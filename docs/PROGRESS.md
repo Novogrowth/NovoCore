@@ -35,16 +35,29 @@ additionally runs the `*IT` tests under Failsafe against a real PostgreSQL 17 co
 
 ---
 
-## ⚠️ Two things to be aware of immediately
+## ⚠️ To be aware of immediately
 
-1. **Nothing is pushed.** Both commits sit on local branch `phase-1/core-skeleton`;
-   `origin` still has only `main` at `f96b826`. `CLAUDE.md` states cross-machine access is
-   git-only, so this work currently exists on one machine. The branch was used because `main`
-   is the default branch. Merging to `main` and pushing has not been authorised yet.
-2. **`docker/.env` is gitignored and machine-local.** It holds a generated 48-character
+1. **`docker/.env` is gitignored and machine-local.** It holds a generated 48-character
    database password. A fresh clone must run `cp docker/.env.example docker/.env` and set
    `NOVOCORE_DB_PASSWORD`, or nothing starts. This is deliberate — there is no fallback
    password anywhere.
+2. **A fresh machine also needs the toolchain**: JDK 25 and a Docker daemon. Maven is not
+   required — `backend/mvnw` is committed. `mvn verify` needs Docker for the `*IT` tests;
+   `mvn test` does not.
+
+## Git state
+
+All work is **pushed to `origin/main` at `e25fcee`** — local and remote agree, no divergence.
+The three commits fast-forwarded onto `main` with no merge commit:
+
+| Commit | What |
+|---|---|
+| `22bb361` | Step 1 — skeleton, guardrails, container stack |
+| `cb93fc8` | Step 2 — primitives, migrations V1–V3, Settings, Audit, Attachments |
+| `e25fcee` | Session close-out — this file, the primer, `CLAUDE.md` |
+
+Local branch `phase-1/core-skeleton` still exists and is fully merged; safe to delete.
+Convention going forward is **one commit per build step**, so history stays checkpoint-able.
 
 ---
 

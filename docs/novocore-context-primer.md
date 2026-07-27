@@ -19,8 +19,8 @@ the summary.
   - Step 1 — Maven multi-module skeleton (`core-api` / `core` / `adapters` / `modules` / `app` / `architecture-tests`), ArchUnit guardrails, Docker Compose with Caddy HTTPS, GitHub Actions CI.
   - Step 2 — `Money` / `Quantity` / `SubLedgerRef`, schema conventions, migrations V1–V3, `SettingsService`, `AuditLogService`, `AttachmentService`, audit columns.
   - **99 tests passing, `mvn verify` exit 0.** Compose stack verified healthy over HTTPS.
-- **⚠️ Nothing is pushed.** Both backend commits (`22bb361`, `cb93fc8`) are on local branch `phase-1/core-skeleton`; `origin` has only `main` at `f96b826`. Given git is the sole cross-machine mechanism, this work exists on one machine only.
-- **⚠️ `docker/.env` is gitignored and machine-local** (holds a generated DB password). A fresh clone must copy `.env.example` and set `NOVOCORE_DB_PASSWORD` or nothing starts — there is deliberately no fallback.
+- **All work is pushed to `origin/main` at `e25fcee`** (`22bb361` step 1, `cb93fc8` step 2, `e25fcee` close-out docs), fast-forwarded with no merge commit. Convention is **one commit per build step**.
+- **⚠️ `docker/.env` is gitignored and machine-local** (holds a generated DB password). A fresh clone must copy `.env.example` and set `NOVOCORE_DB_PASSWORD` or nothing starts — there is deliberately no fallback. A fresh machine also needs JDK 25 and a Docker daemon; Maven is not required, as `backend/mvnw` is committed.
 - **`CLAUDE.md`** verified against intent, and now carries a **Session close-out** section: on "close the session", commit, update `docs/PROGRESS.md`, update this primer.
 - **Toolchain** (per-user, no admin needed): Temurin JDK 25.0.3+9 and Maven 3.9.16 under `C:\Users\kosta\tools\`; Docker Desktop 29.6.2. A committed Maven Wrapper means `./mvnw` works with only a JDK.
 - Minor open items: 5 transitive npm vulnerabilities (via react-router-dom, deliberately unfixed for now), old Google Drive copy at `G:\My Drive\Novocore` pending safe removal (rename first, delete later).
