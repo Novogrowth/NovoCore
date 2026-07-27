@@ -28,6 +28,11 @@ spring:
     # Applied migrations are immutable. Leaving validation on means an edited migration
     # fails startup instead of leaving environments silently diverged.
     validate-on-migrate: true
+    # Stated explicitly rather than relying on the default. Migrations already contain
+    # non-ASCII text (the chart of accounts uses em-dashes) and will contain Greek from step 5
+    # on. If this were ever resolved from the platform default encoding, a Windows machine
+    # would apply mojibake and Flyway's checksum would then differ between environments.
+    encoding: UTF-8
 
   jackson:
     default-property-inclusion: non_null

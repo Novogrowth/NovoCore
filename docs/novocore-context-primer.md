@@ -15,11 +15,12 @@ the summary.
 
 - **Setup complete:** git repo at `https://github.com/Novogrowth/NovoCore.git`, working locally at `C:\Novocore` (moved off Google Drive — Drive's virtual filesystem was silently corrupting `node_modules` installs; git/GitHub is the only cross-machine sync mechanism now, never Drive).
 - **Frontend foundation built and verified:** Vite + React 19 + TypeScript, Tailwind v4 (CSS-first config), shadcn/ui (style `base-nova`, 13 starter components installed), React Router + a structural app shell (sidebar + main + Outlet, no real pages yet). Two commits pushed to `origin/main`. **Untouched since; the backend has no REST endpoints yet for it to call.**
-- **Backend Phase 1: steps 0–2 done, step 3 (chart of accounts) not started.**
+- **Backend Phase 1: steps 0–3 done, step 4 (auth/permissions) blocked on Q21/Q22.**
   - Step 1 — Maven multi-module skeleton (`core-api` / `core` / `adapters` / `modules` / `app` / `architecture-tests`), ArchUnit guardrails, Docker Compose with Caddy HTTPS, GitHub Actions CI.
   - Step 2 — `Money` / `Quantity` / `SubLedgerRef`, schema conventions, migrations V1–V3, `SettingsService`, `AuditLogService`, `AttachmentService`, audit columns.
-  - **99 tests passing, `mvn verify` exit 0.** Compose stack verified healthy over HTTPS.
-- **All work is pushed to `origin/main` at `e25fcee`** (`22bb361` step 1, `cb93fc8` step 2, `e25fcee` close-out docs), fast-forwarded with no merge commit. Convention is **one commit per build step**.
+  - Step 3 — `AccountGroup` / `Account`, seven types, four kinds, `AccountSystemKey`, `ChartOfAccountsService`, migration V4 seeding **65 accounts across 13 groups**, plus `SchemaConventionsIT`.
+  - **131 tests passing, `mvn clean verify` exit 0.** Compose stack verified healthy over HTTPS.
+- **Pushed to `origin/main` only as far as `e25fcee`.** Three later commits are **local only**: `a09428e` and `920044c` (docs) and the step-3 commit. Convention is **one commit per build step**; close-out commits but does not push.
 - **⚠️ `docker/.env` is gitignored and machine-local** (holds a generated DB password). A fresh clone must copy `.env.example` and set `NOVOCORE_DB_PASSWORD` or nothing starts — there is deliberately no fallback. A fresh machine also needs JDK 25 and a Docker daemon; Maven is not required, as `backend/mvnw` is committed.
 - **`CLAUDE.md`** verified against intent, and now carries a **Session close-out** section: on "close the session", commit, update `docs/PROGRESS.md`, update this primer.
 - **Toolchain** (per-user, no admin needed): Temurin JDK 25.0.3+9 and Maven 3.9.16 under `C:\Users\kosta\tools\`; Docker Desktop 29.6.2. A committed Maven Wrapper means `./mvnw` works with only a JDK.
@@ -57,20 +58,22 @@ the summary.
 
 ## Domain model summary
 
-**Chart of accounts — now fully specified from the real Manager.io export.** The complete
-account list, kinds, groups and seed content is in `docs/PROGRESS.md`; the entities and seed
-migration are **not yet written**. Resolved shape:
+**Chart of accounts — built and committed (step 3).** The full account list, decisions and
+per-step obligations are in `docs/PROGRESS.md`. Resolved shape:
 
 - **Two levels only:** an `AccountGroup` entity (name + `displayOrder`) with accounts under it. Not a self-referencing Account tree. Groups are an entity rather than flat text because ordering is **manual/drag-and-drop**, which needs somewhere to store a group's position. Alphabetical ordering applies only to sub-ledgers (customers, suppliers); inventory sorts by SKU.
-- **Normal balance side is derived from account type, never stored.** Six types, because `CONTRA_ASSET` is genuinely needed: accumulated depreciation is an Asset-type account with a *credit* normal balance, and without it fixed assets report at roughly double their carrying value.
-- **Kinds:** Standard / Bank-Cash / Partner Clearing / Control (with a declared sub-ledger type). Control accounts: Accounts Receivable→Customer, Accounts Payable→Supplier, Inventory→Product-Lot, Fixed Assets→Asset, and **GR/IR clearing→Supplier**.
+- **Normal balance side is derived from account type, never stored** — there is no `normal_balance_side` column and a test asserts its absence. **Seven types**, because both contra types are genuinely needed: `CONTRA_ASSET` (accumulated depreciation is Asset-classified with a *credit* normal balance; without it fixed assets report at roughly double carrying value) and `CONTRA_INCOME` (sales returns are Income-classified with a *debit* normal balance; typed as `EXPENSE` they would sit below the revenue line and overstate gross revenue).
+- **Kinds:** Standard / Bank-Cash / Partner Clearing / Control (with a declared sub-ledger type). `type` and `kind` are independent dimensions — accumulated depreciation is `CONTRA_ASSET` *and* `CONTROL`. Control accounts: Accounts Receivable→Customer, Accounts Payable→Supplier, Inventory→Product-Lot, Fixed Assets→Asset, and **GR/IR clearing→Supplier**. A biconditional CHECK enforces "Control iff sub-ledger" in the database, not just in Java.
 - **Bank-Cash:** Cash, Alpha Bank, Piraeus Bank, NBG. **Partner Clearing:** Skroutz, ACS Courier, POS provider, **plus PayPal and Stripe** — the latter two grouped under Cash & Cash Equivalents but treated as clearing accounts, so processor fees post as expense on receipt.
-- **Account codes are left blank** and ΕΛΠ mapping is null for now (comes from the accountant later).
+- **Account codes are left blank** and ΕΛΠ mapping is null for now (comes from the accountant later). Because neither is usable as a handle, **`AccountSystemKey`** gives the eleven accounts NovoCore's own posting rules must locate a stable machine identifier. Keyed accounts can be renamed and reordered but never deactivated, and the key is never settable from application code.
+- **No account balance is stored anywhere** — a balance is the sum of its journal lines, computed on read from step 7. So step 3 introduced no monetary columns at all.
 - **`expectedToClear` flag** rather than a fifth kind, for accounts whose residual balance is a real discrepancy: Freight/Landed Cost — Unallocated, GR/IR clearing, Unclassified — Needs Review.
-- **Sales is split by channel:** Store, eCommerce, Skroutz.
-- **New accounts** not mapping from Manager: the three above plus Rounding, Inventory write-off / shrinkage, and Interest expense in its own **Finance Costs** group (below EBIT, so EBITDA/EBIT stay meaningful).
+- **Sales is split by channel:** **Store & Phone**, eCommerce, Skroutz — phone named explicitly rather than left to convention. **Sales returns are contra-revenue, one account per channel**, so credit notes keep return rate visible per channel instead of netting into revenue.
+- **New accounts** not mapping from Manager: the three expected-to-clear ones, the three Sales returns, `Rounding differences`, `Inventory write-off / shrinkage`, and `Interest expense` in its own **Finance Costs** group (below EBIT, so EBITDA/EBIT stay meaningful).
+- **Inventory write-off sits in the COGS group**, its own account separate from Cost of goods sold — gross margin reflects the loss, sale-driven COGS stays clean. **One account with a reason code**, not three; that reason field is a **step 6 obligation**. Distinct from the Damaged Goods *Location*, which marks stock unsellable but still an asset: **moving a lot there posts nothing**, so **phase 8 Clearing Checks must surface lots aging in it** — the agreed compensating control.
+- **No delete, only deactivate**; with no period locking no account is ever safely finished with. A reorder must name every member exactly once rather than leaving the rest in an order nobody chose.
 - **Dropped:** Suspense, Inter Account Transfers (Manager had the latter under Equity — the error the brief corrects), and DDP (superseded by Freight/Landed Cost — Unallocated).
-- **Known imperfections accepted:** `Interest received` stays in `Income` above EBITDA, so EBITDA is approximate; no current-portion split on the NBG loan; `VAT payable` is a single account pending Q14.
+- **Known imperfections accepted:** `Interest received` stays in `Income` above EBITDA, so EBITDA is approximate; no current-portion split on the NBG loan; `VAT payable` is a single account pending Q14; `Amortization` is seeded although nothing can post to it.
 
 **Core entities (draft field lists — see brief for full lists):** Account (kind: Standard/Bank-Cash/Partner Clearing/Control), Product (SKU, EAN, Type/Status, Bundle flag, computed Stock — no Go/Woo IDs), Inventory Lot/Unit (cost, roast date, Location: Inventory/Service/Damaged Goods, optional serial number, FIFO consumption except serialized items which use their own real cost), Customer (own internal ID; VAT authoritative, phone/email suggestive-only matching; merge = alias forward, never rewrite history), Supplier (parallel to Customer), Asset (straight-line depreciation only).
 
@@ -114,6 +117,9 @@ ones that will stop work soonest:
 - **Remote Staff restricted fields + auth mechanism (Q21, Q22)** — blocks step 4.
 - **Bundle/Composite products (Q11)** — in brief §5's core entities but absent from the agreed Phase 1 scope. In or out?
 - **Landed cost after consumption (Q18)** and the related **provisional lot cost vs purchase price variance** question from ADR 0004 — blocks steps 8 and 10.
+- **Write-off reason field (step 3 obligation, + Q25)** — a step 6 build item, not optional: with one write-off account instead of three, the shrinkage/damage/expiry distinction has nowhere else to live. Q25 is whether the reason is a fixed enum (reportable, which is the point) or free text.
+- **Damaged Goods aging check (step 3 obligation)** — phase 8 Clearing Checks must surface lots sitting in the Damaged Goods location, since moving a lot there posts nothing and nothing else forces the eventual write-off.
+- **Credit note as a typed transaction (Q26)** — now that returns post to per-channel contra-revenue accounts, confirm a credit note is its own transaction type rather than a negative Sales Invoice. Interacts with Q13 and Q16.
 - **SMTP credentials** (step 11) and **the two Google Drive backup destinations plus mechanism** (step 12, Q24 — Drive API or `rclone`; retention; encryption at rest).
 
 Also still open from the brief: final Product/Customer/Supplier/Asset field lists, bank aggregator selection, POS provider (epay vs NBG), invoice/template design mechanism, freight allocation confirmed proportional-by-value, **backup restore test (nothing exists yet)**, physical hosting machine. Needs accountant: AADE Πάροχος scope, Ergani applicability, AADE cash-register/POS interconnection mandate.
