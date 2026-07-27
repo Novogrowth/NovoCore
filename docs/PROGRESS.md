@@ -57,7 +57,7 @@ additionally runs the `*IT` tests under Failsafe against a real PostgreSQL 17 co
 | `920044c` | Docs — reordered the `CLAUDE.md` close-out rule (docs first, single commit last) |
 | `f2ed289` | Step 3 — chart of accounts, migration V4 |
 | `de16e58` | Docs — recorded the step-3 commit hash |
-| *(step 3b)* | Step 3b — VAT classes, exemption reasons, charge types, migration V5 |
+| `15627d2` | Step 3b — VAT classes, exemption reasons, charge types, migration V5 |
 
 **`22bb361` … `e25fcee` are pushed to `origin/main`. Everything after that is local only** —
 `a09428e`, `920044c`, `f2ed289`, `de16e58` and the step-3b commit have not been pushed. Push when
