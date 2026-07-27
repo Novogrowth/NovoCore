@@ -46,10 +46,17 @@ Ask before implementing. Several entity field lists and mechanisms in the brief 
 
 ## Session close-out
 
-When the user says "close the session" (or clearly equivalent phrasing like "let's stop here" or "end session"), perform these three actions in order, regardless of what step or task is in progress:
+When the user says "close the session" (or clearly equivalent phrasing like "let's stop here" or "end session"), perform these three actions **in this order**, regardless of what step or task is in progress:
 
-Commit. Stage and commit all outstanding changes with a message summarizing what was done this session. If the work is incomplete or known-broken, say so explicitly in the commit message rather than implying it's finished.
-Update docs/PROGRESS.md. Record: which step(s) were worked on, what's now done and verified, what's still open or blocked (including any question numbers from the product brief), and the concrete next action for the following session. Overwrite stale status, don't just append.
-Update novocore-context-primer.md. Reflect any changes to build status, resolved decisions, or open items so the primer stays accurate for a fresh chat session. Don't let it drift out of sync with what actually happened.
+1. **Update `docs/PROGRESS.md`.** Record: which step(s) were worked on, what's now done and verified, what's still open or blocked (including any question numbers from the product brief), and the concrete next action for the following session. Overwrite stale status, don't just append.
+2. **Update `docs/novocore-context-primer.md`.** Reflect any changes to build status, resolved decisions, or open items so the primer stays accurate for a fresh chat session. Don't let it drift out of sync with what actually happened.
+3. **Commit last, once, covering everything.** Stage and commit all outstanding changes — the session's work *and* the two documents above — in a single commit whose message summarizes what was done this session. If the work is incomplete or known-broken, say so explicitly in the message rather than implying it's finished.
+
+Committing last is deliberate: the documentation updates are themselves changes, so committing first would leave them uncommitted and immediately stale — the exact drift step 2 exists to prevent.
 
 Do all three before ending the session — don't ask for confirmation on whether to do them, only flag anything unusual you find while doing so (e.g., uncommitted changes you didn't expect, tests that were failing when you started).
+
+Two things this ordering does **not** override:
+
+- **One commit per build step.** If a build step finished during the session, commit it on its own first, then let the close-out commit carry the documentation and any partial work. The single-commit rule above applies to the close-out, not to collapsing completed steps together.
+- **Push only when asked.** Close-out commits locally; it does not push. If the work does get pushed, re-check that `PROGRESS.md` and the primer don't still claim it's unpushed.
