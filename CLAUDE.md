@@ -43,3 +43,13 @@ NovoCore is built in phases (see the brief's roadmap). **Only build what the cur
 ## When something in the brief is marked "draft" or "open"
 
 Ask before implementing. Several entity field lists and mechanisms in the brief are explicitly marked as not finalized — building against them as if they were final risks real rework.
+
+## Session close-out
+
+When the user says "close the session" (or clearly equivalent phrasing like "let's stop here" or "end session"), perform these three actions in order, regardless of what step or task is in progress:
+
+Commit. Stage and commit all outstanding changes with a message summarizing what was done this session. If the work is incomplete or known-broken, say so explicitly in the commit message rather than implying it's finished.
+Update docs/PROGRESS.md. Record: which step(s) were worked on, what's now done and verified, what's still open or blocked (including any question numbers from the product brief), and the concrete next action for the following session. Overwrite stale status, don't just append.
+Update novocore-context-primer.md. Reflect any changes to build status, resolved decisions, or open items so the primer stays accurate for a fresh chat session. Don't let it drift out of sync with what actually happened.
+
+Do all three before ending the session — don't ask for confirmation on whether to do them, only flag anything unusual you find while doing so (e.g., uncommitted changes you didn't expect, tests that were failing when you started).
