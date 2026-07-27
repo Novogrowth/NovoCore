@@ -1,0 +1,10 @@
+# Local Obsidian editor config (per-machine, not part of the project)
+.obsidian/
+
+# Node (defensive; frontend/ has its own .gitignore too)
+node_modules/
+dist/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
