@@ -46,17 +46,24 @@ Ask before implementing. Several entity field lists and mechanisms in the brief 
 
 ## Session close-out
 
-When the user says "close the session" (or clearly equivalent phrasing like "let's stop here" or "end session"), perform these three actions **in this order**, regardless of what step or task is in progress:
+When the user says "close the session" (or clearly equivalent phrasing like "let's stop here" or "end session"), perform these four actions **in this order**, regardless of what step or task is in progress:
 
 1. **Update `docs/PROGRESS.md`.** Record: which step(s) were worked on, what's now done and verified, what's still open or blocked (including any question numbers from the product brief), and the concrete next action for the following session. Overwrite stale status, don't just append.
 2. **Update `docs/novocore-context-primer.md`.** Reflect any changes to build status, resolved decisions, or open items so the primer stays accurate for a fresh chat session. Don't let it drift out of sync with what actually happened.
-3. **Commit last, once, covering everything.** Stage and commit all outstanding changes — the session's work *and* the two documents above — in a single commit whose message summarizes what was done this session. If the work is incomplete or known-broken, say so explicitly in the message rather than implying it's finished.
+3. **Commit, once, covering everything.** Stage and commit all outstanding changes — the session's work *and* the two documents above — in a single commit whose message summarizes what was done this session. If the work is incomplete or known-broken, say so explicitly in the message rather than implying it's finished.
+4. **Push to `origin`.** Always, without being asked. Then verify it landed (`git log --oneline origin/main -1` after a fetch) and confirm local and remote agree.
 
-Committing last is deliberate: the documentation updates are themselves changes, so committing first would leave them uncommitted and immediately stale — the exact drift step 2 exists to prevent.
+Committing before pushing, and documenting before committing, is deliberate: the documentation updates are themselves changes, so committing first would leave them uncommitted and immediately stale — the exact drift step 2 exists to prevent.
 
-Do all three before ending the session — don't ask for confirmation on whether to do them, only flag anything unusual you find while doing so (e.g., uncommitted changes you didn't expect, tests that were failing when you started).
+Do all four before ending the session — don't ask for confirmation on whether to do them, only flag anything unusual you find while doing so (e.g., uncommitted changes you didn't expect, tests that were failing when you started).
 
-Two things this ordering does **not** override:
+**On pushing (step 4).** This is a standing instruction, not a per-session decision. Three consecutive sessions ended with unpushed commits because pushing waited on an explicit request, and the repo has no other cross-machine sync mechanism — unpushed work is work that exists on exactly one laptop. So:
 
-- **One commit per build step.** If a build step finished during the session, commit it on its own first, then let the close-out commit carry the documentation and any partial work. The single-commit rule above applies to the close-out, not to collapsing completed steps together.
-- **Push only when asked.** Close-out commits locally; it does not push. If the work does get pushed, re-check that `PROGRESS.md` and the primer don't still claim it's unpushed.
+- Push at every close-out. Never wait to be asked.
+- Because of this, **`PROGRESS.md` must not maintain a list of "unpushed commits."** That list was itself a source of drift; it went out of date and was wrong. State instead that close-out always pushes, so local and `origin/main` agree at the end of every session, and record the commit each step landed in.
+- If the push **fails** (no network, rejected, diverged), say so loudly in the session summary and correct `PROGRESS.md` so it does not claim the work is pushed when it isn't. A doc claiming a push that never happened is worse than no note at all.
+- If the remote has diverged, do not force-push. Stop and report.
+
+One thing this ordering does **not** override:
+
+- **One commit per build step.** If a build step finished during the session, commit it on its own first, then let the close-out commit carry the documentation and any partial work. The single-commit rule above applies to the close-out, not to collapsing completed steps together. The push at the end covers all of them.

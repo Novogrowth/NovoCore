@@ -2,6 +2,9 @@
 
 *Live status. Overwritten each session close-out, not appended to. Last updated: 2026-07-27.*
 
+*Close-out now also pushes to `origin` automatically (`CLAUDE.md`), so this file no longer tracks
+unpushed commits.*
+
 Phase 1 (the core) is in progress. Build order and step numbering are as agreed at Phase 1
 kickoff; they differ slightly from the brief's roadmap in that permissions were moved earlier
 (step 4, before the ledger) and a Settings service was added (step 2).
@@ -19,7 +22,7 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 3b | VAT classes, VAT exemption reasons, charge types | **Done, committed** — inserted step, see below |
 | 4 | Users, auth, permissions | **Done, committed** — Q21 and Q22 answered, see below |
 | 4b | First REST endpoint (chart of accounts, read-only) | **Done, committed** — boundary validation, see below |
-| 5 | Product, Customer, Supplier, Asset | Not started. Blocked on Q5 (Q4 now resolved) |
+| 5 | Product, Customer, Supplier, Asset | **Next.** Not started. Blocked on Q5 + the VatExemptionReason seed |
 | 6 | Inventory Lot/Unit, Location, computed stock | Not started. **Carries two step-3 obligations — see below** |
 | 7 | Journal engine, debits=credits invariant | Not started. Blocked on Q13, Q14 |
 | 8 | Purchase Invoice, Goods Receipt, GR/IR, FIFO | Not started |
@@ -37,6 +40,35 @@ additionally runs the `*IT` tests under Failsafe against a real PostgreSQL 17 co
 
 ---
 
+## 🚫 Pre-launch blockers
+
+Not open questions — **decided, and deliberately unresolved for now, with a condition attached.**
+These must be closed before the stated trigger, not merely before Phase 1 ends.
+
+### PLB-1 — No 2FA. Blocks any external or remote access. (Q30)
+
+**Decision: no 2FA for now**, because the application is not internet-facing. That is a deliberate
+choice with an explicit condition, not a deferral by default.
+
+**This must be revisited and resolved before *any* external or remote access is enabled**,
+including:
+
+- exposing NovoCore to the public internet (Caddy already obtains a publicly trusted certificate
+  automatically once `NOVOCORE_SITE_ADDRESS` is a real hostname, so this is one environment
+  variable away from being live);
+- **Remote/Order Staff logging in from outside the local network** — which is the whole point of
+  that role, so this trigger is likely to arrive sooner than a general public launch;
+- any VPN-less remote access for an owner or admin.
+
+Why it matters here specifically: a full-access role can reach every financial record in the
+system, and the only thing standing in front of it is one password. Session cookies are hardened
+(`HttpOnly`, `Secure`, `SameSite=Strict`), which addresses cookie theft but does nothing about a
+stolen or reused password.
+
+Scope when resolved: TOTP is the obvious candidate, and the decision needs to cover whether it is
+mandatory for full-access roles only or for everyone, plus recovery codes — a second factor with
+no recovery path locks the owner out of their own financial system.
+
 ## ⚠️ To be aware of immediately
 
 1. **`docker/.env` is gitignored and machine-local.** It holds a generated 48-character
@@ -49,20 +81,23 @@ additionally runs the `*IT` tests under Failsafe against a real PostgreSQL 17 co
 
 ## Git state
 
-| Commit | What |
+**Close-out now always pushes** (`CLAUDE.md`, session close-out step 4), so local `main` and
+`origin/main` agree at the end of every session. This section therefore records *which commit each
+step landed in* and no longer tracks what is unpushed — that list was itself a source of drift, and
+at the start of this session it was wrong: it claimed `a09428e` and `920044c` were local when both
+were already on `origin`.
+
+| Commit | Step |
 |---|---|
 | `22bb361` | Step 1 — skeleton, guardrails, container stack |
 | `cb93fc8` | Step 2 — primitives, migrations V1–V3, Settings, Audit, Attachments |
-| `e25fcee` | Session close-out — PROGRESS.md, the primer, `CLAUDE.md` |
-| `a09428e` | Docs — recorded that the work was pushed |
-| `920044c` | Docs — reordered the `CLAUDE.md` close-out rule (docs first, single commit last) |
 | `f2ed289` | Step 3 — chart of accounts, migration V4 |
-| `de16e58` | Docs — recorded the step-3 commit hash |
 | `15627d2` | Step 3b — VAT classes, exemption reasons, charge types, migration V5 |
+| `a1da425` | Step 4 — users, roles, permissions, session auth, migration V6 |
+| `91543fa` | Step 4b — first REST endpoint, web boundary rule made real |
 
-**`22bb361` … `e25fcee` are pushed to `origin/main`. Everything after that is local only** —
-`a09428e`, `920044c`, `f2ed289`, `de16e58`, `15627d2` and the docs commit following it have not
-been pushed. Push when asked; close-out commits locally and does not push.
+Interleaved with these are small docs-only commits (`e25fcee`, `a09428e`, `920044c`, `de16e58`,
+`b065901`, `8c27cb4`) and this session's close-out commit.
 
 Local branch `phase-1/core-skeleton` still exists and is fully merged; safe to delete.
 Convention going forward is **one commit per build step**, so history stays checkpoint-able.
@@ -471,24 +506,33 @@ Numbering follows the original Phase 1 question list so references stay stable.
 **Resolved:** Q1–Q3 (chart of accounts), Q20 (money scale), **Q4 (VAT classes — real rate list
 supplied and seeded, built as a runtime-editable entity; precedence rule stated as code)**.
 
-### ⚠️ Waiting on a decision before anything else can be built
+### ✅ Q27 — RESOLVED (decision made; implementation still outstanding)
 
-- **Q27** *(new)* **Which income account each ChargeType posts to.** Recommendation given:
-  **dedicated accounts** — `Delivery income` and `COD fee income` in the Income group — rather
-  than the existing `Other income`. Reasons: these will appear on most invoices, so routing them
-  to a residual bucket makes that bucket the largest income line and destroys its diagnostic
-  value; and `Delivery income` needs to be comparable against the existing `Transportation costs`
-  expense account to answer "is shipping costing us money?", which is impossible once it is
-  merged into Other income. Not a blanket policy — `ChargeType.incomeAccountId` is per-type
-  precisely so low-volume future fees can point at `Other income` instead. **Needs a V6 migration
-  adding 2 accounts (65 → 67) plus the two ChargeType rows.** Related sub-question, recommendation
-  is no: do *not* split delivery income by channel the way Sales is split — the channel split was
-  a brief mandate for Sales specifically, and shipping revenue by channel is answerable from the
-  invoice once invoices exist.
-- **Q28** *(new)* **Where "Σκοπός διακίνησης" (dispatch purpose) belongs.** Analysis and
-  recommendation below; **nothing built**. Correctly identified as unrelated to VAT — it is not
-  folded into either VAT entity.
-- **The VatExemptionReason seed** — ~29 verified rows still to be supplied. Structure is ready.
+**Decided: dedicated income accounts.** `Delivery income` and `COD fee income`, in the Income
+group, rather than routing fees to the existing `Other income`. **No channel split** for them —
+the channel split was a brief mandate for Sales specifically.
+
+Reasons on record: these fees appear on most invoices, so routing them to a residual bucket makes
+that bucket the largest income line and destroys the one thing it is for; and `Delivery income`
+needs to be comparable against the existing `Transportation costs` expense account to answer "is
+shipping costing us money?", which is unanswerable once it is merged. Not a blanket policy —
+`ChargeType.incomeAccountId` is per-type precisely so low-volume future fees can point at
+`Other income`.
+
+> **⚠️ Nothing is built for this yet.** The decision is settled; the code is not. `Delivery income`
+> and `COD fee income` **do not exist in the chart of accounts**, and `charge_type` is still empty.
+> Outstanding work: a **`V7` migration** adding the two accounts (65 → 67) and seeding the two
+> ChargeType rows against them, plus test updates for the changed seed counts. Small and
+> self-contained — a good first task for the next session, and it needs no further input.
+
+### ⚠️ Waiting on input
+
+- **The VatExemptionReason seed** — ~29 verified AADE rows. **Being supplied at the start of the
+  next session.** Structure is built and unseeded; see step 3b.
+- **Q5** — the Product↔Supplier link. The single hard blocker on step 5's Product entity.
+- **Q28** **Where "Σκοπός διακίνησης" (dispatch purpose) belongs.** Analysis and recommendation
+  below; **nothing built**. Correctly identified as unrelated to VAT — it is not folded into
+  either VAT entity.
 
 ### Q28 in full — dispatch purpose
 
@@ -529,18 +573,18 @@ That placement decides the rest:
   `BACK_IN_STOCK_REMINDERS` exist as `Section` values flagged unavailable, so they can be granted
   before the modules exist and a UI can tell "you may not see this" from "this isn't built yet".
 
-### ⚠️ Newly open, left over from Q22
-- **Q29** *(new)* **Password policy is a stated default, not a decision.** Currently 12 characters
-  minimum with no composition rules, following NIST SP 800-63B. Open: is 12 right; should there be
-  rotation (current guidance says no); should a breached-password list be checked?
-- **Q30** *(new)* **2FA is not implemented.** Q22 asked and was not answered. For a system holding
-  the company's financial records, reachable over the internet, TOTP for full-access roles is worth
-  a decision rather than a default. Not built, not scoped.
-- **Q31** *(new)* **Single role per user.** Brief §7's "multiple custom roles from the start" was
-  read as the system supporting many role *definitions*, not many roles per person — the natural
-  reading for a company this size, and what is built. **Say so if that reading is wrong**; it is a
-  schema change, cheap now and much less cheap after step 5.
-- **Q32** *(new)* Session timeout is 8 hours. Reasonable for a working day; confirm or change.
+### Left over from Q22
+- ~~**Q29** password policy~~ — **approved as defaulted.** 12 characters minimum, no composition
+  rules, per NIST SP 800-63B. Settled; no further work.
+- **Q30** **2FA — decided (no, for now) with a condition. Escalated to a pre-launch blocker: see
+  PLB-1 at the top of this file.** Not an open question and not a deferral by default; it has a
+  named trigger that must close it.
+- **Q31** *(still open)* **Single role per user.** Brief §7's "multiple custom roles from the start"
+  was read as the system supporting many role *definitions*, not many roles per person — the
+  natural reading for a company this size, and what is built. **Say so if that reading is wrong**;
+  it is a schema change, cheap now and much less cheap after step 5.
+- **Q32** *(still open)* Session timeout is 8 hours. Reasonable for a working day; confirm or
+  change.
 
 ### Blocking step 5 — core entities
 - ~~**Q4** VAT class list~~ — **resolved and built.** See step 3b.
@@ -621,26 +665,49 @@ That placement decides the rest:
 
 ---
 
-## Next action
+## Next action — read this first
 
-**Step 5 (Product, Customer, Supplier, Asset) is the next numbered step, and is blocked only on
-Q5** — the Product↔Supplier link. Q4 is resolved, so Q5 is now the single thing standing between
-here and the largest remaining piece of Phase 1. It also carries two obligations already recorded:
-the VAT class fields from step 3b, and the `ProtectedField` redaction from step 4.
+**Step 5 (Product, Customer, Supplier, Asset) is the next numbered step. It was deliberately not
+started this session.**
 
-Still waiting on input, unchanged:
+### Step 5 is blocked on two things, both expected from the user
 
-1. **Q27 — the ChargeType income account decision.** Smallest unblocking answer outstanding; one
-   reply produces a migration seeding two accounts and two charge types.
-2. **The VatExemptionReason seed** — ~29 verified rows. Structure ready.
-3. **Q28 — dispatch purpose placement.** Recommendation is a core-owned `GoodsDispatch` in phase 4,
-   conditional on whether Go already issues Δελτία Αποστολής and whether the AADE digital delivery
-   note regime applies (accountant question).
+1. **Q5 — the Product↔Supplier link.** Product has "Supplier's SKU" but no supplier reference,
+   which makes the field meaningless. One reference or many, or drop the field. **Hard blocker for
+   the Product entity.**
+2. **The VatExemptionReason seed data** — ~29 verified AADE rows. **The user will provide this at
+   the start of the next session; it was explicitly not provided this one.** The entity structure
+   is built and waiting.
 
-New since step 4, and worth a decision before the system is exposed to the internet rather than
-after: **Q30 (2FA)** and **Q29 (password policy)**. **Q31 (single role per user)** is the cheapest
-of the four to change now and the most expensive to change after step 5.
+### Unblocked work available immediately, needing no input
 
-The standing note about no REST surface is now partly discharged: one endpoint exists and the web
-boundary rule is real. Building out the rest of the API is deliberately **not** started — that
-needs its own scoping conversation, not incremental drift.
+- **Q27's implementation** — a `V7` migration adding `Delivery income` and `COD fee income` to the
+  Income group and seeding the two ChargeType rows against them, plus updating the seed-count
+  assertions in `ChartOfAccountsIT`. The decision is settled (see Q27 above); only the code is
+  missing. Small, self-contained, and the obvious first task.
+
+### Also still open, not blocking step 5
+
+- **Q28 — dispatch purpose placement.** Recommendation is a core-owned `GoodsDispatch` in phase 4,
+  conditional on whether Go already issues Δελτία Αποστολής and whether the AADE digital delivery
+  note regime applies (accountant question). Nothing built.
+- **Q31 — single role per user.** Cheapest to change now, most expensive after step 5.
+- **Q32 — the 8-hour session timeout.**
+- **Q8, Q9, Q12** — Customer email/phone structuring, Customer VAT status, and the Asset field list.
+  Worth noting: **Q5 blocks Product specifically, not all of step 5.** Customer needs Q8 and Q9,
+  and Asset needs Q12, so answering Q5 alone unblocks roughly a quarter of the step. If the aim is
+  to start step 5 in one go, all four want answering together.
+
+### Obligations already recorded that step 5 must honour
+
+- Product needs a default VAT class; Customer needs a *nullable* VAT class override (step 3b).
+- `ProductView` **must** apply `RoleView.canSee(ProtectedField)` for the three restricted Product
+  fields (step 4). The permission model enforces them, but nothing is being redacted until Products
+  exist — this is where Q21's field-level answer takes effect or silently does not.
+
+### Standing note
+
+The REST surface is deliberately still one endpoint. Building out the rest of the API needs its own
+scoping conversation, not incremental drift. **PLB-1 (2FA) must be closed before any remote access
+is enabled** — including Remote/Order Staff logging in from outside the local network, which is that
+role's entire purpose.
