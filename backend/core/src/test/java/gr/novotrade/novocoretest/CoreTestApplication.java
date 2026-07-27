@@ -4,6 +4,7 @@ import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 /**
@@ -34,10 +35,33 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
  */
 @SpringBootConfiguration
 @EnableAutoConfiguration
-@ComponentScan(CoreTestApplication.CORE_PACKAGE)
+/*
+ * The web layer is excluded from this context on purpose.
+ *
+ * A controller in ..core.web.. depends on CurrentUser, which is implemented in the `app` module
+ * against the Spring Security context — that is the seam letting the core ask "who is logged in?"
+ * without knowing Spring Security exists. The core module's own tests have no `app` on the
+ * classpath, so no such bean, and scanning the controllers here fails the whole context.
+ *
+ * Excluding them is the honest answer rather than a workaround: these tests exercise the core's
+ * services against a real database, and the web layer is not part of that scope. The endpoint is
+ * tested in the `app` module by ChartOfAccountsEndpointIT, over real HTTP with real
+ * authentication, which is the only place the full wiring exists to test.
+ *
+ * The alternative — a permissive fallback CurrentUser bean in the core for when none is supplied —
+ * was rejected. A security component that quietly substitutes a default when its real
+ * implementation is missing is exactly the thing that later fails open in production.
+ */
+@ComponentScan(
+        basePackages = CoreTestApplication.CORE_PACKAGE,
+        excludeFilters = @ComponentScan.Filter(
+                type = FilterType.REGEX,
+                pattern = CoreTestApplication.WEB_PACKAGE_PATTERN))
 @EntityScan(CoreTestApplication.CORE_PACKAGE)
 @EnableJpaRepositories(CoreTestApplication.CORE_PACKAGE)
 public class CoreTestApplication {
 
     static final String CORE_PACKAGE = "gr.novotrade.novocore.core";
+
+    static final String WEB_PACKAGE_PATTERN = "gr\\.novotrade\\.novocore\\.core\\.web\\..*";
 }

@@ -17,7 +17,8 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 2 | Money/Quantity/SubLedgerRef, schema conventions, Settings, Audit, Attachments | **Done, committed** `cb93fc8` |
 | 3 | Chart of accounts | **Done, committed** — see below |
 | 3b | VAT classes, VAT exemption reasons, charge types | **Done, committed** — inserted step, see below |
-| 4 | Users, auth, permissions | Not started. Blocked on Q21, Q22 |
+| 4 | Users, auth, permissions | **Done, committed** — Q21 and Q22 answered, see below |
+| 4b | First REST endpoint (chart of accounts, read-only) | **Done, committed** — boundary validation, see below |
 | 5 | Product, Customer, Supplier, Asset | Not started. Blocked on Q5 (Q4 now resolved) |
 | 6 | Inventory Lot/Unit, Location, computed stock | Not started. **Carries two step-3 obligations — see below** |
 | 7 | Journal engine, debits=credits invariant | Not started. Blocked on Q13, Q14 |
@@ -28,10 +29,10 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 12 | Automated backups | Not started. Needs Drive paths/credentials, Q24 |
 | 13 | Test suite consolidation sweep | Not started |
 
-**Tests: 195 passing, `mvn clean verify` exit 0.** 68 unit (core-api), 113 core integration,
-3 app integration, 11 architecture. Nothing was failing at the last close-out.
+**Tests: 259 passing, `mvn clean verify` exit 0.** 86 unit (core-api), 146 core integration,
+4 app unit, 12 app integration, 11 architecture. Nothing was failing at the last close-out.
 
-`mvn test` runs the 79 non-container tests in ~5 seconds and needs no Docker. `mvn verify`
+`mvn test` runs the 101 non-container tests in ~6 seconds and needs no Docker. `mvn verify`
 additionally runs the `*IT` tests under Failsafe against a real PostgreSQL 17 container.
 
 ---
@@ -85,14 +86,26 @@ Convention going forward is **one commit per build step**, so history stays chec
   `numeric(19,6)` columns alongside them. Probe deleted.
 - **The chart-of-accounts invariants are enforced by the database, not only by Java** — proven
   by raw-SQL probes in `ChartOfAccountsIT` that bypass the service and are rejected by CHECK
-  constraints.
+  constraints. Same for the VAT class rules in `VatClassIT`.
+- **The `..core.web..` boundary rule proven to actually fail**, same method: a probe class in
+  `..core.web..` referencing a public core-internal class tripped it, naming both the offending
+  field and constructor parameter. Probe deleted. Its `allowEmptyShould` allowance is gone, so the
+  rule can no longer pass vacuously.
+- **Authentication end to end over real HTTP**: 401 unauthenticated, 403 for Remote/Order Staff,
+  200 for the Owner, logout invalidating the session, CSRF enforced, and the session cookie's
+  `HttpOnly` / `Secure` / `SameSite=Strict` asserted against the real `Set-Cookie` header.
+- **The startup refusal when no user exists and no initial owner is supplied** — unit-tested,
+  including the partial-credentials case.
 
 ## Not yet verified
 
 - **Backup restore.** Brief §13 already flags this. Nothing exists yet (step 12).
-- **No REST controllers exist at all.** No HTTP surface beyond actuator; `..core.web..` is
-  empty, so the frontend has nothing to call — including for the chart of accounts, which now
-  has a full service but no way to reach it from the UI.
+- **The REST surface is one read-only endpoint.** `GET /api/chart-of-accounts` and nothing else, so
+  the frontend still has essentially nothing to call. Everything else — products, customers,
+  settings, users — has a service and no HTTP route.
+- **Nobody has logged in through a browser.** Authentication is proven by an integration test over
+  real HTTP, not by a human using the generated Spring Security login page against the Compose
+  stack. The frontend has no login screen.
 - **PostgreSQL 18.** Pinned to `postgres:17-alpine` in both `backend/pom.xml`
   (`postgres.docker.image`) and `docker/compose.yml`. Both must move together.
 
@@ -323,6 +336,135 @@ unit cost, or rate — which must not itself lose precision before the product i
 
 ---
 
+## Step 4 — done (users, auth, permissions)
+
+Q21 and Q22 both answered, so this was built as specified rather than against a placeholder.
+
+### Q22 — server-side sessions with an HttpOnly cookie (approved)
+
+- **Spring Security with form login**, session-based. `NOVOCORESESSION` cookie is `HttpOnly`,
+  `SameSite=Strict`, `Secure`, 8-hour timeout, with a new session id issued on login so a fixated
+  identifier cannot become an authenticated one. All three attributes are asserted against the
+  real `Set-Cookie` header over HTTP.
+- **CSRF is on**, with the token in a JavaScript-readable cookie so a frontend can echo it back.
+  Non-negotiable given cookie auth: without it any site the user visits while logged in can make
+  their browser send an authenticated request. Deferred token loading is switched off so the
+  cookie exists on the first response.
+- **Login and logout return status codes, not redirects** (204/401). A `fetch()` cannot do anything
+  useful with a 302 to a login page — it follows it and gets HTML with status 200, which looks
+  like success. `/api/**` likewise returns 401 rather than redirecting.
+- **No login controller was written.** Authentication uses Spring Security's own `/login` and
+  `/logout`, so this step added no hand-written API surface.
+- **Password hashes never leave the core.** `UserService.authenticate(username, rawPassword)` takes
+  the plain password and returns a user or nothing, so hashing and comparison both happen inside
+  the core. The conventional `UserDetailsService` arrangement hands the hash to the framework,
+  putting it on the boundary and into every stack trace on the authentication path. A custom
+  `AuthenticationProvider` in `app` calls the core instead, and `NovoCorePrincipal.getPassword()`
+  returns null — it is what lives in the session.
+- **Login failures are indistinguishable.** Unknown username, wrong password, deactivated user and
+  deactivated role all return empty, and the unknown-username path still runs a hash comparison so
+  it does not return measurably faster. The reason is recorded in the audit log, where the
+  distinction legitimately belongs; both success and failure are logged.
+- **Hashes are algorithm-prefixed** (`{bcrypt}$2a$...`) via a delegating encoder, so a future move
+  to a stronger algorithm does not invalidate existing passwords.
+- **⚠️ Password policy is a stated default, not a decision.** Twelve characters minimum, no
+  composition rules (NIST SP 800-63B: composition rules push people to predictable substitutions).
+  **2FA is not implemented.** Q22 approved the session mechanism and left both open — see below.
+
+### Q21 — Remote/Order Staff, built as the concrete case
+
+Brief §7 also requires **multiple custom roles from the start**, so roles are **data** while the
+things being granted are **code**:
+
+- `Section` and `ProtectedField` are enums — which parts of the application exist is determined by
+  what has been built, not by configuration.
+- `app_role` + `role_section_grant` + `role_field_restriction` are tables, so creating a role is an
+  operation rather than a migration.
+- **Access is default-deny.** "Everything else is invisible" needs no enumeration and stays true as
+  sections are added; a new section is invisible until granted.
+- **Owner and Admin use a `full_access` flag, not stored grants per section.** With stored grants a
+  section added in a later release would be invisible to the owner of the system until someone
+  inserted a row. Both are **system roles**: unmodifiable and undeletable, so removing
+  `USERS_AND_ROLES` from the last role that has it cannot lock everyone out.
+- **Remote/Order Staff is seeded exactly as answered** — `FULL` on Sales Order Fulfillment,
+  Customers and Back-in-Stock Reminders; `VIEW` on Products; `PRODUCT_LAST_PURCHASE_PRICE`,
+  `PRODUCT_SUPPLIER` and `PRODUCT_SUPPLIER_SKU` hidden; nothing else. Deliberately **not** a system
+  role, so it stays adjustable at runtime.
+- **Field restrictions narrow, never widen.** A role that cannot view Products does not see a
+  product's cost even with no restriction recorded against the field.
+- **An inactive role or user grants nothing**, independently of the other.
+- The permission decision lives on `RoleView` as pure logic, so it is exhaustively tested with no
+  database — including a sweep over *every* section, which means a section added later is covered
+  by the test the day it appears.
+
+### ⚠️ Step 5 obligation: the field mechanism has nothing to guard yet
+
+`ProtectedField`'s three entries are live configuration, not placeholders — the grants and
+restrictions are seeded and enforced. But **Products do not exist until step 5**, so no response is
+currently redacted by them. When `ProductView` is built it **must** consult
+`RoleView.canSee(ProtectedField)` for each of the three. That is the one piece of Q21 that could
+still silently not happen.
+
+### First-login bootstrap
+
+**No user account is seeded and there is no default password** — the same stance as the database
+credential. The first Owner comes from `NOVOCORE_BOOTSTRAP_OWNER_USERNAME` /
+`NOVOCORE_BOOTSTRAP_OWNER_PASSWORD`, and **the application refuses to start** if the user table is
+empty and those are unset, naming both variables. Once a user exists the variables are ignored and
+should be removed. `docker/.env.example` and `compose.yml` carry them.
+
+### `auditorAware` now records the real user
+
+Step 2 left this returning `system` unconditionally with a note that step 4 would replace it. It
+now reads the authenticated user via a `CurrentUser` interface in `core-api`, implemented in `app`
+against the security context — the seam that keeps the core unaware Spring Security exists.
+Unattended work (Flyway seed, future backup and depreciation runs) still records `system`, which is
+honest rather than attributing it to whoever logged in last. Resolved through an `ObjectProvider`
+so the core's own tests, which have no web layer, still work.
+
+---
+
+## Step 4b — done (the first REST endpoint)
+
+One endpoint: `GET /api/chart-of-accounts`, read-only, returning `List<AccountGroupView>` through
+`ChartOfAccountsService`. **Scoped deliberately narrow — this is boundary validation, not the start
+of the frontend API.** No other endpoint was added.
+
+**It did its job.** The `..core.web..` ArchUnit rule previously carried `allowEmptyShould(true)` and
+passed while checking nothing. That allowance is now removed, and the rule was **proven to fail**: a
+temporary probe class in `..core.web..` referencing a public core-internal class tripped it, naming
+both the field and the constructor parameter. Probe deleted.
+
+The controller has no repository, no entity, no `@Transactional` and no mapping code — a service
+interface and a permission check. Authorisation is an explicit `requireView(Section.CHART_OF_ACCOUNTS)`
+rather than a `@PreAuthorize` string, because a typed enum cannot be misspelled and a misspelled
+expression that fails open is the worst available outcome. With many controllers this should become
+a shared interceptor.
+
+Proven end to end over real HTTP: 401 unauthenticated, **403 for Remote/Order Staff**, 200 with the
+chart for the Owner, session invalidated by logout, CSRF enforced, and the refusal body leaking
+neither the contents nor the permission model.
+
+### Consequence: the core's test context excludes the web layer
+
+`CoreTestApplication` now excludes `..core.web..` from component scanning. The controller depends on
+`CurrentUser`, which only `app` implements, so scanning it in the core's own tests failed the whole
+context. Excluding it is the honest answer — those tests exercise services against a real database,
+and the endpoint is tested in `app` where the full wiring exists. **A permissive fallback
+`CurrentUser` bean in the core was considered and rejected**: a security component that substitutes
+a default when its real implementation is missing is precisely what later fails open.
+
+### Notes for whoever adds the second controller
+
+- Response types are core-api DTOs, not separate web records. Right for a read-only projection
+  already shaped for the outside world; wrong the first time a response needs a shape the core has
+  no reason to have.
+- `WebExceptionHandler` maps the core's permission exceptions to 401/403. It exists because those
+  exceptions live in `core-api`, which may not have a Spring dependency, so `@ResponseStatus` on
+  them is not an option.
+
+---
+
 ## Open questions, by the step they block
 
 Numbering follows the original Phase 1 question list so references stay stable.
@@ -379,19 +521,37 @@ That placement decides the rest:
    Provider/myDATA concern (phases 7 and 11) and the purpose codes must be correct before then.
    **This is an accountant question** — same bucket as the already-open AADE Πάροχος scope item.
 
-### Blocking step 4 — auth and permissions
-- **Q21** Field-level restriction needs a concrete list: which fields must Remote/Order Staff
-  not see? Brief §7 names the sections but no fields.
-- **Q22** Auth mechanism unspecified. Recommendation on the table: server-side sessions with an
-  HttpOnly cookie rather than JWT, for a single self-hosted app. Password policy? 2FA?
-- **Q23** Remote Staff's sections (Sales Order Fulfillment, Back-in-Stock) are phase 4 and 9
-  modules. Plan is to register them as reserved section keys with nothing behind them.
+### Resolved in step 4
+- ~~**Q21** field-level restriction list~~ — **answered and built.** Remote/Order Staff's exact
+  grants and the three hidden Product fields are seeded and enforced.
+- ~~**Q22** auth mechanism~~ — **approved and built.** Server-side sessions, HttpOnly cookie.
+- ~~**Q23** reserved section keys~~ — **done.** `SALES_ORDER_FULFILLMENT` and
+  `BACK_IN_STOCK_REMINDERS` exist as `Section` values flagged unavailable, so they can be granted
+  before the modules exist and a UI can tell "you may not see this" from "this isn't built yet".
+
+### ⚠️ Newly open, left over from Q22
+- **Q29** *(new)* **Password policy is a stated default, not a decision.** Currently 12 characters
+  minimum with no composition rules, following NIST SP 800-63B. Open: is 12 right; should there be
+  rotation (current guidance says no); should a breached-password list be checked?
+- **Q30** *(new)* **2FA is not implemented.** Q22 asked and was not answered. For a system holding
+  the company's financial records, reachable over the internet, TOTP for full-access roles is worth
+  a decision rather than a default. Not built, not scoped.
+- **Q31** *(new)* **Single role per user.** Brief §7's "multiple custom roles from the start" was
+  read as the system supporting many role *definitions*, not many roles per person — the natural
+  reading for a company this size, and what is built. **Say so if that reading is wrong**; it is a
+  schema change, cheap now and much less cheap after step 5.
+- **Q32** *(new)* Session timeout is 8 hours. Reasonable for a working day; confirm or change.
 
 ### Blocking step 5 — core entities
 - ~~**Q4** VAT class list~~ — **resolved and built.** See step 3b.
 - **Step-3b obligation:** Product needs a default VAT class reference, and Customer needs a
   *nullable* VAT class override, so that `VatClassPrecedence` has real levels to read. Overlaps
   Q9 below.
+- **Step-4 obligation (not optional):** `ProductView` must consult
+  `RoleView.canSee(ProtectedField)` for `PRODUCT_LAST_PURCHASE_PRICE`, `PRODUCT_SUPPLIER` and
+  `PRODUCT_SUPPLIER_SKU`. The restrictions are seeded and enforced by the permission model, but
+  until Products exist there is no response being redacted — this is the step where Q21's
+  field-level answer either takes effect or silently does not.
 - **Q5** *(hard blocker)* Product has "Supplier's SKU" but **no Supplier link** — meaningless
   without knowing which supplier. Add a reference (one? many?) or drop the field.
 - **Q6** `last purchase price` is derivable from lots, like `Stock` which the brief says is
@@ -463,23 +623,24 @@ That placement decides the rest:
 
 ## Next action
 
-Three things are waiting on input rather than on work:
+**Step 5 (Product, Customer, Supplier, Asset) is the next numbered step, and is blocked only on
+Q5** — the Product↔Supplier link. Q4 is resolved, so Q5 is now the single thing standing between
+here and the largest remaining piece of Phase 1. It also carries two obligations already recorded:
+the VAT class fields from step 3b, and the `ProtectedField` redaction from step 4.
 
-1. **Q27 — the ChargeType income account decision.** Smallest and most immediately unblocking:
-   one answer produces a V6 migration seeding two accounts and two charge types.
-2. **The VatExemptionReason seed** — ~29 verified rows. Structure is ready and waiting.
-3. **Q28 — dispatch purpose placement.** Recommendation is phase 4 as a core-owned
-   `GoodsDispatch`, conditional on the two questions above it (does Go already issue Δελτία
-   Αποστολής; does the digital delivery note regime apply).
+Still waiting on input, unchanged:
 
-**Step 4** (users, auth, permissions) remains the next numbered step and is still **blocked on
-Q21 and Q22**. Q22 is a decision, not a detail: the recommendation on the table is server-side
-sessions with an HttpOnly cookie rather than JWT, for a single self-hosted app.
+1. **Q27 — the ChargeType income account decision.** Smallest unblocking answer outstanding; one
+   reply produces a migration seeding two accounts and two charge types.
+2. **The VatExemptionReason seed** — ~29 verified rows. Structure ready.
+3. **Q28 — dispatch purpose placement.** Recommendation is a core-owned `GoodsDispatch` in phase 4,
+   conditional on whether Go already issues Δελτία Αποστολής and whether the AADE digital delivery
+   note regime applies (accountant question).
 
-**Step 5** is now blocked only on Q5 (Product↔Supplier link), Q4 having been resolved — so it is
-closer to startable than step 4 is.
+New since step 4, and worth a decision before the system is exposed to the internet rather than
+after: **Q30 (2FA)** and **Q29 (password policy)**. **Q31 (single role per user)** is the cheapest
+of the four to change now and the most expensive to change after step 5.
 
-Standing note regardless of which step comes next: **no REST surface exists at all yet**, so the
-frontend has nothing to call. Worth deciding whether a thin read-only endpoint over the chart of
-accounts and the VAT classes should come early, purely to prove the web layer's ArchUnit boundary
-is real while there is one controller to get right rather than ten to retrofit.
+The standing note about no REST surface is now partly discharged: one endpoint exists and the web
+boundary rule is real. Building out the rest of the API is deliberately **not** started — that
+needs its own scoping conversation, not incremental drift.

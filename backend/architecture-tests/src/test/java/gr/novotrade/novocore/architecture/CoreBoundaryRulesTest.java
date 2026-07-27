@@ -114,9 +114,11 @@ class CoreBoundaryRulesTest {
                 .because("controllers live in the core module for good reason (the web UI is "
                         + "the core's front door, not an adapter), but sharing a module with "
                         + "the implementations means nothing stops a controller injecting a "
-                        + "repository except this rule.")
-                // Non-vacuous once the first controller lands.
-                .allowEmptyShould(true);
+                        + "repository except this rule.");
+        // allowEmptyShould deliberately NOT set: ChartOfAccountsController and
+        // WebExceptionHandler now live in ..core.web.., so this rule has a real subject set and
+        // fails if it is ever emptied. Re-adding the allowance would let the package be deleted
+        // and take the guarantee with it silently.
 
         rule.check(ImportedClasses.production());
     }

@@ -15,13 +15,15 @@ the summary.
 
 - **Setup complete:** git repo at `https://github.com/Novogrowth/NovoCore.git`, working locally at `C:\Novocore` (moved off Google Drive — Drive's virtual filesystem was silently corrupting `node_modules` installs; git/GitHub is the only cross-machine sync mechanism now, never Drive).
 - **Frontend foundation built and verified:** Vite + React 19 + TypeScript, Tailwind v4 (CSS-first config), shadcn/ui (style `base-nova`, 13 starter components installed), React Router + a structural app shell (sidebar + main + Outlet, no real pages yet). Two commits pushed to `origin/main`. **Untouched since; the backend has no REST endpoints yet for it to call.**
-- **Backend Phase 1: steps 0–3 plus an inserted step 3b done. Step 4 (auth/permissions) blocked on Q21/Q22; step 5 now blocked only on Q5.**
+- **Backend Phase 1: steps 0–4 done (plus inserted steps 3b and 4b). Step 5 is next and blocked only on Q5.**
   - Step 1 — Maven multi-module skeleton (`core-api` / `core` / `adapters` / `modules` / `app` / `architecture-tests`), ArchUnit guardrails, Docker Compose with Caddy HTTPS, GitHub Actions CI.
   - Step 2 — `Money` / `Quantity` / `SubLedgerRef`, schema conventions, migrations V1–V3, `SettingsService`, `AuditLogService`, `AttachmentService`, audit columns.
   - Step 3 — `AccountGroup` / `Account`, seven types, four kinds, `AccountSystemKey`, `ChartOfAccountsService`, migration V4 seeding **65 accounts across 13 groups**, plus `SchemaConventionsIT`.
   - Step 3b — `VatClass` (9 real Prosvasis Go classes seeded), `VatClassPrecedence`, `VatExemptionReason` (structure only, unseeded), `ChargeType` (structure only, unseeded), migration V5.
-  - **195 tests passing, `mvn clean verify` exit 0.** Compose stack verified healthy over HTTPS.
-- **Pushed to `origin/main` only as far as `e25fcee`.** Five later commits are **local only**: `a09428e`, `920044c`, `de16e58` (docs), the step-3 commit `f2ed289` and the step-3b commit. Convention is **one commit per build step**; close-out commits but does not push.
+  - Step 4 — users, roles, two-layer permissions (migration V6), Spring Security session auth, first-owner bootstrap, `auditorAware` wired to the real user.
+  - Step 4b — the first REST endpoint, `GET /api/chart-of-accounts`, read-only, existing to make the `..core.web..` ArchUnit boundary real.
+  - **259 tests passing, `mvn clean verify` exit 0.** Compose stack verified healthy over HTTPS.
+- **Pushed to `origin/main` only as far as `e25fcee`.** Everything after is **local only**. Convention is **one commit per build step**; close-out commits but does not push.
 - **⚠️ `docker/.env` is gitignored and machine-local** (holds a generated DB password). A fresh clone must copy `.env.example` and set `NOVOCORE_DB_PASSWORD` or nothing starts — there is deliberately no fallback. A fresh machine also needs JDK 25 and a Docker daemon; Maven is not required, as `backend/mvnw` is committed.
 - **`CLAUDE.md`** verified against intent, and now carries a **Session close-out** section: on "close the session", commit, update `docs/PROGRESS.md`, update this primer.
 - **Toolchain** (per-user, no admin needed): Temurin JDK 25.0.3+9 and Maven 3.9.16 under `C:\Users\kosta\tools\`; Docker Desktop 29.6.2. A committed Maven Wrapper means `./mvnw` works with only a JDK.
@@ -102,7 +104,19 @@ per-step obligations are in `docs/PROGRESS.md`. Resolved shape:
 
 **AADE-first invoice import:** default rule — pull from myDATA automatically, confirm against Goods Receipt; missing-from-myDATA is itself a supplier compliance flag.
 
-**Permissions (Phase 1, not deferred):** two-layer (section visibility + field-level restriction). Owner/Admin full access. "Remote/Order Staff" role defined for home-based workers.
+**Permissions and authentication — built (step 4).**
+
+- **Roles are data, what they grant is code.** `Section` and `ProtectedField` are enums (what exists is determined by what was built); `app_role` / `role_section_grant` / `role_field_restriction` are tables, so creating a role is an operation not a migration — brief §7's "multiple custom roles from the start".
+- **Access is default-deny**, so "everything else is invisible" needs no enumeration and stays true as sections are added.
+- **Owner and Admin use a `full_access` flag, not stored grants**, so a section added later is visible to them at once. Both are **system roles**: unmodifiable, undeletable, so nobody can strip `USERS_AND_ROLES` from the last role holding it.
+- **Remote/Order Staff seeded exactly as answered:** FULL on Sales Order Fulfillment / Customers / Back-in-Stock; VIEW on Products; `PRODUCT_LAST_PURCHASE_PRICE`, `PRODUCT_SUPPLIER`, `PRODUCT_SUPPLIER_SKU` hidden; nothing else. Not a system role, so it stays adjustable. **Field restrictions narrow, never widen.**
+- **⚠️ Step 5 obligation:** `ProductView` must call `RoleView.canSee(...)` for those three fields. The mechanism is built and enforced but has nothing to guard until Products exist.
+- **Auth: server-side sessions, HttpOnly cookie** (Q22, approved). `SameSite=Strict`, `Secure`, 8h, new session id on login, CSRF on. Login/logout return 204/401 not redirects, and `/api/**` returns 401 not a redirect — a `fetch()` cannot use a 302 to an HTML login page. No login controller was written; Spring Security's own `/login` and `/logout` are used.
+- **Password hashes never leave the core.** `UserService.authenticate(username, rawPassword)` verifies internally; a custom `AuthenticationProvider` in `app` calls it, and the session principal's `getPassword()` returns null. Login failures are indistinguishable (unknown user, wrong password, inactive user, inactive role) with the reason recorded only in the audit log.
+- **No seeded account, no default password.** The first Owner comes from `NOVOCORE_BOOTSTRAP_OWNER_USERNAME`/`_PASSWORD` and **the app refuses to start** if the user table is empty and they are unset.
+- **Still open:** password policy (Q29 — currently 12 chars, no composition rules, per NIST), **2FA (Q30, not implemented)**, single-role-per-user reading (Q31), session timeout (Q32).
+
+**REST surface — one endpoint (step 4b).** `GET /api/chart-of-accounts`, read-only. Built specifically to make the `..core.web..` ArchUnit rule load-bearing; its `allowEmptyShould` allowance is removed and the rule was proven to fail against a probe. Authorisation is an explicit typed `requireView(Section...)` call, not a `@PreAuthorize` string that could be misspelled and fail open. **Broader API buildout is deliberately not started.** Note `CoreTestApplication` excludes `..core.web..` from scanning, because the controller needs a `CurrentUser` only `app` implements — a permissive fallback bean in the core was rejected as the thing that later fails open.
 
 **Barcode scanning:** not a module — an input mechanism across Purchase Invoice/Goods Receipt verification, picking, in-store sales, and a new barcode-first entry point into Product Creator (falls back to supplier link, then manual). Once Product Creator exists, NovoCore becomes the point of product creation, syncing outward to Go/Woo — not the reverse.
 
@@ -130,7 +144,7 @@ ones that will stop work soonest:
 - **Product↔Supplier link (Q5)** — Product has "Supplier's SKU" but no supplier reference, which makes the field meaningless. **Now the only hard blocker for step 5.**
 - **VAT posting mechanics (Q14)** — a real design gap, not a clarification. Nothing specifies how input/output VAT posts. Needs a proper conversation. Blocks steps 7–9.
 - **Correction/reversal policy (Q13)** — with no period locking, may a posted entry be edited, or is correction reversal-only? Recommendation: immutable once posted. Blocks step 7.
-- **Remote Staff restricted fields + auth mechanism (Q21, Q22)** — blocks step 4.
+- ~~**Remote Staff restricted fields + auth mechanism (Q21, Q22)**~~ — **both answered and built**, see the permissions section above. Left over from Q22: **2FA (Q30) and password policy (Q29)** are open, and worth deciding before the system faces the internet rather than after.
 - **Bundle/Composite products (Q11)** — in brief §5's core entities but absent from the agreed Phase 1 scope. In or out?
 - **Landed cost after consumption (Q18)** and the related **provisional lot cost vs purchase price variance** question from ADR 0004 — blocks steps 8 and 10.
 - **Write-off reason field (step 3 obligation, + Q25)** — a step 6 build item, not optional: with one write-off account instead of three, the shrinkage/damage/expiry distinction has nowhere else to live. Q25 is whether the reason is a fixed enum (reportable, which is the point) or free text.
