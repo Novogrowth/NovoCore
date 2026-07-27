@@ -60,8 +60,8 @@ additionally runs the `*IT` tests under Failsafe against a real PostgreSQL 17 co
 | `15627d2` | Step 3b — VAT classes, exemption reasons, charge types, migration V5 |
 
 **`22bb361` … `e25fcee` are pushed to `origin/main`. Everything after that is local only** —
-`a09428e`, `920044c`, `f2ed289`, `de16e58` and the step-3b commit have not been pushed. Push when
-asked; close-out commits locally and does not push.
+`a09428e`, `920044c`, `f2ed289`, `de16e58`, `15627d2` and the docs commit following it have not
+been pushed. Push when asked; close-out commits locally and does not push.
 
 Local branch `phase-1/core-skeleton` still exists and is fully merged; safe to delete.
 Convention going forward is **one commit per build step**, so history stays checkpoint-able.
