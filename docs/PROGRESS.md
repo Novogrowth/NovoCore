@@ -55,7 +55,7 @@ under Failsafe against a real PostgreSQL 17 container.
 | `e25fcee` | Session close-out — PROGRESS.md, the primer, `CLAUDE.md` |
 | `a09428e` | Docs — recorded that the work was pushed |
 | `920044c` | Docs — reordered the `CLAUDE.md` close-out rule (docs first, single commit last) |
-| *(step 3)* | Step 3 — chart of accounts, migration V4, and this file |
+| `f2ed289` | Step 3 — chart of accounts, migration V4, and this file |
 
 **`22bb361` … `e25fcee` are pushed to `origin/main`. Everything after that is local only** —
 `a09428e`, `920044c` and the step-3 commit have not been pushed. Push when asked; close-out
