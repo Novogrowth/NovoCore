@@ -16,8 +16,9 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 1 | Skeleton, guardrails, container stack, CI | **Done, committed** `22bb361` |
 | 2 | Money/Quantity/SubLedgerRef, schema conventions, Settings, Audit, Attachments | **Done, committed** `cb93fc8` |
 | 3 | Chart of accounts | **Done, committed** — see below |
+| 3b | VAT classes, VAT exemption reasons, charge types | **Done, committed** — inserted step, see below |
 | 4 | Users, auth, permissions | Not started. Blocked on Q21, Q22 |
-| 5 | Product, Customer, Supplier, Asset | Not started. Blocked on Q4, Q5 |
+| 5 | Product, Customer, Supplier, Asset | Not started. Blocked on Q5 (Q4 now resolved) |
 | 6 | Inventory Lot/Unit, Location, computed stock | Not started. **Carries two step-3 obligations — see below** |
 | 7 | Journal engine, debits=credits invariant | Not started. Blocked on Q13, Q14 |
 | 8 | Purchase Invoice, Goods Receipt, GR/IR, FIFO | Not started |
@@ -27,12 +28,11 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 12 | Automated backups | Not started. Needs Drive paths/credentials, Q24 |
 | 13 | Test suite consolidation sweep | Not started |
 
-**Tests: 131 passing, `mvn verify` exit 0 from clean.** 48 unit (core-api), 69 core integration,
+**Tests: 195 passing, `mvn clean verify` exit 0.** 68 unit (core-api), 113 core integration,
 3 app integration, 11 architecture. Nothing was failing at the last close-out.
 
-`mvn test` runs the 59 non-container tests in ~4 seconds and needs no Docker — unchanged by
-step 3, whose tests are all container-backed. `mvn verify` additionally runs the `*IT` tests
-under Failsafe against a real PostgreSQL 17 container.
+`mvn test` runs the 79 non-container tests in ~5 seconds and needs no Docker. `mvn verify`
+additionally runs the `*IT` tests under Failsafe against a real PostgreSQL 17 container.
 
 ---
 
@@ -55,11 +55,13 @@ under Failsafe against a real PostgreSQL 17 container.
 | `e25fcee` | Session close-out — PROGRESS.md, the primer, `CLAUDE.md` |
 | `a09428e` | Docs — recorded that the work was pushed |
 | `920044c` | Docs — reordered the `CLAUDE.md` close-out rule (docs first, single commit last) |
-| `f2ed289` | Step 3 — chart of accounts, migration V4, and this file |
+| `f2ed289` | Step 3 — chart of accounts, migration V4 |
+| `de16e58` | Docs — recorded the step-3 commit hash |
+| *(step 3b)* | Step 3b — VAT classes, exemption reasons, charge types, migration V5 |
 
 **`22bb361` … `e25fcee` are pushed to `origin/main`. Everything after that is local only** —
-`a09428e`, `920044c` and the step-3 commit have not been pushed. Push when asked; close-out
-commits locally and does not push.
+`a09428e`, `920044c`, `f2ed289`, `de16e58` and the step-3b commit have not been pushed. Push when
+asked; close-out commits locally and does not push.
 
 Local branch `phase-1/core-skeleton` still exists and is fully merged; safe to delete.
 Convention going forward is **one commit per build step**, so history stays checkpoint-able.
@@ -217,11 +219,165 @@ Both are recorded here deliberately so they are not rediscovered cold.
 
 ---
 
+## Step 3b — done
+
+An inserted step, not in the original Phase 1 numbering. Real VAT data arrived from Prosvasis Go
+and the AADE/myDATA documentation, which resolved Q4 and brought one new piece of scope
+(charge types) that depends on VAT classes existing. Migration `V5`.
+
+### VatClass — a real entity, not an enum
+
+Runtime-editable lookup: `code`, `description`, `ratePercent`, `active`, and a nullable
+self-referencing `reducedCounterpart`. **Seeded with the nine real Prosvasis Go classes** —
+`0`, `1030`, `1040`, `1041`, `1060`, `1091`, `1131`, `1170`, `1410`.
+
+- **Nine rows, eight distinct percentages.** 4% appears twice: `1040` as a rate in its own right
+  and `1041` as the island-reduced counterpart of 6% under αρ.31 ν.5057/2023. Same percentage,
+  different legal basis, different code.
+- **The code is the identity, never the rate.** Because of the above, a lookup by rate is
+  ambiguous by construction, so `VatClassService` deliberately has no `findByRate` — a test
+  asserts its absence. A method that is right most of the time is worse than one that does not
+  exist.
+- **Island-reduced mappings seeded** mainland → reduced: 24→17, 13→9, 6→4 (`1041`, not `1040`),
+  4→3. The 0% class has no counterpart. Enforced one level deep, lower-rated, one-to-one, and
+  never self-referencing — in the service with named messages, and by `CHECK`/`UNIQUE`
+  constraints in the database, proven by raw-SQL probes.
+- **Recorded as data only.** Nothing chooses a rate by shipping destination; that is future
+  scope, as instructed.
+- **All eight reduced/mainland rates seeded, not just the mainland four**, because we do ship to
+  islands under the reduced regime.
+- **The rate is not editable in place** — there is no mutator and a test asserts none exists.
+  Editing would retroactively change what every invoice already issued under that class appears
+  to have charged. A rate change is a new class plus deactivation of the old one.
+- **Rate stored as a percentage** (`24.000000`, not `0.24`) in `numeric(19,6)`, with a `CHECK`
+  refusing anything outside 0–100 so a fraction fails loudly rather than undercharging by 100×.
+
+### The VAT precedence rule, stated as code
+
+`VatClassPrecedence` in `core-api` implements **invoice line beats customer beats product**,
+returning both the winning class and a `VatClassSource` saying which level supplied it — so
+"why is this line at 13%?" is answerable about a real invoice.
+
+**There is deliberately no fallback rate.** If no level specifies a class, it throws
+`VatClassNotDeterminableException` rather than assuming 24%. A silent default produces a
+plausible invoice at a rate nobody chose, and an undercharge is not recoverable from the customer
+after issue. Tested exhaustively over all eight present/absent combinations, because the rule is
+three null checks whose *ordering* carries the entire meaning.
+
+It takes ids rather than objects so it can be applied before Product, Customer and Sales Invoice
+exist. **This creates a step 5 obligation:** Product needs a default VAT class, and Customer
+needs a *nullable* VAT class override — which overlaps Q9 (Customer has no VAT status field
+although Supplier does).
+
+### VatExemptionReason — structure built, deliberately unseeded
+
+`code` (integer), `description`, `mydataCode`, `inputVatDeductible`, `active`. **No seed data** —
+the ~29 verified rows are still to come.
+
+- **A separate entity from VatClass, not a 0% rate.** Zero-rated charges 0% under a rate that
+  exists; exempt is outside VAT because a named article of the Κώδικας ΦΠΑ says so. Reported
+  differently to myDATA.
+- **`mydataCode` is stored verbatim**, not composed from `code + "-" + description` at use time.
+  It is what goes on the wire, and reproducing AADE's exact punctuation by concatenation is a bet
+  worth not taking. `VatExemptionReasonView.mydataCodeMatchesDescription()` exists so a test can
+  check whether the composition actually holds **once the real rows land** — worth running then.
+- **`code` is an integer, not text.** myDATA's own field is numeric, and text would sort "10"
+  before "2" in a picker of ~29 entries. **If any real row's code is not a plain integer, say so
+  and it becomes a `varchar` migration.**
+- **`inputVatDeductible` is uniformly "Όχι" in everything seen so far.** Kept because it is a
+  genuine per-reason distinction in AADE's table; a test proves the column can carry `true` so it
+  is not a constant waiting to be optimised away.
+- Neither code nor myDATA string is editable — a retired reason is deactivated, not corrected.
+- Tests use codes in the 9000s so they cannot collide with AADE's real 1–31 range.
+
+### ChargeType — new scope, structure built, unseeded
+
+`name`, `defaultVatClassId`, `incomeAccountId`, `active`.
+
+- **The income-side guard is the reason this service exists** rather than a bare repository: the
+  account must be `INCOME`-type. `EXPENSE` is refused (wiring a delivery fee to
+  `Transportation costs` to "net it off" understates revenue and cost together and leaves a gross
+  margin that looks plausible and is wrong), and `CONTRA_INCOME` is refused too (that side is for
+  sales returns).
+- **Unseeded pending Q27** — see below. Seeding against the wrong income account would mean
+  migrating posted history later.
+- **Nothing consumes it yet.** Sales Invoice line items are step 9.
+
+### Design note: the slice boundary holds inside the core
+
+`ChargeType` holds plain `Long` ids for its VAT class and account, not JPA associations, because
+`VatClass` and `Account` are package-private within their own slices. That is not a style choice
+— it is the only option available, so ADR 0003's boundary holds *between slices of the core*, not
+just between the core and its adapters, without needing another ArchUnit rule. The ids are
+validated through `VatClassService` and `ChartOfAccountsService`, the same published interfaces
+an adapter would use, and the FK constraints still exist in the database.
+
+### Design note: a third meaning for `numeric(19,6)`
+
+`vat_class.rate_percent` is the schema's **first `numeric` column**, and it is a *rate* — neither
+of the two shapes V1 named. The convention now reads: `numeric(19,2)` for a posted **amount**
+(two decimals because that is what a cent is), `numeric(19,6)` for a **multiplier** — quantity,
+unit cost, or rate — which must not itself lose precision before the product is rounded once.
+`SchemaConventionsIT` was updated to say so. Its scale rule is therefore now live; the
+`numeric(19,2)` half still waits for step 7.
+
+---
+
 ## Open questions, by the step they block
 
 Numbering follows the original Phase 1 question list so references stay stable.
-**Resolved:** Q1–Q3 (chart of accounts), Q20 (money scale: `numeric(19,2)` postings,
-`numeric(19,6)` unit costs and quantities).
+**Resolved:** Q1–Q3 (chart of accounts), Q20 (money scale), **Q4 (VAT classes — real rate list
+supplied and seeded, built as a runtime-editable entity; precedence rule stated as code)**.
+
+### ⚠️ Waiting on a decision before anything else can be built
+
+- **Q27** *(new)* **Which income account each ChargeType posts to.** Recommendation given:
+  **dedicated accounts** — `Delivery income` and `COD fee income` in the Income group — rather
+  than the existing `Other income`. Reasons: these will appear on most invoices, so routing them
+  to a residual bucket makes that bucket the largest income line and destroys its diagnostic
+  value; and `Delivery income` needs to be comparable against the existing `Transportation costs`
+  expense account to answer "is shipping costing us money?", which is impossible once it is
+  merged into Other income. Not a blanket policy — `ChargeType.incomeAccountId` is per-type
+  precisely so low-volume future fees can point at `Other income` instead. **Needs a V6 migration
+  adding 2 accounts (65 → 67) plus the two ChargeType rows.** Related sub-question, recommendation
+  is no: do *not* split delivery income by channel the way Sales is split — the channel split was
+  a brief mandate for Sales specifically, and shipping revenue by channel is answerable from the
+  invoice once invoices exist.
+- **Q28** *(new)* **Where "Σκοπός διακίνησης" (dispatch purpose) belongs.** Analysis and
+  recommendation below; **nothing built**. Correctly identified as unrelated to VAT — it is not
+  folded into either VAT entity.
+- **The VatExemptionReason seed** — ~29 verified rows still to be supplied. Structure is ready.
+
+### Q28 in full — dispatch purpose
+
+**It is an attribute of an outbound goods movement**, not of an invoice and not of a receipt.
+That placement decides the rest:
+
+- **Not Goods Receipt (step 8).** That is *inbound*. The supplier authors their own dispatch note
+  and states their own purpose; we read theirs, we never state ours on a receipt.
+- **Not inside the Sales Order Fulfillment module either**, even though that is where the ACS
+  voucher generation and QZ Tray printing already live. Dispatches also happen for supplier
+  returns, transfers between our own locations, goods sent out for repair (brief §9's
+  Service/Technician Management), consignment and sampling. If the purpose lives inside the sales
+  module, every non-sale dispatch has no home, and a module ends up owning a core concept —
+  against `CLAUDE.md` rule 1.
+- **Recommendation: a core-owned `GoodsDispatch`** — the outbound counterpart to Goods Receipt —
+  carrying a `DispatchPurpose` core lookup entity, same shape as `VatExemptionReason` since it is
+  likewise a codified AADE list. Sales Order Fulfillment then becomes one *consumer* that creates
+  a dispatch with purpose = sale, alongside the other cases.
+- **Which phase: roadmap phase 4**, with Purchase Orders + Sales Order Fulfillment — that is when
+  goods first physically leave under NovoCore's control.
+
+**Two things must be settled before that is final, and both could move it to phase 11:**
+
+1. **Does Prosvasis Go currently issue the Δελτίο Αποστολής?** Go is the invoicing system of
+   record until phase 11. If it already issues dispatch notes, NovoCore does not need to author
+   them until Go is retired, and phase 4 only needs to print the *courier voucher* — which is not
+   a legal dispatch document. That would make this phase 11 scope, not phase 4.
+2. **Does the AADE Ψηφιακό Δελτίο Αποστολής (digital delivery note) regime apply to us?** If
+   NovoCore must *transmit* delivery notes rather than print them, that is an AADE
+   Provider/myDATA concern (phases 7 and 11) and the purpose codes must be correct before then.
+   **This is an accountant question** — same bucket as the already-open AADE Πάροχος scope item.
 
 ### Blocking step 4 — auth and permissions
 - **Q21** Field-level restriction needs a concrete list: which fields must Remote/Order Staff
@@ -232,9 +388,10 @@ Numbering follows the original Phase 1 question list so references stay stable.
   modules. Plan is to register them as reserved section keys with nothing behind them.
 
 ### Blocking step 5 — core entities
-- **Q4** *(hard blocker)* **VAT class list absent.** Product has a "VAT Class" and Supplier a
-  "VAT status", but no rates exist anywhere in the brief. Need the real classes (24/13/6/0 and
-  exempt, plus reduced island rates if applicable) and whether it is an entity or an enum.
+- ~~**Q4** VAT class list~~ — **resolved and built.** See step 3b.
+- **Step-3b obligation:** Product needs a default VAT class reference, and Customer needs a
+  *nullable* VAT class override, so that `VatClassPrecedence` has real levels to read. Overlaps
+  Q9 below.
 - **Q5** *(hard blocker)* Product has "Supplier's SKU" but **no Supplier link** — meaningless
   without knowing which supplier. Add a reference (one? many?) or drop the field.
 - **Q6** `last purchase price` is derivable from lots, like `Stock` which the brief says is
@@ -244,6 +401,9 @@ Numbering follows the original Phase 1 question list so references stay stable.
 - **Q8** Customer fields omit email and phone, yet the identity model matches on exactly those.
   They need structuring (multiple per customer) for matching to work.
 - **Q9** Customer has no VAT status field although Supplier does. Exempt/intra-EU customers.
+  **Now partly answered by step 3b:** Customer gets a nullable VAT class override for the
+  precedence rule, and an exempt customer needs a `VatExemptionReason` reference rather than a
+  rate. Still open is whether "VAT status" is anything more than those two fields.
 - **Q10** Confirm the shared generic "Πελάτης Λιανικής" retail record is seeded.
 - **Q11** **Bundle/Composite products** are in brief §5's core entities but were absent from the
   agreed Phase 1 scope list. Build now or defer?
@@ -266,6 +426,11 @@ Numbering follows the original Phase 1 question list so references stay stable.
   the brief says how input and output VAT post. NovoCore has no filing duty but the ledger must
   still carry VAT correctly on every purchase and sales invoice. Needs the account structure and
   the per-line computation rule. This is a design conversation, not a one-line answer.
+  **Step 3b narrowed it but did not close it:** the rates now exist, `VatClassView.vatOn` does the
+  multiply-and-round-once arithmetic in one place, and the precedence rule picks the class. What
+  is still undefined is *where it posts* — one `VAT payable` account or several, input vs output
+  separation, and whether the computation is per line or per document. Also still open: how an
+  exempt line posts, now that exemption reasons are modelled.
 - **Q15** Rounding: is the independent recomputation compared against the document total only,
   or line by line? And "flagged for review" needs somewhere to live — is a review queue in
   Phase 1 scope, or just a flag on the record? *(The destination account now exists.)*
@@ -298,12 +463,23 @@ Numbering follows the original Phase 1 question list so references stay stable.
 
 ## Next action
 
-Step 4: users, auth, permissions. **Blocked — needs Q21 and Q22 answered first.** Q22 in
-particular is a decision, not a detail: the recommendation on the table is server-side sessions
-with an HttpOnly cookie rather than JWT, for a single self-hosted app.
+Three things are waiting on input rather than on work:
 
-If step 4 stays blocked, the unblocked alternative is **step 6's prerequisites**, or bringing
-forward part of step 13 — but note that no REST surface exists at all yet, so the frontend
-still has nothing to call regardless of which backend step comes next. Worth deciding whether a
-thin read-only chart-of-accounts endpoint should come early, purely to prove the web layer's
-ArchUnit boundary is real before there are ten controllers to retrofit.
+1. **Q27 — the ChargeType income account decision.** Smallest and most immediately unblocking:
+   one answer produces a V6 migration seeding two accounts and two charge types.
+2. **The VatExemptionReason seed** — ~29 verified rows. Structure is ready and waiting.
+3. **Q28 — dispatch purpose placement.** Recommendation is phase 4 as a core-owned
+   `GoodsDispatch`, conditional on the two questions above it (does Go already issue Δελτία
+   Αποστολής; does the digital delivery note regime apply).
+
+**Step 4** (users, auth, permissions) remains the next numbered step and is still **blocked on
+Q21 and Q22**. Q22 is a decision, not a detail: the recommendation on the table is server-side
+sessions with an HttpOnly cookie rather than JWT, for a single self-hosted app.
+
+**Step 5** is now blocked only on Q5 (Product↔Supplier link), Q4 having been resolved — so it is
+closer to startable than step 4 is.
+
+Standing note regardless of which step comes next: **no REST surface exists at all yet**, so the
+frontend has nothing to call. Worth deciding whether a thin read-only endpoint over the chart of
+accounts and the VAT classes should come early, purely to prove the web layer's ArchUnit boundary
+is real while there is one controller to get right rather than ten to retrofit.

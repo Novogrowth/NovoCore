@@ -15,12 +15,13 @@ the summary.
 
 - **Setup complete:** git repo at `https://github.com/Novogrowth/NovoCore.git`, working locally at `C:\Novocore` (moved off Google Drive — Drive's virtual filesystem was silently corrupting `node_modules` installs; git/GitHub is the only cross-machine sync mechanism now, never Drive).
 - **Frontend foundation built and verified:** Vite + React 19 + TypeScript, Tailwind v4 (CSS-first config), shadcn/ui (style `base-nova`, 13 starter components installed), React Router + a structural app shell (sidebar + main + Outlet, no real pages yet). Two commits pushed to `origin/main`. **Untouched since; the backend has no REST endpoints yet for it to call.**
-- **Backend Phase 1: steps 0–3 done, step 4 (auth/permissions) blocked on Q21/Q22.**
+- **Backend Phase 1: steps 0–3 plus an inserted step 3b done. Step 4 (auth/permissions) blocked on Q21/Q22; step 5 now blocked only on Q5.**
   - Step 1 — Maven multi-module skeleton (`core-api` / `core` / `adapters` / `modules` / `app` / `architecture-tests`), ArchUnit guardrails, Docker Compose with Caddy HTTPS, GitHub Actions CI.
   - Step 2 — `Money` / `Quantity` / `SubLedgerRef`, schema conventions, migrations V1–V3, `SettingsService`, `AuditLogService`, `AttachmentService`, audit columns.
   - Step 3 — `AccountGroup` / `Account`, seven types, four kinds, `AccountSystemKey`, `ChartOfAccountsService`, migration V4 seeding **65 accounts across 13 groups**, plus `SchemaConventionsIT`.
-  - **131 tests passing, `mvn clean verify` exit 0.** Compose stack verified healthy over HTTPS.
-- **Pushed to `origin/main` only as far as `e25fcee`.** Three later commits are **local only**: `a09428e` and `920044c` (docs) and the step-3 commit. Convention is **one commit per build step**; close-out commits but does not push.
+  - Step 3b — `VatClass` (9 real Prosvasis Go classes seeded), `VatClassPrecedence`, `VatExemptionReason` (structure only, unseeded), `ChargeType` (structure only, unseeded), migration V5.
+  - **195 tests passing, `mvn clean verify` exit 0.** Compose stack verified healthy over HTTPS.
+- **Pushed to `origin/main` only as far as `e25fcee`.** Five later commits are **local only**: `a09428e`, `920044c`, `de16e58` (docs), the step-3 commit `f2ed289` and the step-3b commit. Convention is **one commit per build step**; close-out commits but does not push.
 - **⚠️ `docker/.env` is gitignored and machine-local** (holds a generated DB password). A fresh clone must copy `.env.example` and set `NOVOCORE_DB_PASSWORD` or nothing starts — there is deliberately no fallback. A fresh machine also needs JDK 25 and a Docker daemon; Maven is not required, as `backend/mvnw` is committed.
 - **`CLAUDE.md`** verified against intent, and now carries a **Session close-out** section: on "close the session", commit, update `docs/PROGRESS.md`, update this primer.
 - **Toolchain** (per-user, no admin needed): Temurin JDK 25.0.3+9 and Maven 3.9.16 under `C:\Users\kosta\tools\`; Docker Desktop 29.6.2. A committed Maven Wrapper means `./mvnw` works with only a JDK.
@@ -75,6 +76,18 @@ per-step obligations are in `docs/PROGRESS.md`. Resolved shape:
 - **Dropped:** Suspense, Inter Account Transfers (Manager had the latter under Equity — the error the brief corrects), and DDP (superseded by Freight/Landed Cost — Unallocated).
 - **Known imperfections accepted:** `Interest received` stays in `Income` above EBITDA, so EBITDA is approximate; no current-portion split on the NBG loan; `VAT payable` is a single account pending Q14; `Amortization` is seeded although nothing can post to it.
 
+**VAT — built (step 3b), real data from Prosvasis Go and AADE.**
+
+- **`VatClass` is a runtime-editable entity, not an enum**, because Greek rates change by statute (the 3% and island-reduced 4% classes exist only because of αρ.31 ν.5057/2023). Fields: code, description, ratePercent, active, nullable self-referencing reducedCounterpart.
+- **Nine classes seeded, eight distinct percentages** — `0`/`1030`/`1040`/`1041`/`1060`/`1091`/`1131`/`1170`/`1410`. 4% appears twice: `1040` in its own right, `1041` as the island-reduced counterpart of 6%. **So the code is the identity, never the rate** — there is deliberately no `findByRate`, and a test asserts its absence.
+- **Island-reduced mappings seeded as data** (24→17, 13→9, 6→4 as `1041`, 4→3), held on the mainland rate pointing at the reduced one. Enforced one level deep, lower-rated, one-to-one, never self-referencing. **No automatic rate switching by shipping destination** — future scope by explicit decision.
+- **Rates are percentages** (`24.000000`, not `0.24`) in `numeric(19,6)`, with a CHECK refusing anything outside 0–100 so a fraction fails loudly instead of undercharging 100×. **Rates are never editable in place** — a rate change is a new class plus deactivation, because editing would retroactively change what already-issued invoices appear to have charged.
+- **Precedence rule, stated as code** in `VatClassPrecedence`: **invoice line beats customer beats product**, returning which level won. **No fallback rate** — it throws rather than assuming 24%, since a silent default produces a plausible invoice at a rate nobody chose and an undercharge is unrecoverable after issue.
+- **`VatExemptionReason` is a separate entity, not a 0% rate** — zero-rated charges 0% under a real rate; exempt is outside VAT because a named article of the Κώδικας ΦΠΑ says so, and myDATA reports them differently. Structure built (code, description, mydataCode, inputVatDeductible, active); **the ~29 official AADE rows are still to be supplied.** `mydataCode` stored verbatim rather than composed from code+description.
+- **`ChargeType` (new scope)** — extensible lookup for fees charged *to* the customer as revenue (COD, delivery): name, default VAT class, income account, active. The service **refuses a non-`INCOME` account**, which is the point of it existing: wiring a delivery fee to `Transportation costs` to net it off would understate revenue and cost together. **Unseeded pending the income-account decision (Q27).** Nothing consumes it until step 9.
+- **`numeric(19,6)` now covers three things** — quantity, unit cost, and *rate*. The distinction that matters is amount (2dp, because that is a cent) vs multiplier (6dp, must not lose precision before the product is rounded once).
+- **Still open:** Q14 (where VAT actually posts) is narrowed but not closed — rates and arithmetic exist, the account structure and per-line-vs-per-document rule do not. Q28 (dispatch purpose) is answered as a recommendation only, nothing built.
+
 **Core entities (draft field lists — see brief for full lists):** Account (kind: Standard/Bank-Cash/Partner Clearing/Control), Product (SKU, EAN, Type/Status, Bundle flag, computed Stock — no Go/Woo IDs), Inventory Lot/Unit (cost, roast date, Location: Inventory/Service/Damaged Goods, optional serial number, FIFO consumption except serialized items which use their own real cost), Customer (own internal ID; VAT authoritative, phone/email suggestive-only matching; merge = alias forward, never rewrite history), Supplier (parallel to Customer), Asset (straight-line depreciation only).
 
 **Bundles:** a Product with its own SKU, no stock of its own, automatic proportional cost allocation across components; decomposes into component lines for inventory/COGS/invoicing; revenue reporting shows both bundle-level and component-level (linked).
@@ -110,8 +123,11 @@ Purchase Orders, Sales Order Fulfillment (status list: Processing/On Hold/Comple
 **`docs/PROGRESS.md` carries the full numbered list with which build step each one blocks.** The
 ones that will stop work soonest:
 
-- **VAT class list (Q4)** — Product has a "VAT Class" and Supplier a "VAT status", but no rates appear anywhere in the brief. Hard blocker for step 5.
-- **Product↔Supplier link (Q5)** — Product has "Supplier's SKU" but no supplier reference, which makes the field meaningless. Hard blocker for step 5.
+- **ChargeType income account (Q27)** — the smallest unblocking decision outstanding. Recommendation: **dedicated `Delivery income` and `COD fee income` accounts**, not the existing `Other income` — these appear on most invoices, so a residual bucket becomes the largest income line and loses its diagnostic value, and delivery income needs to be comparable against the existing `Transportation costs` expense account. One answer produces a V6 migration.
+- **VatExemptionReason seed** — ~29 verified AADE rows. Structure ready and waiting.
+- **Dispatch purpose / Σκοπός διακίνησης (Q28)** — recommendation: a **core-owned `GoodsDispatch`** (outbound counterpart to Goods Receipt) with a `DispatchPurpose` lookup, in **roadmap phase 4**; not inside the Sales Order Fulfillment module, since supplier returns, inter-location transfers and repairs are dispatches too. Conditional on two unknowns: whether Go already issues Δελτία Αποστολής (if so this is phase 11), and whether the AADE digital delivery note regime applies (accountant question).
+- ~~**VAT class list (Q4)**~~ — **resolved and built**, see the VAT section above.
+- **Product↔Supplier link (Q5)** — Product has "Supplier's SKU" but no supplier reference, which makes the field meaningless. **Now the only hard blocker for step 5.**
 - **VAT posting mechanics (Q14)** — a real design gap, not a clarification. Nothing specifies how input/output VAT posts. Needs a proper conversation. Blocks steps 7–9.
 - **Correction/reversal policy (Q13)** — with no period locking, may a posted entry be edited, or is correction reversal-only? Recommendation: immutable once posted. Blocks step 7.
 - **Remote Staff restricted fields + auth mechanism (Q21, Q22)** — blocks step 4.

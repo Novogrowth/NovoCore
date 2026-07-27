@@ -19,11 +19,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
  *
  * <p><strong>What each rule is worth right now.</strong> The no-floating-point rule is live and
  * meaningful today — it proves the absence of the thing {@code CLAUDE.md} rule 5 forbids across
- * every table that exists. The scale rule is dormant: the chart of accounts has no monetary
- * columns, because an account's balance is the sum of its journal lines and is computed on read,
- * never stored. It starts doing real work when the journal arrives in step 7, which is precisely
- * when a mistake would be expensive, and having it already in place means the first money column
- * is checked the moment it is written.
+ * every table that exists. The scale rule became live with {@code vat_class.rate_percent}, the
+ * first {@code numeric} column in the schema. There are still no <em>monetary</em> columns: an
+ * account's balance is the sum of its journal lines, computed on read and never stored, so the
+ * {@code numeric(19,2)} half of the rule starts doing real work when the journal arrives in
+ * step 7 — precisely when a mistake would be expensive.
  *
  * <p>Deliberately <em>not</em> asserted: V1 also says a monetary column carries a companion
  * {@code char(3)} currency column. There is no first money column yet, so the naming convention
@@ -73,11 +73,14 @@ class SchemaConventionsIT extends AbstractCoreIntegrationTest {
                 """, NOT_OURS);
 
         assertThat(offenders)
-                .as("V1 allows exactly two numeric shapes: numeric(19,2) for a posted monetary "
-                        + "amount and numeric(19,6) for a quantity or unit cost. A third scale "
-                        + "means two columns that have to be reconciled by rounding somewhere, "
-                        + "which is where cent-level discrepancies come from. An unconstrained "
-                        + "numeric with no precision at all is also caught here.")
+                .as("Exactly two numeric shapes are allowed: numeric(19,2) for a posted monetary "
+                        + "amount, and numeric(19,6) for a multiplier — a quantity, a unit cost, "
+                        + "or a rate such as vat_class.rate_percent. The distinction is between "
+                        + "an amount, which is two decimals because that is what a cent is, and "
+                        + "a multiplier, which must not itself lose precision before the product "
+                        + "is rounded once. A third scale means two columns to reconcile by "
+                        + "rounding somewhere, which is where cent-level discrepancies come "
+                        + "from. An unconstrained numeric with no precision is also caught here.")
                 .isEmpty();
     }
 
