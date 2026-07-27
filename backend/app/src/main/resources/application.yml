@@ -59,6 +59,23 @@ server:
   error:
     include-message: never
     include-stacktrace: never
+  servlet:
+    session:
+      # Session cookie attributes. These are servlet container settings rather than Spring
+      # Security ones, which is why they are here and not in SecurityConfiguration.
+      cookie:
+        name: NOVOCORESESSION
+        # The reason Q22 chose sessions over a token in web storage: HttpOnly means a
+        # cross-site scripting bug cannot read the session identifier at all.
+        http-only: true
+        # Not sent on cross-site requests, which blunts CSRF before the token check even runs.
+        same-site: strict
+        # Only ever sent over HTTPS. Caddy terminates TLS and forward-headers-strategy makes
+        # the app aware of it. Overridden to false in tests, which run without a proxy.
+        secure: true
+      # A working day. Long enough not to interrupt someone mid-task, short enough that an
+      # unattended machine does not stay logged in overnight.
+      timeout: 8h
 
 logging:
   level:

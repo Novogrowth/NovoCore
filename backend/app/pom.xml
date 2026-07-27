@@ -30,6 +30,52 @@
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
 
+    <!--
+      The authentication filter chain and session management live here, not in core: they are
+      cross-cutting configuration, which is what this module is for.
+
+      Note the asymmetry with `core`, which takes only spring-security-crypto. The core hashes
+      and verifies passwords; this module decides how a request proves who it is. Neither needs
+      the other's half.
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!--
+      TestRestTemplate. Spring Boot 4 split test support into per-technology modules, so this is
+      no longer part of spring-boot-starter-test as it was in 3.x, and it is no longer supplied
+      automatically by webEnvironment=RANDOM_PORT — the test class needs
+      @AutoConfigureTestRestTemplate as well.
+
+      Note this is spring-boot-resttestclient, NOT the similarly named spring-boot-restclient-test,
+      which is for mocking a RestTemplate's outbound calls and contains no TestRestTemplate at all.
+
+      Needed rather than MockMvc because the endpoint test asserts the real Set-Cookie header:
+      HttpOnly, Secure and SameSite are applied by the servlet container, and MockMvc has none, so
+      it could not tell whether the session cookie is actually hardened.
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-resttestclient</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!--
+      RestTemplateBuilder, which spring-boot-resttestclient needs at runtime and does not pull in
+      itself. Without it the context fails with NoClassDefFoundError rather than a missing-bean
+      message, which is a long way from the cause.
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-restclient</artifactId>
+      <scope>test</scope>
+    </dependency>
+
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>

@@ -38,6 +38,21 @@
     </dependency>
 
     <!--
+      Password hashing only — deliberately NOT spring-boot-starter-security.
+
+      The core hashes and verifies passwords itself so that a hash never crosses its boundary
+      (see UserService.authenticate). That needs DelegatingPasswordEncoder and nothing else.
+      Pulling the full starter in here would also drag the servlet filter chain, method
+      security and the authentication plumbing into the core, which belong in `app` as
+      cross-cutting configuration. spring-security-crypto has no Spring context dependency at
+      all — it is a library of hashing algorithms.
+    -->
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-crypto</artifactId>
+    </dependency>
+
+    <!--
       Flyway owns the schema from the first commit. Hibernate never generates DDL
       (ddl-auto: validate) because the debits=credits invariant is enforced by a database
       constraint trigger that Hibernate cannot express — see CLAUDE.md rule 6.

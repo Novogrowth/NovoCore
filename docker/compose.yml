@@ -44,6 +44,12 @@ services:
       NOVOCORE_DB_URL: jdbc:postgresql://postgres:5432/${NOVOCORE_DB_NAME:-novocore}
       NOVOCORE_DB_USER: ${NOVOCORE_DB_USER:-novocore}
       NOVOCORE_DB_PASSWORD: ${NOVOCORE_DB_PASSWORD:?NOVOCORE_DB_PASSWORD must be set; copy .env.example to .env}
+      # The first Owner account, used only when no user exists yet. There is deliberately no
+      # seeded default account: the application refuses to start on an empty user table without
+      # these, rather than shipping an admin/admin that outlives every intention to change it.
+      # Safe to leave empty here once the first owner has been created.
+      NOVOCORE_BOOTSTRAP_OWNER_USERNAME: ${NOVOCORE_BOOTSTRAP_OWNER_USERNAME:-}
+      NOVOCORE_BOOTSTRAP_OWNER_PASSWORD: ${NOVOCORE_BOOTSTRAP_OWNER_PASSWORD:-}
     depends_on:
       postgres:
         # Waits for readiness, not just container start, so Flyway does not race the database.

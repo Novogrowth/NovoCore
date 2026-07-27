@@ -25,11 +25,19 @@ import org.springframework.context.annotation.Import;
  */
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        // application.yml intentionally has no fallback for NOVOCORE_DB_PASSWORD, so that a
-        // missing password stops the application rather than becoming a blank credential.
-        // Overriding the property outright means that placeholder is never resolved here;
-        // @ServiceConnection supplies the real connection details from the container.
-        properties = "spring.datasource.password=overridden-by-testcontainers")
+        properties = {
+            // application.yml intentionally has no fallback for NOVOCORE_DB_PASSWORD, so that a
+            // missing password stops the application rather than becoming a blank credential.
+            // Overriding the property outright means that placeholder is never resolved here;
+            // @ServiceConnection supplies the real connection details from the container.
+            "spring.datasource.password=overridden-by-testcontainers",
+            // Likewise there is no seeded user account, and the application refuses to start on
+            // an empty user table without an initial owner. That refusal is the intended
+            // behaviour — InitialOwnerBootstrapTest asserts it — so this test supplies one in
+            // order to get past it and check what it is actually here to check.
+            "novocore.bootstrap.owner-username=smoke.owner",
+            "novocore.bootstrap.owner-password=smoke-owner-password",
+        })
 @Import(PostgresTestContainerConfiguration.class)
 class NovoCoreApplicationSmokeIT {
 
