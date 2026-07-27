@@ -1,0 +1,27 @@
+# Line endings are normalised to LF in the repository by default. What matters here is the
+# working-copy ending for files that a shell or a container actually executes.
+
+* text=auto
+
+# Must be LF. `mvnw` is run by /bin/sh in CI and inside the Docker build; with CRLF endings
+# the shell fails with an unhelpful "bad interpreter" or "not found" error. Same for the
+# Caddy config and the Dockerfile, which are read inside Linux containers.
+mvnw text eol=lf
+*.sh text eol=lf
+Dockerfile text eol=lf
+Caddyfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Must be CRLF: interpreted by cmd.exe, which mishandles LF-only batch files.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Treat as binary so git never tries to normalise or diff them as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.jar binary

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>gr.novotrade.novocore</groupId>
+    <artifactId>novocore-backend</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>novocore-app</artifactId>
+  <name>NovoCore :: Application</name>
+  <description>
+    The deployable Spring Boot application: entry point, cross-cutting configuration, and
+    the place where core, adapters and modules are wired together. Business logic does not
+    belong here.
+  </description>
+
+  <dependencies>
+    <dependency>
+      <groupId>gr.novotrade.novocore</groupId>
+      <artifactId>novocore-core</artifactId>
+    </dependency>
+
+    <!-- Health and readiness endpoints for the reverse proxy and the container runtime. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-testcontainers</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers-postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- The shared PostgreSQL Testcontainers harness, defined once in core's test sources. -->
+    <dependency>
+      <groupId>gr.novotrade.novocore</groupId>
+      <artifactId>novocore-core</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <!--
+            Publish the executable jar under a classifier so the module's MAIN artifact
+            stays an ordinary library jar.
+
+            Without this, `repackage` replaces the main artifact with the executable jar,
+            whose classes live under BOOT-INF/classes and are therefore invisible to
+            anything depending on this module. That would silently exclude the whole `app`
+            module from the ArchUnit suite — rules covering it would pass while checking
+            nothing, which is exactly the failure mode ArchUnitSanityTest exists to catch.
+
+            Consequence: the deployable artifact is novocore-app-<version>-exec.jar, and
+            docker/Dockerfile refers to that name.
+          -->
+          <classifier>exec</classifier>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

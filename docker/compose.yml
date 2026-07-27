@@ -1,0 +1,83 @@
+name: novocore
+
+# Base stack: PostgreSQL, the application, and a Caddy reverse proxy terminating TLS.
+#
+# HTTPS is present from the first commit rather than added later, per CLAUDE.md's stack
+# section and brief §3. The application itself speaks plain HTTP and is never published to
+# the host — only Caddy binds a port.
+#
+# Local development:  docker compose -f compose.yml -f compose.dev.yml up --build
+# Production:         docker compose up -d --build   (with NOVOCORE_SITE_ADDRESS set to the
+#                                                     real hostname so Caddy obtains a
+#                                                     publicly trusted certificate)
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${NOVOCORE_DB_NAME:-novocore}
+      POSTGRES_USER: ${NOVOCORE_DB_USER:-novocore}
+      # No default. Compose refuses to start if this is unset, which is the point — a
+      # fallback password would eventually become a production password.
+      POSTGRES_PASSWORD: ${NOVOCORE_DB_PASSWORD:?NOVOCORE_DB_PASSWORD must be set; copy .env.example to .env}
+      # Deterministic collation. Left to the host locale, sort order for Greek text could
+      # differ between machines, which would make report output environment-dependent.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready --username=${NOVOCORE_DB_USER:-novocore} --dbname=${NOVOCORE_DB_NAME:-novocore}
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  app:
+    build:
+      # Repository root, so the Dockerfile can see backend/. See .dockerignore.
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      NOVOCORE_DB_URL: jdbc:postgresql://postgres:5432/${NOVOCORE_DB_NAME:-novocore}
+      NOVOCORE_DB_USER: ${NOVOCORE_DB_USER:-novocore}
+      NOVOCORE_DB_PASSWORD: ${NOVOCORE_DB_PASSWORD:?NOVOCORE_DB_PASSWORD must be set; copy .env.example to .env}
+    depends_on:
+      postgres:
+        # Waits for readiness, not just container start, so Flyway does not race the database.
+        condition: service_healthy
+    # `expose`, not `ports`: reachable on the internal network only. Publishing 8080 would
+    # hand out an unencrypted route straight past Caddy.
+    expose:
+      - "8080"
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      # QUIC / HTTP3
+      - "443:443/udp"
+    environment:
+      # Defaults to plain `localhost`, not `novocore.localhost`. Windows does not resolve
+      # *.localhost subdomains: browsers resolve them internally per RFC 6761, but the OS
+      # resolver, curl, and any script do not — so a subdomain default would appear to work
+      # in a browser while breaking every command-line check against it.
+      NOVOCORE_SITE_ADDRESS: ${NOVOCORE_SITE_ADDRESS:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates and the local CA live in a volume. Without this, every restart
+      # re-issues certificates, which in production would quickly hit rate limits.
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  caddy-data:
+  caddy-config:

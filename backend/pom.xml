@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.1.0</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>gr.novotrade.novocore</groupId>
+  <artifactId>novocore-backend</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>NovoCore Backend</name>
+  <description>
+    Internal financial and operational system of record for Novotrade S.A. (Java Jives).
+    See /docs/novocore-product-brief-v4.md for the domain design and /CLAUDE.md for the
+    architecture rules this build structure exists to enforce.
+  </description>
+
+  <!--
+    Module order matters only for readability; Maven derives the real build order from
+    the dependency graph. The boundary this layout enforces is documented in
+    /docs/decisions/0003-module-layout-core-api-boundary.md.
+  -->
+  <modules>
+    <module>core-api</module>
+    <module>core</module>
+    <module>adapters</module>
+    <module>modules</module>
+    <module>app</module>
+    <module>architecture-tests</module>
+  </modules>
+
+  <properties>
+    <java.version>25</java.version>
+
+    <!--
+      ArchUnit is NOT managed by Spring Boot, so we pin it. We deliberately use the plain
+      `archunit` artifact rather than `archunit-junit5`; see
+      /docs/decisions/0002-archunit-without-junit-integration.md.
+    -->
+    <archunit.version>1.4.2</archunit.version>
+
+    <!--
+      Pinned so the Testcontainers image and the docker-compose image can never drift
+      apart: tests must run against the same PostgreSQL major version as production.
+    -->
+    <postgres.docker.image>postgres:17-alpine</postgres.docker.image>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Our own modules, so child POMs never repeat the version. -->
+      <dependency>
+        <groupId>gr.novotrade.novocore</groupId>
+        <artifactId>novocore-core-api</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>gr.novotrade.novocore</groupId>
+        <artifactId>novocore-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.tngtech.archunit</groupId>
+        <artifactId>archunit</artifactId>
+        <version>${archunit.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>3.6.3</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-wrapper-plugin</artifactId>
+          <version>3.3.4</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+
+    <plugins>
+      <!--
+        Hand the pinned PostgreSQL image down to the tests, so the Testcontainers harness and
+        docker-compose cannot drift onto different major versions. Tests that pass against a
+        different PostgreSQL major than production runs are tests that prove less than they
+        appear to, and the ledger's invariants are enforced by database constraints.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <novocore.postgres.image>${postgres.docker.image}</novocore.postgres.image>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+
+      <!--
+        Fail fast and loudly on a wrong JDK rather than producing class files that will
+        not run, or silently compiling to an older release than intended.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>enforce-build-environment</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireJavaVersion>
+                  <version>[25,26)</version>
+                  <message>
+                    NovoCore requires Java 25 (see docs/decisions/0001-toolchain-java-25-maven.md).
+                    Spring Boot 4.x is pinned to that choice.
+                  </message>
+                </requireJavaVersion>
+                <requireMavenVersion>
+                  <version>[3.9.0,)</version>
+                </requireMavenVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

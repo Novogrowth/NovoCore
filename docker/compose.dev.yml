@@ -1,0 +1,24 @@
+# Local development overrides. Never used in production.
+#
+#   docker compose -f compose.yml -f compose.dev.yml up --build
+#
+# With the default NOVOCORE_SITE_ADDRESS of novocore.localhost, Caddy issues a certificate
+# from its own internal CA. Browsers will not trust it until that CA is installed locally —
+# see docker/README.md.
+
+services:
+  postgres:
+    ports:
+      # Bound to loopback only, so a laptop on a café network is not serving PostgreSQL.
+      # Exposed at all so psql, a JDBC client, or an IDE database tool can connect.
+      - "127.0.0.1:5432:5432"
+
+  app:
+    environment:
+      # Verbose logging for our own packages only; framework packages stay at INFO so the
+      # signal is not buried.
+      LOGGING_LEVEL_GR_NOVOTRADE_NOVOCORE: DEBUG
+      # Surface real error detail locally. Production keeps these off (application.yml) so
+      # stack traces are not returned to clients.
+      SERVER_ERROR_INCLUDE_MESSAGE: always
+      SERVER_ERROR_INCLUDE_STACKTRACE: on_param

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>gr.novotrade.novocore</groupId>
+    <artifactId>novocore-backend</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>novocore-architecture-tests</artifactId>
+  <name>NovoCore :: Architecture Tests</name>
+  <description>
+    Enforces CLAUDE.md's architecture rules on every build. This module depends on
+    everything so it can see the whole class graph; nothing depends on it.
+
+    It lives in its own module rather than inside `core` so that a future adapter or module
+    is covered automatically by adding one dependency here — and so these rules cannot be
+    skipped by running a single module's tests.
+  </description>
+
+  <dependencies>
+    <dependency>
+      <groupId>gr.novotrade.novocore</groupId>
+      <artifactId>novocore-core-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>gr.novotrade.novocore</groupId>
+      <artifactId>novocore-core</artifactId>
+    </dependency>
+    <!--
+      `app` is included so its rules are not vacuous. This works only because `app`
+      configures spring-boot-maven-plugin with a classifier, keeping its main artifact an
+      ordinary jar; a repackaged Boot jar hides its classes under BOOT-INF/classes and would
+      contribute nothing here.
+    -->
+    <dependency>
+      <groupId>gr.novotrade.novocore</groupId>
+      <artifactId>novocore-app</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <!--
+      As adapters and modules are added in later phases, add each one here too. An adapter
+      absent from this list is an adapter whose boundary is not being checked.
+    -->
+
+    <dependency>
+      <groupId>com.tngtech.archunit</groupId>
+      <artifactId>archunit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <properties>
+    <!-- This module has no main sources and produces no artifact worth keeping. -->
+    <maven.install.skip>true</maven.install.skip>
+    <maven.deploy.skip>true</maven.deploy.skip>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <!-- Test sources only, so there is nothing to package. -->
+          <skipIfEmpty>true</skipIfEmpty>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

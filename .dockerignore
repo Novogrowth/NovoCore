@@ -1,0 +1,26 @@
+# The Docker build context is the repository root so the backend tree is available in full.
+# Everything not needed to build the backend is excluded here — without this, the frontend's
+# node_modules alone would make the context enormous and every build slow.
+
+.git/
+.github/
+.obsidian/
+
+# Frontend is not part of the backend image.
+frontend/
+
+# Build output — the image builds from source inside the container.
+**/target/
+**/node_modules/
+**/dist/
+
+# Docs and decisions are not needed at build time.
+docs/
+
+# Never let a local secrets file into the build context.
+**/.env
+**/.env.*
+!**/.env.example
+
+.DS_Store
+Thumbs.db

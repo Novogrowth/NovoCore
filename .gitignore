@@ -5,6 +5,14 @@
 node_modules/
 dist/
 
+# Java / Maven build output
+target/
+
+# Secrets. docker/.env holds real credentials; only the example is committed.
+.env
+.env.*
+!.env.example
+
 # OS / editor cruft
 .DS_Store
 Thumbs.db

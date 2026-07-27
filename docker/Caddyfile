@@ -1,0 +1,42 @@
+# Caddy terminates TLS for NovoCore. The application never speaks HTTPS itself and is not
+# published to the host.
+#
+# NOVOCORE_SITE_ADDRESS drives certificate behaviour and is set in .env:
+#   - novocore.localhost (default)  -> Caddy issues from its own internal CA, no public DNS
+#                                      needed. The CA must be trusted locally; see README.md.
+#   - a real hostname               -> Caddy obtains a publicly trusted certificate over ACME
+#                                      automatically, provided ports 80 and 443 are reachable.
+
+{
+	# The admin API is unauthenticated by design and would allow reconfiguring the proxy.
+	# Nothing here needs it.
+	admin off
+}
+
+{$NOVOCORE_SITE_ADDRESS} {
+	encode zstd gzip
+
+	header {
+		# NovoCore is HTTPS-only, so pin it. Note this is remembered by the browser per
+		# hostname — worth knowing if you ever need plain HTTP on the same hostname.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Do not advertise the server software.
+		-Server
+	}
+
+	# Health endpoints are for the reverse proxy and container runtime, not for callers.
+	# Everything under /actuator stays internal.
+	@actuator path /actuator*
+	respond @actuator 404
+
+	reverse_proxy app:8080 {
+		# Stop sending traffic to an instance that is up but not ready — during startup
+		# Flyway may still be migrating.
+		health_uri /actuator/health/readiness
+		health_interval 10s
+		health_timeout 5s
+	}
+}

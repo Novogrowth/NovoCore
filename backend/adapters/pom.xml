@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>gr.novotrade.novocore</groupId>
+    <artifactId>novocore-backend</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>novocore-adapters</artifactId>
+  <packaging>pom</packaging>
+  <name>NovoCore :: Adapters (reserved)</name>
+  <description>
+    Reserved aggregator for external-system adapters. Intentionally empty in Phase 1 —
+    see README.md in this directory before adding anything here.
+  </description>
+
+  <!-- Deliberately empty. Each adapter is added as its own submodule in its own phase. -->
+  <modules/>
+</project>
