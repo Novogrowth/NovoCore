@@ -31,7 +31,7 @@ import org.springframework.context.annotation.Import;
         // @ServiceConnection supplies the real connection details from the container.
         properties = "spring.datasource.password=overridden-by-testcontainers")
 @Import(PostgresTestContainerConfiguration.class)
-class NovoCoreApplicationSmokeTest {
+class NovoCoreApplicationSmokeIT {
 
     @Autowired
     private DataSource dataSource;

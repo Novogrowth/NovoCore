@@ -59,11 +59,7 @@ class MoneyRulesTest {
                 .should(beFloatingPoint)
                 .because("CLAUDE.md rule 5: money is always BigDecimal. Stored state is the "
                         + "worst place for a float, because the imprecision persists and "
-                        + "compounds across every later calculation.")
-                // At skeleton stage NovoCore declares no fields at all, and ArchUnit treats a
-                // rule that matched nothing as a failure. Remove this line in build step 2,
-                // when Money and the first entities land and the rule has something to check.
-                .allowEmptyShould(true);
+                        + "compounds across every later calculation.");
 
         rule.check(ImportedClasses.production());
     }

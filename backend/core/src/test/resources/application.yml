@@ -1,0 +1,32 @@
+# JPA and Flyway configuration for the CORE module's own integration tests.
+#
+# This file exists because of a real hole that was found rather than as boilerplate. The
+# deployable configuration lives in app/src/main/resources/application.yml, which is not on this
+# module's test classpath — so core's integration tests were running with Boot's default
+# ddl-auto (none) and Hibernate was never validating entity mappings against the schema Flyway
+# produced. The tests passed against a schema the application then refused to start on.
+#
+# Since core is where every entity and migration is actually written, this is precisely where
+# validation is worth the most. Keep these settings in step with app/src/main/resources.
+
+spring:
+  jpa:
+    hibernate:
+      # The point of this file. A column renamed in a migration but not in its entity, or a type
+      # that does not match, now fails here instead of surfacing in the app module later.
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+logging:
+  level:
+    # Quiet by default; raise to DEBUG locally when a mapping mismatch needs the generated SQL.
+    org.hibernate.SQL: INFO

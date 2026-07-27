@@ -110,6 +110,33 @@
       </plugin>
 
       <!--
+        Tests named *IT need a PostgreSQL container; tests named *Test do not. Failsafe runs the
+        former in the integration-test phase, which gives a split worth having: `mvn test` is
+        fast and needs no Docker daemon, while `mvn verify` runs everything. Both are run in CI.
+
+        Failsafe also reports failures after the post-integration-test phase rather than
+        aborting mid-phase, so containers get torn down even when a test fails.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <novocore.postgres.image>${postgres.docker.image}</novocore.postgres.image>
+          </systemPropertyVariables>
+        </configuration>
+        <executions>
+          <execution>
+            <id>integration-tests</id>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!--
         Fail fast and loudly on a wrong JDK rather than producing class files that will
         not run, or silently compiling to an older release than intended.
       -->
