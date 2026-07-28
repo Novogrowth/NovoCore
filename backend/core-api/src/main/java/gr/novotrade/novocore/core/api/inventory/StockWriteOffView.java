@@ -2,6 +2,7 @@ package gr.novotrade.novocore.core.api.inventory;
 
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
+import gr.novotrade.novocore.core.api.shared.UnitCost;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.Optional;
@@ -13,6 +14,12 @@ import java.util.Optional;
  * unit cost across the quantity again would give the same figure today and a different one after step 10:
  * brief §5 says a lot's unit cost includes allocated landed costs, so a freight allocation would silently
  * change what a past write-off appears to have cost. The entry is what actually happened.
+ *
+ * <p><strong>{@link #unitCost()} is the other half of that, stored since V19.</strong> The entry gives the
+ * amount; it does not give the six-decimal cost the amount was extended from, and once step 10 could move
+ * a lot's carrying cost that figure stopped being recoverable from the lot. It is what
+ * {@code reverseWriteOff} compares against to find out whether the lot has been re-costed since — ADR
+ * 0011.
  *
  * <p><strong>The journal entry is optional, and the case is real.</strong> A lot may have a unit cost of
  * zero — a supplier's free sample, promotional stock, a warranty replacement received at no charge — and
@@ -35,6 +42,7 @@ public record StockWriteOffView(
         Long serializedUnitId,
         String serialNumber,
         Quantity quantity,
+        UnitCost unitCost,
         WriteOffReason reason,
         LocalDate writeOffDate,
         String note,
@@ -46,6 +54,7 @@ public record StockWriteOffView(
     public StockWriteOffView {
         Objects.requireNonNull(productSku, "productSku");
         Objects.requireNonNull(quantity, "quantity");
+        Objects.requireNonNull(unitCost, "unitCost");
         Objects.requireNonNull(reason, "reason");
         Objects.requireNonNull(writeOffDate, "writeOffDate");
 

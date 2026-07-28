@@ -960,29 +960,48 @@ class InventoryServiceImpl implements InventoryService {
 
     /**
      * Posts the cost back: debit {@code INVENTORY}, credit {@code COST_OF_GOODS_SOLD}, one line per
-     * lot, at the cost the stock left at.
+     * lot, at the cost the stock left at — <strong>plus the landed-cost catch-up, ADR 0011</strong>.
      *
      * <p>An ordinary entry rather than a mirror, because a return is not a reversal — see
      * {@code InventoryService.returnConsumed}. Nothing is posted when every lot involved was carried
      * at zero, exactly as nothing was posted on the way out.
+     *
+     * <p><strong>The catch-up is what keeps Inventory equal to what the lots carry.</strong> Stock
+     * comes back at the cost it left at, which is right and is what stops a credit note revaluing
+     * stock (ADR 0009) — but if a freight allocation landed while it was out, the lot now carries
+     * those units higher than the figure being debited back, and the difference is exactly the share
+     * that allocation wrote off to {@code LANDED_COST_VARIANCE} on the grounds that they had gone.
+     * They came back, so it comes back: debit Inventory, credit that account. Cost of goods sold is
+     * still credited precisely what was debited, so nothing about the sale is restated.
      */
     private Long postReturn(StockConsumption record, Product product, LocalDate date,
             JournalSource source, long originalConsumptionId) {
         RoundingMode roundingMode = settings.requireRoundingMode(SettingKeys.LEDGER_ROUNDING_MODE);
         AccountView cogs = chartOfAccounts.requireAccount(AccountSystemKey.COST_OF_GOODS_SOLD);
         AccountView inventory = chartOfAccounts.requireAccount(AccountSystemKey.INVENTORY);
+        AccountView landedCostVariance =
+                chartOfAccounts.requireAccount(AccountSystemKey.LANDED_COST_VARIANCE);
 
         List<NewJournalLine> lines = new ArrayList<>();
         for (StockConsumptionLine line : record.getLines()) {
-            Money cost = line.getUnitCost().extend(line.getQuantity(), roundingMode);
-            if (!cost.isPositive()) {
-                continue;
-            }
             SubLedgerRef lotRef = SubLedgerRef.inventoryLot(line.getLot().getId());
-            lines.add(NewJournalLine.debit(inventory.id(), cost).forSubLedger(lotRef));
-            lines.add(NewJournalLine.credit(cogs.id(), cost)
-                    .forSubLedger(lotRef)
-                    .describedAs(line.getQuantity() + " x " + product.getSku() + " returned"));
+
+            Money cost = line.getUnitCost().extend(line.getQuantity(), roundingMode);
+            if (cost.isPositive()) {
+                lines.add(NewJournalLine.debit(inventory.id(), cost).forSubLedger(lotRef));
+                lines.add(NewJournalLine.credit(cogs.id(), cost)
+                        .forSubLedger(lotRef)
+                        .describedAs(line.getQuantity() + " x " + product.getSku() + " returned"));
+            }
+
+            Money catchUp = landedCostCatchUp(line, roundingMode);
+            if (catchUp.isPositive()) {
+                lines.add(NewJournalLine.debit(inventory.id(), catchUp).forSubLedger(lotRef));
+                lines.add(NewJournalLine.credit(landedCostVariance.id(), catchUp)
+                        .forSubLedger(lotRef)
+                        .describedAs("Landed cost on returned stock — " + product.getSku()
+                                + " (lot " + line.getLot().getId() + ")"));
+            }
         }
         if (lines.isEmpty()) {
             return null;
@@ -992,6 +1011,72 @@ class InventoryServiceImpl implements InventoryService {
                 "Stock returned — " + record.getQuantityFilled() + " x " + product.getSku()
                         + " (against consumption " + originalConsumptionId + ")",
                 source, lines)).id();
+    }
+
+    /**
+     * The freight a returning unit did not bear, and now does — <strong>ADR 0011</strong>.
+     *
+     * <p>The stock left carrying {@code line.getUnitCost()}, which is the lot's received cost plus
+     * whatever had been allocated onto it by then. The received half never changes (ADR 0010), so
+     * subtracting it recovers exactly what had been allocated at that moment, and the difference
+     * against what is allocated now is the catch-up. Zero whenever nothing has been allocated since,
+     * which is the ordinary case.
+     */
+    private Money landedCostCatchUp(StockConsumptionLine line, RoundingMode roundingMode) {
+        InventoryLot lot = line.getLot();
+        UnitCost received = lot.getReceivedUnitCost();
+        UnitCost leftAt = line.getUnitCost();
+        if (leftAt.compareTo(received) < 0) {
+            throw new IllegalStateException(
+                    "Lot " + lot.getId() + " was received at " + received + " and stock left it at "
+                            + leftAt + ", which is less. A lot is carried at its received cost plus "
+                            + "allocated landed costs and the received half never changes, so this "
+                            + "cannot happen — reaching here means something wrote it.");
+        }
+        UnitCost allocatedWhenItLeft = leftAt.minus(received);
+        UnitCost allocatedNow = lot.getAllocatedLandedUnitCost();
+        if (allocatedNow.compareTo(allocatedWhenItLeft) < 0) {
+            // Unreachable: un-allocating requires the lot's remaining quantity to be what it was at
+            // allocation time, and stock that is out of the lot awaiting return has changed it.
+            throw new IllegalStateException(
+                    "Lot " + lot.getId() + " carried " + allocatedWhenItLeft + " of allocated landed "
+                            + "cost when this stock left and carries " + allocatedNow + " now, which "
+                            + "is less. A freight allocation cannot be reversed while stock it costed "
+                            + "is out of the lot, so reaching here means that guard was bypassed.");
+        }
+        return allocatedNow.minus(allocatedWhenItLeft).extend(line.getQuantity(), roundingMode);
+    }
+
+    /**
+     * Refuses to un-make a stock movement into a lot that has been re-costed since — ADR 0011.
+     *
+     * <p>A reversal says the movement never happened. If that is true then the stock was in the lot
+     * all along, so a freight allocation that has since split its share on the basis that those units
+     * had gone did not merely post its counterpart to the wrong account — it computed the wrong split.
+     * Patching the difference would leave a posted allocation stating something untrue about which
+     * stock was where, which is ADR 0008's objection exactly.
+     *
+     * <p>The remedy is exact rather than a dead end, so the message names it: reverse the allocation
+     * first (permitted, because the lot's remaining quantity has not moved since <em>it</em> posted),
+     * then reverse this, then allocate again — which capitalises the whole share, correctly.
+     *
+     * <p>A <em>return</em> takes the other path deliberately: it says the sale was real, so the
+     * allocation's split was right at the time, and the catch-up is all that is owed.
+     */
+    private static boolean hasBeenRecostedSince(InventoryLot lot, UnitCost costWhenItLeft) {
+        return lot.getUnitCost().compareTo(costWhenItLeft) != 0;
+    }
+
+    /** The message both refusals share. Two exception types, one rule, stated once. */
+    private static String recostedRefusal(InventoryLot lot, UnitCost costWhenItLeft, String what) {
+        return "Lot " + lot.getId() + " was carried at " + costWhenItLeft + " when this " + what
+                + " happened and is carried at " + lot.getUnitCost() + " now, because a landed cost "
+                + "has been allocated onto it since. Un-making the movement would say those units "
+                + "were in the lot all along, which is not what that allocation was computed against "
+                + "— so it would leave the allocation stating something untrue rather than merely a "
+                + "figure to patch. Reverse the freight allocation first (its own guard permits that, "
+                + "since the lot's quantity has not moved since it posted), then reverse this, then "
+                + "allocate the freight again.";
     }
 
     @Override
@@ -1038,6 +1123,13 @@ class InventoryServiceImpl implements InventoryService {
 
         for (StockConsumptionLine line : original.getLines()) {
             InventoryLot lot = line.getLot();
+            // ADR 0011. The mirror this is about to post credits COGS and debits Inventory at the
+            // cost the stock left at; if the lot has been re-costed since, that debit no longer
+            // matches what the lot would carry the restored units at.
+            if (hasBeenRecostedSince(lot, line.getUnitCost())) {
+                throw new InvalidStockConsumptionException(
+                        recostedRefusal(lot, line.getUnitCost(), "consumption"));
+            }
             if (lot.getQuantityRemaining().plus(line.getQuantity())
                     .compareTo(lot.getQuantityReceived()) > 0) {
                 // Reachable: something else may have consumed the lot in between. Refused rather than
@@ -1373,7 +1465,10 @@ class InventoryServiceImpl implements InventoryService {
                 ? Quantity.of(1)
                 : validatedPooledQuantity(lot, request.quantity());
 
-        StockWriteOff record = record(lot, unit, quantity, request.reason(),
+        // The cost is read BEFORE anything moves and carried into the record: V19 stores it for
+        // stock_consumption_line.unit_cost's reason, since step 10 lets a lot's carrying cost move.
+        UnitCost carriedAt = lot.getUnitCost();
+        StockWriteOff record = record(lot, unit, quantity, carriedAt, request.reason(),
                 request.writeOffDate(), request.note(),
                 postWriteOff(lot, quantity, request), null);
 
@@ -1415,6 +1510,14 @@ class InventoryServiceImpl implements InventoryService {
         Quantity quantity = original.getQuantity();
         SerializedUnit unit = original.getSerializedUnit();
 
+        // ADR 0011, as reverseConsumption does: this posts the exact mirror of what the write-off
+        // derecognised, so a lot re-costed since would take the stock back at a figure that no longer
+        // matches what it now carries those units at.
+        if (hasBeenRecostedSince(lot, original.getUnitCost())) {
+            throw new InvalidStockWriteOffException(
+                    recostedRefusal(lot, original.getUnitCost(), "write-off"));
+        }
+
         if (unit != null) {
             if (unit.getStatus() != SerializedUnitStatus.WRITTEN_OFF) {
                 throw new InvalidStockWriteOffException(
@@ -1452,8 +1555,8 @@ class InventoryServiceImpl implements InventoryService {
             lot.restore(quantity);
         }
 
-        StockWriteOff reversal = record(lot, unit, quantity, original.getReason(), reversalDate,
-                note, reversingEntryId, writeOffId);
+        StockWriteOff reversal = record(lot, unit, quantity, original.getUnitCost(),
+                original.getReason(), reversalDate, note, reversingEntryId, writeOffId);
 
         auditLog.record("stock-write-off.reversed", WRITE_OFF_ENTITY_TYPE,
                 String.valueOf(writeOffId), Map.of(
@@ -1535,10 +1638,10 @@ class InventoryServiceImpl implements InventoryService {
     }
 
     private StockWriteOff record(InventoryLot lot, SerializedUnit unit, Quantity quantity,
-            gr.novotrade.novocore.core.api.inventory.WriteOffReason reason, LocalDate date,
-            String note, Long journalEntryId, Long reversalOfId) {
+            UnitCost unitCost, gr.novotrade.novocore.core.api.inventory.WriteOffReason reason,
+            LocalDate date, String note, Long journalEntryId, Long reversalOfId) {
         return writeOffs.save(new StockWriteOff(
-                lot, unit, quantity, reason, date, note, journalEntryId, reversalOfId));
+                lot, unit, quantity, unitCost, reason, date, note, journalEntryId, reversalOfId));
     }
 
     private SerializedUnit loadUnitOf(InventoryLot lot, NewStockWriteOff request) {
@@ -1653,6 +1756,7 @@ class InventoryServiceImpl implements InventoryService {
                 unit == null ? null : unit.getId(),
                 unit == null ? null : unit.getSerialNumber(),
                 record.getQuantity(),
+                record.getUnitCost(),
                 record.getReason(),
                 record.getWriteOffDate(),
                 record.getNote(),

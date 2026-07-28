@@ -2,6 +2,7 @@ package gr.novotrade.novocore.core.product;
 
 import gr.novotrade.novocore.core.api.inventory.WriteOffReason;
 import gr.novotrade.novocore.core.api.shared.Quantity;
+import gr.novotrade.novocore.core.api.shared.UnitCost;
 import gr.novotrade.novocore.core.support.AuditableEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -31,10 +32,12 @@ import java.time.LocalDate;
  * zero-amount journal entry is refused by the ledger for good reason, so the stock leaves and no entry
  * exists. That is the honest record rather than a gap.
  *
- * <p><strong>No amount column.</strong> What was posted is in the entry. Storing it here as well would be
- * a second copy that starts to diverge the day step 10 allocates freight onto a lot and changes its unit
- * cost — at which point recomputing it would give a different answer from what actually posted, and there
- * would be no way to tell which figure was the historical one.
+ * <p><strong>No amount column, but a unit cost since V19.</strong> What was POSTED is in the entry and
+ * stays there: it is a consequence of our own posting, and storing it here as well would be a second copy
+ * of it. What the stock was CARRIED at when it left is a different thing — a historical input rather than
+ * a historical output — and step 10 made a lot's carrying cost move, so it is no longer recoverable from
+ * the lot afterwards. {@code stock_consumption_line} has stored its own for exactly this reason since step
+ * 8; this is the same rule, arriving when the need did (ADR 0011).
  */
 @Entity
 @Table(name = "stock_write_off")
@@ -60,6 +63,17 @@ class StockWriteOff extends AuditableEntity {
     /** Always 1 for a serialized write-off, by CHECK constraint. */
     @Column(name = "quantity", nullable = false)
     private BigDecimal quantity;
+
+    /**
+     * What the lot was carried at when this derecognised it — see the class comment. Frozen, and what
+     * {@code reverseWriteOff} compares against to find out whether the lot has been re-costed since.
+     */
+    @Column(name = "unit_cost", nullable = false)
+    private BigDecimal unitCost;
+
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.CHAR)
+    @Column(name = "unit_cost_currency", nullable = false, length = 3)
+    private String unitCostCurrency;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "reason", nullable = false, length = 20)
@@ -88,11 +102,13 @@ class StockWriteOff extends AuditableEntity {
     }
 
     StockWriteOff(InventoryLot lot, SerializedUnit serializedUnit, Quantity quantity,
-            WriteOffReason reason, LocalDate writeOffDate, String note, Long journalEntryId,
-            Long reversalOfId) {
+            UnitCost unitCost, WriteOffReason reason, LocalDate writeOffDate, String note,
+            Long journalEntryId, Long reversalOfId) {
         this.lot = lot;
         this.serializedUnit = serializedUnit;
         this.quantity = quantity.value();
+        this.unitCost = unitCost.value();
+        this.unitCostCurrency = unitCost.currency().getCurrencyCode();
         this.reason = reason;
         this.writeOffDate = writeOffDate;
         this.note = note;
@@ -115,6 +131,11 @@ class StockWriteOff extends AuditableEntity {
 
     Quantity getQuantity() {
         return Quantity.of(quantity);
+    }
+
+    /** What the lot was carried at when this write-off happened. Never recomputed from the lot. */
+    UnitCost getUnitCost() {
+        return new UnitCost(unitCost, java.util.Currency.getInstance(unitCostCurrency));
     }
 
     WriteOffReason getReason() {

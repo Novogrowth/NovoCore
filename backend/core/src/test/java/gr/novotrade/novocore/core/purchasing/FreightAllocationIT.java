@@ -13,6 +13,8 @@ import gr.novotrade.novocore.core.api.account.ChartOfAccountsService;
 import gr.novotrade.novocore.core.api.inventory.InventoryLotView;
 import gr.novotrade.novocore.core.api.inventory.InventoryService;
 import gr.novotrade.novocore.core.api.inventory.NewStockConsumption;
+import gr.novotrade.novocore.core.api.inventory.NewStockWriteOff;
+import gr.novotrade.novocore.core.api.inventory.WriteOffReason;
 import gr.novotrade.novocore.core.api.ledger.AccountBalance;
 import gr.novotrade.novocore.core.api.ledger.InvalidJournalEntryException;
 import gr.novotrade.novocore.core.api.ledger.JournalEntryNotAmendableException;
@@ -143,9 +145,33 @@ class FreightAllocationIT extends AbstractCoreIntegrationTest {
         return inventory.findLotByReceiptLine(receipt.lines().getFirst().id()).orElseThrow().id();
     }
 
-    private void sell(ProductView product, long quantity) {
-        inventory.consume(NewStockConsumption.of(
+    private gr.novotrade.novocore.core.api.inventory.StockConsumptionView sell(
+            ProductView product, long quantity) {
+        return inventory.consume(NewStockConsumption.of(
                 product.id(), Quantity.of(quantity), APRIL, JournalSource.SALES_INVOICE));
+    }
+
+    /**
+     * What the Inventory control account says <em>this one lot</em> is worth, debit-positive.
+     *
+     * <p>Not {@code subLedgerBalanceOf}, which nets every account carrying the lot's reference —
+     * COGS and the two variance accounts carry it too. This is the control-account side alone, which
+     * is the figure a stock valuation has to agree with.
+     */
+    private Money inventoryLedgerPositionOf(long lotId) {
+        long inventoryAccount = chart.requireAccount(AccountSystemKey.INVENTORY).id();
+        Money net = Money.zero(Money.EUR);
+        for (gr.novotrade.novocore.core.api.ledger.JournalLineView line
+                : journal.linesFor(gr.novotrade.novocore.core.api.shared.SubLedgerRef
+                        .inventoryLot(lotId))) {
+            if (line.accountId() != inventoryAccount) {
+                continue;
+            }
+            net = line.side() == gr.novotrade.novocore.core.api.account.BalanceSide.DEBIT
+                    ? net.plus(line.amount())
+                    : net.minus(line.amount());
+        }
+        return net;
     }
 
     private Money balanceChange(AccountSystemKey key, AccountBalance before) {
@@ -708,6 +734,182 @@ class FreightAllocationIT extends AbstractCoreIntegrationTest {
             assertThat(allocations.between(APRIL, MAY))
                     .extracting(FreightAllocationView::id)
                     .contains(allocation.id());
+        }
+    }
+
+    @Nested
+    @DisplayName("stock coming back into a lot whose cost has moved — ADR 0011")
+    class StockComingBack {
+
+        @Test
+        @DisplayName("a sale and its full return leave the allocation reversible and everything agreeing")
+        void saleAndReturnNetToNothing() {
+            // The case that looked like a hole in the reversal guard and is not one. The sale stored
+            // €20/unit on its consumption line, the return read that same figure back, so the pair
+            // nets to zero in both Inventory and COGS — the freight is not inside any posted cost of
+            // goods sold by the time the reversal runs, and the guard passes because it is genuinely
+            // safe rather than because it missed something.
+            ProductView grinder = product("ADR11-01");
+            long lotId = lot("ADR11 Sale Then Return", grinder, 10, "10.000000");
+            long freight = freightLine("A11-01", Money.ofEur("100.00"));
+
+            FreightAllocationView allocation = allocations.allocate(NewFreightAllocation.of(
+                    freight, Money.ofEur("100.00"), APRIL, null, List.of(lotId)));
+
+            AccountBalance cogsBefore = journal.balanceOf(AccountSystemKey.COST_OF_GOODS_SOLD, MAY);
+            var consumption = sell(grinder, 2);
+            inventory.returnConsumed(consumption.id(), Quantity.of(2L), APRIL, "changed their mind");
+
+            // Sold at €40 and credited back at €40: nothing of the freight is stranded in COGS.
+            assertThat(balanceChange(AccountSystemKey.COST_OF_GOODS_SOLD, cogsBefore))
+                    .isEqualTo(Money.ofEur("0.00"));
+            assertThat(inventory.requireLot(lotId).remainingValue())
+                    .isEqualTo(inventoryLedgerPositionOf(lotId));
+
+            allocations.reverse(allocation.id(), MAY, "wrong shipment after all");
+
+            InventoryLotView lot = inventory.requireLot(lotId);
+            assertThat(lot.unitCost()).isEqualTo(UnitCost.ofEur("10.000000"));
+            assertThat(lot.remainingValue()).isEqualTo(Money.ofEur("100.00"));
+            assertThat(inventoryLedgerPositionOf(lotId)).isEqualTo(Money.ofEur("100.00"));
+        }
+
+        @Test
+        @DisplayName("a return into a re-costed lot catches the freight up, so Inventory still agrees")
+        void returnCatchesTheLandedCostUp() {
+            // The defect ADR 0011 fixes, and it needs no reversal at all: sell, then the freight
+            // arrives, then the customer brings the goods back. Without the catch-up the lot would
+            // carry €200 while Inventory held €180, and the €20 would never clear.
+            ProductView grinder = product("ADR11-02");
+            long lotId = lot("ADR11 Return Catch Up", grinder, 10, "10.000000");
+
+            var consumption = sell(grinder, 2);
+            long freight = freightLine("A11-02", Money.ofEur("100.00"));
+            FreightAllocationView allocation = allocations.allocate(NewFreightAllocation.of(
+                    freight, Money.ofEur("100.00"), APRIL, null, List.of(lotId)));
+
+            // 8 units on hand carry €80 of it; the 2 already gone put €20 into the variance account.
+            assertThat(allocation.capitalised()).isEqualTo(Money.ofEur("80.00"));
+            assertThat(allocation.variance()).isEqualTo(Money.ofEur("20.00"));
+
+            AccountBalance varianceBefore =
+                    journal.balanceOf(AccountSystemKey.LANDED_COST_VARIANCE, MAY);
+            AccountBalance cogsBefore = journal.balanceOf(AccountSystemKey.COST_OF_GOODS_SOLD, MAY);
+
+            inventory.returnConsumed(consumption.id(), Quantity.of(2L), MAY, "came back");
+
+            InventoryLotView lot = inventory.requireLot(lotId);
+            assertThat(lot.quantityRemaining()).isEqualTo(Quantity.of(10L));
+            assertThat(lot.unitCost()).isEqualTo(UnitCost.ofEur("20.000000"));
+            assertThat(lot.remainingValue()).isEqualTo(Money.ofEur("200.00"));
+
+            // The invariant: what the control account says, and what the lot says, are the same.
+            assertThat(inventoryLedgerPositionOf(lotId)).isEqualTo(Money.ofEur("200.00"));
+
+            // The €20 came back off the variance account, which is what makes its balance mean
+            // "freight attributable to stock that has gone for good".
+            assertThat(balanceChange(AccountSystemKey.LANDED_COST_VARIANCE, varianceBefore))
+                    .isEqualTo(Money.ofEur("-20.00"));
+
+            // And COGS was credited exactly what it was debited — the sale is not restated (ADR 0009).
+            assertThat(balanceChange(AccountSystemKey.COST_OF_GOODS_SOLD, cogsBefore))
+                    .isEqualTo(Money.ofEur("-20.00"));
+        }
+
+        @Test
+        @DisplayName("no allocation in between means no catch-up, and the return is unchanged")
+        void noCatchUpWhenNothingWasAllocated() {
+            // The ordinary case, pinned so the catch-up cannot start firing where it has nothing to
+            // correct: it is zero whenever the lot's cost has not moved.
+            ProductView grinder = product("ADR11-03");
+            long lotId = lot("ADR11 No Catch Up", grinder, 10, "10.000000");
+
+            var consumption = sell(grinder, 2);
+            AccountBalance varianceBefore =
+                    journal.balanceOf(AccountSystemKey.LANDED_COST_VARIANCE, MAY);
+            inventory.returnConsumed(consumption.id(), Quantity.of(2L), MAY, "came back");
+
+            assertThat(balanceChange(AccountSystemKey.LANDED_COST_VARIANCE, varianceBefore))
+                    .isEqualTo(Money.ofEur("0.00"));
+            assertThat(inventoryLedgerPositionOf(lotId)).isEqualTo(Money.ofEur("100.00"));
+            assertThat(inventory.requireLot(lotId).remainingValue()).isEqualTo(Money.ofEur("100.00"));
+        }
+
+        @Test
+        @DisplayName("reversing a consumption into a re-costed lot is refused, and names the remedy")
+        void consumptionReversalRefusedOnARecostedLot() {
+            ProductView grinder = product("ADR11-04");
+            long lotId = lot("ADR11 Reverse Consumption", grinder, 10, "10.000000");
+
+            var consumption = sell(grinder, 2);
+            FreightAllocationView allocation = allocations.allocate(NewFreightAllocation.of(
+                    freightLine("A11-04", Money.ofEur("100.00")), Money.ofEur("100.00"),
+                    APRIL, null, List.of(lotId)));
+
+            assertThatExceptionOfType(
+                    gr.novotrade.novocore.core.api.inventory.InvalidStockConsumptionException.class)
+                    .isThrownBy(() -> inventory.reverseConsumption(consumption.id(), MAY, "wrong"))
+                    .withMessageContaining("Reverse the freight allocation first");
+
+            // The remedy the message names actually works, and ends up exactly right: the allocation
+            // reverses (the lot's quantity has not moved since it posted), the consumption reverses,
+            // and re-allocating now capitalises the whole share because nothing has gone.
+            allocations.reverse(allocation.id(), MAY, "unwinding to correct the sale");
+            inventory.reverseConsumption(consumption.id(), MAY, "wrong");
+
+            FreightAllocationView again = allocations.allocate(NewFreightAllocation.of(
+                    freightLine("A11-04B", Money.ofEur("100.00")), Money.ofEur("100.00"),
+                    MAY, null, List.of(lotId)));
+
+            assertThat(again.capitalised()).isEqualTo(Money.ofEur("100.00"));
+            assertThat(again.variance()).isEqualTo(Money.ofEur("0.00"));
+            assertThat(inventory.requireLot(lotId).remainingValue()).isEqualTo(Money.ofEur("200.00"));
+            assertThat(inventoryLedgerPositionOf(lotId)).isEqualTo(Money.ofEur("200.00"));
+        }
+
+        @Test
+        @DisplayName("reversing a write-off into a re-costed lot is refused the same way")
+        void writeOffReversalRefusedOnARecostedLot() {
+            ProductView grinder = product("ADR11-05");
+            long lotId = lot("ADR11 Reverse WriteOff", grinder, 10, "10.000000");
+
+            var writeOff = inventory.writeOff(NewStockWriteOff.pooled(
+                    lotId, Quantity.of(2L), WriteOffReason.DAMAGE, APRIL));
+            // V19: the write-off remembers what the lot was carried at, which is how this is knowable
+            // at all — the entry gives the amount, not the six-decimal cost behind it.
+            assertThat(writeOff.unitCost()).isEqualTo(UnitCost.ofEur("10.000000"));
+
+            allocations.allocate(NewFreightAllocation.of(
+                    freightLine("A11-05", Money.ofEur("100.00")), Money.ofEur("100.00"),
+                    APRIL, null, List.of(lotId)));
+
+            assertThatExceptionOfType(
+                    gr.novotrade.novocore.core.api.inventory.InvalidStockWriteOffException.class)
+                    .isThrownBy(() -> inventory.reverseWriteOff(writeOff.id(), MAY, "not damaged"))
+                    .withMessageContaining("Reverse the freight allocation first");
+        }
+
+        @Test
+        @DisplayName("a write-off after an allocation reverses normally — nothing has been re-costed")
+        void writeOffReversalStillWorksWhenNothingMoved() {
+            // The guard must not fire on the ordinary case: allocate first, write off second, and the
+            // lot's cost is the same at both ends.
+            ProductView grinder = product("ADR11-06");
+            long lotId = lot("ADR11 WriteOff After", grinder, 10, "10.000000");
+
+            allocations.allocate(NewFreightAllocation.of(
+                    freightLine("A11-06", Money.ofEur("100.00")), Money.ofEur("100.00"),
+                    APRIL, null, List.of(lotId)));
+            var writeOff = inventory.writeOff(NewStockWriteOff.pooled(
+                    lotId, Quantity.of(2L), WriteOffReason.DAMAGE, APRIL));
+            assertThat(writeOff.unitCost()).isEqualTo(UnitCost.ofEur("20.000000"));
+
+            inventory.reverseWriteOff(writeOff.id(), MAY, "not damaged after all");
+
+            InventoryLotView lot = inventory.requireLot(lotId);
+            assertThat(lot.quantityRemaining()).isEqualTo(Quantity.of(10L));
+            assertThat(lot.remainingValue()).isEqualTo(Money.ofEur("200.00"));
+            assertThat(inventoryLedgerPositionOf(lotId)).isEqualTo(Money.ofEur("200.00"));
         }
     }
 

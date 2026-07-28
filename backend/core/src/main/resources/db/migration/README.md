@@ -15,7 +15,7 @@ new system keys, `V15` journal entries, journal lines and stock write-offs, `V16
 invoices, goods receipts, GR/IR matches, purchase price variance and FIFO consumption, `V17`
 sales invoices, credit notes, settlements, open-item allocations and bank transfers, `V18`
 freight / landed cost allocation, which also splits a lot's cost into a frozen received half and
-an allocated one.
+an allocated one, and `V19` the unit cost a write-off derecognised at.
 
 ## Rules
 
@@ -104,3 +104,14 @@ an allocated one.
    is untouched — but it does mean **raw-SQL probes in tests have to be updated**, and two were.
    That is the cost of the rename and it is worth paying once; the alternative was a column named
    for what it used to be.
+
+9. **A figure stops being derivable the moment something it was derived from can move.** `V15`
+   deliberately stored no amount on `stock_write_off`, on the argument that the amount is a
+   consequence of our own posting and the journal entry is the honest source. `V18` made a lot's
+   carrying cost move, and the entry gives the rounded two-decimal *amount* but not the six-decimal
+   *cost* behind it — so `V19` adds `stock_write_off.unit_cost`, exactly as
+   `stock_consumption_line.unit_cost` has existed since `V16` and for the same stated reason.
+
+   The posted amount is **still** not stored. The distinction that decides it: a historical *input*
+   to a posting has to be kept once it can no longer be recovered; a historical *output* is in the
+   entry and always was. Only the input became unrecoverable, so only the input was added.
