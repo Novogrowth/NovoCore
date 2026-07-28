@@ -27,16 +27,16 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 7 | Journal engine, debits=credits invariant | **Done, committed** `8e7e10e` — Q13, Q14, Q19, Q26, Q15, Q16 answered, see below |
 | 8 | Purchase Invoice, Goods Receipt, GR/IR, purchase price variance, FIFO | **Done, committed** `c6e2513` — ADR 0004's open item, Q17 and Q39 answered as **ADR 0008**, see below |
 | 9 | Sales Invoice, Credit Note, Receipt, Payment, Bank Transfer, open items, rounding | **Done, committed** `29e9dcd` — Q10, Q15's remainder, Q16, Q26 answered as **ADR 0009**; Q31 confirmed; all seven obligations discharged, see below |
-| 10 | Freight / landed cost allocation | **Next.** Blocked on Q18, whose shape ADR 0008 now constrains |
+| 10 | Freight / landed cost allocation | **Done, committed** `cf6f1e4` + `6f06cf8` — Q18 answered as **ADR 0010**, and a defect it introduced closed as **ADR 0011**, see below |
 | 11 | Email service | Not started. Needs SMTP credentials |
 | 12 | Automated backups | Not started. Needs Drive paths/credentials, Q24 |
 | 13 | Test suite consolidation sweep | Not started |
 
-**Tests: 685 passing, `mvn clean verify` exit 0.** 178 unit (core-api), 480 core integration,
+**Tests: 720 passing, `mvn clean verify` exit 0.** 179 unit (core-api), 514 core integration,
 4 app unit, 12 app integration, 11 architecture. Nothing was failing at the start of this session,
 and nothing is failing now.
 
-`mvn test` runs the 193 non-container tests in ~6 seconds and needs no Docker. `mvn verify`
+`mvn test` runs the non-container tests in ~6 seconds and needs no Docker. `mvn verify`
 additionally runs the `*IT` tests under Failsafe against a real PostgreSQL 17 container.
 
 ---
@@ -105,10 +105,17 @@ were already on `origin`.
 | `8e7e10e` | Step 7 — journal engine, VAT accounts, stock write-offs, migrations V14–V15 |
 | `c6e2513` | Step 8 — purchase invoices, goods receipts, GR/IR clearing, purchase price variance, FIFO consumption, migration V16 |
 | `29e9dcd` | Step 9 — sales invoices, credit notes, settlements, bank transfers, open-item matching, rounding, migration V17 |
+| `cf6f1e4` | Step 10 — freight / landed cost allocation, the lot's two cost figures, migration V18 (**ADR 0010**) |
+| `6f06cf8` | Step 10 (cont.) — stock returning into a re-costed lot, migration V19 (**ADR 0011**) |
 
 Interleaved with these are small docs-only commits (`e25fcee`, `a09428e`, `920044c`, `de16e58`,
-`b065901`, `8c27cb4`, `2c3fa8a`, `21b2231`, `d1111d0`, `610f785`) and this session's close-out
-commit.
+`b065901`, `8c27cb4`, `2c3fa8a`, `21b2231`, `d1111d0`, `610f785`, `836a4eb`) and this session's
+close-out commit.
+
+**Step 10 is two commits, deliberately.** The convention is one per build step, and `cf6f1e4` is a
+complete, green step on its own; `6f06cf8` is a distinct decision found by *reviewing* it, with its
+own ADR and its own migration. Folding it in would have buried that story inside another commit's
+message, which is the opposite of what the convention is for.
 
 Local branch `phase-1/core-skeleton` still exists and is fully merged; safe to delete.
 Convention going forward is **one commit per build step**, so history stays checkpoint-able.
@@ -172,6 +179,13 @@ Convention going forward is **one commit per build step**, so history stays chec
   lot with more remaining than received, a negative remaining, a negative unit cost, a bundle that is
   also serial-tracked, a serialized service product, a self-referencing bundle component and a
   duplicate component are all refused by CHECK or UNIQUE constraints, each named in the assertion.
+- **Step 10's landed-cost invariants**, by raw-SQL probes in `FreightAllocationIT`: a lot whose two
+  cost halves name different currencies, a lot carried below what was paid for it, two allocation
+  lines for one lot, and a second reversal of one allocation are all refused by the database.
+- **The Inventory control account agrees with what the lots carry**, asserted directly rather than
+  inferred — `inventoryLedgerPositionOf` sums the Inventory-side lines for one lot's sub-ledger
+  reference and is compared against `remainingValue()` across every shape ADR 0011 examines. This is
+  the assertion that found the defect ADR 0011 fixes, and the one that proves it fixed.
 - **Step 8's purchasing invariants likewise**, by raw-SQL probes in `PurchaseInvoiceIT`: a duplicate
   supplier invoice number (case-insensitively, by trigger), an invoice line that is neither an
   inventory nor an expense shape, a line stating no VAT treatment, a second GR/IR match for the same
@@ -965,11 +979,11 @@ not enforced by the service**; the check belongs at the controller, and there is
   bundle that has been sold** would strand decomposed component lines pointing at something that is
   no longer a bundle — brief §5's "alias forward, never rewrite history" is the shape of the answer
   and it needs the ledger.
-- **Step 10 — last purchase price must stop coming from the lot.** Brief §5 says a lot's unit cost
-  *includes allocated landed costs*, so the day freight allocation exists this figure stops being
-  the **purchase** price and has to come from the purchase invoice line instead. It is correct today
-  because nothing allocates yet, and the day it stops being correct is knowable in advance. Recorded
-  in `InventoryService.lastPurchaseCostOf`'s Javadoc as well as here.
+- ~~**Step 10 — last purchase price must stop coming from the lot**~~ — **done in step 10.** It now
+  returns the lot's **received** cost, which ADR 0010 froze for the life of a lot precisely so this
+  question has an answer inside the inventory slice. The residual — that the received cost is the last
+  price we *believed*, not necessarily the last a supplier *invoiced* (ADR 0008) — is recorded in the
+  step 10 section and was deliberately not built around.
 - **Phase 8 — the Damaged Goods aging check now has its query.** `InventoryService.lotsAt` and
   `unitsAt` are what it reads, and `lotsAt` deliberately covers serial-tracked lots (via any on-hand
   unit at that location) and deliberately excludes exhausted lots, which are history rather than
@@ -1328,10 +1342,9 @@ exempt line carrying the article that actually applies.
 - ~~**Step 9 — serialized consumption**~~ — **done in step 9**, with no FIFO and no shortfall. `consume` refuses a serial-tracked product outright, naming
   step 9: selling an identified unit means marking it `SOLD`, and brief §5 requires the customer and
   invoice on it at that point. `SerializedUnitStatus.SOLD` is still unreachable.
-- **Step 10 — Q18 is now constrained.** Landed-cost allocation must allocate against the lot's
-  **received** cost and must not reach back into consumption already costed out. Whatever step 10
-  does with the sold portion of a lot, it is not "recompute the COGS that was posted". The mechanism
-  is still open; its shape is not.
+- ~~**Step 10 — Q18 is now constrained**~~ — **answered in step 10 as ADR 0010**, within the shape
+  this constraint set: allocation is computed against the lot's received cost, and the share belonging
+  to stock already costed out goes to `Landed cost variance` rather than back into a posted COGS.
 - **Phase 8 — two new checks have their queries.** `consumptionsWithShortfall()` for Q17's flag, and
   `linesAwaitingDelivery()` / `linesAwaitingInvoice()` for the two halves of a non-zero GR/IR
   balance. The checks themselves are still phase 8's to write.
@@ -1561,6 +1574,136 @@ against the intended behaviour rather than against the code.
 
 ---
 
+## Step 10 — done (freight / landed cost allocation)
+
+Commits `cf6f1e4` and `6f06cf8`, migrations `V18` and `V19`, and **ADR 0010** and **ADR 0011**.
+Q18 — the only question that had been blocking a numbered step — is answered, and a defect the answer
+introduced was found by review and closed in the same session.
+
+### Q18, answered: a lot's share is split by what is still in the lot
+
+Brief §4 allocates freight and duty out of `Freight / Landed Cost — Unallocated` into the lots they
+delivered, proportionally by value. V4 created that account and flagged it `expected_to_clear`; step 8
+gave a carrier's invoice somewhere to land. **Nothing had ever cleared it.** This is what does.
+
+| the part of a lot's share belonging to | goes |
+|---|---|
+| stock **still on hand** | onto that lot's unit cost, normally |
+| stock **already gone** | to a new `Landed cost variance` account |
+
+The second row is the whole of Q18. That share cannot raise a unit cost, because the units it is about
+are not in the lot; and it cannot be added to the cost of goods sold that took them out, because that
+entry is immutable (ADR 0006) and re-costing consumption already costed out is what ADR 0008 refuses.
+So it posts openly, to the exact counterpart of `Purchase price variance`, one position along in the
+same group and not `expected_to_clear` for the same reason.
+
+**A fully-sold lot may still be named**, and all of its share goes to variance. That is the case Q18
+exists for; refusing it would leave real freight sitting in an expected-to-clear account forever.
+
+### A lot's cost is now two figures, and the received half is frozen
+
+`inventory_lot.unit_cost` became `received_unit_cost` and **stops changing**;
+`allocated_landed_unit_cost` accumulates beside it; the carrying cost is their sum, computed on read
+and deliberately not a third column.
+
+The freezing is load-bearing rather than tidy. If allocation were computed against the *carrying* cost,
+the first freight invoice would move the proportions the second one divides by, so two invoices
+covering one shipment would split differently depending on the order they were entered in — and nobody
+would ever see that happen, they would simply have costs that could not be reproduced. It also makes
+each allocation's basis recomputable from frozen inputs, which is why `freight_allocation_line` stores
+no basis column.
+
+`goods_receipt_line.unit_cost` is untouched and is **not** the same fact: that is what a delivery
+document said and one half of every GR/IR variance, while this is what a lot was opened at. They
+coincide for every lot a delivery created and cannot for phase 2b's opening stock — which is exactly
+the case a rule reading the delivery document instead would have no answer for.
+
+### What an allocation is allocated out of
+
+A **purchase invoice expense line pointed at `Freight / Landed Cost — Unallocated`**, not a bare
+amount. Naming the source is what makes "how much of this freight is unallocated" answerable and what
+stops the account being credited below what was debited into it — the GR/IR match's shape. One source
+line per allocation, so a multi-line freight invoice keeps a remainder per line; many lots across many
+purchase invoices, which is the consolidated-shipment case; and the lots are always **named**, never
+inferred from suppliers and dates (rule 7).
+
+Refused rather than resolved: a line booked to another account, an invoice that has been reversed, more
+than the line charged, a lot received at zero cost (proportional-by-value gives it no share), a lot from
+a reversed Goods Receipt, and any currency mismatch.
+
+### ⚠️ ADR 0011 — the asymmetry between returns and reversals
+
+**Found by review, measured rather than reasoned about.** The review question was whether reversing an
+allocation on a lot with intervening sale-then-return activity could produce a wrong figure. It cannot,
+and the reason matters: a sale stores the cost it took stock out at, a return reads that same figure
+back (ADR 0009), so the pair nets to zero in both Inventory and COGS and there is no freight left inside
+a posted COGS to be inconsistent with. Reversal is also value-neutral on the relationship, because its
+guard forces `remaining` to equal `remainingAtAllocation` and the mirror credit equals the `capitalised`
+computed from that same figure.
+
+**But probing it found a real defect next door, needing no reversal at all.** Three operations put stock
+back into a lot, all at the cost it left at; if an allocation landed while the stock was out, the lot
+carries those units higher than what was debited back. Measured on a lot of 10 at €10 with 2 sold and
+€100 allocated: lot valuation €200, Inventory €180, on all three paths, never clearing.
+
+The fix is deliberately **not uniform**, and the asymmetry is the part to remember:
+
+- **A return catches up.** It says the sale was real, so the allocation's split was right at the time
+  and only the returning units' share is owed. Debit Inventory, credit `Landed cost variance`, in the
+  same entry, computed from the consumption line's stored cost against the lot's frozen received cost —
+  so nothing new is stored and it is zero whenever the lot has not moved. COGS is still credited exactly
+  what was debited, so ADR 0009 stands. Refusing was available and rejected: a return is driven by a
+  credit note at the till, and making it wait on a freight document ends in returns going unrecorded.
+- **A reversal refuses.** It says the movement never happened — which would mean the allocation computed
+  the wrong *split*, not merely posted its counterpart to the wrong account. `reverseConsumption` and
+  `reverseWriteOff` refuse once the lot has been re-costed, naming the remedy: reverse the allocation
+  (permitted, the quantity has not moved), reverse the movement, allocate again. **A test walks that
+  sequence and checks the end state is exactly right**, because a refusal whose named remedy has never
+  been tried is a refusal that might not have one.
+
+**V19 exists because of this:** `stock_write_off` now stores its unit cost. V15 deliberately stored no
+amount, on the argument that the entry is the honest source — true, and it stopped being sufficient the
+day a lot's carrying cost could move, because the entry gives the rounded amount and not the six-decimal
+cost behind it. `stock_consumption_line` has stored its own since step 8 for exactly this reason. The
+posted **amount** is still not stored: a historical input has to be kept once it stops being
+recoverable, a historical output was always in the entry.
+
+### Obligations discharged this step
+
+- ~~**Step 6 — last purchase price must stop coming from the lot's unit cost**~~ — `lastPurchaseCostOf`
+  returns the **received** cost, so a product no longer reads as dearer because its last delivery came
+  by air. **One residual difference is recorded rather than hidden:** where a delivery preceded its
+  invoice and the invoice disagreed, ADR 0008 keeps the lot at the received cost, so this is the last
+  price we *believed* rather than necessarily the last a supplier *invoiced*. Making it the latter needs
+  a purchasing-side query — the inventory slice cannot read purchasing, which depends on it — and that
+  was **not built**.
+- ~~**`Freight / Landed Cost — Unallocated` has a key and nothing clears it**~~ — cleared now, and
+  `linesAwaitingAllocation()` is the query phase 8 reads against its balance.
+
+### Code-quality work folded in, both flagged rather than done quietly
+
+1. **`BundleAllocation` became `ProportionalAllocation` in `core-api/shared`.** Freight allocation is
+   the same arithmetic, and a second copy would have been a second set of rounding behaviour — the kind
+   of difference that surfaces later as a report a cent out with nothing to say which half is wrong. One
+   production call site and one test moved with it.
+2. **`PurchaseInvoiceLineViews` extracted**, because a second service in the slice now projects invoice
+   lines and two private copies of one projection diverge the first time a field is added to either.
+
+### ⚠️ Obligations this step created
+
+- **Phase 8 — one more check has its query.** `linesAwaitingAllocation()` against the
+  `Freight / Landed Cost — Unallocated` balance, the same shape as the two GR/IR halves.
+  `InventoryService.lotsWithAllocatedLandedCost()` answers "which stock is carrying freight" when a
+  valuation comes out above the invoices behind it.
+- **The first purchasing controller** must expose `FreightAllocationService` and **not**
+  `InventoryService.applyLandedCost` / `removeLandedCost`, which are the lower layer — the same class of
+  caution as `postManualEntry` versus `post`. Those two move a lot's cost with no entry behind them.
+- **A stock valuation report should reconcile against the Inventory control account**, which is now a
+  real check rather than a tautology: ADR 0011 made them agree, and the test that asserts it is the one
+  that found the defect.
+
+---
+
 ## Open questions, by the step they block
 
 Numbering follows the original Phase 1 question list so references stay stable.
@@ -1739,12 +1882,18 @@ That placement decides the rest:
   VAT the sale actually charged.
 - ~~**Q31**~~ — **confirmed, nothing to change.** See above.
 
-### Still blocking step 10
-- **Q18** Landed-cost allocation mutates a lot's unit cost after the fact. If any of that lot is
-  already sold, posted COGS is now wrong. Block allocation after consumption, or post an adjustment?
-  The brief does not address it. **ADR 0008 constrains the shape of the answer**: allocate against
-  the lot's received cost, and do not reach back into consumption already costed out. The mechanism
-  is still genuinely open.
+### Resolved in step 10 — landed costs
+- ~~**Q18**~~ — **answered and built. ADR 0010.** A lot's share of an allocated freight cost splits by
+  what is still in the lot: the part belonging to stock on hand raises its unit cost, the part belonging
+  to stock already gone posts to `Landed cost variance`. Nothing reaches back into posted COGS, which is
+  the constraint ADR 0008 placed on the answer. The allocation basis is the lot's **received** cost,
+  which is why that figure is now frozen for the life of a lot.
+- ~~**Step 6's last-purchase-price obligation**~~ — **discharged**, with one residual difference
+  recorded. See the step 10 section.
+- **ADR 0011** *(new, not a question)* — **returns catch the freight up, reversals refuse.** A defect
+  ADR 0010 introduced, found by reviewing step 10 rather than by a failing test, measured at €20 on a
+  ten-unit lot. Recorded here because the asymmetry is the kind of thing a later reader would otherwise
+  try to "make consistent".
 
 ### Not blocking anything, but unanswered
 - **Q40** **Does a journal entry need a human-facing entry number?** The id is the handle today. An
@@ -1781,70 +1930,60 @@ That placement decides the rest:
 ---
 ## Next action — read this first
 
-**Step 10 (freight / landed cost allocation) is the next numbered step.** Steps 0–9 are done,
-committed and pushed.
+**Step 11 (the email service) is the next numbered step.** Steps 0–10 are done, committed and pushed.
+**Nothing is blocked on an open question** — for the first time since step 5, no numbered step is
+waiting on a decision.
 
-### Step 10 is blocked on Q18, and ADR 0008 has already fixed the shape of the answer
+### Step 11 needs credentials before it needs code
 
-**Q18: landed-cost allocation mutates a lot's unit cost after the fact, and if any of that lot is
-already sold, posted COGS is now wrong.** The brief does not address it. What ADR 0008 settles is
-the *constraint*, not the mechanism:
+The shared email service is `CLAUDE.md`'s own example of a core-owned service: configured once via
+Settings (SMTP credentials, sender identity), exposed through one interface, called by any module that
+needs to send something. Nothing about its shape is open. What is missing is the **SMTP host, port,
+credentials and sender identity** — and a decision about whether the credentials live in Settings (as
+the brief implies) or in the environment alongside the database password.
 
-- allocate against the lot's **received** cost;
-- **do not reach back into consumption already costed out.** Whatever step 10 does with the sold
-  portion of a lot, it is not "recompute the COGS that was posted".
+That second one is worth deciding deliberately rather than by default: `docker/.env` already holds one
+secret and is gitignored, while Settings is in the database and therefore inside the backup. A password
+in a backup that gets copied to Google Drive (step 12) is a different exposure from one that does not.
 
-The open half is what it *does* instead — block allocation once a lot has been consumed, or post an
-adjustment somewhere, and if so where. Step 9 adds one relevant precedent: a stock **return** puts
-quantity back at the cost it left at, read off the consumption's own stored lines, precisely so a
-later change to a lot's cost cannot rewrite what a past movement was worth. Whatever step 10
-chooses should be consistent with that.
+### Step 12 then needs Q24
 
-### Step 10 also inherits two obligations already written down
-
-1. **Last purchase price must stop coming from the lot** (step 6). Brief §5 says a lot's unit cost
-   includes allocated landed costs, so the day freight allocation exists,
-   `InventoryService.lastPurchaseCostOf` stops being the *purchase* price and has to come from the
-   purchase invoice line instead. Correct today because nothing allocates yet.
-2. **`Freight / Landed Cost — Unallocated` already has its account and its system key**, is flagged
-   `expected_to_clear`, and nothing posts to it or clears it. Step 8 records freight as an ordinary
-   expense line pointed at it; step 10 is what allocates it out.
+Google Drive API with credentials held by NovoCore, or `rclone` on the host (no Python, per
+`CLAUDE.md`), plus retention policy, whether dumps are encrypted at rest, and the two actual Drive
+destinations.
 
 ### Waiting on the accountant, and blocking real data rather than code
 
-- **Statutory depreciation rates per asset category**, plus the category taxonomy. The field exists
-  and is nullable; **do not create real assets with real values until these are confirmed.**
+- **Statutory depreciation rates per asset category**, plus the category taxonomy. The field exists and
+  is nullable; **do not create real assets with real values until these are confirmed.**
 - **AADE exemption codes 24 and 28** (Q35), **the OSS/IOSS myDATA codes** (Q36), and **the myDATA
   unit-of-measure codes** (Q38) — all before phase 7, all NULL and fail-loud in the meantime.
 
-### Also still open, not blocking step 10
+### Also still open, not blocking anything
 
-- **Q41 — after-the-fact GR/IR matching.** Belongs with phase 8's Clearing Checks; needs an answer
-  to "whose document is the variance entry?".
-- **Q42** *(new)* — a bundle containing a serial-tracked component cannot be sold as a bundle. Not
-  blocking; the machine sells on its own line.
+- **Q41 — after-the-fact GR/IR matching.** Belongs with phase 8's Clearing Checks; needs an answer to
+  "whose document is the variance entry?".
+- **Q42** — a bundle containing a serial-tracked component cannot be sold as a bundle. The machine sells
+  on its own line.
 - **Q28 — dispatch purpose placement.** Recommendation is a core-owned `GoodsDispatch` in phase 4,
-  conditional on whether Go already issues Δελτία Αποστολής and whether the AADE digital delivery
-  note regime applies (accountant question). Nothing built.
+  conditional on whether Go already issues Δελτία Αποστολής and whether the AADE digital delivery note
+  regime applies (accountant question). Nothing built.
 - **Q32 — the 8-hour session timeout.**
 - **Q37 — addresses on Customer and Supplier**, plus human-facing codes and multiple selling prices.
-  Sales invoices exist now and print nothing, because Go still issues the document; this starts to
-  matter at phase 11 and possibly at phase 4 for courier vouchers.
-- **Q40 — a human-facing document number.** Journal entries, purchase invoices and goods receipts
-  still have none. **Sales invoices and credit notes do** — but theirs is the *issuing system's*
-  number, not one NovoCore assigns, so the question is unchanged for the documents NovoCore owns.
+- **Q40 — a human-facing document number** for the documents NovoCore owns. Step 10 adds one more to
+  the list: a freight allocation has no number either, only an id.
 - **Q12 leftover — is the periodic depreciation posting run Phase 1 scope**, or only the register and
-  the calculation? Step 7 added the `DEPRECIATION_EXPENSE` system key the run would need, and
-  deliberately did not build the run. Still waiting on the statutory rates either way.
+  the calculation? Still waiting on the statutory rates either way.
 
 ### Standing note
 
-The REST surface is deliberately still one endpoint — **the ledger, inventory, purchasing, sales and
-settlements all have no HTTP route at all.** Building out the rest of the API needs its own scoping
-conversation, not incremental drift. When it happens, these lower-layer methods must **not** be what
-a controller exposes: `JournalService.post` (use `postManualEntry`), `InventoryService.receive` /
-`unreceive` (use `GoodsReceiptService`), `InventoryService.consume` / `returnConsumed` (use
-`SalesInvoiceService` and `CreditNoteService`), and `ProductService`'s unredacted reads (use the
+The REST surface is deliberately still one endpoint — **the ledger, inventory, purchasing, sales,
+settlements and now landed costs all have no HTTP route at all.** Building out the rest of the API
+needs its own scoping conversation, not incremental drift. When it happens, these lower-layer methods
+must **not** be what a controller exposes: `JournalService.post` (use `postManualEntry`),
+`InventoryService.receive` / `unreceive` (use `GoodsReceiptService`), `InventoryService.consume` /
+`returnConsumed` (use `SalesInvoiceService` and `CreditNoteService`), **`InventoryService.applyLandedCost`
+/ `removeLandedCost` (use `FreightAllocationService`)**, and `ProductService`'s unredacted reads (use the
 `...For(viewer)` variants). **PLB-1 (2FA) must be closed before any remote access is enabled** —
 including Remote/Order Staff logging in from outside the local network, which is that role's entire
 purpose.
