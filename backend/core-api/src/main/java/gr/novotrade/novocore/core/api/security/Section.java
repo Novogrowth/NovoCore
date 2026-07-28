@@ -62,6 +62,20 @@ public enum Section {
      */
     INVENTORY(true),
 
+    /**
+     * Journal entries, account balances and the trial balance. Built in step 7.
+     *
+     * <p>Separate from {@link #CHART_OF_ACCOUNTS} for the reason {@link #INVENTORY} is separate from
+     * {@link #PRODUCTS}: seeing the <em>list</em> of accounts is close to harmless, while seeing what has
+     * posted to them is every financial figure in the business. Someone maintaining the chart is not
+     * necessarily someone who should read the ledger.
+     *
+     * <p>Granting this is close to granting everything, since an account's lines carry customer,
+     * supplier and lot references and therefore the cost of every purchase. No role is granted it by
+     * default — access is default-deny — and the two full-access system roles reach it without a grant.
+     */
+    JOURNAL(true),
+
     /** Reserved for the Sales Order Fulfillment module (roadmap phase 4). */
     SALES_ORDER_FULFILLMENT(false),
 

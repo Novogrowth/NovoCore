@@ -1,24 +1,43 @@
 package gr.novotrade.novocore.core.product;
 
+import gr.novotrade.novocore.core.api.account.AccountSystemKey;
+import gr.novotrade.novocore.core.api.account.AccountView;
+import gr.novotrade.novocore.core.api.account.ChartOfAccountsService;
 import gr.novotrade.novocore.core.api.audit.AuditLogService;
 import gr.novotrade.novocore.core.api.inventory.InvalidInventoryLotException;
+import gr.novotrade.novocore.core.api.inventory.InvalidStockWriteOffException;
 import gr.novotrade.novocore.core.api.inventory.InventoryLotNotFoundException;
 import gr.novotrade.novocore.core.api.inventory.InventoryLotView;
 import gr.novotrade.novocore.core.api.inventory.InventoryService;
 import gr.novotrade.novocore.core.api.inventory.NewInventoryLot;
+import gr.novotrade.novocore.core.api.inventory.NewStockWriteOff;
 import gr.novotrade.novocore.core.api.inventory.SerializedUnitNotFoundException;
 import gr.novotrade.novocore.core.api.inventory.SerializedUnitStatus;
 import gr.novotrade.novocore.core.api.inventory.SerializedUnitView;
 import gr.novotrade.novocore.core.api.inventory.StockLevels;
 import gr.novotrade.novocore.core.api.inventory.StockLocation;
 import gr.novotrade.novocore.core.api.inventory.StockNotApplicableException;
+import gr.novotrade.novocore.core.api.inventory.StockWriteOffNotFoundException;
+import gr.novotrade.novocore.core.api.inventory.StockWriteOffView;
+import gr.novotrade.novocore.core.api.ledger.JournalEntryView;
+import gr.novotrade.novocore.core.api.ledger.JournalService;
+import gr.novotrade.novocore.core.api.ledger.JournalSource;
+import gr.novotrade.novocore.core.api.ledger.NewJournalEntry;
+import gr.novotrade.novocore.core.api.ledger.NewJournalLine;
 import gr.novotrade.novocore.core.api.product.ProductNotFoundException;
+import gr.novotrade.novocore.core.api.settings.SettingKeys;
+import gr.novotrade.novocore.core.api.settings.SettingsService;
+import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
+import gr.novotrade.novocore.core.api.shared.SubLedgerRef;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -46,20 +65,30 @@ class InventoryServiceImpl implements InventoryService {
 
     private static final String LOT_ENTITY_TYPE = "InventoryLot";
     private static final String UNIT_ENTITY_TYPE = "SerializedUnit";
+    private static final String WRITE_OFF_ENTITY_TYPE = "StockWriteOff";
 
     private final ProductRepository products;
     private final InventoryLotRepository lots;
     private final SerializedUnitRepository units;
     private final BundleComponentRepository bundleComponents;
+    private final StockWriteOffRepository writeOffs;
+    private final ChartOfAccountsService chartOfAccounts;
+    private final JournalService journal;
+    private final SettingsService settings;
     private final AuditLogService auditLog;
 
     InventoryServiceImpl(ProductRepository products, InventoryLotRepository lots,
             SerializedUnitRepository units, BundleComponentRepository bundleComponents,
-            AuditLogService auditLog) {
+            StockWriteOffRepository writeOffs, ChartOfAccountsService chartOfAccounts,
+            JournalService journal, SettingsService settings, AuditLogService auditLog) {
         this.products = products;
         this.lots = lots;
         this.units = units;
         this.bundleComponents = bundleComponents;
+        this.writeOffs = writeOffs;
+        this.chartOfAccounts = chartOfAccounts;
+        this.journal = journal;
+        this.settings = settings;
         this.auditLog = auditLog;
     }
 
@@ -455,6 +484,338 @@ class InventoryServiceImpl implements InventoryService {
                         SerializedUnitStatus.IN_STOCK, location).stream()
                 .map(this::toView)
                 .toList();
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Write-offs — the step 3 and step 6 obligation
+    // ---------------------------------------------------------------------------------------
+
+    @Override
+    @Transactional
+    public StockWriteOffView writeOff(NewStockWriteOff request) {
+        Objects.requireNonNull(request, "request");
+        InventoryLot lot = lots.findById(request.lotId())
+                .orElseThrow(() -> new InventoryLotNotFoundException(request.lotId()));
+
+        if (lot.isSerialTracked() != request.isSerialized()) {
+            throw new InvalidStockWriteOffException(lot.isSerialTracked()
+                    ? "Lot " + lot.getId() + " is serial-tracked, so a write-off names the unit it "
+                            + "concerns. Brief §5: it uses that unit's own actual cost, with no FIFO "
+                            + "logic, because a serialized unit is not pooled stock."
+                    : "Lot " + lot.getId() + " is pooled stock, so a write-off states a quantity. "
+                            + "There are no individual units to name.");
+        }
+
+        SerializedUnit unit = request.isSerialized() ? loadUnitOf(lot, request) : null;
+        Quantity quantity = request.isSerialized()
+                ? Quantity.of(1)
+                : validatedPooledQuantity(lot, request.quantity());
+
+        StockWriteOff record = record(lot, unit, quantity, request.reason(),
+                request.writeOffDate(), request.note(),
+                postWriteOff(lot, quantity, request), null);
+
+        // The stock moves only after the posting has been accepted. Either both happen or neither
+        // does — the transaction guarantees that — but doing it in this order means a rejected posting
+        // never leaves a half-applied request behind in the entity graph either.
+        if (unit != null) {
+            unit.writeOff();
+        } else {
+            lot.consume(quantity);
+        }
+
+        auditLog.record("stock-write-off.recorded", WRITE_OFF_ENTITY_TYPE,
+                String.valueOf(record.getId()), writeOffDetail(record));
+        return toView(record, entriesById(List.of(record)));
+    }
+
+    @Override
+    @Transactional
+    public StockWriteOffView reverseWriteOff(long writeOffId, LocalDate reversalDate, String note) {
+        Objects.requireNonNull(reversalDate, "reversalDate");
+        StockWriteOff original = loadWriteOff(writeOffId);
+
+        if (original.isReversal()) {
+            throw new InvalidStockWriteOffException(
+                    "Write-off " + writeOffId + " is itself the reversal of write-off "
+                            + original.getReversalOfId() + ". Reversing it would write the stock off "
+                            + "again while claiming to be a correction; record a new write-off "
+                            + "instead, so the ledger says what actually happened.");
+        }
+        writeOffs.findByReversalOfId(writeOffId).ifPresent(existing -> {
+            throw new InvalidStockWriteOffException(
+                    "Write-off " + writeOffId + " has already been reversed by write-off "
+                            + existing.getId() + ". Reversing it twice would restore the stock twice "
+                            + "and credit the loss twice, with both halves looking correct.");
+        });
+
+        InventoryLot lot = original.getLot();
+        Quantity quantity = original.getQuantity();
+        SerializedUnit unit = original.getSerializedUnit();
+
+        if (unit != null) {
+            if (unit.getStatus() != SerializedUnitStatus.WRITTEN_OFF) {
+                throw new InvalidStockWriteOffException(
+                        "Unit '" + unit.getSerialNumber() + "' is " + unit.getStatus() + " rather than "
+                                + "written off, so there is nothing to restore. Something else has "
+                                + "happened to it since.");
+            }
+        } else if (lot.getQuantityRemaining().plus(quantity)
+                .compareTo(lot.getQuantityReceived()) > 0) {
+            // Reachable: the lot may have been consumed elsewhere between the write-off and its
+            // reversal. Refused rather than clamped, because clamping would silently restore less
+            // stock than the entry it is about to reverse accounts for.
+            throw new InvalidStockWriteOffException(
+                    "Restoring " + quantity + " to lot " + lot.getId() + " would leave "
+                            + lot.getQuantityRemaining().plus(quantity) + " of a lot that only ever "
+                            + "received " + lot.getQuantityReceived() + ". Something has consumed the "
+                            + "lot since this write-off, so the correction is a new receipt rather "
+                            + "than a reversal.");
+        }
+
+        Long reversingEntryId = null;
+        if (original.getJournalEntryId() != null) {
+            long originalEntryId = original.getJournalEntryId();
+            reversingEntryId = journal.post(NewJournalEntry.reversalOf(
+                    originalEntryId,
+                    reversalDate,
+                    "Reversal of stock write-off " + writeOffId + " on lot " + lot.getId(),
+                    JournalSource.INVENTORY_WRITE_OFF,
+                    journal.mirrorOf(originalEntryId))).id();
+        }
+
+        if (unit != null) {
+            unit.restoreToStock();
+        } else {
+            lot.restore(quantity);
+        }
+
+        StockWriteOff reversal = record(lot, unit, quantity, original.getReason(), reversalDate,
+                note, reversingEntryId, writeOffId);
+
+        auditLog.record("stock-write-off.reversed", WRITE_OFF_ENTITY_TYPE,
+                String.valueOf(writeOffId), Map.of(
+                        "reversedBy", String.valueOf(reversal.getId()),
+                        "quantity", quantity.toString(),
+                        "reversalDate", reversalDate.toString(),
+                        "posted", String.valueOf(reversingEntryId != null)));
+
+        return toView(reversal, entriesById(List.of(reversal)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public StockWriteOffView requireWriteOff(long writeOffId) {
+        StockWriteOff record = loadWriteOff(writeOffId);
+        return toView(record, entriesById(List.of(record)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<StockWriteOffView> writeOffsOf(long lotId) {
+        return toViews(writeOffs.findByLotIdOrderByIdAsc(lotId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<StockWriteOffView> writeOffsBetween(LocalDate from, LocalDate to) {
+        Objects.requireNonNull(from, "from");
+        Objects.requireNonNull(to, "to");
+        if (from.isAfter(to)) {
+            throw new IllegalArgumentException(
+                    "Date range " + from + " to " + to + " runs backwards. An empty result would look "
+                            + "identical to a period with no write-offs in it.");
+        }
+        return toViews(writeOffs.findByWriteOffDateBetweenOrderByWriteOffDateAscIdAsc(from, to));
+    }
+
+    /**
+     * Posts the loss, or returns null when there is none to post.
+     *
+     * <p>Debit {@code INVENTORY_WRITE_OFF}, credit {@code INVENTORY}, both carrying the lot's
+     * {@code SubLedgerRef} — the credit because Inventory is a Control account and must, the debit
+     * because knowing which lot a loss came out of is what having lots is for.
+     *
+     * <p><strong>Nothing is posted when the extended cost is zero.</strong> A lot carried at a unit cost
+     * of zero is a real thing that {@code UnitCost} explicitly allows — a free sample, promotional stock,
+     * a warranty replacement — and writing it off derecognises nothing, because nothing was carried. The
+     * ledger refuses a zero-amount line for good reason, so the honest record is a write-off with no
+     * entry rather than an entry that says nothing happened.
+     */
+    private Long postWriteOff(InventoryLot lot, Quantity quantity, NewStockWriteOff request) {
+        // The single rounding, with its mode read from settings rather than chosen here: brief §6 makes
+        // the mode configurable, and this is its first real consumer.
+        RoundingMode roundingMode =
+                settings.requireRoundingMode(SettingKeys.LEDGER_ROUNDING_MODE);
+        Money amount = lot.getUnitCost().extend(quantity, roundingMode);
+        if (!amount.isPositive()) {
+            return null;
+        }
+
+        AccountView expense = chartOfAccounts.requireAccount(AccountSystemKey.INVENTORY_WRITE_OFF);
+        AccountView inventory = chartOfAccounts.requireAccount(AccountSystemKey.INVENTORY);
+        SubLedgerRef lotRef = SubLedgerRef.inventoryLot(lot.getId());
+
+        String what = quantity + " x " + lot.getProduct().getSku() + " (lot " + lot.getId() + ")";
+        String description = "Stock write-off — " + request.reason() + ": " + what
+                + request.noteIfAny().map(note -> " — " + note).orElse("");
+
+        return journal.post(NewJournalEntry.of(
+                request.writeOffDate(),
+                description,
+                JournalSource.INVENTORY_WRITE_OFF,
+                List.of(
+                        NewJournalLine.debit(expense.id(), amount)
+                                .forSubLedger(lotRef)
+                                .describedAs(request.reason().name()),
+                        NewJournalLine.credit(inventory.id(), amount)
+                                .forSubLedger(lotRef)))).id();
+    }
+
+    private StockWriteOff record(InventoryLot lot, SerializedUnit unit, Quantity quantity,
+            gr.novotrade.novocore.core.api.inventory.WriteOffReason reason, LocalDate date,
+            String note, Long journalEntryId, Long reversalOfId) {
+        return writeOffs.save(new StockWriteOff(
+                lot, unit, quantity, reason, date, note, journalEntryId, reversalOfId));
+    }
+
+    private SerializedUnit loadUnitOf(InventoryLot lot, NewStockWriteOff request) {
+        long unitId = request.serializedUnitId();
+        SerializedUnit unit = units.findById(unitId)
+                .orElseThrow(() -> new SerializedUnitNotFoundException(unitId));
+        if (!unit.getLot().getId().equals(lot.getId())) {
+            throw new InvalidStockWriteOffException(
+                    "Unit '" + unit.getSerialNumber() + "' belongs to lot " + unit.getLot().getId()
+                            + ", not lot " + lot.getId() + ". The cost written off is the lot's, so "
+                            + "naming the wrong one would derecognise the wrong amount.");
+        }
+        if (!unit.isOnHand()) {
+            throw new InvalidStockWriteOffException(
+                    "Unit '" + unit.getSerialNumber() + "' is " + unit.getStatus() + ", so it is not "
+                            + "ours to write off.");
+        }
+        return unit;
+    }
+
+    private Quantity validatedPooledQuantity(InventoryLot lot, Quantity quantity) {
+        if (!quantity.isPositive()) {
+            throw new InvalidStockWriteOffException(
+                    "Write-off quantity " + quantity + " is not positive. A write-off of nothing is "
+                            + "not a write-off, and a negative one is a receipt.");
+        }
+        requireExpressibleQuantityForWriteOff(lot.getProduct(), quantity);
+        if (quantity.compareTo(lot.getQuantityRemaining()) > 0) {
+            throw new InvalidStockWriteOffException(
+                    "Lot " + lot.getId() + " has " + lot.getQuantityRemaining() + " left, so "
+                            + quantity + " cannot be written off it. Stock that was never there "
+                            + "cannot be lost.");
+        }
+        return quantity;
+    }
+
+    private static void requireExpressibleQuantityForWriteOff(Product product, Quantity quantity) {
+        UnitOfMeasure unit = product.getUnitOfMeasure();
+        if (unit.isFractionalQuantityAllowed()) {
+            return;
+        }
+        if (quantity.value().stripTrailingZeros().scale() > 0) {
+            throw new InvalidStockWriteOffException(
+                    "Quantity " + quantity + " has a fraction, and product '" + product.getSku()
+                            + "' is measured in '" + unit.getCode() + "', which does not allow one.");
+        }
+    }
+
+    private StockWriteOff loadWriteOff(long writeOffId) {
+        return writeOffs.findById(writeOffId)
+                .orElseThrow(() -> new StockWriteOffNotFoundException(writeOffId));
+    }
+
+    private List<StockWriteOffView> toViews(List<StockWriteOff> records) {
+        if (records.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, JournalEntryView> byEntryId = entriesById(records);
+        Map<Long, Long> reversedBy = new LinkedHashMap<>();
+        for (Object[] pair : writeOffs.findReversalPairs(
+                records.stream().map(StockWriteOff::getId).toList())) {
+            reversedBy.put((Long) pair[0], (Long) pair[1]);
+        }
+        return records.stream()
+                .map(record -> toView(record, byEntryId, reversedBy.get(record.getId())))
+                .toList();
+    }
+
+    /** One query for every entry a batch of write-offs points at, rather than one per row. */
+    private Map<Long, JournalEntryView> entriesById(List<StockWriteOff> records) {
+        List<Long> entryIds = records.stream()
+                .map(StockWriteOff::getJournalEntryId)
+                .filter(Objects::nonNull)
+                .toList();
+        Map<Long, JournalEntryView> byId = new LinkedHashMap<>();
+        for (JournalEntryView entry : journal.findEntries(entryIds)) {
+            byId.put(entry.id(), entry);
+        }
+        return byId;
+    }
+
+    private StockWriteOffView toView(StockWriteOff record, Map<Long, JournalEntryView> entries) {
+        return toView(record, entries,
+                writeOffs.findByReversalOfId(record.getId()).map(StockWriteOff::getId).orElse(null));
+    }
+
+    private static StockWriteOffView toView(StockWriteOff record,
+            Map<Long, JournalEntryView> entries, Long reversedByWriteOffId) {
+        InventoryLot lot = record.getLot();
+        SerializedUnit unit = record.getSerializedUnit();
+
+        // Read off the entry, never recomputed from the lot's unit cost: brief §5 says a lot's unit cost
+        // includes allocated landed costs, so once step 10 allocates freight a recomputation would give a
+        // different figure from the one that actually posted, with no way to tell which was historical.
+        Money postedAmount = null;
+        if (record.getJournalEntryId() != null) {
+            JournalEntryView entry = entries.get(record.getJournalEntryId());
+            if (entry == null) {
+                throw new IllegalStateException(
+                        "Write-off " + record.getId() + " names journal entry "
+                                + record.getJournalEntryId() + ", which does not exist. A foreign key "
+                                + "makes that impossible, so the entry was not fetched.");
+            }
+            postedAmount = entry.totalDebits();
+        }
+
+        return new StockWriteOffView(
+                record.getId(),
+                lot.getId(),
+                lot.getProduct().getId(),
+                lot.getProduct().getSku(),
+                unit == null ? null : unit.getId(),
+                unit == null ? null : unit.getSerialNumber(),
+                record.getQuantity(),
+                record.getReason(),
+                record.getWriteOffDate(),
+                record.getNote(),
+                record.getJournalEntryId(),
+                postedAmount,
+                record.getReversalOfId(),
+                reversedByWriteOffId);
+    }
+
+    private static Map<String, String> writeOffDetail(StockWriteOff record) {
+        Map<String, String> detail = new LinkedHashMap<>();
+        detail.put("sku", record.getLot().getProduct().getSku());
+        detail.put("lot", String.valueOf(record.getLot().getId()));
+        detail.put("quantity", record.getQuantity().toString());
+        detail.put("reason", record.getReason().name());
+        detail.put("writeOffDate", record.getWriteOffDate().toString());
+        detail.put("journalEntry", record.getJournalEntryId() == null
+                // Distinguished in the log rather than left blank: "no entry" and "entry missing" are
+                // different situations and one of them is a bug.
+                ? "none — lot carried at zero cost"
+                : String.valueOf(record.getJournalEntryId()));
+        if (record.getSerializedUnit() != null) {
+            detail.put("serialNumber", record.getSerializedUnit().getSerialNumber());
+        }
+        return detail;
     }
 
     // ---------------------------------------------------------------------------------------

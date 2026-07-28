@@ -3,6 +3,7 @@ package gr.novotrade.novocore.core.api.inventory;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,11 +18,10 @@ import java.util.Optional;
  * default. Whatever exposes these over HTTP must call {@code requireView} with the right one of the
  * two — the section each method belongs to is stated on it.
  *
- * <p><strong>What this step does not do.</strong> Nothing consumes a lot. FIFO consumption, the
+ * <p><strong>What this does not do.</strong> Nothing consumes a lot through a sale. FIFO consumption, the
  * Goods Receipt that will create lots in earnest, and the source-document reference all belong to
- * step 8 (ADR 0004). The write-off that carries a {@link WriteOffReason} belongs to step 7, because
- * it derecognises an asset and therefore posts. Reducing stock here without those entries would leave
- * the goods gone and the balance sheet still carrying them.
+ * step 8 (ADR 0004). The <em>write-off</em> that carries a {@link WriteOffReason} was step 7's, because
+ * it derecognises an asset and therefore posts, and it is built — see the write-off section below.
  *
  * <p><strong>Whether stock may go negative is still open (Q17)</strong> and is not decided here. A
  * single lot cannot go below zero — that is a CHECK constraint — but the aggregate policy belongs
@@ -180,4 +180,73 @@ public interface InventoryService {
 
     /** Units on hand at one location, by serial number. The serialized half of {@link #lotsAt}. */
     List<SerializedUnitView> unitsAt(StockLocation location);
+
+    // ---------------------------------------------------------------------------------------
+    // Write-offs — Section.INVENTORY
+    // ---------------------------------------------------------------------------------------
+
+    /**
+     * Writes stock off, reducing the lot and posting the loss in one transaction.
+     *
+     * <p><strong>This is what the single {@code Inventory write-off / shrinkage} account was chosen
+     * against three for.</strong> The reason lives on the transaction, and it lives there because it has to
+     * be reportable: a quarter's shrinkage is a security question and a quarter's expiry is a purchasing
+     * one, and they get different answers.
+     *
+     * <p>Posts a debit to {@code INVENTORY_WRITE_OFF} and a credit to {@code INVENTORY}, both carrying the
+     * lot's {@code SubLedgerRef} — the credit because Inventory is a Control account and must, the debit
+     * because knowing which lot a loss came out of is the point of having lots. The amount is the lot's
+     * unit cost extended across the quantity, rounded once with the mode from
+     * {@code SettingKeys.LEDGER_ROUNDING_MODE}.
+     *
+     * <p><strong>Nothing is posted when the lot's unit cost is zero</strong>, and the stock still leaves. A
+     * free sample derecognises nothing because nothing was carried, and a zero-amount journal entry is
+     * refused by the ledger. {@link StockWriteOffView#derecognisedNothing()} is how that case reads.
+     *
+     * <p>Moving a lot to {@link StockLocation#DAMAGED_GOODS} remains posting-free (the step 3 decision).
+     * This is the second step nothing forces, which is why phase 8's Clearing Checks has to surface lots
+     * aging there — see {@link #lotsAt}.
+     *
+     * @throws InvalidStockWriteOffException if the quantity is not positive, exceeds what the lot has
+     *     left, or has a fraction the product's unit of measure does not allow; if the request's shape
+     *     disagrees with whether the lot is serial-tracked; or if the named unit is not on hand
+     * @throws InventoryLotNotFoundException if there is no such lot
+     * @throws SerializedUnitNotFoundException if there is no such unit, or it belongs to another lot
+     */
+    StockWriteOffView writeOff(NewStockWriteOff request);
+
+    /**
+     * Reverses a write-off: restores the quantity or the unit's status, and posts the mirror entry.
+     *
+     * <p>Both halves together, because either alone is worse than neither — restoring the stock without
+     * the entry leaves the goods on the shelf and the loss still in the accounts, and reversing the entry
+     * without the stock does the opposite. This is also why
+     * {@code JournalService.reverse} refuses an {@code INVENTORY_WRITE_OFF} entry outright and names this
+     * method instead: the ledger cannot see the quantity it would be stranding.
+     *
+     * <p>A write-off with no journal entry (the zero-cost case) reverses the stock and posts nothing, for
+     * the same reason it posted nothing.
+     *
+     * @param reversalDate the accounting date of the restoration. A new fact, so normally today rather
+     *     than the original's date.
+     * @throws InvalidStockWriteOffException if the write-off has already been reversed, is itself a
+     *     reversal, or if restoring the quantity would put the lot above what it originally received
+     * @throws StockWriteOffNotFoundException if there is no such write-off
+     */
+    StockWriteOffView reverseWriteOff(long writeOffId, LocalDate reversalDate, String note);
+
+    /** @throws StockWriteOffNotFoundException if absent */
+    StockWriteOffView requireWriteOff(long writeOffId);
+
+    /** Every write-off against one lot, oldest first — including the reversals. */
+    List<StockWriteOffView> writeOffsOf(long lotId);
+
+    /**
+     * Write-offs in a date range, oldest first — what a shrinkage-by-reason report reads.
+     *
+     * <p>Includes reversals, which is deliberate: a report that silently dropped them would show a loss
+     * that was corrected as though it stood, and netting them out is the reader's decision rather than
+     * this query's.
+     */
+    List<StockWriteOffView> writeOffsBetween(LocalDate from, LocalDate to);
 }

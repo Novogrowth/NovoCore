@@ -70,5 +70,44 @@ public enum AccountSystemKey {
      * Cost of goods sold. Keyed because FIFO consumption posts here automatically, one line per
      * lot consumed (brief §6).
      */
-    COST_OF_GOODS_SOLD
+    COST_OF_GOODS_SOLD,
+
+    /**
+     * VAT charged on our sales, held until it is paid over. A liability.
+     *
+     * <p><strong>Q14, answered: output and input VAT are separate accounts and are never
+     * netted.</strong> Step 3 seeded a single {@code VAT payable} account and said in the migration
+     * that one was almost certainly insufficient; it was. Netting the two destroys the pair of
+     * figures a VAT return is made of, and it hides the case that matters most — a period where
+     * reclaimable input VAT exceeds output VAT is a refund position, and once added together that
+     * looks identical to a small liability.
+     *
+     * <p>Keyed because the posting rule for every sales invoice line resolves it at runtime. See
+     * {@link gr.novotrade.novocore.core.api.ledger.VatDirection}.
+     */
+    OUTPUT_VAT,
+
+    /**
+     * VAT charged to us on purchases, reclaimable against output VAT. Asset-side, per Q14.
+     *
+     * <p>An asset rather than a negative liability because that is what it is: a claim on the tax
+     * authority. It is also what makes {@link #OUTPUT_VAT}'s balance mean "VAT we collected"
+     * rather than "VAT we happen to owe on balance".
+     */
+    INPUT_VAT,
+
+    /**
+     * The expense side of a depreciation posting.
+     *
+     * <p>Added because step 5 flagged the gap: both fixed-asset control accounts carry a key, so a
+     * depreciation entry could find the asset side of itself and would have had to look the expense
+     * side up by name — which breaks the first time somebody renames it, the whole reason this enum
+     * exists.
+     *
+     * <p><strong>Nothing posts here yet.</strong> Whether the periodic depreciation run is Phase 1
+     * scope or only the register and the calculation is still open, and the statutory rates are
+     * still with the accountant. The key is the handle that run will need; creating it now is not
+     * building the run.
+     */
+    DEPRECIATION_EXPENSE
 }

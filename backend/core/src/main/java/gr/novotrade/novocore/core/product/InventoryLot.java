@@ -204,4 +204,40 @@ class InventoryLot extends AuditableEntity {
     void moveTo(StockLocation destination) {
         this.location = destination;
     }
+
+    /**
+     * Takes pooled quantity out of this lot.
+     *
+     * <p><strong>Never called on a serial-tracked lot</strong>, whose remaining quantity is the count of
+     * its on-hand units and is not a column: writing one would be refused by
+     * {@code inventory_lot_pooled_columns_go_together}. The service checks the shape and has the message;
+     * this is the assertion that the two agree.
+     *
+     * <p>Bounds are checked by the service so the failure names the lot and the amounts, and again by
+     * {@code inventory_lot_remaining_within_received}, which is the guarantee.
+     */
+    void consume(Quantity amount) {
+        requirePooled("consumed from");
+        this.quantityRemaining = quantityRemaining.subtract(amount.value());
+    }
+
+    /**
+     * Puts pooled quantity back — the reversal of a write-off.
+     *
+     * <p>Bounded above by what was received, not by what is currently missing: restoring more than the
+     * lot ever held would be inventing stock, and the CHECK refuses it.
+     */
+    void restore(Quantity amount) {
+        requirePooled("restored to");
+        this.quantityRemaining = quantityRemaining.add(amount.value());
+    }
+
+    private void requirePooled(String what) {
+        if (isSerialTracked()) {
+            throw new IllegalStateException(
+                    "Lot " + id + " is serial-tracked, so quantity cannot be " + what + " it directly: "
+                            + "its quantity is the count of its on-hand units. Change the unit's status "
+                            + "instead. Reaching here means the service's shape check was bypassed.");
+        }
+    }
 }

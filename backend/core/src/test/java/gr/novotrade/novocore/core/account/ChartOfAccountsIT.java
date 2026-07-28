@@ -90,7 +90,10 @@ class ChartOfAccountsIT extends AbstractCoreIntegrationTest {
     void seededGroupSizes() {
         assertThat(accountCountsBySeededGroup())
                 .containsEntry("Cash & Cash Equivalents", 6)
-                .containsEntry("Current Assets", 7)
+                // Eight since V14 added Input VAT — Q14's answer that output and input VAT are
+                // separate accounts and are never netted. It is an asset because it is a claim on the
+                // tax authority, so it sits here rather than as a negative liability.
+                .containsEntry("Current Assets", 8)
                 .containsEntry("Non-Current Assets", 3)
                 .containsEntry("Current Liabilities", 8)
                 .containsEntry("Non-Current Liabilities", 1)

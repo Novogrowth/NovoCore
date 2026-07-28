@@ -144,7 +144,8 @@ class SchemaConventionsIT extends AbstractCoreIntegrationTest {
         assertThat(tables)
                 .contains("audit_log", "setting", "attachment", "account", "account_group",
                         "product", "customer", "supplier", "asset",
-                        "inventory_lot", "serialized_unit", "bundle_component");
+                        "inventory_lot", "serialized_unit", "bundle_component",
+                        "journal_entry", "journal_line", "stock_write_off");
 
         // And the currency rule above is not passing vacuously either: there is a real
         // numeric(19,2) column in the schema for it to check.

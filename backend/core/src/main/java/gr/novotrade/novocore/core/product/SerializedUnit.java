@@ -90,4 +90,22 @@ class SerializedUnit extends AuditableEntity {
     void moveTo(StockLocation destination) {
         this.location = destination;
     }
+
+    /**
+     * Derecognises this unit. The step 6 obligation that {@link SerializedUnitStatus#WRITTEN_OFF} was
+     * declared for and could not reach until the ledger existed.
+     *
+     * <p><strong>The location is deliberately left alone.</strong> A written-off machine is often still
+     * physically in the Damaged Goods area waiting to be disposed of, and the stock count already excludes
+     * it through {@code status = IN_STOCK} rather than through where it is. Clearing the location would
+     * lose the one fact somebody looking for it still needs.
+     */
+    void writeOff() {
+        this.status = SerializedUnitStatus.WRITTEN_OFF;
+    }
+
+    /** Puts a written-off unit back on hand — the reversal of a write-off. */
+    void restoreToStock() {
+        this.status = SerializedUnitStatus.IN_STOCK;
+    }
 }
