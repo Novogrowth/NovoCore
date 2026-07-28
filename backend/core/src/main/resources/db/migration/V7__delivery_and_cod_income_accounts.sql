@@ -57,16 +57,18 @@ COMMENT ON TABLE charge_type IS
 -- ---------------------------------------------------------------------------------------
 -- Seed: the two charge types
 -- ---------------------------------------------------------------------------------------
--- Both default to the standard 24% rate ('1410'), which is what these fees are charged at on an
--- ordinary domestic order.
+-- Both default to the standard 24% rate ('1410').
 --
--- KNOWN LIMITATION, recorded rather than silently accepted: under Greek practice a delivery
--- charge ancillary to a supply follows the VAT rate of the goods it delivers, so on a 13% order
--- the correct rate for delivery is 13%, not 24%. Nothing here computes that. The ordinary
--- precedence rule (invoice line beats customer beats product — see VatClassPrecedence) lets a
--- line carry the right rate, so the mechanism to be correct exists; what does not exist is
--- anything that derives it automatically. Deciding whether it should is part of the open VAT
--- posting design (PROGRESS.md Q14) rather than something to guess at here.
+-- SETTLED (Q33): a fee's VAT rate is INDEPENDENT of the products on the invoice. It was raised as
+-- a possible defect — Greek practice treats an ancillary charge as following the rate of the main
+-- supply — and answered explicitly: these fees are not treated as ancillary to the goods here, so
+-- a 13% order still carries 24% delivery. That means the default below is the operative rate
+-- rather than a placeholder, and nothing should later be built to derive a fee's rate from the
+-- lines around it.
+--
+-- The per-line override still exists (invoice line beats customer beats product — see
+-- VatClassPrecedence), so a specific invoice can state something else deliberately. What is
+-- deliberately absent is anything automatic.
 --
 -- Joined by code and name rather than by generated id, for the same reason V4's seed is: these
 -- statements must not depend on where a sequence happens to have got to.

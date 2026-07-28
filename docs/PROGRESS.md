@@ -32,11 +32,11 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 12 | Automated backups | Not started. Needs Drive paths/credentials, Q24 |
 | 13 | Test suite consolidation sweep | Not started |
 
-**Tests: 356 passing, `mvn clean verify` exit 0.** 110 unit (core-api), 219 core integration,
+**Tests: 370 passing, `mvn clean verify` exit 0.** 112 unit (core-api), 231 core integration,
 4 app unit, 12 app integration, 11 architecture. Nothing was failing at the last close-out, and
 nothing is failing now.
 
-`mvn test` runs the 125 non-container tests in ~6 seconds and needs no Docker. `mvn verify`
+`mvn test` runs the 127 non-container tests in ~6 seconds and needs no Docker. `mvn verify`
 additionally runs the `*IT` tests under Failsafe against a real PostgreSQL 17 container.
 
 ---
@@ -99,6 +99,8 @@ were already on `origin`.
 | `efe897e` | Q27 — `Delivery income` / `COD fee income` accounts, ChargeType seed, migration V7 |
 | `09ea0d5` | The real AADE VAT exemption reason seed, migration V8 |
 | `ae7c31f` | Step 5 — Product, Customer, Supplier, Asset, migration V9 |
+| `9c25993` | VAT rate bound's blind spot closed, migration V10 |
+| `2dce5df` | Q34 — units of measure as a runtime-editable table, migration V11 |
 
 Interleaved with these are small docs-only commits (`e25fcee`, `a09428e`, `920044c`, `de16e58`,
 `b065901`, `8c27cb4`) and this session's close-out commit.
@@ -522,10 +524,13 @@ of a list invites postings that should have gone somewhere specific. No channel 
 `AccountSystemKey`: these accounts are located through `charge_type.incomeAccountId`, which is an
 operator decision per fee rather than a rule compiled into the software.
 
-> ⚠️ **Recorded limitation, not silently accepted.** Both charge types default to 24%. Under Greek
-> practice a delivery charge **ancillary to a supply follows the VAT rate of the goods it
-> delivers**, so 24% is wrong on a 13% order. The per-line override can express the right rate;
-> nothing derives it. See Q33.
+**✅ Q33 settled: a fee's VAT rate is independent of the products on the invoice.** Both charge
+types default to 24%, and that is the operative rate rather than a placeholder — a 13% order still
+carries 24% delivery. Raised as a possible defect (Greek practice treats an ancillary charge as
+following the main supply's rate) and answered explicitly the other way, so **nothing should later
+be built to derive a fee's rate from the lines around it.** The per-line override still exists for
+a deliberate exception; what is deliberately absent is anything automatic. V7's comment and
+`ChargeTypeIT` both state the decision rather than the former limitation.
 
 **V8 (`09ea0d5`) seeds the real AADE VAT exemption reasons** — 29 rows from Prosvasis Go's
 "Διατάξεις απαλλαγής Φ.Π.Α." screen, in the **recodified** Κώδικας ΦΠΑ article numbering (άρθρο 2
@@ -691,6 +696,64 @@ exists:
 
 ---
 
+## V10 and V11 — the two follow-ups from step 5's review
+
+### V10 (`9c25993`) — the VAT rate bound had the same blind spot as the depreciation rate
+
+Flagged by the user after step 5's rate bug, and worth recording as a pattern rather than an
+incident. **V5's 0–100 CHECK did not do what its comment claimed.** It said a rate entered as a
+fraction would "fail loudly instead of undercharging 100×"; in fact `0.24` sits comfortably inside
+0–100, so it was accepted as a quarter of one percent and produced exactly that undercharge.
+`VatClassViewTest` even asserted the behaviour and documented the gap as a known limit instead of
+closing it.
+
+**The rule is now "exactly 0, or between 1 and 100"** — not a flat minimum, because the `'0'` class
+(Μηδενικός Συντελεστής ΦΠΑ) is real, seeded, and legally distinct from an exempt line, so `>= 1`
+would have refused real data. Nothing charges a fraction of a percent, so the whole interval (0, 1)
+is unreachable by legitimate data and is available as a trap. Stated once as
+`VatClassView.isAcceptableRate`, applied by the service, and enforced by the database, so all three
+agree by construction. Every seeded rate already satisfied it.
+
+**Worth generalising:** a range check whose bounds both sit outside the plausible-typo range catches
+nothing. Both times the mistake was the same — the *upper* bound was chosen carefully and the lower
+one was left at "not negative". Any future rate column should be checked against this.
+
+### V11 (`2dce5df`) — units of measure became a table (Q34)
+
+Step 5 built `UnitOfMeasure` as an enum; the user approved converting it. The decisive argument is
+the one that made `VatExemptionReason` a table: **myDATA has its own unit codes, which are AADE's
+data, and an enum constant cannot own them.** Prosvasis Go also holds "Μονάδες μέτρησης" as an
+editable list, so an operator already expects to add one without a deployment. Converted now rather
+than after step 6, because lots carry quantities and the reference gets harder to move with every
+table pointing at it.
+
+- **`mydata_code` is nullable and every seeded row has NULL** — same stance as the OSS/IOSS
+  exemption reasons. `UnitOfMeasureView.requireMydataCode()` makes phase 7 fail naming the unit
+  rather than transmitting a composed code, and `withoutMydataCode()` answers "which units cannot be
+  transmitted?" before AADE asks it.
+- **A myDATA code is write-once.** One that has been transmitted describes documents already filed
+  under it, so a wrong mapping means deactivate-and-replace, not edit.
+- **`allowsFractionalQuantity` moved from enum constant to column**, since it is a judgement about
+  how the business sells rather than a physical fact. Still unenforced until quantities exist.
+- **`UnitOfMeasure` is a real `@ManyToOne` from `Product`**, unlike the VAT class and supplier which
+  are plain ids. Not an inconsistency: it lives in the same package, so it is the same slice of the
+  core rather than another aggregate reached through a published service.
+- **Deactivating a unit a product still uses is refused**, not cascaded — a product whose unit was
+  retired carries a quantity that no longer states what it counts.
+- The column conversion is **add / backfill / constrain / drop**. The product table is expected to be
+  empty everywhere, but a migration that silently needs an empty table is one that fails on exactly
+  the machine where someone has been working.
+
+> ⚠️ **New step 6 obligation:** `ProductService.changeUnitOfMeasure` must refuse a change on a
+> product that has stock. Reinterpreting 12 pieces as 12 kilograms is not a units change, it is a
+> different quantity. There is nothing to guard yet; the obligation is stated in the interface and
+> the implementation so it is findable.
+
+> ⚠️ **Still needed from the accountant, now with a home to go in:** the verified AADE unit codes
+> (Q34 follow-on), alongside the exemption codes in Q35/Q36 and the depreciation rates.
+
+---
+
 ## Open questions, by the step they block
 
 Numbering follows the original Phase 1 question list so references stay stable.
@@ -707,25 +770,25 @@ supplied and seeded, built as a runtime-editable entity; precedence rule stated 
 - ~~**Q12**~~ a manually set depreciation rate on Asset; automatic pre-fill deferred.
 - ~~**Q6**~~ last purchase price is **computed, not stored**, for consistency with stock.
 
-### ⚠️ New, and waiting on input
+### ✅ Also resolved this session
 
-- **Q33** *(new)* **Should a delivery or COD fee follow the VAT rate of the goods it delivers?**
-  Under Greek practice an ancillary charge takes the rate of the main supply, so the seeded 24%
-  default is wrong on a 13% order. The per-line override can already express the right rate;
-  nothing derives it. Interacts with Q14. **Nothing is built either way** — say which behaviour is
-  wanted and it becomes a rule in the sales-invoice step (9).
-- **Q34** *(new)* **Should `UnitOfMeasure` be a runtime-editable lookup table rather than an enum?**
-  Built as an enum (`PIECE`, `SET`, `PACK`, `KILOGRAM`, `GRAM`, `LITRE`, `MILLILITRE`, `METRE`),
-  because the set NovoCore needs is small, known and physical rather than statutory. Two arguments
-  for a table: Prosvasis Go holds "Μονάδες μέτρησης" as an editable list, and myDATA has its own
-  unit codes a transmitted line must carry. Cheap to change now, less so after step 6's lots.
-- **Q35** *(new)* **AADE exemption codes 24 and 28 are absent from Go's list.** Confirm with the
+- ~~**Q33**~~ — **a fee's VAT rate is independent of the products purchased.** Nothing to build;
+  the seeded 24% default is the answer. See the V7 section.
+- ~~**Q34**~~ — **converted to a table** (V11). See above.
+- ~~**The VAT rate bound**~~ — **fixed** (V10). Not a question, a defect the user flagged.
+
+### ⚠️ Still waiting on input
+
+- **Q35** **AADE exemption codes 24 and 28 are absent from Go's list.** Confirm with the
   accountant whether AADE defines them and whether we need them, before the myDATA adapter is built
   (phase 7). If so it is two `INSERT`s, not a restructuring.
-- **Q36** *(new)* **The OSS and IOSS reasons (codes 29–31) have no myDATA code.** Seeded as NULL
-  deliberately. Supply the values if they exist, or confirm that Go genuinely has no mapping —
-  either way, phase 7 must refuse to transmit a NULL rather than compose one.
-- **Q37** *(new)* **Customer and Supplier have no address fields.** Not needed while Go issues the
+- **Q36** **The OSS and IOSS reasons (codes 29–31) have no myDATA code.** Seeded as NULL
+  deliberately — **approved as built**, with phase 7 required to refuse transmission on a NULL
+  rather than guess. The real values are to be confirmed with the accountant before then.
+- **Q38** *(new)* **The AADE myDATA unit-of-measure codes.** `unit_of_measure.mydata_code` exists
+  and every row is NULL. Same shape and same phase-7 obligation as Q36. Add them to the accountant
+  list alongside the exemption codes and the depreciation rates.
+- **Q37** **Customer and Supplier have no address fields.** Not needed while Go issues the
   invoices, but needed by phase 11 at the latest, and possibly sooner for courier vouchers in phase
   4. Also unasked: whether Customer and Supplier want human-facing codes (the internal id is a
   bigint), and whether more than one selling price per product is ever needed.
@@ -873,26 +936,28 @@ committed and pushed.
    with one write-off account instead of three, the shrinkage/damage/expiry distinction has nowhere
    else to live.
 
-Also worth settling before step 6 rather than after: **Q11 (bundles)**, since a bundle decomposes
-into component lines for inventory and COGS, and **Q34 (unit of measure as a table)**, which is
-cheap now and less so once lots carry quantities.
+**The user will supply answers to Q7, Q25 and Q11 at the start of the next session.** Q11 (bundles)
+matters before step 6 rather than after, since a bundle decomposes into component lines for
+inventory and COGS.
 
 ### Obligations step 6 must honour
 
 - **A reason field on the inventory write-off transaction** (step 3, not optional).
 - **`ProductType.SERVICE` must not answer "zero" when asked for stock** — it has no lots, and zero
   is indistinguishable from "not applicable" on a screen.
-- **Enforce `UnitOfMeasure.allowsFractionalQuantity()`** — 2.5 pieces is a data-entry error.
+- **Enforce `UnitOfMeasureView.allowsFractionalQuantity()`** — 2.5 pieces is a data-entry error.
+- **`ProductService.changeUnitOfMeasure` must refuse a product that has stock** — reinterpreting 12
+  pieces as 12 kilograms is a different quantity, not a units change.
 
 ### Waiting on the accountant, and blocking real data rather than code
 
 - **Statutory depreciation rates per asset category**, plus the category taxonomy. The field exists
   and is nullable; **do not create real assets with real values until these are confirmed.**
-- **AADE exemption codes 24 and 28** (Q35) and **the OSS/IOSS myDATA codes** (Q36), before phase 7.
+- **AADE exemption codes 24 and 28** (Q35), **the OSS/IOSS myDATA codes** (Q36), and **the myDATA
+  unit-of-measure codes** (Q38) — all before phase 7, all NULL and fail-loud in the meantime.
 
 ### Also still open, not blocking step 6
 
-- **Q33** delivery/COD VAT following the main supply's rate — interacts with Q14.
 - **Q28 — dispatch purpose placement.** Recommendation is a core-owned `GoodsDispatch` in phase 4,
   conditional on whether Go already issues Δελτία Αποστολής and whether the AADE digital delivery
   note regime applies (accountant question). Nothing built.

@@ -59,9 +59,10 @@ class ChargeTypeIT extends AbstractCoreIntegrationTest {
                 .isNotEqualTo(otherIncome().id())
                 .isNotEqualTo(cod.incomeAccountId());
 
-        // Both default to the standard rate. Note the known limitation recorded in V7: a delivery
-        // charge ancillary to a supply legally follows the rate of the goods it delivers, and
-        // nothing derives that automatically — the per-line override is the only route to it.
+        // Both default to the standard rate, and that is the settled answer rather than a
+        // placeholder (Q33): a fee's VAT rate is independent of the products on the invoice, so a
+        // 13% order still carries 24% delivery. Nothing should later derive a fee's rate from the
+        // lines around it; a specific invoice can still state something else per line.
         long standardRate = vatClasses.requireByCode("1410").id();
         assertThat(delivery.defaultVatClassId()).isEqualTo(standardRate);
         assertThat(cod.defaultVatClassId()).isEqualTo(standardRate);
