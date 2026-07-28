@@ -8,7 +8,9 @@ regenerated the schema.
 Applied migrations, in order: `V1` conventions and the audit log, `V2` settings, `V3`
 attachments, `V4` the chart of accounts, `V5` VAT classes / exemption reasons / charge types,
 `V6` users, roles and permissions, `V7` the two fee income accounts and the charge-type seed,
-`V8` the real AADE exemption-reason seed, `V9` products, customers, suppliers and assets.
+`V8` the real AADE exemption-reason seed, `V9` products, customers, suppliers and assets,
+`V10` the VAT rate's lower bound, `V11` units of measure as a table, `V12` inventory lots and
+serialized units, `V13` bundle products.
 
 ## Rules
 
@@ -38,3 +40,11 @@ attachments, `V4` the chart of accounts, `V5` VAT classes / exemption reasons / 
    `SchemaConventionsIT.everyMonetaryColumnCarriesItsCurrency` enforces the pairing, and a JPA
    field mapping a `char(3)` column needs `@JdbcTypeCode(SqlTypes.CHAR)` or schema validation
    rejects it as a `varchar` mismatch.
+
+   **Two kinds of monetary column, because the scale cannot identify them on its own.** Every
+   `numeric(19,2)` is an amount and therefore money. A `numeric(19,6)` is a multiplier, and only
+   *some* multipliers are money — a VAT rate and a quantity are not, a unit cost is. So the
+   discriminator for the six-decimal case is the **name**: a monetary multiplier is named
+   `..._cost`, and the test requires a currency companion for any `numeric(19,6)` column whose
+   name ends that way. `inventory_lot.unit_cost` in `V12` is the first. A monetary six-decimal
+   column that is genuinely not a cost means widening that rule, not naming the column around it.

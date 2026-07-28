@@ -86,12 +86,18 @@ class SchemaConventionsIT extends AbstractCoreIntegrationTest {
     }
 
     @Test
-    @DisplayName("every numeric(19,2) amount has a char(3) currency column beside it")
+    @DisplayName("every monetary column has a char(3) currency column beside it")
     void everyMonetaryColumnCarriesItsCurrency() {
         // ADR 0005: EUR-only behaviour, but currency is modelled from day one, and every monetary
         // column carries one. Enforced structurally rather than by convention, because the failure
         // mode of a missing currency is a figure that looks right and means nothing once a second
         // currency exists — and by then there is history in the table.
+        //
+        // TWO KINDS OF MONETARY COLUMN, because scale alone cannot identify them. Every numeric(19,2)
+        // is an amount and therefore money. A numeric(19,6) is a multiplier, and only SOME multipliers
+        // are money: a VAT rate and a quantity are not, a unit cost is. So the discriminator for the
+        // six-decimal case is the name, and `_cost` is the naming convention V12 established for it —
+        // inventory_lot.unit_cost being the first.
         List<Map<String, Object>> offenders = jdbc.queryForList("""
                 SELECT amount.table_name, amount.column_name
                 FROM information_schema.columns amount
@@ -104,19 +110,23 @@ class SchemaConventionsIT extends AbstractCoreIntegrationTest {
                 WHERE amount.table_schema = current_schema()
                   AND amount.table_name <> ?
                   AND amount.data_type = 'numeric'
-                  AND amount.numeric_scale = 2
+                  AND (amount.numeric_scale = 2
+                       OR (amount.numeric_scale = 6 AND right(amount.column_name, 5) = '_cost'))
                   AND currency.column_name IS NULL
                 ORDER BY amount.table_name, amount.column_name
                 """, NOT_OURS);
 
         assertThat(offenders)
-                .as("A numeric(19,2) column is a posted monetary amount, and ADR 0005 requires "
+                .as("A numeric(19,2) column is a posted monetary amount, and a numeric(19,6) column "
+                        + "whose name ends in _cost is a monetary multiplier. ADR 0005 requires "
                         + "every one to carry its currency in a companion char(3) column named "
                         + "<column>_currency — product.selling_price and "
-                        + "product.selling_price_currency being the first pair. Add the companion "
+                        + "inventory_lot.unit_cost being the first of each kind. Add the companion "
                         + "and a CHECK tying the two together, rather than exempting the column "
                         + "here: an amount whose currency is implied is an amount that means "
-                        + "something different the day a second currency exists.")
+                        + "something different the day a second currency exists. A new monetary "
+                        + "six-decimal column that is not a cost needs this rule widened, not "
+                        + "sidestepped by naming it something else.")
                 .isEmpty();
     }
 
@@ -133,7 +143,8 @@ class SchemaConventionsIT extends AbstractCoreIntegrationTest {
 
         assertThat(tables)
                 .contains("audit_log", "setting", "attachment", "account", "account_group",
-                        "product", "customer", "supplier", "asset");
+                        "product", "customer", "supplier", "asset",
+                        "inventory_lot", "serialized_unit", "bundle_component");
 
         // And the currency rule above is not passing vacuously either: there is a real
         // numeric(19,2) column in the schema for it to check.
@@ -143,6 +154,18 @@ class SchemaConventionsIT extends AbstractCoreIntegrationTest {
                   AND data_type = 'numeric' AND numeric_scale = 2
                 """, Integer.class))
                 .as("the monetary-column rule needs at least one monetary column to be meaningful")
+                .isPositive();
+
+        // Nor is its six-decimal half, which became live with inventory_lot.unit_cost in V12. Without
+        // this, adding a second monetary multiplier with no currency would pass silently the day
+        // somebody renamed unit_cost.
+        assertThat(jdbc.queryForObject("""
+                SELECT count(*) FROM information_schema.columns
+                WHERE table_schema = current_schema()
+                  AND data_type = 'numeric' AND numeric_scale = 6
+                  AND right(column_name, 5) = '_cost'
+                """, Integer.class))
+                .as("the monetary-multiplier half of the rule needs at least one _cost column")
                 .isPositive();
     }
 }

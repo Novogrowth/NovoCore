@@ -4,6 +4,7 @@ import gr.novotrade.novocore.core.api.security.ProtectedField;
 import gr.novotrade.novocore.core.api.security.RoleView;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.shared.Money;
+import gr.novotrade.novocore.core.api.shared.UnitCost;
 import gr.novotrade.novocore.core.api.tax.VatClassPrecedence;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -24,13 +25,12 @@ import java.util.Set;
  * one implementation of the redaction — one place rather than one per caller, so a second reader of
  * products cannot forget half of it.
  *
- * <p><strong>What is deliberately not here.</strong> Stock is absent: it is derived from lots
- * (brief §5 says it is never stored), lots arrive in step 6, and it is not one number anyway — the
- * location lives on the lot and sellability depends on stock at a sellable location (Q7).
- * {@link #lastPurchasePrice()} is present but always empty for the same reason: it is derived from
- * lot costs, so it stays empty until step 6. It is on the record now rather than added later
- * because it is one of the three restricted fields, and the redaction that hides it is testable
- * today whether or not a value has arrived.
+ * <p><strong>Stock is deliberately not here.</strong> It is derived from lots (brief §5 says it is
+ * never stored) and it is not one number anyway — the location lives with the quantity and
+ * sellability depends on stock at a sellable location. Q7 answered the shape:
+ * {@code InventoryService.stockOf} returns {@code StockLevels}, which is per location plus a computed
+ * sellable figure. Putting a single number on this record would have to pick one of those to be wrong
+ * about.
  *
  * @param sku NovoCore's own SKU, unique. The handle everything else uses.
  * @param ean the barcode, unique when present. Null for products that have none — own-blend coffee
@@ -48,8 +48,18 @@ import java.util.Set;
  * @param supplierSku the supplier's own code for this product. Meaningless without knowing which
  *     supplier, which is what Q5 was about, so the schema refuses one without the other. Protected
  *     by {@link ProtectedField#PRODUCT_SUPPLIER_SKU}.
- * @param lastPurchasePrice derived from inventory lots, never stored (Q6, consistent with stock).
- *     Always empty until step 6. Protected by
+ * @param serialTracked whether stock of this product is identified individually by serial number
+ *     (brief §5's serialized products — coffee machines). Decides the shape of its lots: a
+ *     serial-tracked lot holds units rather than a pooled quantity, and its write-offs use the
+ *     specific unit's own cost instead of FIFO. Only a stocked, non-bundle product can be one.
+ * @param bundle whether this is a bundle/composite product (Q11, brief §5). A bundle has its own SKU
+ *     and <em>no stock of its own</em> — its availability is computed from its components, and it
+ *     cannot receive a lot.
+ * @param lastPurchasePrice the unit cost of the most recent lot — derived, never stored (Q6,
+ *     consistent with stock). A {@code UnitCost} rather than a {@code Money} because that is what a
+ *     lot carries: six decimals, since a cost that has had landed costs allocated into it is not a
+ *     round number of cents, and rounding it for display would show a figure nobody paid. Empty for a
+ *     product that has never been received. Protected by
  *     {@link ProtectedField#PRODUCT_LAST_PURCHASE_PRICE}.
  * @param hiddenFields the protected fields blanked out of this instance. Empty on an unredacted
  *     view. Carried so a caller can tell "hidden from you" from "not set" — two states that look
@@ -67,7 +77,9 @@ public record ProductView(
         Money sellingPrice,
         Long supplierId,
         String supplierSku,
-        Money lastPurchasePrice,
+        boolean serialTracked,
+        boolean bundle,
+        UnitCost lastPurchasePrice,
         boolean active,
         Set<ProtectedField> hiddenFields) {
 
@@ -139,6 +151,7 @@ public record ProductView(
                 id, sku, ean, name, type, unitOfMeasure, defaultVatClassId, sellingPrice,
                 hideSupplier ? null : supplierId,
                 hideSupplierSku ? null : supplierSku,
+                serialTracked, bundle,
                 hideLastPurchasePrice ? null : lastPurchasePrice,
                 active,
                 hidden);
@@ -171,13 +184,39 @@ public record ProductView(
         return Optional.ofNullable(supplierSku);
     }
 
-    /** Empty until inventory lots exist (step 6), and empty when hidden from the viewer. */
-    public Optional<Money> lastPurchasePriceIfAny() {
+    /**
+     * The most recent lot's unit cost, or empty where the product has never been received — and empty
+     * when hidden from the viewer, which is why {@link #isHidden} exists to tell the two apart.
+     */
+    public Optional<UnitCost> lastPurchasePriceIfAny() {
         return Optional.ofNullable(lastPurchasePrice);
     }
 
-    /** True when this product carries stock — goods do, services do not. */
+    /**
+     * True when this product carries stock of its own.
+     *
+     * <p>Goods do. Services do not — they have no lots. <strong>Nor does a bundle</strong>: it has its
+     * own SKU and no stock of its own (brief §5), and its availability is computed from its components,
+     * so it can never receive a lot. Both cases answer false here, and for both of them
+     * {@code InventoryService.stockOf} refuses rather than answering zero.
+     */
     public boolean isStocked() {
-        return type.isStocked();
+        return type.isStocked() && !bundle;
+    }
+
+    /**
+     * True when this product's stock is individually identified by serial number.
+     *
+     * <p>Decides the shape of its lots: units rather than a pooled quantity, a location per unit
+     * rather than per lot, and — brief §5's exception — write-offs and count corrections that use the
+     * named unit's own actual cost rather than FIFO, because serialized stock is not pooled.
+     */
+    public boolean isSerialTracked() {
+        return serialTracked;
+    }
+
+    /** True when this is a bundle/composite product (Q11, brief §5). */
+    public boolean isBundle() {
+        return bundle;
     }
 }

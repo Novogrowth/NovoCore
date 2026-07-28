@@ -27,11 +27,15 @@ import java.util.Optional;
  * {@link ProtectedField#PRODUCT_SUPPLIER_SKU}. An order picker needs to know what a product is and
  * what it sells for; they have no need to know what it cost us or who supplies it.
  *
- * <p><strong>Not here yet.</strong> Stock, in any form — it comes from lots (step 6) and is not one
- * number (Q7). Bundles/composite products, which are in brief §5 but were left out of the agreed
- * Phase 1 scope and are still an open question (Q11), so no bundle flag is carried: a flag nothing
- * honours reads as a half-built feature to whoever finds it next. Last purchase price is on
- * {@link ProductView} but always empty, being derived from lot costs.
+ * <p><strong>Stock is not here, and that is the answer to Q7 rather than an omission.</strong> Stock
+ * is not one number: the location lives with the quantity and only the Inventory location is sellable,
+ * so it is {@code InventoryService.stockOf} returning {@code StockLevels} — per location plus a
+ * computed sellable figure. {@link ProductView#lastPurchasePrice()} is the one derived figure that does
+ * appear here, because it is one of the three restricted fields and belongs behind the same redaction.
+ *
+ * <p><strong>Bundles are {@code BundleService}</strong> (Q11, answered: built). This interface carries
+ * the flag and the rules that follow from it — a bundle cannot receive stock, and a product cannot be
+ * a bundle and serial-tracked — while the component list and the decomposition live there.
  */
 public interface ProductService {
 
@@ -103,13 +107,29 @@ public interface ProductService {
     /**
      * Changes the unit a product's quantity is expressed in.
      *
-     * <p>Once lots exist (step 6) this will need to refuse a change on a product that has stock:
-     * reinterpreting 12 pieces as 12 kilograms is not a units change, it is a different quantity.
-     * There is nothing to guard yet, and stating the obligation here is what makes it findable.
+     * <p><strong>Refused once the product has lots.</strong> Reinterpreting 12 pieces as 12 kilograms
+     * is not a units change, it is a different quantity — and every lot, every future consumption and
+     * every posted cost behind that product is denominated in the old unit. The step 5 obligation,
+     * discharged: there is something to guard now.
      *
-     * @throws InvalidProductException if the unit does not exist or is inactive
+     * @throws InvalidProductException if the unit does not exist or is inactive, if the product has any
+     *     inventory lot, or if the new unit forbids fractions the product's bundle components need
      */
     ProductView changeUnitOfMeasure(long id, long unitOfMeasureId);
+
+    /**
+     * Switches a product between pooled and serial-tracked stock.
+     *
+     * <p><strong>Refused once the product has lots</strong>, for the same reason as the unit of
+     * measure and then some: a lot is received in one shape or the other, and there is no honest way to
+     * turn a pooled quantity of five into five identified units — the serial numbers were never
+     * recorded. This exists for the window between creating a product and receiving its first stock,
+     * which is where the mistake is actually correctable.
+     *
+     * @throws InvalidProductException if the product is a service or a bundle (neither has units to
+     *     number), or if it already has inventory lots
+     */
+    ProductView changeSerialTracking(long id, boolean serialTracked);
 
     /** @throws InvalidProductException if the name is blank */
     ProductView rename(long id, String newName);
@@ -147,6 +167,17 @@ public interface ProductService {
     /** Sets or clears the barcode. @throws InvalidProductException if another product has it */
     ProductView changeEan(long id, String ean);
 
+    /**
+     * Deactivates a product.
+     *
+     * <p><strong>Refused while the product is a component of an active bundle.</strong> A bundle whose
+     * component has been discontinued cannot be assembled, and deactivating quietly would leave a
+     * sellable-looking bundle that fails at the till — the same reasoning that refuses to deactivate a
+     * unit of measure a product still uses. {@code BundleService.bundlesContaining} names them, and
+     * either the bundle is dissolved or the component is replaced first.
+     *
+     * @throws InvalidProductException if an active bundle still lists this product as a component
+     */
     void deactivate(long id);
 
     void reactivate(long id);

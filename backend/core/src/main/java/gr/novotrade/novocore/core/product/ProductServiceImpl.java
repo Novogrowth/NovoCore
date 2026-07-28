@@ -9,10 +9,14 @@ import gr.novotrade.novocore.core.api.product.ProductView;
 import gr.novotrade.novocore.core.api.security.RoleView;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.shared.Money;
+import gr.novotrade.novocore.core.api.shared.UnitCost;
 import gr.novotrade.novocore.core.api.supplier.SupplierService;
 import gr.novotrade.novocore.core.api.supplier.SupplierView;
 import gr.novotrade.novocore.core.api.tax.VatClassService;
 import gr.novotrade.novocore.core.api.tax.VatClassView;
+import java.math.BigDecimal;
+import java.util.Currency;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -29,6 +33,13 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>The {@code ...For} methods apply {@link ProductView#redactedFor}, which is where step 4's
  * field-restriction obligation is discharged. The redaction logic itself lives on the view, so this
  * class holds no copy of the rule.
+ *
+ * <p><strong>Lots and bundle components are read from their repositories directly, not through
+ * {@code InventoryService} or {@code BundleService}.</strong> They are the same slice of the core —
+ * the Inventory control account's sub-ledger is Product-Lot, one thing — so this is the same case as
+ * {@code UnitOfMeasure}. It is also the only arrangement that works: a product's last purchase price
+ * comes from a lot while a lot's validity depends on its product, and two services calling each other
+ * is a bean cycle.
  */
 @Service
 class ProductServiceImpl implements ProductService {
@@ -37,17 +48,22 @@ class ProductServiceImpl implements ProductService {
 
     private final ProductRepository repository;
     private final UnitOfMeasureRepository unitsOfMeasure;
+    private final InventoryLotRepository lots;
+    private final BundleComponentRepository bundleComponents;
     private final VatClassService vatClasses;
     private final SupplierService suppliers;
     private final AuditLogService auditLog;
 
     ProductServiceImpl(ProductRepository repository, UnitOfMeasureRepository unitsOfMeasure,
+            InventoryLotRepository lots, BundleComponentRepository bundleComponents,
             VatClassService vatClasses, SupplierService suppliers, AuditLogService auditLog) {
         this.repository = repository;
         // The unit repository directly, not through UnitOfMeasureService: units live in this
         // package, so they are the same slice of the core rather than another aggregate reached
         // through a published interface. The VAT class and supplier above are the other case.
         this.unitsOfMeasure = unitsOfMeasure;
+        this.lots = lots;
+        this.bundleComponents = bundleComponents;
         this.vatClasses = vatClasses;
         this.suppliers = suppliers;
         this.auditLog = auditLog;
@@ -72,7 +88,7 @@ class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public Optional<ProductView> find(long id) {
-        return repository.findById(id).map(ProductServiceImpl::toView);
+        return repository.findById(id).map(this::toView);
     }
 
     @Override
@@ -88,7 +104,7 @@ class ProductServiceImpl implements ProductService {
         if (normalised == null) {
             return Optional.empty();
         }
-        return repository.findBySkuIgnoreCase(normalised).map(ProductServiceImpl::toView);
+        return repository.findBySkuIgnoreCase(normalised).map(this::toView);
     }
 
     @Override
@@ -106,7 +122,7 @@ class ProductServiceImpl implements ProductService {
             // a misread into a confidently wrong product on an invoice.
             return Optional.empty();
         }
-        return repository.findByEan(normalised).map(ProductServiceImpl::toView);
+        return repository.findByEan(normalised).map(this::toView);
     }
 
     @Override
@@ -169,15 +185,24 @@ class ProductServiceImpl implements ProductService {
         requireSupplierPair(request.supplierId(), supplierSku);
         requireUsablePrice(request.sellingPrice());
 
+        // A service has no units to number. Refused here as well as by CHECK, so the message names the
+        // reason instead of surfacing as a constraint violation.
+        if (request.serialTracked() && !request.type().isStocked()) {
+            throw new InvalidProductException(
+                    "Product '" + sku + "' is a " + request.type() + ", so it cannot be serial-"
+                            + "tracked: a service has no units to give serial numbers to.");
+        }
+
         Product saved = repository.save(new Product(
                 sku, ean, name, request.type(), unit,
                 request.defaultVatClassId(), request.sellingPrice(),
-                request.supplierId(), supplierSku));
+                request.supplierId(), supplierSku, request.serialTracked()));
 
         auditLog.record("product.created", ENTITY_TYPE, String.valueOf(saved.getId()), Map.of(
                 "sku", sku,
                 "name", name,
                 "type", request.type().name(),
+                "serialTracked", String.valueOf(request.serialTracked()),
                 "defaultVatClassId", String.valueOf(request.defaultVatClassId())));
 
         return toView(saved);
@@ -233,9 +258,31 @@ class ProductServiceImpl implements ProductService {
         Product product = load(id);
         UnitOfMeasure unit = requireActiveUnitOfMeasure(unitOfMeasureId);
 
-        // Step 6 obligation, recorded where it will be read: once lots exist this must refuse a
-        // change on a product that has stock. Reinterpreting 12 pieces as 12 kilograms is not a
-        // units change, it is a different quantity.
+        // The step 5 obligation, discharged. Reinterpreting 12 pieces as 12 kilograms is not a units
+        // change, it is a different quantity — and every lot, every future consumption and every posted
+        // cost behind this product is denominated in the old unit.
+        if (lots.existsByProductId(id)) {
+            throw new InvalidProductException(
+                    "Product '" + product.getSku() + "' has inventory lots, so its unit of measure "
+                            + "cannot be changed: reinterpreting a recorded quantity in a different "
+                            + "unit is not a correction, it is a different quantity. Write the stock "
+                            + "off and receive it again if the unit was genuinely recorded wrong.");
+        }
+
+        // The V11 obligation applied in the other direction: a bundle component quantity that is
+        // fractional cannot survive a move to a unit that forbids fractions.
+        if (!unit.isFractionalQuantityAllowed()) {
+            for (BundleComponent component : bundleComponents.findByComponentIdOrderByBundleSkuAsc(id)) {
+                if (hasFraction(component.getQuantityPerBundle().value())) {
+                    throw new InvalidProductException(
+                            "Product '" + product.getSku() + "' appears in bundle '"
+                                    + component.getBundle().getSku() + "' with a fractional quantity "
+                                    + component.getQuantityPerBundle() + ", which unit '"
+                                    + unit.getCode() + "' does not allow.");
+                }
+            }
+        }
+
         String previous = product.getUnitOfMeasure().getCode();
         product.changeUnitOfMeasure(unit);
 
@@ -243,6 +290,44 @@ class ProductServiceImpl implements ProductService {
                 "sku", product.getSku(),
                 "from", previous,
                 "to", unit.getCode()));
+
+        return toView(product);
+    }
+
+    @Override
+    @Transactional
+    public ProductView changeSerialTracking(long id, boolean serialTracked) {
+        Product product = load(id);
+
+        if (product.isSerialTracked() == serialTracked) {
+            return toView(product);
+        }
+        if (serialTracked && !product.getType().isStocked()) {
+            throw new InvalidProductException(
+                    "Product '" + product.getSku() + "' is a " + product.getType() + ", so it cannot "
+                            + "be serial-tracked: a service has no units to give serial numbers to.");
+        }
+        if (serialTracked && product.isBundle()) {
+            throw new InvalidProductException(
+                    "Product '" + product.getSku() + "' is a bundle, so it cannot be serial-tracked: "
+                            + "a bundle has no stock of its own and nothing arrives to be numbered.");
+        }
+        // The reason this is not freely changeable. A pooled quantity of five cannot become five
+        // identified units, because the serial numbers were never recorded; going the other way would
+        // discard identities that warranty and service history depend on.
+        if (lots.existsByProductId(id)) {
+            throw new InvalidProductException(
+                    "Product '" + product.getSku() + "' already has inventory lots, so its serial "
+                            + "tracking cannot be changed. A lot is received in one shape or the "
+                            + "other: a pooled quantity has no serial numbers to recover, and "
+                            + "discarding real ones would lose the history attached to them.");
+        }
+
+        product.changeSerialTracking(serialTracked);
+
+        auditLog.record("product.serial-tracking-changed", ENTITY_TYPE, String.valueOf(id), Map.of(
+                "sku", product.getSku(),
+                "serialTracked", String.valueOf(serialTracked)));
 
         return toView(product);
     }
@@ -292,6 +377,23 @@ class ProductServiceImpl implements ProductService {
         if (!product.isActive()) {
             return;
         }
+
+        // Refused rather than cascaded, the same stance UnitOfMeasureService takes on a unit a product
+        // still uses. A bundle whose component has been discontinued cannot be assembled, and letting
+        // this through would leave a bundle that looks sellable and fails at the till.
+        List<String> blockingBundles = bundleComponents.findByComponentIdOrderByBundleSkuAsc(id).stream()
+                .map(BundleComponent::getBundle)
+                .filter(Product::isActive)
+                .map(Product::getSku)
+                .toList();
+        if (!blockingBundles.isEmpty()) {
+            throw new InvalidProductException(
+                    "Product '" + product.getSku() + "' is a component of active bundle(s) "
+                            + String.join(", ", blockingBundles) + ", which could not be assembled "
+                            + "without it. Dissolve or re-define the bundle first, or deactivate it "
+                            + "too.");
+        }
+
         product.setActive(false);
         auditLog.record("product.deactivated", ENTITY_TYPE, String.valueOf(id),
                 Map.of("sku", product.getSku()));
@@ -390,11 +492,54 @@ class ProductServiceImpl implements ProductService {
         return (value == null || value.isBlank()) ? null : value.trim();
     }
 
-    private static List<ProductView> toViews(List<Product> products) {
-        return products.stream().map(ProductServiceImpl::toView).toList();
+    /** True when a quantity has anything after the decimal point. */
+    private static boolean hasFraction(BigDecimal quantity) {
+        return quantity.stripTrailingZeros().scale() > 0;
     }
 
-    private static ProductView toView(Product product) {
+    /**
+     * Projects a list, reading every product's last lot cost in one query rather than one per row.
+     *
+     * <p>The alternative is an N+1 that only shows up once the catalogue is real.
+     */
+    private List<ProductView> toViews(List<Product> products) {
+        if (products.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, UnitCost> lastCosts = latestLotCostsByProductId();
+        return products.stream()
+                .map(product -> toView(product, lastCosts.get(product.getId())))
+                .toList();
+    }
+
+    private ProductView toView(Product product) {
+        UnitCost lastCost = lots
+                .findFirstByProductIdOrderByAcquisitionDateDescIdDesc(product.getId())
+                .map(InventoryLot::getUnitCost)
+                .orElse(null);
+        return toView(product, lastCost);
+    }
+
+    private Map<Long, UnitCost> latestLotCostsByProductId() {
+        Map<Long, UnitCost> costs = new HashMap<>();
+        for (Object[] row : lots.findLatestLotCostPerProduct()) {
+            long productId = ((Number) row[0]).longValue();
+            BigDecimal amount = (BigDecimal) row[1];
+            Currency currency = Currency.getInstance(((String) row[2]).trim());
+            costs.put(productId, UnitCost.of(amount, currency));
+        }
+        return costs;
+    }
+
+    /**
+     * @param lastPurchaseCost the most recent lot's unit cost, or null where the product has never been
+     *     received. Q6's answer — computed from lots, never a column, exactly like stock.
+     *     <p><strong>Step 10 obligation.</strong> Brief §5 says a lot's unit cost includes allocated
+     *     landed costs, so the day freight allocation exists this stops being the <em>purchase</em>
+     *     price and has to come from the purchase invoice line instead. It is correct today because
+     *     nothing allocates yet, and the day it stops being correct is knowable in advance.
+     */
+    private ProductView toView(Product product, UnitCost lastPurchaseCost) {
         return new ProductView(
                 product.getId(),
                 product.getSku(),
@@ -406,9 +551,9 @@ class ProductServiceImpl implements ProductService {
                 product.getSellingPrice(),
                 product.getSupplierId(),
                 product.getSupplierSku(),
-                // Derived from lot costs, which do not exist until step 6 (Q6). Null here rather
-                // than a stored column, for the same reason stock is not stored.
-                null,
+                product.isSerialTracked(),
+                product.isBundle(),
+                lastPurchaseCost,
                 product.isActive(),
                 // Nothing is hidden on the way out of the core. Redaction is applied by the
                 // ...For methods, against a specific viewer.

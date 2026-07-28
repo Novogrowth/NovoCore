@@ -8,6 +8,7 @@ import gr.novotrade.novocore.core.api.security.ProtectedField;
 import gr.novotrade.novocore.core.api.security.RoleView;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.shared.Money;
+import gr.novotrade.novocore.core.api.shared.UnitCost;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
@@ -29,7 +30,13 @@ import org.junit.jupiter.api.Test;
 class ProductViewTest {
 
     private static final Money PRICE = Money.ofEur("42.50");
-    private static final Money LAST_PURCHASE_PRICE = Money.ofEur("27.30");
+    /**
+     * A {@code UnitCost} rather than a {@code Money} since step 6: it comes from a lot's unit cost, so
+     * it carries six decimals. The trailing digits are the point — a cost that has had landed costs
+     * allocated into it is not a round number of cents, and rounding it for display would show a figure
+     * nobody paid.
+     */
+    private static final UnitCost LAST_PURCHASE_PRICE = UnitCost.ofEur("27.303333");
 
     /**
      * Units as they arrive from the lookup table (Q34), with no myDATA code — which is the state
@@ -62,7 +69,7 @@ class ProductViewTest {
         return new ProductView(
                 7L, "JJ-ESP-001", "5201234567890", "Espresso machine",
                 ProductType.GOODS, PIECE, 9L,
-                PRICE, 4L, "SUP-ESP-77", LAST_PURCHASE_PRICE, true, Set.of());
+                PRICE, 4L, "SUP-ESP-77", false, false, LAST_PURCHASE_PRICE, true, Set.of());
     }
 
     @Nested
@@ -204,7 +211,7 @@ class ProductViewTest {
             ProductView noSupplier = new ProductView(
                     8L, "JJ-BLEND-01", null, "House blend 250g",
                     ProductType.GOODS, KILOGRAM, 9L,
-                    Money.ofEur("9.90"), null, null, null, true, Set.of());
+                    Money.ofEur("9.90"), null, null, false, false, null, true, Set.of());
 
             ProductView redacted = noSupplier.redactedFor(remoteOrderStaff());
 
@@ -224,7 +231,7 @@ class ProductViewTest {
                     .isThrownBy(() -> new ProductView(
                             9L, "JJ-X", null, "Orphan supplier code",
                             ProductType.GOODS, PIECE, 9L,
-                            null, null, "SUP-ORPHAN", null, true, Set.of()))
+                            null, null, "SUP-ORPHAN", false, false, null, true, Set.of()))
                     .withMessageContaining("supplier SKU but no supplier");
         }
 
@@ -234,7 +241,7 @@ class ProductViewTest {
             ProductView product = new ProductView(
                     10L, "JJ-Y", null, "Bought under our own reference",
                     ProductType.GOODS, PIECE, 9L,
-                    null, 4L, null, null, true, Set.of());
+                    null, 4L, null, false, false, null, true, Set.of());
 
             assertThat(product.supplier()).contains(4L);
             assertThat(product.supplierSkuIfAny()).isEmpty();
@@ -249,8 +256,50 @@ class ProductViewTest {
         ProductView repair = new ProductView(
                 11L, "JJ-SVC-REPAIR", null, "Machine service",
                 ProductType.SERVICE, PIECE, 9L,
-                Money.ofEur("60.00"), null, null, null, true, Set.of());
+                Money.ofEur("60.00"), null, null, false, false, null, true, Set.of());
 
         assertThat(repair.isStocked()).isFalse();
+    }
+
+    @Nested
+    @DisplayName("the two step 6 flags")
+    class InventoryFlags {
+
+        @Test
+        @DisplayName("a bundle is GOODS and still not stocked — it has no stock of its own")
+        void aBundleIsNotStocked() {
+            // Brief §5. The trap this guards: a bundle is typed GOODS, so isStocked() reading only the
+            // type would report it as carrying stock, and something would try to receive a lot against
+            // it — counting the same goods twice, once as the bundle and once as its parts.
+            ProductView giftSet = new ProductView(
+                    12L, "JJ-GIFT-01", null, "Brewing gift set",
+                    ProductType.GOODS, PIECE, 9L,
+                    Money.ofEur("129.00"), null, null, false, true, null, true, Set.of());
+
+            assertThat(giftSet.type()).isEqualTo(ProductType.GOODS);
+            assertThat(giftSet.isBundle()).isTrue();
+            assertThat(giftSet.isStocked())
+                    .as("a bundle's availability is computed from its components, so it holds none "
+                            + "itself")
+                    .isFalse();
+        }
+
+        @Test
+        @DisplayName("serial tracking survives redaction — it is not a restricted field")
+        void serialTrackingIsNotRedacted() {
+            // Deliberate: whether a machine is identified by serial number is something an order
+            // picker has to know in order to pick the right one. What is hidden is what it cost.
+            ProductView machine = new ProductView(
+                    13L, "JJ-ESP-900", null, "Serialised espresso machine",
+                    ProductType.GOODS, PIECE, 9L,
+                    Money.ofEur("2400.00"), 4L, "SUP-900", true, false, LAST_PURCHASE_PRICE, true,
+                    Set.of());
+
+            ProductView redacted = machine.redactedFor(remoteOrderStaff());
+
+            assertThat(redacted.isSerialTracked()).isTrue();
+            assertThat(redacted.isStocked()).isTrue();
+            assertThat(redacted.lastPurchasePriceIfAny()).isEmpty();
+        }
     }
 }

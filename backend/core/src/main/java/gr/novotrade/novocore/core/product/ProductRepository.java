@@ -24,6 +24,9 @@ interface ProductRepository extends JpaRepository<Product, Long> {
 
     List<Product> findBySupplierIdOrderBySkuAsc(long supplierId);
 
+    /** Bundles (Q11). Active and inactive alike, since a discontinued bundle is still a bundle. */
+    List<Product> findByBundleTrueOrderBySkuAsc();
+
     /** Whether any product still refers to a unit, before it may be deactivated. */
     long countByUnitOfMeasureId(long unitOfMeasureId);
 }

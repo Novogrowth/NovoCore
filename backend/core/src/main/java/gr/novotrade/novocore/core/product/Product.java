@@ -96,6 +96,25 @@ class Product extends AuditableEntity {
     @Column(name = "supplier_sku", length = 60)
     private String supplierSku;
 
+    /**
+     * Whether this product's stock is identified individually by serial number (brief §5).
+     *
+     * <p>Decides the shape of its lots, so it cannot change once one exists: a pooled quantity of five
+     * cannot become five identified units, because the serial numbers were never recorded. Refused for
+     * a service and for a bundle, both by CHECK and by the service.
+     */
+    @Column(name = "serial_tracked", nullable = false)
+    private boolean serialTracked;
+
+    /**
+     * Whether this is a bundle/composite product (Q11, brief §5).
+     *
+     * <p>Set together with the component list by {@code BundleServiceImpl}, in one transaction, so a
+     * bundle never exists with nothing in it. A bundle has no stock of its own and cannot receive a lot.
+     */
+    @Column(name = "bundle", nullable = false)
+    private boolean bundle;
+
     @Column(name = "active", nullable = false)
     private boolean active = true;
 
@@ -104,7 +123,8 @@ class Product extends AuditableEntity {
     }
 
     Product(String sku, String ean, String name, ProductType type, UnitOfMeasure unitOfMeasure,
-            Long defaultVatClassId, Money sellingPrice, Long supplierId, String supplierSku) {
+            Long defaultVatClassId, Money sellingPrice, Long supplierId, String supplierSku,
+            boolean serialTracked) {
         this.sku = sku;
         this.ean = ean;
         this.name = name;
@@ -119,6 +139,10 @@ class Product extends AuditableEntity {
                 sellingPrice == null ? null : sellingPrice.currency().getCurrencyCode();
         this.supplierId = supplierId;
         this.supplierSku = supplierSku;
+        this.serialTracked = serialTracked;
+        // Never at creation: a bundle is defined by BundleService, which sets the flag and the
+        // components together so a bundle is never briefly empty.
+        this.bundle = false;
         this.active = true;
     }
 
@@ -168,6 +192,24 @@ class Product extends AuditableEntity {
 
     String getSupplierSku() {
         return supplierSku;
+    }
+
+    boolean isSerialTracked() {
+        return serialTracked;
+    }
+
+    /** Refused by the service once any lot exists — see {@code ProductService.changeSerialTracking}. */
+    void changeSerialTracking(boolean nowSerialTracked) {
+        this.serialTracked = nowSerialTracked;
+    }
+
+    boolean isBundle() {
+        return bundle;
+    }
+
+    /** Set only by {@code BundleServiceImpl}, alongside the component list. */
+    void setBundle(boolean nowBundle) {
+        this.bundle = nowBundle;
     }
 
     boolean isActive() {

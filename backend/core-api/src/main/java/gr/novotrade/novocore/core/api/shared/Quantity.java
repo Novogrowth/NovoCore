@@ -66,6 +66,35 @@ public record Quantity(BigDecimal value) implements Comparable<Quantity> {
         return new Quantity(value.negate());
     }
 
+    /**
+     * Multiplies one quantity by another — a per-unit quantity by a number of units.
+     *
+     * <p>Needed because {@code value().multiply(other.value())} produces up to twelve decimals and
+     * this type allows six, so the naive version throws on perfectly ordinary input: one whole bundle
+     * containing one whole grinder is {@code 1.000000 x 1.000000 = 1.000000000000}. The extra places
+     * there are all zeros, and widening them away is exact.
+     *
+     * <p><strong>Exact, and throws rather than rounding.</strong> If the product genuinely needs more
+     * than {@value #SCALE} decimals, then the answer cannot be expressed as a quantity at all and
+     * silently rounding it would misstate how much stock leaves a shelf. That is the same stance
+     * {@link Money#timesExact} takes, and for the same reason: a quantity is a physical count, so an
+     * unrepresentable one is a modelling error and not a rounding question.
+     */
+    public Quantity times(Quantity multiplier) {
+        Objects.requireNonNull(multiplier, "multiplier");
+        BigDecimal product = value.multiply(multiplier.value);
+        BigDecimal significant = product.stripTrailingZeros();
+        if (significant.scale() > SCALE) {
+            throw new ArithmeticException(
+                    "%s x %s = %s, which needs more than %d decimal places and therefore is not a "
+                            .formatted(value.toPlainString(), multiplier.value.toPlainString(),
+                                    product.toPlainString(), SCALE)
+                            + "quantity anything could be counted in. Rounding it would misstate how "
+                            + "much stock moves.");
+        }
+        return new Quantity(significant.setScale(SCALE));
+    }
+
     /** The smaller of the two. Used by FIFO consumption to take what a lot can supply. */
     public Quantity min(Quantity other) {
         Objects.requireNonNull(other, "other");

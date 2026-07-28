@@ -107,11 +107,13 @@ class ProductIT extends AbstractCoreIntegrationTest {
                 .noneSatisfy(column -> assertThat(column.toLowerCase())
                         .containsAnyOf("go_", "woo", "external"));
 
-        // Present on the view but empty: derived from lot costs, and lots arrive in step 6.
+        // On the view, computed from lots (Q6), and empty for a product that has never been received —
+        // which is a different fact from being hidden, hence isHidden().
         ProductView product = products.create(NewProduct.goods(
                 "ProdIT-DERIVED-01", "ProdIT derived values", pieceId(), standardRateId(),
                 Money.ofEur("10.00")));
         assertThat(product.lastPurchasePriceIfAny()).isEmpty();
+        assertThat(product.isHidden(ProtectedField.PRODUCT_LAST_PURCHASE_PRICE)).isFalse();
     }
 
     @Test
@@ -176,7 +178,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
         ProductView product = products.create(new NewProduct(
                 "ProdIT-SUP-01", null, "ProdIT supplied item", ProductType.GOODS,
                 kilogramId(), standardRateId(), Money.ofEur("24.00"),
-                importer.id(), "IMP-77-A"));
+                importer.id(), "IMP-77-A", false));
 
         assertThat(product.supplier()).contains(importer.id());
         assertThat(product.supplierSkuIfAny()).contains("IMP-77-A");
@@ -207,7 +209,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
         assertThatExceptionOfType(InvalidProductException.class)
                 .isThrownBy(() -> products.create(new NewProduct(
                         "ProdIT-ORPHAN-01", null, "ProdIT orphan code", ProductType.GOODS,
-                        pieceId(), standardRateId(), null, null, "ORPHAN-1")))
+                        pieceId(), standardRateId(), null, null, "ORPHAN-1", false)))
                 .withMessageContaining("identifies nothing without knowing whose code it is");
 
         // And in the database, not only in Java.
@@ -229,7 +231,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
 
         ProductView product = products.create(new NewProduct(
                 "ProdIT-SUP-02", null, "ProdIT own reference", ProductType.GOODS,
-                pieceId(), standardRateId(), null, supplier.id(), null));
+                pieceId(), standardRateId(), null, supplier.id(), null, false));
         assertThat(product.supplierSkuIfAny()).isEmpty();
 
         // Clearing the supplier clears its code with it — one setter, so the code cannot outlive
@@ -253,13 +255,13 @@ class ProductIT extends AbstractCoreIntegrationTest {
         assertThatExceptionOfType(InvalidProductException.class)
                 .isThrownBy(() -> products.create(new NewProduct(
                         "ProdIT-BADSUP-01", null, "ProdIT unknown supplier", ProductType.GOODS,
-                        pieceId(), standardRateId(), null, 999_999L, null)))
+                        pieceId(), standardRateId(), null, 999_999L, null, false)))
                 .withMessageContaining("No supplier with id 999999");
 
         assertThatExceptionOfType(InvalidProductException.class)
                 .isThrownBy(() -> products.create(new NewProduct(
                         "ProdIT-BADSUP-02", null, "ProdIT inactive supplier", ProductType.GOODS,
-                        pieceId(), standardRateId(), null, retired.id(), null)))
+                        pieceId(), standardRateId(), null, retired.id(), null, false)))
                 .withMessageContaining("inactive");
     }
 
@@ -282,7 +284,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
         ProductView product = products.create(new NewProduct(
                 "ProdIT-REDACT-01", "5209999900001", "ProdIT redacted item", ProductType.GOODS,
                 pieceId(), standardRateId(), Money.ofEur("129.00"),
-                supplier.id(), "HID-99"));
+                supplier.id(), "HID-99", false));
 
         ProductView asStaffSees = products.requireFor(product.id(), remoteStaff);
 
@@ -311,7 +313,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
         ProductView product = products.create(new NewProduct(
                 "ProdIT-OWNER-01", null, "ProdIT owner view", ProductType.GOODS,
                 pieceId(), standardRateId(), Money.ofEur("55.00"),
-                supplier.id(), "VIS-1"));
+                supplier.id(), "VIS-1", false));
 
         assertThat(products.requireFor(product.id(), owner).supplier()).contains(supplier.id());
         assertThat(products.requireFor(product.id(), owner).isRedacted()).isFalse();
@@ -371,7 +373,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
     void skuAndEanAreUnique() {
         products.create(new NewProduct(
                 "ProdIT-UNIQ-01", "5209999900002", "ProdIT unique one", ProductType.GOODS,
-                pieceId(), standardRateId(), null, null, null));
+                pieceId(), standardRateId(), null, null, null, false));
 
         assertThatExceptionOfType(InvalidProductException.class)
                 .isThrownBy(() -> products.create(NewProduct.goods(
@@ -382,7 +384,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
                 .isThrownBy(() -> products.create(new NewProduct(
                         "ProdIT-UNIQ-02", "5209999900002", "ProdIT duplicate barcode",
                         ProductType.GOODS, pieceId(), standardRateId(),
-                        null, null, null)))
+                        null, null, null, false)))
                 .withMessageContaining("scan ambiguous");
 
         assertThat(products.findByEan("5209999900002")).isPresent();
@@ -434,15 +436,43 @@ class ProductIT extends AbstractCoreIntegrationTest {
     }
 
     @Test
-    @DisplayName("no bundle flag exists while Q11 is open")
-    void noBundleFlagYet() {
-        // Bundles are in brief §5 but were left out of the agreed Phase 1 scope. A flag nothing
-        // honours reads as a half-built feature to whoever finds it next.
-        assertThat(jdbc.queryForList("""
-                SELECT column_name FROM information_schema.columns
-                WHERE table_schema = current_schema() AND table_name = 'product'
-                """, String.class))
-                .noneSatisfy(column -> assertThat(column.toLowerCase())
-                        .containsAnyOf("bundle", "composite", "kit"));
+    @DisplayName("the two step 6 flags exist and default to the safe answer")
+    void serialTrackingAndBundleDefaultToFalse() {
+        // Q11 is answered — bundles are built (V13) — so the step 5 assertion that no bundle column
+        // existed is gone. What is worth asserting instead is the default: a product is pooled,
+        // non-bundle stock unless somebody says otherwise, because both flags change how stock is
+        // counted and neither should be arrived at by accident.
+        ProductView plain = products.create(NewProduct.goods(
+                "ProdIT-FLAGS-01", "ProdIT plain goods", pieceId(), standardRateId(),
+                Money.ofEur("12.00")));
+
+        assertThat(plain.isSerialTracked()).isFalse();
+        assertThat(plain.isBundle()).isFalse();
+        assertThat(plain.isStocked()).isTrue();
+
+        ProductView machine = products.create(NewProduct.serializedGoods(
+                "ProdIT-FLAGS-02", "ProdIT serialised machine", pieceId(), standardRateId(),
+                Money.ofEur("1800.00")));
+
+        assertThat(machine.isSerialTracked()).isTrue();
+    }
+
+    @Test
+    @DisplayName("a service cannot be serial-tracked, in code and in the database")
+    void serviceCannotBeSerialTracked() {
+        assertThatExceptionOfType(InvalidProductException.class)
+                .isThrownBy(() -> products.create(new NewProduct(
+                        "ProdIT-SVCSER-01", null, "ProdIT serialised service", ProductType.SERVICE,
+                        pieceId(), standardRateId(), null, null, null, true)))
+                .withMessageContaining("no units to give serial numbers to");
+
+        // And structurally, not only through the service (migration README rule 4).
+        assertThatThrownBy(() -> jdbc.update("""
+                INSERT INTO product (sku, name, product_type, unit_of_measure_id,
+                                     default_vat_class_id, serial_tracked)
+                VALUES ('ProdIT-SVCSER-02', 'ProdIT raw serialised service', 'SERVICE', ?, ?, true)
+                """, pieceId(), standardRateId()))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("product_serial_tracked_needs_goods");
     }
 }

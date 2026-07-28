@@ -51,6 +51,17 @@ public enum Section {
     /** The fixed asset register. Built in step 5. */
     FIXED_ASSETS(true),
 
+    /**
+     * Inventory lots, serialized units and stock movements. Built in step 6.
+     *
+     * <p><strong>Separate from {@link #PRODUCTS} because of cost.</strong> Stock <em>levels</em> are a
+     * product-level read — an order picker granted VIEW on Products needs to know whether there are
+     * three left. A <em>lot</em> carries its unit cost, which is exactly what
+     * {@link ProtectedField#PRODUCT_LAST_PURCHASE_PRICE} exists to keep away from that role, so
+     * granting the ability to see stock must not grant the ability to see what it cost.
+     */
+    INVENTORY(true),
+
     /** Reserved for the Sales Order Fulfillment module (roadmap phase 4). */
     SALES_ORDER_FULFILLMENT(false),
 

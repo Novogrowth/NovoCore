@@ -1,6 +1,7 @@
 package gr.novotrade.novocore.core.api.shared;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import java.math.BigDecimal;
@@ -106,5 +107,23 @@ class QuantityTest {
     @DisplayName("toString uses plain notation, never scientific")
     void toStringIsPlain() {
         assertThat(Quantity.of("0.000001")).hasToString("0.000001");
+    }
+
+    @Test
+    @DisplayName("multiplying two quantities discards only zeros, and never rounds")
+    void multiplyingQuantities() {
+        // The trap this method exists for, found by a bundle test: a raw
+        // value().multiply(other.value()) on two six-decimal values produces twelve decimals, so one
+        // whole bundle containing one whole grinder failed on its own trailing zeros.
+        assertThat(Quantity.of(1L).times(Quantity.of(1L))).isEqualTo(Quantity.of(1L));
+        assertThat(Quantity.of("0.250").times(Quantity.of(4L))).isEqualTo(Quantity.of(1L));
+        assertThat(Quantity.of("1.5").times(Quantity.of("2.5"))).isEqualTo(Quantity.of("3.75"));
+
+        // And a product that genuinely needs more precision throws rather than rounding: a quantity is
+        // a physical count, so one that cannot be expressed is a modelling error, not a rounding
+        // question.
+        assertThatExceptionOfType(ArithmeticException.class)
+                .isThrownBy(() -> Quantity.of("0.000001").times(Quantity.of("0.1")))
+                .withMessageContaining("not a quantity anything could be counted in");
     }
 }
