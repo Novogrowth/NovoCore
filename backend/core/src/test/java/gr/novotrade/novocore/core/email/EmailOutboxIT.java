@@ -577,19 +577,64 @@ class EmailOutboxIT extends AbstractCoreIntegrationTest {
     }
 
     @Test
+    @DisplayName("a row already at its attempt limit fails alone, and does not block the queue")
+    void aRowAtItsAttemptLimitDoesNotStopEverythingElse() {
+        // The second door into the same batch-wide stall, and the one the original fix missed.
+        //
+        // This row is valid in every respect the first poison test checks — the address parses,
+        // the subject is fine, it rebuilds into a perfectly good EmailMessage. What is wrong is
+        // that it sits PENDING with attempts already at max_attempts, which satisfies every
+        // CHECK at rest and which the service cannot produce. Claiming it increments attempts
+        // past the limit, and that violation lands at flush, after the loop, where no catch can
+        // reach it: the whole claim transaction rolls back, taking the healthy message with it,
+        // every cycle, forever.
+        jdbc.update("""
+                INSERT INTO email_outbox
+                    (to_addresses, subject, body, body_format, status, attempts, max_attempts,
+                     last_attempt_at, next_attempt_at)
+                VALUES (ARRAY['stuck@example.com'], 'Already exhausted', 'body', 'PLAIN_TEXT',
+                        'PENDING', 3, 3, now(), now())
+                """);
+        Long stuckId = jdbc.queryForObject(
+                "SELECT max(id) FROM email_outbox WHERE subject = 'Already exhausted'", Long.class);
+
+        long healthy = emailSender.send(
+                EmailMessage.to("customer@example.com", "Perfectly fine", "body"));
+
+        assertThat(dispatcher.dispatchDue())
+                .as("the healthy message in the same batch must still go out")
+                .isEqualTo(1);
+        assertThat(emailSender.find(healthy).orElseThrow().status()).isEqualTo(EmailStatus.SENT);
+
+        QueuedEmailView stuck = emailSender.find(stuckId).orElseThrow();
+        assertThat(stuck.status()).isEqualTo(EmailStatus.FAILED);
+        assertThat(stuck.lastErrorIfAny())
+                .hasValueSatisfying(error -> assertThat(error).contains("attempt limit"));
+        assertThat(stuck.attempts())
+                .as("it must not have been incremented past its own limit")
+                .isEqualTo(3);
+    }
+
+    @Test
     @DisplayName("a stored message that cannot be sent fails alone, and does not block the queue")
     void aPoisonRowDoesNotStopEverythingElse() {
         // Found the hard way: a raw-SQL probe left a row whose recipient EmailMessage refuses,
         // materialising the batch threw inside the claim transaction, and every subsequent
         // dispatch in the class sent nothing at all. One unusable row must fail on its own.
-        jdbc.update("""
-                INSERT INTO email_outbox
-                    (to_addresses, subject, body, body_format, status, max_attempts,
-                     next_attempt_at)
-                VALUES (ARRAY[?], 'Unsendable', 'body', 'PLAIN_TEXT', 'PENDING', 3, now())
-                """, "not-an-address");
-        Long poisonId = jdbc.queryForObject(
-                "SELECT max(id) FROM email_outbox WHERE subject = 'Unsendable'", Long.class);
+        //
+        // Three differently-malformed rows rather than one, because the question worth answering
+        // is whether the guard isolates a *class* of bad row or only the case that was
+        // reproduced. Each of these fails a different check in rebuilding the message — no '@',
+        // no domain suffix, and a bad address in cc rather than to — and each passes every
+        // database CHECK, so all three are genuinely storable.
+        insertRawPending("no-at-sign", null, "Unsendable A");
+        insertRawPending("kostas@novotrade", null, "Unsendable B");
+        insertRawPending("fine@example.com", "not-an-address", "Unsendable C");
+
+        List<Long> poisonIds = jdbc.queryForList(
+                "SELECT id FROM email_outbox WHERE subject LIKE 'Unsendable %' ORDER BY id",
+                Long.class);
+        assertThat(poisonIds).hasSize(3);
 
         long healthy = emailSender.send(
                 EmailMessage.to("customer@example.com", "Perfectly fine", "body"));
@@ -600,9 +645,23 @@ class EmailOutboxIT extends AbstractCoreIntegrationTest {
         assertThat(emailSender.find(healthy).orElseThrow().status())
                 .isEqualTo(EmailStatus.SENT);
 
-        QueuedEmailView poison = emailSender.find(poisonId).orElseThrow();
-        assertThat(poison.status()).isEqualTo(EmailStatus.FAILED);
-        assertThat(poison.lastErrorIfAny()).isPresent();
+        assertThat(poisonIds)
+                .allSatisfy(id -> {
+                    QueuedEmailView poison = emailSender.find(id).orElseThrow();
+                    assertThat(poison.status()).isEqualTo(EmailStatus.FAILED);
+                    assertThat(poison.lastErrorIfAny()).isPresent();
+                });
+    }
+
+    /** A storable PENDING row that the service itself would never have written. */
+    private void insertRawPending(String to, String cc, String subject) {
+        jdbc.update("""
+                INSERT INTO email_outbox
+                    (to_addresses, cc_addresses, subject, body, body_format, status,
+                     max_attempts, next_attempt_at)
+                VALUES (ARRAY[?], CASE WHEN ?::text IS NULL THEN '{}'::text[] ELSE ARRAY[?] END,
+                        ?, 'body', 'PLAIN_TEXT', 'PENDING', 3, now())
+                """, to, cc, cc, subject);
     }
 
     @Test

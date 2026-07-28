@@ -76,23 +76,31 @@ no recovery path locks the owner out of their own financial system.
 
 ## ⚠️ To be aware of immediately
 
-1. **`docker/.env` is gitignored and machine-local.** It now holds **three** secrets: the
-   generated database password, the SMTP password, and the initial owner's password. A fresh
-   clone must run `cp docker/.env.example docker/.env` and set `NOVOCORE_DB_PASSWORD`, or nothing
-   starts. This is deliberate — there is no fallback password anywhere.
+1. **`docker/.env` is gitignored and machine-local, and now holds exactly two variables again**:
+   `NOVOCORE_DB_PASSWORD` and `NOVOCORE_SITE_ADDRESS`. The three one-time bootstrap variables were
+   removed once consumed — see item 3. A fresh clone must run `cp docker/.env.example docker/.env`
+   and set `NOVOCORE_DB_PASSWORD`, or nothing starts. This is deliberate — there is no fallback
+   password anywhere.
 2. **A fresh machine also needs the toolchain**: JDK 25 and a Docker daemon. Maven is not
    required — `backend/mvnw` is committed. `mvn verify` needs Docker for the `*IT` tests;
    `mvn test` does not.
-3. **The first Owner account now exists: `kostas`.** Created on 2026-07-28 by
-   `InitialOwnerBootstrap` from `docker/.env`, with a randomly generated 24-character password.
-   **Change it after first login**, and then remove `NOVOCORE_BOOTSTRAP_OWNER_USERNAME` and
-   `NOVOCORE_BOOTSTRAP_OWNER_PASSWORD` from `.env` — they are ignored from now on, and editing
-   them there will not change the account. The password is only in that gitignored file and in
-   the chat session that generated it.
-4. **The SMTP password is in the database, not in git.** `NOVOCORE_SMTP_PASSWORD` in `.env` has
-   already been consumed and can be removed. Changing the password means changing the
-   `smtp.password` setting, not the environment variable — the bootstrap logs a line saying so
-   if the variable is still set.
+3. **The first Owner account exists: `kostas`, and its password has been rotated once.** Created
+   2026-07-28 by `InitialOwnerBootstrap`, then changed the same day through
+   `UserService.changePassword` — the real service, so the password policy, the delegating encoder
+   and the `user.password-changed` audit entry all applied, exactly as they would if a screen
+   existed. **The current password lives only in the chat session that generated it.** There is
+   still **no change-password screen**, so rotating it again means the same route: a one-off run of
+   `UserService.changePassword` against the live database.
+4. **All three one-time bootstrap variables have been removed from `.env`**, having served their
+   purpose: `NOVOCORE_SMTP_PASSWORD` (consumed into the `smtp.password` setting) and
+   `NOVOCORE_BOOTSTRAP_OWNER_USERNAME` / `_PASSWORD` (consumed into the user table). The app was
+   recreated without them and starts clean. **The SMTP password now lives only in the database** —
+   changing it means changing the setting, not the environment.
+5. **⚠️ `docker/.env` has a UTF-8 BOM and CRLF line endings.** This cost real time: a
+   `grep '^NOVOCORE_DB_PASSWORD='` silently matched nothing, because the BOM sits between the start
+   of the file and the first key, so the value came back empty and the failure looked like a
+   password problem. Docker Compose copes with both. **Anything else reading this file must strip
+   the BOM and the CRs** — `sed '1s/^\xEF\xBB\xBF//' docker/.env | tr -d '\r'`.
 
 ## Git state
 
@@ -1854,8 +1862,49 @@ Both are recorded because both were invisible to inspection and are the kind tha
 2. **One unusable outbox row stopped all email indefinitely.** Materialising the claimed batch threw
    inside the claim transaction, so the whole transaction aborted, nothing in the batch was sent,
    and the next cycle claimed the same batch and failed identically — with no message of its own
-   ever marked failed. Such a row is now failed on its own and skipped. Found because a raw-SQL
-   probe left exactly such a row behind and nine unrelated tests went red.
+   ever marked failed. Found because a raw-SQL probe left exactly such a row behind and nine
+   unrelated tests went red.
+
+   **The first fix was narrower than its commit message claimed, and a review found a second door
+   into the same stall.** Recorded in full below, because "we fixed the poison pill" is exactly the
+   kind of half-true note that stops the next person looking.
+
+### The batch-wide stall, and what actually closes it
+
+Worth stating precisely, because the failure is severe (all email stops, silently, forever) and
+reachable by more than one route.
+
+**What the guard covers.** Everything thrown while rebuilding a stored row into an `EmailMessage`
+— which is a *class* of failure, not the one case that was reproduced: any invalid `to`, `cc` or
+`bcc` address, a blank or over-long subject, a null body, a bad attachment filename, an empty
+attachment. A test now stores three differently-malformed rows in one batch (no `@`, no domain
+suffix, and a bad address in `cc` rather than `to`), each of which passes every database CHECK, and
+asserts all three fail individually while a healthy message in the same batch still goes out.
+
+**The second door, found by review rather than by a test going red.** `attemptStarting` increments
+`attempts`, and the schema has `CHECK (attempts <= max_attempts)`. A row sitting `PENDING` with
+`attempts` already equal to `max_attempts` **satisfies every constraint at rest** — the service
+cannot produce one, since `markAttemptFailed` flips to `FAILED` at the limit and `requeue` resets to
+zero, but raw SQL or a restore can. Claiming such a row emits an `UPDATE` that violates the CHECK,
+and **that violation lands at flush, when the transaction commits** — after the loop, outside any
+`try`, and unrecoverable. It rolls back the entire claim transaction *including the
+`markAttemptFailed` writes the catch block had just made: the same batch-wide stall, reached through
+a door a `try` around the conversion cannot close, and this time not even leaving a record of which
+row caused it.*
+
+**Why prevention rather than catching.** A failed flush poisons the persistence context, so there is
+no per-message recovery available once the invalid `UPDATE` has been queued. The fix is a guard
+*before* the increment, so the invalid statement is never emitted. Its own test stores exactly such a
+row and asserts the healthy message in the batch still sends.
+
+**Known residual, not defended.** A row that cannot be *loaded* as an entity at all still aborts the
+batch, because `findAllById` runs before anything can be guarded. In practice that needs a `status`
+or `body_format` value the deployed Java does not know — the CHECK constraints make that impossible
+within one version, so the realistic route is **deploying a version that adds an enum value, writing
+rows with it, then rolling back to the older jar**. Defending it would mean claiming through a native
+projection instead of the entity, which is a real cost against a narrow risk. Recorded so the choice
+is visible; **if an enum value is ever added to `EmailStatus` or `EmailBodyFormat`, a downgrade is
+not safe.**
 
 ### Test hygiene worth keeping
 
@@ -2125,16 +2174,13 @@ That placement decides the rest:
 **Step 12 (automated backups) is the next numbered step.** Steps 0–11 are done and committed.
 **Step 12 is blocked on Q24** — the first numbered step to be blocked since step 10 closed.
 
-### Two things to do before anything else
+### Credential housekeeping — done, nothing outstanding
 
-1. **Change the `kostas` owner password**, then remove `NOVOCORE_BOOTSTRAP_OWNER_USERNAME` and
-   `NOVOCORE_BOOTSTRAP_OWNER_PASSWORD` from `docker/.env`. The current password was randomly
-   generated on 2026-07-28 and exists only in that gitignored file. Note there is **no
-   change-password screen** — the REST surface is still one read-only endpoint — so this needs
-   `UserService` or a direct hash update until there is a UI.
-2. **Remove `NOVOCORE_SMTP_PASSWORD` from `docker/.env`.** It has already been consumed into
-   Settings and is ignored; the application logs a line saying so on every start while it is
-   still there.
+Both items raised at the end of step 11 are closed. The `kostas` password was rotated through
+`UserService.changePassword` against the live database and verified by logging in over HTTPS (the
+old password now returns 401), and all three consumed bootstrap variables were removed from
+`docker/.env`, after which the app was recreated and starts clean. See "To be aware of immediately"
+above for the current state.
 
 ### Step 12 needs Q24
 

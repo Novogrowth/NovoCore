@@ -61,36 +61,74 @@ class EmailOutbox {
 
         List<ClaimedEmail> claimed = new ArrayList<>(due.size());
         for (QueuedEmail message : repository.findAllById(due)) {
-            message.attemptStarting(now, sentFrom, replyTo,
-                    retryPolicy.delayAfterAttempt(message.getAttempts() + 1));
-            repository.save(message);
-
-            // A row that cannot be turned back into a message is failed here and skipped,
-            // rather than being allowed to throw.
+            // A row that cannot be sent as stored is failed here and skipped, rather than being
+            // allowed to throw.
             //
-            // This is not theoretical, and it is not only about bad data. EmailMessage
-            // validates what it is given, so a row that got into the table another way — a psql
-            // session, a restore from an older schema, a future column this code does not
-            // understand — throws on the way out. Letting that escape would abort the whole
-            // claim transaction, so nothing in the batch would be sent, and the same batch
-            // would be retried on the next cycle and fail identically: one poison row stopping
-            // all email in the system, indefinitely, with no message of its own marked failed.
-            // Found by a test whose raw-SQL probe left exactly such a row behind.
+            // This is not theoretical, and it is not only about bad data. EmailMessage validates
+            // what it is given, so a row that got into the table another way — a psql session, a
+            // restore, a future column this code does not understand — throws on the way out.
+            // Letting that escape would abort the whole claim transaction, so nothing in the
+            // batch would be sent, and the same batch would be retried on the next cycle and
+            // fail identically: one poison row stopping all email in the system, indefinitely,
+            // with no message of its own marked failed. Found by a test whose raw-SQL probe left
+            // exactly such a row behind.
+            //
+            // The whole per-message body is inside the try, not just the conversion. An earlier
+            // version guarded only toMessage(), which covered the reproduction and a useful
+            // family around it — every validation failure in rebuilding the message — but left
+            // the claim's own bookkeeping outside, where a throw would still take the batch down.
             try {
-                claimed.add(new ClaimedEmail(message.getId(), toMessage(message),
-                        message.getAttempts(), message.getMaxAttempts()));
+                claimed.add(claim(message, now, sentFrom, replyTo, retryPolicy));
             } catch (RuntimeException e) {
-                String error = "This message cannot be sent as stored: "
-                        + EmailSenderImpl.describe(e);
-                log.error("Email {} is unusable and has been marked FAILED: {}",
-                        message.getId(), error);
-                message.markAttemptFailed(error, true);
-                repository.save(message);
-                auditLog.record("email.failed", ENTITY_TYPE, String.valueOf(message.getId()),
-                        Map.of("permanent", "true", "error", error));
+                failPermanently(message, e);
             }
         }
         return List.copyOf(claimed);
+    }
+
+    private ClaimedEmail claim(QueuedEmail message, Instant now, String sentFrom, String replyTo,
+            RetryPolicy retryPolicy) {
+        // Checked BEFORE the increment, and this guard is the reason the try above is not
+        // enough on its own.
+        //
+        // attemptStarting increments attempts, and the schema has
+        // `CHECK (attempts <= max_attempts)`. A row sitting at PENDING with attempts already
+        // equal to max_attempts satisfies every constraint at rest — the service cannot create
+        // one, since markAttemptFailed flips to FAILED at the limit and requeue resets to zero,
+        // but raw SQL or a restore can. Claiming it would emit an UPDATE that violates the
+        // CHECK, and that violation lands at *flush*, when the transaction commits: after the
+        // loop, outside the try, and unrecoverable. It would roll back the entire claim
+        // transaction including the markAttemptFailed writes the catch block had just made — the
+        // same batch-wide stall, reached through a door the try cannot close, and this time not
+        // even leaving a record of which row caused it.
+        //
+        // A failed flush also poisons the persistence context, so there is no per-message
+        // recovery available. Prevention is the only reliable fix: never emit the invalid
+        // UPDATE in the first place.
+        if (message.getAttempts() >= message.getMaxAttempts()) {
+            throw new IllegalStateException(
+                    "already at its attempt limit (%d of %d) while still PENDING, which the "
+                            .formatted(message.getAttempts(), message.getMaxAttempts())
+                            + "service cannot produce — it was written directly to the table");
+        }
+
+        message.attemptStarting(now, sentFrom, replyTo,
+                retryPolicy.delayAfterAttempt(message.getAttempts() + 1));
+        repository.save(message);
+
+        return new ClaimedEmail(message.getId(), toMessage(message),
+                message.getAttempts(), message.getMaxAttempts());
+    }
+
+    private void failPermanently(QueuedEmail message, RuntimeException cause) {
+        String error = "This message cannot be sent as stored: "
+                + EmailSenderImpl.describe(cause);
+        log.error("Email {} is unusable and has been marked FAILED: {}",
+                message.getId(), error);
+        message.markAttemptFailed(error, true);
+        repository.save(message);
+        auditLog.record("email.failed", ENTITY_TYPE, String.valueOf(message.getId()),
+                Map.of("permanent", "true", "error", error));
     }
 
     @Transactional
