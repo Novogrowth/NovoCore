@@ -332,17 +332,20 @@ class StockConsumptionIT extends AbstractCoreIntegrationTest {
 
         @Test
         @DisplayName("a serial-tracked product is refused, and names step 9")
-        void serialTrackedIsStepNine() {
+        void serialTrackedNeedsItsUnitsNamed() {
             ProductView machine = products.create(NewProduct.serializedGoods("SCIT-14",
                     "Machine", unitsOfMeasure.requireByCode("PIECE").id(),
                     vatClasses.requireByCode("1410").id(), Money.ofEur("2400.00")));
             inventory.receive(NewInventoryLot.serialized(machine.id(), UnitCost.ofEur("1800.000000"),
                     MARCH, StockLocation.INVENTORY, List.of("SCIT-SN-1")));
 
+            // Step 9 made this reachable, but not by FIFO: brief §5 costs a serialized item at its
+            // own actual cost, so which machine left the shelf is a fact somebody scanned rather than
+            // something a costing rule may choose.
             assertThatExceptionOfType(InvalidStockConsumptionException.class)
                     .isThrownBy(() -> inventory.consume(NewStockConsumption.of(
                             machine.id(), Quantity.of(1L), JULY, JournalSource.SALES_INVOICE)))
-                    .withMessageContaining("step 9");
+                    .withMessageContaining("must name the units");
         }
 
         @Test

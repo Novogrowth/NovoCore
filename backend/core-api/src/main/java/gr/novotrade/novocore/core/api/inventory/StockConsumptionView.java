@@ -42,6 +42,7 @@ public record StockConsumptionView(
         Long journalEntryId,
         Long reversalOfConsumptionId,
         Long reversedByConsumptionId,
+        Long returnOfConsumptionId,
         List<StockConsumptionLineView> lines) {
 
     public StockConsumptionView {
@@ -77,6 +78,19 @@ public record StockConsumptionView(
 
     public boolean isReversed() {
         return reversedByConsumptionId != null;
+    }
+
+    /**
+     * True when this row put stock back after a customer returned it, rather than undoing a
+     * consumption that should not have happened.
+     *
+     * <p>The distinction is a difference in fact, not in mechanism — see
+     * {@code InventoryService.returnConsumed}. A return posts an ordinary entry, may be partial, and
+     * may happen more than once against one sale; a reversal is an exact mirror and happens at most
+     * once.
+     */
+    public boolean isReturn() {
+        return returnOfConsumptionId != null;
     }
 
     /** True when this consumption still stands — neither a reversal nor reversed. */

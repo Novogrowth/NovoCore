@@ -3,6 +3,7 @@ package gr.novotrade.novocore.core.customer;
 import gr.novotrade.novocore.core.api.audit.AuditLogService;
 import gr.novotrade.novocore.core.api.customer.CustomerNotFoundException;
 import gr.novotrade.novocore.core.api.customer.CustomerService;
+import gr.novotrade.novocore.core.api.customer.CustomerSystemKey;
 import gr.novotrade.novocore.core.api.customer.CustomerView;
 import gr.novotrade.novocore.core.api.customer.InvalidCustomerException;
 import gr.novotrade.novocore.core.api.customer.NewCustomer;
@@ -64,6 +65,18 @@ class CustomerServiceImpl implements CustomerService {
     @Transactional(readOnly = true)
     public CustomerView require(long id) {
         return find(id).orElseThrow(() -> new CustomerNotFoundException(id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CustomerView require(CustomerSystemKey systemKey) {
+        Objects.requireNonNull(systemKey, "systemKey");
+        return repository.findBySystemKey(systemKey)
+                .map(CustomerServiceImpl::toView)
+                .orElseThrow(() -> new CustomerNotFoundException(
+                        "No customer carries the system key " + systemKey + ". It is seeded by "
+                                + "migration V17, so its absence is a broken seed rather than a "
+                                + "missing option — every retail sale needs somebody to be against."));
     }
 
     @Override
@@ -240,6 +253,15 @@ class CustomerServiceImpl implements CustomerService {
     @Transactional
     public void deactivate(long id) {
         Customer customer = load(id);
+        if (customer.getSystemKey() != null && !customer.getSystemKey().isDeactivatable()) {
+            // Also a CHECK constraint, so it holds against a psql session too. Stated here as well
+            // because a constraint name arriving at flush time explains nothing.
+            throw new InvalidCustomerException(
+                    "'" + customer.getName() + "' is a structural record (" + customer.getSystemKey()
+                            + "), not a real customer, so it cannot be deactivated. Every till sale "
+                            + "with no identified buyer is recorded against it, and deactivating it "
+                            + "would leave those sales with nobody to be against.");
+        }
         if (!customer.isActive()) {
             return;
         }
@@ -335,6 +357,7 @@ class CustomerServiceImpl implements CustomerService {
                 customer.getVatStatus(),
                 customer.getVatClassOverrideId(),
                 customer.getVatExemptionReasonId(),
+                customer.getSystemKey(),
                 customer.isActive());
     }
 }

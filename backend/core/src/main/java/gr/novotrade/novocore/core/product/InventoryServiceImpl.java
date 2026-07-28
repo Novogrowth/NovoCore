@@ -13,6 +13,7 @@ import gr.novotrade.novocore.core.api.inventory.InventoryService;
 import gr.novotrade.novocore.core.api.inventory.NewInventoryLot;
 import gr.novotrade.novocore.core.api.inventory.NewStockConsumption;
 import gr.novotrade.novocore.core.api.inventory.NewStockWriteOff;
+import gr.novotrade.novocore.core.api.inventory.SaleReference;
 import gr.novotrade.novocore.core.api.inventory.SerializedUnitNotFoundException;
 import gr.novotrade.novocore.core.api.inventory.SerializedUnitStatus;
 import gr.novotrade.novocore.core.api.inventory.SerializedUnitView;
@@ -41,6 +42,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
@@ -576,6 +578,19 @@ class InventoryServiceImpl implements InventoryService {
         Objects.requireNonNull(request, "request");
         Product product = loadProduct(request.productId());
         requireConsumable(product, request.quantity());
+        if (product.isSerialTracked() != request.isSerialized()) {
+            throw new InvalidStockConsumptionException(product.isSerialTracked()
+                    ? "Product '" + product.getSku() + "' is serial-tracked, so a sale must name the "
+                            + "units that left the shelf. FIFO exists for stock that cannot be told "
+                            + "apart, and these can — brief §5 costs a serialized item at its own "
+                            + "actual cost."
+                    : "Product '" + product.getSku() + "' is pooled, so a sale states a quantity and "
+                            + "FIFO chooses the lots. Serial numbers would name units that do not "
+                            + "exist.");
+        }
+        if (request.isSerialized()) {
+            return consumeUnits(product, request);
+        }
 
         // FIFO's candidate list, in the one order lotsOf already defines — acquisition date, then id —
         // narrowed to lots whose stock is actually sellable. Damaged Goods is still an asset, and
@@ -615,6 +630,281 @@ class InventoryServiceImpl implements InventoryService {
         return toView(saved, entriesOf(List.of(saved)));
     }
 
+    /**
+     * Selling named machines — <strong>the step 6 obligation, discharged</strong>.
+     *
+     * <p>No FIFO, deliberately: brief §5 says a serialized item is costed at its own actual cost,
+     * because FIFO exists for units that cannot be told apart and these can. So the lots are whichever
+     * lots the named units happen to belong to, and each unit's cost is its lot's.
+     *
+     * <p><strong>No shortfall either, and that is not an inconsistency with Q17.</strong> Aggregate
+     * stock can go negative because "how many are there" is a number that can be wrong; "is machine
+     * 1234 on the shelf" is not. A unit that is not on hand is refused rather than flagged, because
+     * there is nothing a later Goods Receipt could arrive to back it with.
+     */
+    private StockConsumptionView consumeUnits(Product product, NewStockConsumption request) {
+        SaleReference sale = request.sale().orElseThrow();
+
+        List<SerializedUnit> selling = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+        for (String raw : request.serialNumbers()) {
+            String serial = raw == null ? "" : raw.trim();
+            if (serial.isEmpty()) {
+                throw new InvalidStockConsumptionException(
+                        "A serial number on this sale is blank. A unit with no serial is the pooled "
+                                + "stock this product is not.");
+            }
+            if (!seen.add(serial.toLowerCase(Locale.ROOT))) {
+                throw new InvalidStockConsumptionException(
+                        "Serial number '" + serial + "' appears twice on this sale. One physical "
+                                + "machine cannot be sold twice on one line.");
+            }
+            SerializedUnit unit = units.findBySerialNumberIgnoreCaseAndStatusNot(
+                            serial, SerializedUnitStatus.UNRECEIVED)
+                    .orElseThrow(() -> SerializedUnitNotFoundException.forSerialNumber(serial));
+
+            if (!Objects.equals(unit.getLot().getProduct().getId(), product.getId())) {
+                throw new InvalidStockConsumptionException(
+                        "Unit '" + serial + "' is a '" + unit.getLot().getProduct().getSku()
+                                + "', not a '" + product.getSku() + "'. Selling it on this line would "
+                                + "take the cost out of the wrong product's stock.");
+            }
+            if (!unit.isOnHand()) {
+                throw new InvalidStockConsumptionException(
+                        "Unit '" + serial + "' is " + unit.getStatus() + ", so it is not ours to "
+                                + "sell. A named machine either is on the shelf or is not — unlike a "
+                                + "pooled quantity, there is no aggregate for it to go negative in "
+                                + "and nothing a later delivery could arrive to back it with.");
+            }
+            if (!StockLocation.sellableLocations().contains(unit.getLocation())) {
+                throw new InvalidStockConsumptionException(
+                        "Unit '" + serial + "' is at " + unit.getLocation() + ", which is not stock "
+                                + "that may be sold. Selling out of Damaged Goods is not a decision a "
+                                + "costing rule gets to make quietly — move it back first if it is "
+                                + "genuinely saleable.");
+            }
+            selling.add(unit);
+        }
+
+        // One line per lot, brief §6's shape, even though the units were named individually: two
+        // machines from one delivery are one lot's cost coming out.
+        Map<InventoryLot, Quantity> taken = new LinkedHashMap<>();
+        for (SerializedUnit unit : selling) {
+            taken.merge(unit.getLot(), Quantity.of(1), Quantity::plus);
+        }
+
+        StockConsumption record = new StockConsumption(product, request.quantity(),
+                request.quantity(), request.consumptionDate(), request.source(), request.note(), null);
+        taken.forEach((lot, quantity) -> record.addLine(lot, quantity, lot.getUnitCost()));
+
+        record.postedAs(postConsumption(record, product, request.consumptionDate(), request.source()));
+        // Brief §5's customer/invoice link, set with the status so there is no window in which a unit
+        // is SOLD to nobody — which is the state step 6 refused to make reachable.
+        selling.forEach(unit -> unit.sell(sale.customerId(), sale.salesInvoiceLineId()));
+
+        StockConsumption saved = consumptions.save(record);
+
+        Map<String, String> detail = new LinkedHashMap<>(consumptionDetail(saved));
+        detail.put("units", String.join(", ", request.serialNumbers()));
+        detail.put("soldToCustomer", String.valueOf(sale.customerId()));
+        detail.put("salesInvoiceLine", String.valueOf(sale.salesInvoiceLineId()));
+        auditLog.record("stock-consumption.recorded", CONSUMPTION_ENTITY_TYPE,
+                String.valueOf(saved.getId()), detail);
+
+        return toView(saved, entriesOf(List.of(saved)));
+    }
+
+    @Override
+    @Transactional
+    public StockConsumptionView returnConsumed(
+            long consumptionId, Quantity quantity, LocalDate returnDate, String note) {
+        Objects.requireNonNull(quantity, "quantity");
+        Objects.requireNonNull(returnDate, "returnDate");
+        StockConsumption original = loadConsumption(consumptionId);
+
+        if (!quantity.isPositive()) {
+            throw new InvalidStockConsumptionException(
+                    "Returned quantity " + quantity + " is not positive. Taking more stock out is a "
+                            + "consumption, not a negative return.");
+        }
+        if (!original.isOutbound()) {
+            throw new InvalidStockConsumptionException(
+                    "Consumption " + consumptionId + " is itself a "
+                            + (original.isReversal() ? "reversal" : "return")
+                            + ", so nothing was sold out of it to come back.");
+        }
+        consumptions.findByReversalOfId(consumptionId).ifPresent(existing -> {
+            throw new InvalidStockConsumptionException(
+                    "Consumption " + consumptionId + " was reversed by consumption "
+                            + existing.getId() + ", so as far as the ledger is concerned it never "
+                            + "happened. There is nothing to return.");
+        });
+
+        Quantity alreadyReturned = returnedQuantityOf(consumptionId);
+        Quantity remaining = original.getQuantityFilled().minus(alreadyReturned);
+        if (quantity.compareTo(remaining) > 0) {
+            throw new InvalidStockConsumptionException(
+                    "Consumption " + consumptionId + " took " + original.getQuantityFilled()
+                            + " out of stock and " + alreadyReturned + " has already come back, so "
+                            + quantity + " cannot. Returning more than was sold would create stock "
+                            + "out of a credit note.");
+        }
+
+        // Reverse of the order FIFO took them: the last lot reached into gives its quantity back
+        // first, so a partial return leaves the queue in the state a smaller sale would have.
+        List<StockConsumptionLine> takenLast = new ArrayList<>(original.getLines());
+        Collections.reverse(takenLast);
+
+        StockConsumption returned = new StockConsumption(original.getProduct(), quantity, quantity,
+                returnDate, original.getSource(), note, null);
+        returned.returns(consumptionId);
+
+        Quantity outstanding = quantity;
+        for (StockConsumptionLine line : takenLast) {
+            if (!outstanding.isPositive()) {
+                break;
+            }
+            InventoryLot lot = line.getLot();
+            Quantity alreadyBack = returnedIntoLot(consumptionId, lot.getId());
+            Quantity availableFromThisLine = line.getQuantity().minus(alreadyBack);
+            if (!availableFromThisLine.isPositive()) {
+                continue;
+            }
+            Quantity intoThisLot = outstanding.min(availableFromThisLine);
+            if (lot.getQuantityRemaining().plus(intoThisLot)
+                    .compareTo(lot.getQuantityReceived()) > 0) {
+                throw new InvalidStockConsumptionException(
+                        "Restoring " + intoThisLot + " to lot " + lot.getId() + " would leave more in "
+                                + "it than it ever received. Something has happened to the lot since, "
+                                + "so the honest record is a new receipt rather than a return.");
+            }
+            if (!lot.isSerialTracked()) {
+                // A serial-tracked lot stores no quantity — the quantity IS the count of its on-hand
+                // units (V12's rule: location lives wherever the quantity does). So the stock comes
+                // back by the units changing status, which restoreSerializedUnits does below;
+                // restoring a number here would be a second copy of what the units already say.
+                lot.restore(intoThisLot);
+            }
+            // The cost the stock LEFT at, off the consumption's own line — never off the lot as it
+            // stands now, which step 10 will move when freight is allocated.
+            returned.addLine(lot, intoThisLot, line.getUnitCost());
+            outstanding = outstanding.minus(intoThisLot);
+        }
+
+        if (outstanding.isPositive()) {
+            // Reachable only if the consumption filled less than it claimed, which the schema refuses.
+            throw new IllegalStateException(
+                    "Consumption " + consumptionId + " could not give back " + outstanding
+                            + ": its lines account for less than it says it filled.");
+        }
+
+        returned.postedAs(postReturn(returned, original.getProduct(), returnDate,
+                original.getSource(), consumptionId));
+
+        // Serialized units come back on hand and stop being sold to anybody — brief §5 puts that link
+        // on a SOLD unit, and a machine on the shelf is not one.
+        if (original.getProduct().isSerialTracked()) {
+            restoreSerializedUnits(original, quantity);
+        }
+
+        StockConsumption saved = consumptions.save(returned);
+
+        auditLog.record("stock-consumption.returned", CONSUMPTION_ENTITY_TYPE,
+                String.valueOf(consumptionId), Map.of(
+                        "returnedBy", String.valueOf(saved.getId()),
+                        "quantity", quantity.toString(),
+                        "previouslyReturned", alreadyReturned.toString(),
+                        "returnDate", returnDate.toString(),
+                        "posted", String.valueOf(saved.getJournalEntryId() != null)));
+
+        return toView(saved, entriesOf(List.of(saved)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Quantity returnedQuantityOf(long consumptionId) {
+        return Quantity.of(consumptions.returnedQuantityOf(consumptionId));
+    }
+
+    /** How much of one lot a given consumption has already had returned into it. */
+    private Quantity returnedIntoLot(long consumptionId, long lotId) {
+        Quantity total = Quantity.ZERO;
+        for (StockConsumption back
+                : consumptions.findByReturnsConsumptionIdOrderByIdAsc(consumptionId)) {
+            for (StockConsumptionLine line : back.getLines()) {
+                if (Objects.equals(line.getLot().getId(), lotId)) {
+                    total = total.plus(line.getQuantity());
+                }
+            }
+        }
+        return total;
+    }
+
+    /**
+     * Puts the named machines back on the shelf, most recently sold first.
+     *
+     * <p>Which units come back is not stated by the credit note today — it names a quantity of a line
+     * — so the newest sale of the fewest units is undone. That is the same shape as the pooled case
+     * restoring the last lot first, and it is right for the reason that matters: every unit on one
+     * line is the same product at the same lot cost, so the accounting is identical whichever machine
+     * physically returns, and the serial the customer actually brought back is on the credit note the
+     * shop wrote.
+     */
+    private void restoreSerializedUnits(StockConsumption original, Quantity quantity) {
+        List<SerializedUnit> sold = units.findByLotProductIdOrderBySerialNumberAsc(
+                        original.getProduct().getId()).stream()
+                .filter(unit -> unit.getStatus() == SerializedUnitStatus.SOLD)
+                .filter(unit -> original.getLines().stream()
+                        .anyMatch(line -> Objects.equals(
+                                line.getLot().getId(), unit.getLot().getId())))
+                .toList();
+
+        int wanted = quantity.value().intValueExact();
+        if (sold.size() < wanted) {
+            throw new InvalidStockConsumptionException(
+                    "This return covers " + wanted + " units of '" + original.getProduct().getSku()
+                            + "' but only " + sold.size() + " of the lots it came out of are still "
+                            + "recorded as sold. A machine cannot come back twice.");
+        }
+        sold.subList(0, wanted).forEach(SerializedUnit::returnFromCustomer);
+    }
+
+    /**
+     * Posts the cost back: debit {@code INVENTORY}, credit {@code COST_OF_GOODS_SOLD}, one line per
+     * lot, at the cost the stock left at.
+     *
+     * <p>An ordinary entry rather than a mirror, because a return is not a reversal — see
+     * {@code InventoryService.returnConsumed}. Nothing is posted when every lot involved was carried
+     * at zero, exactly as nothing was posted on the way out.
+     */
+    private Long postReturn(StockConsumption record, Product product, LocalDate date,
+            JournalSource source, long originalConsumptionId) {
+        RoundingMode roundingMode = settings.requireRoundingMode(SettingKeys.LEDGER_ROUNDING_MODE);
+        AccountView cogs = chartOfAccounts.requireAccount(AccountSystemKey.COST_OF_GOODS_SOLD);
+        AccountView inventory = chartOfAccounts.requireAccount(AccountSystemKey.INVENTORY);
+
+        List<NewJournalLine> lines = new ArrayList<>();
+        for (StockConsumptionLine line : record.getLines()) {
+            Money cost = line.getUnitCost().extend(line.getQuantity(), roundingMode);
+            if (!cost.isPositive()) {
+                continue;
+            }
+            SubLedgerRef lotRef = SubLedgerRef.inventoryLot(line.getLot().getId());
+            lines.add(NewJournalLine.debit(inventory.id(), cost).forSubLedger(lotRef));
+            lines.add(NewJournalLine.credit(cogs.id(), cost)
+                    .forSubLedger(lotRef)
+                    .describedAs(line.getQuantity() + " x " + product.getSku() + " returned"));
+        }
+        if (lines.isEmpty()) {
+            return null;
+        }
+
+        return journal.post(NewJournalEntry.of(date,
+                "Stock returned — " + record.getQuantityFilled() + " x " + product.getSku()
+                        + " (against consumption " + originalConsumptionId + ")",
+                source, lines)).id();
+    }
+
     @Override
     @Transactional
     public StockConsumptionView reverseConsumption(
@@ -628,6 +918,17 @@ class InventoryServiceImpl implements InventoryService {
                             + original.getReversalOfId() + ". Reversing it would take the stock out "
                             + "again while claiming to be a correction; record a new consumption "
                             + "instead, so the ledger says what actually happened.");
+        }
+        if (original.isReturn()) {
+            // Refused rather than handled, because this method restores quantities and a return row
+            // is stock that came IN — reversing it would have to take stock out, which is the exact
+            // opposite of every line below. A return also reflects goods physically arriving back on
+            // a shelf, which ADR 0008's principle says is not un-made after other things depend on it.
+            throw new InvalidStockConsumptionException(
+                    "Consumption " + consumptionId + " is a return against consumption "
+                            + original.getReturnsConsumptionId() + ", not stock leaving. Goods that "
+                            + "came back are physically on a shelf; if they have gone out again, that "
+                            + "is a new sale rather than the un-making of a return.");
         }
         consumptions.findByReversalOfId(consumptionId).ifPresent(existing -> {
             throw new InvalidStockConsumptionException(
@@ -745,13 +1046,6 @@ class InventoryServiceImpl implements InventoryService {
                     "Product '" + product.getSku() + "' is a " + product.getType() + ", which has no "
                             + "inventory lots and therefore no cost of goods sold. A service costs "
                             + "against Cost of service sold, which is not a FIFO question.");
-        }
-        if (product.isSerialTracked()) {
-            throw new InvalidStockConsumptionException(
-                    "Product '" + product.getSku() + "' is serial-tracked, so selling it means naming "
-                            + "the unit and marking it SOLD — and brief §5 requires the customer and "
-                            + "invoice on the unit at that point. That is step 9. FIFO does not apply "
-                            + "to a machine somebody chose off the shelf by its serial number.");
         }
         UnitOfMeasure unit = product.getUnitOfMeasure();
         if (!unit.isFractionalQuantityAllowed()
@@ -892,6 +1186,7 @@ class InventoryServiceImpl implements InventoryService {
                 record.getJournalEntryId(),
                 record.getReversalOfId(),
                 reversedByConsumptionId,
+                record.getReturnsConsumptionId(),
                 lineViews);
     }
 
@@ -1336,6 +1631,8 @@ class InventoryServiceImpl implements InventoryService {
                 unit.getLocation(),
                 // A serialized write-off or sale uses this unit's own actual cost, not FIFO (brief §5),
                 // so the figure travels with the unit rather than being fetched again later.
-                lot.getUnitCost());
+                lot.getUnitCost(),
+                unit.getSoldToCustomerId(),
+                unit.getSoldOnInvoiceLineId());
     }
 }

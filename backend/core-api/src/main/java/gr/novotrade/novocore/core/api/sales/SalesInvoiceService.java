@@ -1,0 +1,142 @@
+package gr.novotrade.novocore.core.api.sales;
+
+import gr.novotrade.novocore.core.api.security.Section;
+import gr.novotrade.novocore.core.api.shared.Money;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Recording sales — brief §6's Sales Invoice typed transaction.
+ *
+ * <p><strong>A sale posts two entries, not one.</strong> Revenue in one
+ * ({@code SALES_INVOICE}-sourced: debit the settlement account or Accounts receivable, credit the
+ * channel's Sales account or {@code Services} per line, credit Output VAT per class), and cost in
+ * another, posted by {@code InventoryService} because reducing lots without posting is the
+ * "half is worse than neither" problem the write-off settled. The two are linked by the consumption
+ * record each line points at. This is an ordinary arrangement and it is stated here so nobody
+ * rediscovers it as a surprise.
+ *
+ * <p><strong>The VAT dimension is supplied here</strong> — the step 7 obligation. It is
+ * <em>optional</em> at the ledger, because the periodic VAT settlement entry legitimately has none, so
+ * nothing forces an invoice to carry it and a VAT return assembled without it would silently
+ * understate. Every Output VAT line this service posts carries its {@code VatDimension}: the class it
+ * was computed at and the taxable base it was computed from. An exempt line posts no VAT line at all,
+ * and its exemption reason lives on the invoice line — which makes exempt turnover by reason a
+ * document-level report rather than a ledger-level one.
+ *
+ * <p><strong>Immutable once posted</strong> (Q13, ADR 0006). Correction is {@link #reverse}, which
+ * posts the mirror, un-consumes the stock it consumed and releases the units it sold — all in one
+ * transaction, because the ledger cannot see the last two. A <em>return</em> is not a correction and
+ * is not this: that is a credit note.
+ *
+ * <p><strong>Permissions.</strong> {@link Section#SALES}. As everywhere else in the core, the section
+ * is stated here and checked at the controller, because these methods are also called by the core's
+ * own rules with no user in front of them. There is no controller yet.
+ */
+public interface SalesInvoiceService {
+
+    // ---------------------------------------------------------------------------------------
+    // Recording
+    // ---------------------------------------------------------------------------------------
+
+    /**
+     * Records a sale: posts the revenue, takes the stock out, and marks any serialized units sold.
+     *
+     * <p>What happens per line, in the order a caller will hit it:
+     *
+     * <ul>
+     *   <li>the VAT class is resolved by {@code VatClassPrecedence} — invoice line beats customer
+     *       beats product — and the winning <em>level</em> is stored, so the rate stays explicable
+     *       after the customer's override changes;
+     *   <li>net is the quantity extended at the unit price, rounded once with the mode from
+     *       {@code ledger.rounding.mode}; VAT is that net at the class's rate, rounded once;
+     *   <li>a bundle is decomposed by {@code BundleService} and the component lines are
+     *       <strong>stored</strong>, not recomputed later — brief §5's two linked levels;
+     *   <li>stock leaves: pooled goods FIFO, a serial-tracked line by the units it named, each of
+     *       which is marked {@code SOLD} and carries the customer and this line (brief §5);
+     *   <li>the gross is compared against {@link NewSalesInvoice#statedTotal()} and the difference
+     *       posted to {@code Rounding differences} — see below.
+     * </ul>
+     *
+     * <p><strong>Stock never blocks a sale</strong> (Q17, ADR 0008). Pooled stock may go negative in
+     * aggregate; the shortfall is recorded on the consumption and is queryable. A <em>serialized</em>
+     * line is different and does refuse: a named machine either is on the shelf or is not, and there
+     * is no aggregate for it to be negative in.
+     *
+     * <p><strong>Rounding, per document</strong> (Q15). A difference at or below
+     * {@code ledger.rounding.threshold} posts automatically. A larger one <em>refuses the invoice</em>
+     * unless {@link NewSalesInvoice#roundingAcceptedBy()} names who agreed to it — {@code CLAUDE.md}
+     * rule 7's "suggest and require one-click confirmation", applied where the person who can explain
+     * the difference is standing.
+     *
+     * @throws InvalidSalesInvoiceException if the customer or a product is unknown or inactive; if a
+     *     line mixes currencies with the rest; if a line's shape disagrees with whether its product is
+     *     serial-tracked; if a cash sale reaches {@code SettingKeys.CASH_PAYMENT_LIMIT}; if the
+     *     document number duplicates an invoice that still stands; or if a rounding difference above
+     *     the threshold has not been accepted
+     * @throws gr.novotrade.novocore.core.api.tax.VatClassNotDeterminableException if a line's rate
+     *     cannot be resolved at any level — there is deliberately no fallback rate
+     * @throws gr.novotrade.novocore.core.api.inventory.InvalidStockConsumptionException if a named
+     *     unit is not ours to sell — sold already, written off, or at a location stock may not be sold
+     *     from. It propagates rather than being wrapped, because the refusal is about the stock and
+     *     the message that says so is the useful one.
+     * @throws gr.novotrade.novocore.core.api.inventory.SerializedUnitNotFoundException if a line names
+     *     a serial number no unit holds
+     */
+    SalesInvoiceView record(NewSalesInvoice request);
+
+    /**
+     * Reverses a sale that should not have been recorded, posting the mirror and undoing everything
+     * it did.
+     *
+     * <p>Q13's reversal half, and it has to be here rather than at the ledger for the reason
+     * {@code JournalSource.isReversibleThroughTheLedgerAlone()} names: reversing the money without
+     * putting the stock back would leave goods off the shelf that the balance sheet no longer
+     * carries, and without releasing a serialized unit would leave a machine sold to somebody on a
+     * document that no longer exists.
+     *
+     * <p><strong>This is not how a return is handled.</strong> A customer bringing goods back is a
+     * credit note: the sale happened, and rewriting it to say otherwise would delete a real event and
+     * the VAT that was charged on it. Reversal is for an invoice recorded in error.
+     *
+     * @throws InvalidSalesInvoiceException if the invoice is itself a reversal, has already been
+     *     reversed, has a credit note against it, has anything allocated against it, or if stock it
+     *     consumed can no longer be put back
+     * @throws SalesInvoiceNotFoundException if there is no such invoice
+     */
+    SalesInvoiceView reverse(long invoiceId, LocalDate reversalDate, String reason);
+
+    // ---------------------------------------------------------------------------------------
+    // Reading
+    // ---------------------------------------------------------------------------------------
+
+    Optional<SalesInvoiceView> find(long invoiceId);
+
+    /** @throws SalesInvoiceNotFoundException if absent */
+    SalesInvoiceView require(long invoiceId);
+
+    /** Every sale to one customer, oldest first. */
+    List<SalesInvoiceView> ofCustomer(long customerId);
+
+    /** Sales in a date range, both ends inclusive, oldest first. Includes reversals. */
+    List<SalesInvoiceView> between(LocalDate from, LocalDate to);
+
+    /** The invoice one journal entry belongs to — the queried direction of the stored link. */
+    Optional<SalesInvoiceView> findByJournalEntry(long journalEntryId);
+
+    /**
+     * Invoices whose rounding difference somebody had to accept — <strong>Q15's query</strong>.
+     *
+     * <p>The compensating control for allowing the difference at all, and the same shape as
+     * {@code consumptionsWithShortfall()} and {@code lotsAt(DAMAGED_GOODS)}: the model permits a state
+     * that a human should look at, so there is a query that finds it. <strong>Deliberately a query
+     * over a flag on the record rather than a review queue</strong> — a queue is a second copy of
+     * state that has to be created when the condition arises and removed when it is resolved, and the
+     * day those fall out of step it shows work already done or hides work that is not.
+     */
+    List<SalesInvoiceView> withAcceptedRoundingDifference(LocalDate from, LocalDate to);
+
+    /** What the rounding differences in a period come to, netted. Either sign. */
+    Money totalRoundingBetween(LocalDate from, LocalDate to);
+}

@@ -90,6 +90,30 @@ public enum Section {
      */
     PURCHASING(true),
 
+    /**
+     * Sales invoices and credit notes. Built in step 9.
+     *
+     * <p>Separate from {@link #CUSTOMERS} for the reason {@link #PURCHASING} is separate from
+     * {@link #SUPPLIERS}: the customer list is a directory, while the sales invoices are every figure
+     * of revenue in the business. Remote/Order Staff has FULL on Customers and is deliberately
+     * granted nothing here.
+     *
+     * <p>Credit notes share the section rather than having one of their own, because a credit note
+     * only exists against an invoice — someone recording one has to be able to read the sale it
+     * corrects, or the reference cannot be made.
+     */
+    SALES(true),
+
+    /**
+     * Receipts, payments, bank transfers and open-item matching. Built in step 9.
+     *
+     * <p>Its own section, because reading what the business was paid, by whom, and into which
+     * account is a different job from recording a sale — and because a settlement reaches both
+     * sub-ledgers at once, so granting it alongside {@link #SALES} would hand over the supplier
+     * position as well.
+     */
+    SETTLEMENTS(true),
+
     /** Reserved for the Sales Order Fulfillment module (roadmap phase 4). */
     SALES_ORDER_FULFILLMENT(false),
 

@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.customer;
 
+import gr.novotrade.novocore.core.api.customer.CustomerSystemKey;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,6 +18,9 @@ interface CustomerRepository extends JpaRepository<Customer, Long> {
     Optional<Customer> findByVatNumberIgnoreCase(String vatNumber);
 
     boolean existsByVatNumberIgnoreCase(String vatNumber);
+
+    /** Q10's shared retail record, located by key rather than by an editable name. */
+    Optional<Customer> findBySystemKey(CustomerSystemKey systemKey);
 
     // ---------------------------------------------------------------------------------------
     // Suggestive-only matching (brief §5), one criterion per query

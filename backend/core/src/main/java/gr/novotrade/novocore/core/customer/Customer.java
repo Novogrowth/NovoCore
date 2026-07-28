@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.customer;
 
+import gr.novotrade.novocore.core.api.customer.CustomerSystemKey;
 import gr.novotrade.novocore.core.api.tax.VatStatus;
 import gr.novotrade.novocore.core.support.AuditableEntity;
 import jakarta.persistence.Column;
@@ -58,6 +59,16 @@ class Customer extends AuditableEntity {
     @Column(name = "vat_exemption_reason_id")
     private Long vatExemptionReasonId;
 
+    /**
+     * Non-null on a record NovoCore's own logic must locate — Q10's shared retail customer, and
+     * nothing else today. Seeded by migration and never settable from application code: there is no
+     * setter and no constructor takes one, so a second keyed row cannot be created through the
+     * service, exactly as {@code AccountSystemKey} is handled.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "system_key", length = 40, insertable = false, updatable = false)
+    private CustomerSystemKey systemKey;
+
     @Column(name = "active", nullable = false)
     private boolean active = true;
 
@@ -107,6 +118,10 @@ class Customer extends AuditableEntity {
 
     Long getVatExemptionReasonId() {
         return vatExemptionReasonId;
+    }
+
+    CustomerSystemKey getSystemKey() {
+        return systemKey;
     }
 
     boolean isActive() {

@@ -72,9 +72,19 @@ class StockConsumption extends AuditableEntity {
     @Column(name = "journal_entry_id")
     private Long journalEntryId;
 
-    /** Set on the row that PUTS STOCK BACK — the correction of a consumption. */
+    /** Set on the row that UNDOES a consumption that should not have happened. At most once. */
     @Column(name = "reversal_of_id")
     private Long reversalOfId;
+
+    /**
+     * Set on the row that puts back stock a customer <em>returned</em>.
+     *
+     * <p>A different fact from a reversal, not a different mechanism for one: the sale was real, so
+     * the return may be partial and may happen more than once against the same consumption. A trigger
+     * holds the total returned within what was taken.
+     */
+    @Column(name = "returns_consumption_id")
+    private Long returnsConsumptionId;
 
     /**
      * Cascaded for {@code InventoryLot}'s reason: a consumption and its lines are one transaction, so
@@ -153,8 +163,25 @@ class StockConsumption extends AuditableEntity {
         return reversalOfId;
     }
 
+    Long getReturnsConsumptionId() {
+        return returnsConsumptionId;
+    }
+
     boolean isReversal() {
         return reversalOfId != null;
+    }
+
+    boolean isReturn() {
+        return returnsConsumptionId != null;
+    }
+
+    /** True when this row records stock actually leaving, rather than coming back. */
+    boolean isOutbound() {
+        return reversalOfId == null && returnsConsumptionId == null;
+    }
+
+    void returns(long originalConsumptionId) {
+        this.returnsConsumptionId = originalConsumptionId;
     }
 
     /** Sorted here as well as by {@code @OrderBy}, for the reason {@code InventoryLot.getUnits} gives. */

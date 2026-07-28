@@ -58,10 +58,18 @@ public interface BundleService {
     /**
      * Stops a product being a bundle and removes its components.
      *
-     * <p><strong>Step 9 obligation.</strong> Once sales exist, dissolving a bundle that has been sold
-     * would leave decomposed component lines pointing at a bundle that is no longer one. Brief §5's
-     * "alias forward, never rewrite history" is the shape of the answer, and it needs the ledger to be
-     * decidable; until then there is no history to strand.
+     * <p><strong>Permitted after the bundle has been sold, and the step 6 obligation is discharged by
+     * that being safe rather than by a refusal.</strong> The worry was that dissolving would strand
+     * decomposed component lines pointing at something that is no longer a bundle. It does not,
+     * because step 9 <em>materialises</em> the decomposition: a sale stores its component lines with
+     * their allocated amounts on the invoice, so what a past invoice says is a copy of what was
+     * allocated on the day rather than a live read of the current definition. Brief §5's "alias
+     * forward, never rewrite history" is satisfied with no alias table, because nothing about a
+     * recorded sale changes when the definition does — including when it stops existing.
+     *
+     * <p><strong>The obligation this creates in exchange, and it is real:</strong> a report showing
+     * both revenue levels must read {@code SalesInvoiceLineView.components()} and never
+     * {@link #componentsOf}. The current definition can differ from the one that was sold, or be gone.
      *
      * @throws InvalidBundleException if the product is not a bundle
      */

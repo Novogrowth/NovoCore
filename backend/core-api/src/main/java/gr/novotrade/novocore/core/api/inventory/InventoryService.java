@@ -215,12 +215,60 @@ public interface InventoryService {
      * <p>Nothing is posted when everything consumed was carried at zero, or when nothing could be
      * filled at all. Both are real; {@link StockConsumptionView#costedNothing()} is how they read.
      *
-     * @throws InvalidStockConsumptionException if the product is serial-tracked (that is a sale of a
-     *     named unit and needs step 9's customer link — see {@link SerializedUnitStatus#SOLD}), a
-     *     service, a bundle, or if the quantity has a fraction its unit of measure does not allow
+     * <p><strong>Serial-tracked stock takes the other shape and no FIFO at all</strong> — the step 6
+     * obligation, discharged. The request names the units, each is costed at <em>its own</em> lot's
+     * cost (brief §5's explicit exception, because FIFO exists for units that cannot be told apart),
+     * each is marked {@link SerializedUnitStatus#SOLD}, and each carries the {@link SaleReference}'s
+     * customer and invoice line. There is no shortfall on this path: a named machine either is on the
+     * shelf or is not, and there is no aggregate for it to go negative in, so a unit that is not on
+     * hand is refused rather than flagged.
+     *
+     * @throws InvalidStockConsumptionException if the product is a service or a bundle; if the
+     *     quantity has a fraction its unit of measure does not allow; if the request's shape disagrees
+     *     with whether the product is serial-tracked; or if a named unit is unknown, belongs to
+     *     another product, or is not on hand at a sellable location
      * @throws gr.novotrade.novocore.core.api.product.ProductNotFoundException if the product is unknown
      */
     StockConsumptionView consume(NewStockConsumption request);
+
+    /**
+     * Puts <em>returned</em> stock back into the lots it came out of, and posts the cost back.
+     *
+     * <p><strong>Deliberately not {@link #reverseConsumption}, and the difference is a difference in
+     * fact rather than in mechanism.</strong> A reversal says the consumption should never have
+     * happened: it is the whole quantity, it can happen at most once (by UNIQUE constraint), and it
+     * posts an exact ledger mirror. A return says the sale was real and the goods came back: it may be
+     * partial, it may happen more than once against one sale, and it posts an ordinary entry — debit
+     * {@code INVENTORY}, credit {@code COST_OF_GOODS_SOLD}, one line per lot, each carrying that lot's
+     * reference.
+     *
+     * <p><strong>At the cost the stock left at</strong>, read off the consumption's own stored lines,
+     * never off the lot as it stands now. Step 10 will move a lot's unit cost when freight is
+     * allocated, and returning goods at a later cost would revalue stock through a credit note.
+     *
+     * <p>Lots are restored in reverse of the order they were taken — the last lot FIFO reached into
+     * gives its quantity back first — so a partial return leaves the FIFO queue in the state it would
+     * have been in had the smaller quantity been sold.
+     *
+     * <p>Serialized units come back to {@code IN_STOCK} and their sale link is cleared: brief §5 puts
+     * the customer/invoice link on a <em>sold</em> unit, so a machine that came back is not sold to
+     * anybody.
+     *
+     * @throws InvalidStockConsumptionException if the consumption is a reversal or a return itself; if
+     *     more is returned than was taken, counting earlier returns; or if a lot cannot take its
+     *     quantity back because something happened to it since
+     * @throws StockConsumptionNotFoundException if there is no such consumption
+     */
+    StockConsumptionView returnConsumed(
+            long consumptionId, Quantity quantity, LocalDate returnDate, String note);
+
+    /**
+     * How much of a consumption has already come back, counting every return against it.
+     *
+     * <p>What a credit note checks before crediting a line twice, and what the "never more than was
+     * taken" invariant is stated against. Computed, never stored.
+     */
+    Quantity returnedQuantityOf(long consumptionId);
 
     /**
      * Puts consumed stock back into the lots it came from, and posts the mirror entry.

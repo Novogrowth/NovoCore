@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import gr.novotrade.novocore.core.AbstractCoreIntegrationTest;
 import gr.novotrade.novocore.core.api.customer.CustomerNotFoundException;
 import gr.novotrade.novocore.core.api.customer.CustomerService;
+import gr.novotrade.novocore.core.api.customer.CustomerSystemKey;
 import gr.novotrade.novocore.core.api.customer.CustomerView;
 import gr.novotrade.novocore.core.api.customer.InvalidCustomerException;
 import gr.novotrade.novocore.core.api.customer.NewCustomer;
@@ -276,13 +277,82 @@ class CustomerIT extends AbstractCoreIntegrationTest {
                 .withMessageContaining("999999");
     }
 
+    // ---------------------------------------------------------------------------------------
+    // Q10 — the generic retail customer, seeded and protected
+    // ---------------------------------------------------------------------------------------
+    // Step 5 deliberately seeded none, on the grounds that a catch-all absorbs every unmatched sale
+    // and then cannot be untangled. Answered in step 9: seed it, and make it structural — because the
+    // alternative is a person creating it by hand on day one, which produces exactly that row with
+    // nothing in the software able to tell which one it is.
+
     @Test
-    @DisplayName("no generic retail customer is seeded (Q10 unanswered)")
-    void noSeededRetailCustomer() {
-        // A seeded catch-all customer is the row that quietly absorbs every unmatched sale and then
-        // cannot be untangled, so it waits for the answer rather than being added speculatively.
-        assertThat(customers.all())
-                .noneMatch(customer -> customer.name().equals("Πελάτης Λιανικής"));
+    @DisplayName("Q10 — the shared retail customer is seeded and locatable by key, not by name")
+    void retailCustomerIsSeeded() {
+        CustomerView retail = customers.require(CustomerSystemKey.RETAIL_WALK_IN);
+
+        assertThat(retail.name()).isEqualTo("Πελάτης Λιανικής");
+        assertThat(retail.isSystemRecord()).isTrue();
+        assertThat(retail.active()).isTrue();
+        // Not one identifiable party, so it can hold neither a VAT number nor a claim about a
+        // counterparty's status.
+        assertThat(retail.vatStatus()).isEqualTo(VatStatus.DOMESTIC);
+        assertThat(retail.vatNumber()).isNull();
+        assertThat(retail.vatExemptionReasonId()).isNull();
+
+        // Exactly one, which is the whole point of the key: a second cannot be created through the
+        // service, because nothing there sets one.
+        assertThat(customers.all()).filteredOn(CustomerView::isSystemRecord).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("Q10 — the retail customer cannot be deactivated, and is refused by both layers")
+    void retailCustomerCannotBeDeactivated() {
+        CustomerView retail = customers.require(CustomerSystemKey.RETAIL_WALK_IN);
+
+        assertThatExceptionOfType(InvalidCustomerException.class)
+                .isThrownBy(() -> customers.deactivate(retail.id()))
+                .withMessageContaining("structural record");
+
+        // And by CHECK, so it holds against a psql session that never came through the service.
+        assertThatThrownBy(() -> jdbc.update(
+                "UPDATE customer SET active = false WHERE id = ?", retail.id()))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("customer_system_record_stays_active");
+    }
+
+    @Test
+    @DisplayName("Q10 — the retail customer's VAT treatment is fixed, by CHECK")
+    void retailCustomerVatTreatmentIsFixed() {
+        CustomerView retail = customers.require(CustomerSystemKey.RETAIL_WALK_IN);
+
+        assertThatThrownBy(() -> jdbc.update(
+                "UPDATE customer SET vat_number = 'EL099999999' WHERE id = ?", retail.id()))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("customer_system_record_has_no_vat_number");
+
+        assertThatThrownBy(() -> jdbc.update(
+                "UPDATE customer SET vat_status = 'EXEMPT' WHERE id = ?", retail.id()))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("Q10 — it is refused on both sides of a merge, and merge still does not exist")
+    void retailCustomerIsNeverMerged() {
+        CustomerView retail = customers.require(CustomerSystemKey.RETAIL_WALK_IN);
+
+        // The rule is stated now so that whoever builds merge consults it rather than rediscovering
+        // the argument: this is the absence of a party, so aliasing it into somebody would attribute
+        // every anonymous till sale to one named person, and aliasing somebody into it would erase a
+        // real customer's history into an anonymous bucket.
+        assertThat(retail.isMergeable()).isFalse();
+        assertThat(CustomerSystemKey.RETAIL_WALK_IN.isMergeable()).isFalse();
+        assertThat(CustomerSystemKey.RETAIL_WALK_IN.isDeactivatable()).isFalse();
+
+        // Still not built — brief §5's alias-forward needs an alias table and a rule for postings made
+        // under the retired id, and half a merge loses references while appearing to work.
+        assertThat(CustomerService.class.getMethods())
+                .noneMatch(method -> method.getName().toLowerCase(java.util.Locale.ROOT)
+                        .contains("merge"));
     }
 
     // ---------------------------------------------------------------------------------------

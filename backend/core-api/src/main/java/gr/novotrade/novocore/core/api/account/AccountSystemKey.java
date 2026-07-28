@@ -125,5 +125,76 @@ public enum AccountSystemKey {
      * still with the accountant. The key is the handle that run will need; creating it now is not
      * building the run.
      */
-    DEPRECIATION_EXPENSE
+    DEPRECIATION_EXPENSE,
+
+    // ---------------------------------------------------------------------------------------
+    // Step 9: the accounts a sale resolves by itself
+    // ---------------------------------------------------------------------------------------
+    // The criterion has not moved — a key exists when NovoCore's own posting rules must locate a
+    // specific account at runtime. Step 9 is simply the first step where the software chooses a
+    // revenue account and a settlement account without a person naming one: a
+    // {@code SalesChannel} picks the pair below, and a {@code SettlementMethod} picks one of the
+    // six after them. Thirteen at once looks like a set losing its discipline; it is one step
+    // finally reaching the accounts step 3 created for exactly this.
+
+    /** Revenue for a walk-in or telephone sale. Chosen by {@code SalesChannel.STORE_AND_PHONE}. */
+    SALES_STORE_AND_PHONE,
+
+    /** Revenue for a website sale. Chosen by {@code SalesChannel.ECOMMERCE}. */
+    SALES_ECOMMERCE,
+
+    /** Revenue for a Skroutz marketplace sale. Chosen by {@code SalesChannel.SKROUTZ}. */
+    SALES_SKROUTZ,
+
+    /**
+     * Contra-revenue for a credit note against a Store &amp; Phone sale.
+     *
+     * <p>Three returns accounts rather than one, because step 3 split them so return rate stays
+     * visible per channel — and channel exists nowhere else in the model but in which account gets
+     * credited. A credit note debits one of these rather than reducing the channel's Sales account,
+     * which is exactly what makes the split worth having.
+     */
+    SALES_RETURNS_STORE_AND_PHONE,
+
+    /** Contra-revenue for a credit note against an eCommerce sale. */
+    SALES_RETURNS_ECOMMERCE,
+
+    /** Contra-revenue for a credit note against a Skroutz sale. */
+    SALES_RETURNS_SKROUTZ,
+
+    /**
+     * Revenue for a {@code SERVICE} product.
+     *
+     * <p>Step 5 recorded that {@code ProductType} decides real behaviour, and this is one of the
+     * three places it does: a service credits {@code Services} rather than a channel Sales account,
+     * because a repair carried out in the shop is not a Store &amp; Phone product sale and folding
+     * it in would make the channel figures answer a different question.
+     *
+     * <p>There is deliberately <em>no</em> key for {@code Cost of service sold}: nothing computes a
+     * service's cost, so no rule resolves that account, and a key is a promise that code which does
+     * not exist can reach it.
+     */
+    SERVICES_INCOME,
+
+    /**
+     * The cash box. Chosen by {@code SettlementMethod.CASH}, and needed by machine for a second
+     * reason: brief §6's €500 legal cash limit ({@code SettingKeys.CASH_PAYMENT_LIMIT}) cannot be
+     * enforced against an account found by an editable name.
+     */
+    CASH,
+
+    /** Partner clearing for card takings, held until the acquirer's remittance lands. */
+    PARTNER_CLEARING_POS,
+
+    /** Partner clearing for Skroutz orders, held until Skroutz remits. */
+    PARTNER_CLEARING_SKROUTZ,
+
+    /** Partner clearing for ACS cash-on-delivery, held until the courier remits. */
+    PARTNER_CLEARING_ACS,
+
+    /** PayPal. Grouped under Cash &amp; Cash Equivalents but treated as clearing (step 3). */
+    PAYPAL,
+
+    /** Stripe. Same treatment as {@link #PAYPAL}. */
+    STRIPE
 }

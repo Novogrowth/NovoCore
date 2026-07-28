@@ -21,6 +21,17 @@ interface StockConsumptionRepository extends JpaRepository<StockConsumption, Lon
     /** The consumption that reverses this one, if any. Stored one way, queried the other. */
     Optional<StockConsumption> findByReversalOfId(long consumptionId);
 
+    /** Every return recorded against one consumption, oldest first. */
+    List<StockConsumption> findByReturnsConsumptionIdOrderByIdAsc(long consumptionId);
+
+    /**
+     * How much of a consumption has already come back. Computed, never stored — a third column would
+     * be a number that has to agree with the rows it summarises.
+     */
+    @Query("select coalesce(sum(c.quantityFilled), 0) from StockConsumption c "
+            + "where c.returnsConsumptionId = :consumptionId")
+    java.math.BigDecimal returnedQuantityOf(long consumptionId);
+
     /** The batched form, so listing consumptions does not become a query per row. */
     @Query("select c.reversalOfId, c.id from StockConsumption c "
             + "where c.reversalOfId in :consumptionIds")

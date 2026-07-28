@@ -37,6 +37,22 @@ public interface CustomerService {
     CustomerView require(long id);
 
     /**
+     * The customer carrying a system key — <strong>Q10's shared retail record</strong>.
+     *
+     * <p>Seeded by migration, the way the chart of accounts seeds its keyed accounts, and located by
+     * key rather than by name for the same reason: the name is operator-editable and the id is an
+     * implementation detail, so neither is a safe handle for code that must find one specific row.
+     *
+     * <p>It is <strong>not a default</strong>. Nothing falls back to it, and no sale is assigned to it
+     * automatically. A till operator choosing "retail, no details" is stating a real answer to who
+     * bought it, which is what makes it different from the catch-all step 5 refused to seed.
+     *
+     * @throws CustomerNotFoundException if no customer carries the key, which is a broken seed rather
+     *     than a missing option
+     */
+    CustomerView require(CustomerSystemKey systemKey);
+
+    /**
      * Exact match on the VAT number — brief §5's authoritative identifier.
      *
      * <p>Safe to apply without confirmation, and the only lookup here that is. The schema refuses
@@ -102,6 +118,14 @@ public interface CustomerService {
      */
     CustomerView changeVatClassOverride(long id, Long vatClassId);
 
+    /**
+     * Deactivates a customer.
+     *
+     * @throws InvalidCustomerException if the customer carries a {@link CustomerSystemKey}. The shared
+     *     retail record is structural: deactivating it would leave every till sale with nobody to be
+     *     against. Refused here <em>and</em> by a CHECK constraint, so it holds against a {@code psql}
+     *     session too.
+     */
     void deactivate(long id);
 
     void reactivate(long id);

@@ -37,6 +37,9 @@ import java.util.Optional;
  *     value copied onto every customer would quietly become the level that always wins.
  * @param vatExemptionReasonId required when {@link #vatStatus()} is {@link VatStatus#EXEMPT},
  *     optional otherwise.
+ * @param systemKey non-null on a record NovoCore's own logic has to locate — today only the shared
+ *     retail customer (Q10). A keyed record is protected: it cannot be deactivated, its VAT treatment
+ *     is fixed, and it is refused on both sides of a merge. See {@link CustomerSystemKey}.
  */
 public record CustomerView(
         long id,
@@ -47,11 +50,24 @@ public record CustomerView(
         VatStatus vatStatus,
         Long vatClassOverrideId,
         Long vatExemptionReasonId,
+        CustomerSystemKey systemKey,
         boolean active) {
 
     public CustomerView {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(vatStatus, "vatStatus");
+        if (systemKey != null && vatStatus != VatStatus.DOMESTIC) {
+            throw new IllegalArgumentException(
+                    "Customer '" + name + "' carries system key " + systemKey + " and is "
+                            + vatStatus + ". A system record's VAT treatment is fixed at DOMESTIC: "
+                            + "it is not one identifiable party, so it cannot make a claim about a "
+                            + "party's status.");
+        }
+        if (systemKey != null && vatNumber != null) {
+            throw new IllegalArgumentException(
+                    "Customer '" + name + "' carries system key " + systemKey + " and a VAT number. "
+                            + "A shared anonymous record cannot hold one party's ΑΦΜ.");
+        }
         if (vatStatus.requiresVatNumber() && vatNumber == null) {
             throw new IllegalArgumentException(
                     "Customer '" + name + "' is " + vatStatus + ", which is not meaningful "
@@ -85,5 +101,25 @@ public record CustomerView(
 
     public Optional<Long> vatExemptionReason() {
         return Optional.ofNullable(vatExemptionReasonId);
+    }
+
+    /** The key this record is located by, when it is one NovoCore's own logic has to find. */
+    public Optional<CustomerSystemKey> systemRecord() {
+        return Optional.ofNullable(systemKey);
+    }
+
+    /**
+     * True when this is a structural record rather than a real party — the shared retail customer.
+     *
+     * <p>Worth asking before offering an edit: its VAT treatment is fixed, it cannot be deactivated,
+     * and it is refused on both sides of a merge.
+     */
+    public boolean isSystemRecord() {
+        return systemKey != null;
+    }
+
+    /** True when this record may take part in a merge. Everything except a system record. */
+    public boolean isMergeable() {
+        return systemKey == null || systemKey.isMergeable();
     }
 }

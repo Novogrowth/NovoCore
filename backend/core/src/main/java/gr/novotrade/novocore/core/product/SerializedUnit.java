@@ -21,11 +21,10 @@ import jakarta.persistence.Table;
  * <p><strong>Carries its own location.</strong> That is the whole reason a serial-tracked lot has none:
  * a lot-level location cannot say "one of these three is out for repair" without splitting the lot.
  *
- * <p><strong>No customer or invoice link.</strong> Brief §5 wants one once the unit is sold, and the
- * Sales Invoice is step 9. A nullable customer id added now would let a unit be marked sold to somebody
- * with no document behind it, which is a claim nothing can substantiate — so the link arrives with the
- * thing that justifies it. Only {@link SerializedUnitStatus#IN_STOCK} is reachable in step 6 for the
- * same reason: the other two are consequences of postings that do not exist yet.
+ * <p><strong>The customer and invoice link arrived in step 9</strong>, with the document that justifies
+ * it. Step 6 deliberately added no nullable customer id early, because a unit marked sold to somebody
+ * with no document behind it is a claim nothing can substantiate. Both halves move together and exist
+ * exactly when the status is {@link SerializedUnitStatus#SOLD} — biconditional, by CHECK.
  */
 @Entity
 @Table(name = "serialized_unit")
@@ -50,6 +49,13 @@ class SerializedUnit extends AuditableEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "location", nullable = false, length = 20)
     private StockLocation location;
+
+    /** Brief §5's link on a sold unit. Present exactly when {@link #status} is SOLD. */
+    @Column(name = "sold_to_customer_id")
+    private Long soldToCustomerId;
+
+    @Column(name = "sold_on_invoice_line_id")
+    private Long soldOnInvoiceLineId;
 
     /** For JPA only. */
     protected SerializedUnit() {
@@ -82,8 +88,42 @@ class SerializedUnit extends AuditableEntity {
         return location;
     }
 
+    Long getSoldToCustomerId() {
+        return soldToCustomerId;
+    }
+
+    Long getSoldOnInvoiceLineId() {
+        return soldOnInvoiceLineId;
+    }
+
     boolean isOnHand() {
         return status.isOnHand();
+    }
+
+    /**
+     * Marks this unit sold, naming the buyer and the line that sold it — brief §5, and the step 6
+     * obligation that left {@link SerializedUnitStatus#SOLD} unreachable.
+     *
+     * <p>The status and the link are set together, which is what makes the biconditional CHECK
+     * satisfiable and means there is no window in which a unit is sold to nobody.
+     */
+    void sell(long customerId, long salesInvoiceLineId) {
+        this.status = SerializedUnitStatus.SOLD;
+        this.soldToCustomerId = customerId;
+        this.soldOnInvoiceLineId = salesInvoiceLineId;
+    }
+
+    /**
+     * Takes a sold unit back — a customer return, or the reversal of the sale that sold it.
+     *
+     * <p>The sale link is cleared with the status, because brief §5 puts that link on a <em>sold</em>
+     * unit and a machine sitting back on the shelf is not sold to anybody. Its history is in the
+     * credit note and the invoice, which both still say what happened.
+     */
+    void returnFromCustomer() {
+        this.status = SerializedUnitStatus.IN_STOCK;
+        this.soldToCustomerId = null;
+        this.soldOnInvoiceLineId = null;
     }
 
     /** Posts nothing, for the reason {@code InventoryLot.moveTo} gives. */
