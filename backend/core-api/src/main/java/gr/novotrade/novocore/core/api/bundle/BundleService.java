@@ -113,7 +113,7 @@ public interface BundleService {
      * Splits a bundle sale into component lines, allocating the bundle's value across them in
      * proportion to their standalone values.
      *
-     * <p>Brief §5's one core-level rule. The allocation is exact — see {@link BundleAllocation} — so
+     * <p>Brief §5's one core-level rule. The allocation is exact — see {@link gr.novotrade.novocore.core.api.shared.ProportionalAllocation} — so
      * the component lines are the same money as the bundle line and a report can use either.
      *
      * @param bundleQuantity how many bundles. Must be positive, and whole unless the bundle's own unit

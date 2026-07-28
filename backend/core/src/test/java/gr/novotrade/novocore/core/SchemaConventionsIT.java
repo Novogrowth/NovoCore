@@ -97,7 +97,7 @@ class SchemaConventionsIT extends AbstractCoreIntegrationTest {
         // is an amount and therefore money. A numeric(19,6) is a multiplier, and only SOME multipliers
         // are money: a VAT rate and a quantity are not, a unit cost is. So the discriminator for the
         // six-decimal case is the name, and `_cost` is the naming convention V12 established for it —
-        // inventory_lot.unit_cost being the first.
+        // inventory_lot.received_unit_cost (unit_cost until V18 split it) being the first.
         //
         // WIDENED IN V16 to `_price` as well. purchase_invoice_line.unit_price is a six-decimal
         // monetary multiplier that is emphatically not a cost — it is what the supplier charged, as
@@ -130,7 +130,8 @@ class SchemaConventionsIT extends AbstractCoreIntegrationTest {
                         + "whose name ends in _cost or _price is a monetary multiplier. ADR 0005 requires "
                         + "every one to carry its currency in a companion char(3) column named "
                         + "<column>_currency — product.selling_price and "
-                        + "inventory_lot.unit_cost being the first of each kind. Add the companion "
+                        + "inventory_lot.received_unit_cost being the first of each kind. Add the "
+                        + "companion "
                         + "and a CHECK tying the two together, rather than exempting the column "
                         + "here: an amount whose currency is implied is an amount that means "
                         + "something different the day a second currency exists. A new monetary "
@@ -157,7 +158,10 @@ class SchemaConventionsIT extends AbstractCoreIntegrationTest {
                         "journal_entry", "journal_line", "stock_write_off",
                         "purchase_invoice", "purchase_invoice_line", "goods_receipt",
                         "goods_receipt_line", "gr_ir_match", "stock_consumption",
-                        "stock_consumption_line");
+                        "stock_consumption_line", "sales_invoice", "sales_invoice_line",
+                        "credit_note", "credit_note_line", "settlement", "open_item_allocation",
+                        "customer_credit", "bank_transfer",
+                        "freight_allocation", "freight_allocation_line");
 
         // And the currency rule above is not passing vacuously either: there is a real
         // numeric(19,2) column in the schema for it to check.
@@ -169,9 +173,10 @@ class SchemaConventionsIT extends AbstractCoreIntegrationTest {
                 .as("the monetary-column rule needs at least one monetary column to be meaningful")
                 .isPositive();
 
-        // Nor is its six-decimal half, which became live with inventory_lot.unit_cost in V12. Without
+        // Nor is its six-decimal half, which became live with inventory_lot.unit_cost in V12 and is
+        // now carried by received_unit_cost, allocated_landed_unit_cost and landed_unit_cost. Without
         // this, adding a second monetary multiplier with no currency would pass silently the day
-        // somebody renamed unit_cost.
+        // somebody renamed the last _cost column.
         assertThat(jdbc.queryForObject("""
                 SELECT count(*) FROM information_schema.columns
                 WHERE table_schema = current_schema()

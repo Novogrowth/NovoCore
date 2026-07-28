@@ -41,6 +41,13 @@ import java.util.List;
  * Storing a quantity on a serial-tracked lot would be a second copy of a number the units already
  * state — the argument that keeps a cost off {@code Asset} and {@code normal_balance_side} off
  * {@code Account}. A CHECK constraint refuses any third shape.
+ *
+ * <p><strong>The cost is two figures and the carrying cost is their sum</strong> — step 10, ADR 0010.
+ * {@link #receivedUnitCost} is what the goods cost and never changes;
+ * {@link #allocatedLandedUnitCost} accumulates the freight and duty allocated onto them. The received
+ * half is frozen because it is the basis every allocation divides by: if allocation were computed
+ * against the carrying cost, a second freight invoice would split the same lots in proportions the
+ * first one had already moved, and the result would depend on the order the two were entered in.
  */
 @Entity
 @Table(name = "inventory_lot")
@@ -63,13 +70,29 @@ class InventoryLot extends AuditableEntity {
     @Column(name = "quantity_remaining")
     private BigDecimal quantityRemaining;
 
-    @Column(name = "unit_cost", nullable = false)
-    private BigDecimal unitCost;
+    /**
+     * What one unit cost when the stock came in. <strong>Never written again</strong> — ADR 0010: it
+     * is the basis every landed-cost allocation divides by, so a second freight invoice against the
+     * same lots has to see the same proportions the first one did.
+     */
+    @Column(name = "received_unit_cost", nullable = false)
+    private BigDecimal receivedUnitCost;
 
     /** {@code char(3)}, so the JDBC type has to be stated — see {@code Product.sellingPriceCurrency}. */
     @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.CHAR)
-    @Column(name = "unit_cost_currency", nullable = false, length = 3)
-    private String unitCostCurrency;
+    @Column(name = "received_unit_cost_currency", nullable = false, length = 3)
+    private String receivedUnitCostCurrency;
+
+    /**
+     * Freight and duty allocated onto one unit of this lot since (brief §4). Zero until something
+     * allocates; the lot is carried at this plus {@link #receivedUnitCost}, computed on read.
+     */
+    @Column(name = "allocated_landed_unit_cost", nullable = false)
+    private BigDecimal allocatedLandedUnitCost;
+
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.CHAR)
+    @Column(name = "allocated_landed_unit_cost_currency", nullable = false, length = 3)
+    private String allocatedLandedUnitCostCurrency;
 
     @Column(name = "acquisition_date", nullable = false)
     private LocalDate acquisitionDate;
@@ -114,8 +137,13 @@ class InventoryLot extends AuditableEntity {
         this.product = product;
         this.quantityReceived = quantityReceived;
         this.quantityRemaining = quantityReceived;
-        this.unitCost = unitCost.value();
-        this.unitCostCurrency = unitCost.currency().getCurrencyCode();
+        this.receivedUnitCost = unitCost.value();
+        this.receivedUnitCostCurrency = unitCost.currency().getCurrencyCode();
+        // Explicit rather than left to a column default. Nothing has been allocated onto a lot that
+        // has just been received, and the currency has to agree with the received half — a CHECK
+        // refuses it otherwise, because a lot whose two halves disagreed could not be added up at all.
+        this.allocatedLandedUnitCost = BigDecimal.ZERO;
+        this.allocatedLandedUnitCostCurrency = this.receivedUnitCostCurrency;
         this.acquisitionDate = acquisitionDate;
         this.roastDate = roastDate;
         this.location = location;
@@ -177,8 +205,42 @@ class InventoryLot extends AuditableEntity {
         return Quantity.of(units.stream().filter(SerializedUnit::isOnHand).count());
     }
 
+    /** What was paid for the goods. Frozen — see the field. */
+    UnitCost getReceivedUnitCost() {
+        return new UnitCost(receivedUnitCost, Currency.getInstance(receivedUnitCostCurrency));
+    }
+
+    /** Freight and duty allocated onto one unit since. Zero until an allocation posts. */
+    UnitCost getAllocatedLandedUnitCost() {
+        return new UnitCost(
+                allocatedLandedUnitCost, Currency.getInstance(allocatedLandedUnitCostCurrency));
+    }
+
+    /**
+     * What one unit is <em>carried</em> at — brief §5's "unit cost includes allocated landed costs".
+     *
+     * <p>Computed, never stored: a third column holding the sum would be the number that must agree
+     * with the other two. This is what FIFO costs at, what a write-off derecognises, and what
+     * Inventory carries.
+     */
     UnitCost getUnitCost() {
-        return new UnitCost(unitCost, Currency.getInstance(unitCostCurrency));
+        return getReceivedUnitCost().plus(getAllocatedLandedUnitCost());
+    }
+
+    /**
+     * Raises what this lot is carried at by an allocated landed cost (ADR 0010).
+     *
+     * <p>Adds to the allocated half and leaves the received half alone, which is what keeps a later
+     * allocation's proportions reproducible. Bounds and currency are checked by the service so the
+     * failure names the lot and the amounts; the CHECK constraints are the guarantee.
+     */
+    void applyLandedCost(UnitCost perUnit) {
+        this.allocatedLandedUnitCost = getAllocatedLandedUnitCost().plus(perUnit).value();
+    }
+
+    /** Takes an allocated landed cost back off — the reversal of {@link #applyLandedCost}. */
+    void removeLandedCost(UnitCost perUnit) {
+        this.allocatedLandedUnitCost = getAllocatedLandedUnitCost().minus(perUnit).value();
     }
 
     LocalDate getAcquisitionDate() {

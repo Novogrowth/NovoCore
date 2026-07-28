@@ -102,8 +102,11 @@ class ChartOfAccountsIT extends AbstractCoreIntegrationTest {
                 .containsEntry("Income", 12)
                 // Four since V16 added Purchase price variance — ADR 0008's answer that a lot keeps
                 // the cost it was received at and the difference posts somewhere visible. In this
-                // group so gross margin reflects what was actually paid for the goods.
-                .containsEntry("COGS", 4)
+                // group so gross margin reflects what was actually paid for the goods. Five since
+                // V18 added Landed cost variance beside it, which is the same answer to Q18: the
+                // share of a freight cost belonging to stock that has already sold cannot raise a
+                // unit cost and cannot be added to a posted COGS, so it posts here (ADR 0010).
+                .containsEntry("COGS", 5)
                 .containsEntry("Selling Expenses", 7)
                 .containsEntry("General Expenses", 10)
                 .containsEntry("Administrative Expenses", 5)

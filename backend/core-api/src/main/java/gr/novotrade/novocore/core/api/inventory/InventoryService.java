@@ -140,20 +140,70 @@ public interface InventoryService {
     InventoryLotView moveLot(long lotId, StockLocation destination);
 
     /**
-     * The unit cost of the most recent lot of this product, which is Q6's "last purchase price,
-     * computed rather than stored".
+     * The <em>received</em> unit cost of the most recent lot of this product, which is Q6's "last
+     * purchase price, computed rather than stored".
      *
-     * <p><strong>Step 10 obligation.</strong> This is the purchase price only while nothing has been
-     * allocated onto a lot. Brief §5 says a lot's unit cost includes allocated landed costs, so once
-     * step 10 exists a freight allocation will move this figure away from what the supplier actually
-     * charged, and the last <em>purchase</em> price will have to come from the purchase invoice line
-     * instead. Recorded here because the value is right today and the day it stops being right is
-     * knowable in advance.
+     * <p><strong>The step 6 obligation, discharged in step 10.</strong> It used to return the lot's
+     * unit cost outright, which was correct only while nothing allocated landed costs onto a lot —
+     * brief §5 puts freight into a lot's carrying cost, so from step 10 that figure is a landed cost
+     * and not a purchase price. It now returns {@link InventoryLotView#receivedUnitCost()}, which is
+     * frozen at receipt and is what was paid for the goods themselves.
+     *
+     * <p><strong>One residual difference, stated rather than hidden.</strong> Where a delivery
+     * preceded its invoice and the invoice then charged something else, ADR 0008 keeps the lot at the
+     * cost it was received at and posts the difference to {@code Purchase price variance}. So this is
+     * what stock was taken in at, which is the last price we <em>believed</em>, not necessarily the
+     * last price a supplier <em>invoiced</em>. Making it the latter would mean this slice reading the
+     * purchasing slice, which depends on it — the answer to that, if it is ever wanted, is a query on
+     * {@code PurchaseInvoiceService}, not a dependency in this direction.
      *
      * <p>Behind {@code PRODUCT_LAST_PURCHASE_PRICE} when read through {@code ProductView}; reading it
      * here is a {@link Section#INVENTORY} operation for the same reason.
      */
     Optional<UnitCost> lastPurchaseCostOf(long productId);
+
+    // ---------------------------------------------------------------------------------------
+    // Landed costs — Section.INVENTORY. Q18, answered (ADR 0010)
+    // ---------------------------------------------------------------------------------------
+
+    /**
+     * Adds an allocated landed cost to one unit of a lot, raising what the lot is carried at.
+     *
+     * <p><strong>The lower layer, exactly as {@link #receive} is.</strong> It posts nothing and works
+     * out no proportions: {@code FreightAllocationService.allocate} divides a freight cost across lots
+     * by value, decides how much of each lot's share belongs to stock that is still there, and posts
+     * both halves — then calls this. A controller must expose that service and never this method,
+     * which would move a lot's cost with no entry behind it and leave the Inventory control account
+     * disagreeing with the sub-ledger it controls.
+     *
+     * <p>The <em>received</em> cost is never touched, which is what keeps a second allocation's
+     * proportions honest — see {@link InventoryLotView#landedCostBasis()}.
+     *
+     * @throws InvalidInventoryLotException if the increment is zero, or is in another currency than
+     *     the lot (ADR 0005 never converts)
+     * @throws InventoryLotNotFoundException if there is no such lot
+     */
+    InventoryLotView applyLandedCost(long lotId, UnitCost perUnit);
+
+    /**
+     * Takes an allocated landed cost back off a lot — the reversal of {@link #applyLandedCost}.
+     *
+     * <p>The same lower-layer caution applies: {@code FreightAllocationService.reverse} is what checks
+     * that the lots have not moved since, posts the mirror entry, and calls this.
+     *
+     * @throws InvalidInventoryLotException if the lot has less allocated landed cost than this would
+     *     take off, which would leave it carried below what it was received at
+     * @throws InventoryLotNotFoundException if there is no such lot
+     */
+    InventoryLotView removeLandedCost(long lotId, UnitCost perUnit);
+
+    /**
+     * Lots that have had a landed cost allocated onto them, oldest first.
+     *
+     * <p>What a stock valuation reconciles against when the Inventory balance is higher than the sum
+     * of the invoices behind it, and what phase 8 reads to answer "which stock is carrying freight".
+     */
+    List<InventoryLotView> lotsWithAllocatedLandedCost();
 
     /**
      * The lot one delivery line created — brief §5's source document reference, read the other way.

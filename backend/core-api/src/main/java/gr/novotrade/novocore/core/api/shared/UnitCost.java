@@ -125,6 +125,40 @@ public record UnitCost(BigDecimal value, Currency currency) implements Comparabl
         return value.multiply(quantity.value());
     }
 
+    /**
+     * Adds another unit cost to this one — <strong>step 10's landed-cost allocation</strong>.
+     *
+     * <p>Exact and needs no rounding mode: two six-decimal values add to six decimals. That is the
+     * whole reason a lot's carrying cost is stored as a received cost <em>plus</em> an allocated
+     * landed cost rather than as one number that gets overwritten — the received figure is never
+     * touched, and the sum is computed on every read.
+     */
+    public UnitCost plus(UnitCost other) {
+        requireSameCurrency(other, "add");
+        return new UnitCost(value.add(other.value), currency);
+    }
+
+    /**
+     * Subtracts another unit cost from this one — reversing a landed-cost allocation.
+     *
+     * @throws IllegalArgumentException if the result would be negative, which is
+     *     {@code UnitCost}'s own rule reached from here: a lot cannot un-allocate more freight than
+     *     was allocated onto it
+     */
+    public UnitCost minus(UnitCost other) {
+        requireSameCurrency(other, "subtract");
+        return new UnitCost(value.subtract(other.value), currency);
+    }
+
+    private void requireSameCurrency(UnitCost other, String operation) {
+        Objects.requireNonNull(other, "other");
+        if (!currency.equals(other.currency)) {
+            throw new IllegalArgumentException(
+                    "Cannot %s %s and %s. NovoCore does not convert between currencies and will not "
+                            .formatted(operation, this, other) + "silently pick one; see ADR 0005.");
+        }
+    }
+
     public boolean isZero() {
         return value.signum() == 0;
     }

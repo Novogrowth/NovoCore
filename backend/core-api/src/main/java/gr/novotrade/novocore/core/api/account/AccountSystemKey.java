@@ -51,12 +51,35 @@ public enum AccountSystemKey {
      */
     PURCHASE_PRICE_VARIANCE,
 
+    /**
+     * The part of an allocated landed cost that belongs to stock which has already left —
+     * <strong>Q18, and the exact counterpart of {@link #PURCHASE_PRICE_VARIANCE}</strong>.
+     *
+     * <p>Freight arrives after the goods it carried, and often after some of them have been sold.
+     * The share attributable to the quantity still on hand raises that lot's unit cost normally; the
+     * share attributable to the quantity already consumed cannot, because that stock was costed out
+     * into a posted cost-of-goods-sold entry and ADR 0008 does not reach back into one. So it posts
+     * here instead — openly, and somewhere it can be reported from.
+     *
+     * <p>Same placement and same reasoning as the purchase price variance: in the COGS group so
+     * gross margin reflects it, and <em>not</em> {@code expected_to_clear}, because it is a result
+     * rather than a discrepancy waiting to be cleared. A persistent balance here is a real signal —
+     * it says freight is routinely being allocated after the goods have sold, which is a process
+     * question rather than an accounting error.
+     */
+    LANDED_COST_VARIANCE,
+
     /** Where an invoice lands when no category could be determined (brief §7). */
     UNCLASSIFIED_NEEDS_REVIEW,
 
     /**
      * Freight and duty land here on receipt, then allocate proportionally by value into the
      * relevant lots' unit cost, crediting this back to zero (brief §4).
+     *
+     * <p><strong>This is the account a freight allocation credits</strong>, and the only one it
+     * will: a purchase invoice line pointed anywhere else is not an unallocated landed cost, and
+     * allocating out of some other expense account would drive this one negative while the real cost
+     * sat untouched somewhere else.
      */
     FREIGHT_LANDED_COST_UNALLOCATED,
 

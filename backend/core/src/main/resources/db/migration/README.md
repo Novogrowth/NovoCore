@@ -11,7 +11,11 @@ attachments, `V4` the chart of accounts, `V5` VAT classes / exemption reasons / 
 `V8` the real AADE exemption-reason seed, `V9` products, customers, suppliers and assets,
 `V10` the VAT rate's lower bound, `V11` units of measure as a table, `V12` inventory lots and
 serialized units, `V13` bundle products, `V14` the separate Output/Input VAT accounts and three
-new system keys, `V15` journal entries, journal lines and stock write-offs.
+new system keys, `V15` journal entries, journal lines and stock write-offs, `V16` purchase
+invoices, goods receipts, GR/IR matches, purchase price variance and FIFO consumption, `V17`
+sales invoices, credit notes, settlements, open-item allocations and bank transfers, `V18`
+freight / landed cost allocation, which also splits a lot's cost into a frozen received half and
+an allocated one.
 
 ## Rules
 
@@ -87,3 +91,16 @@ new system keys, `V15` journal entries, journal lines and stock write-offs.
    makes directly. **A trigger's `RAISE` arrives as SQLSTATE `P0001`**, which Spring maps to
    `UncategorizedSQLException` rather than `DataIntegrityViolationException`; assert on the message
    in tests, not the exception type.
+
+8. **A column whose meaning changes is renamed, not left alone.** `V18` renames
+   `inventory_lot.unit_cost` to `received_unit_cost` and adds `allocated_landed_unit_cost` beside
+   it, because from step 10 a lot is *carried* at the sum of the two and the old name meant one
+   thing before an allocation and another after it. The carrying cost is deliberately **not** a
+   third column: a stored total beside its own parts is the second copy of a fact this schema keeps
+   refusing to create (ADR 0010). The received half never changes after receipt, which is what makes
+   a second allocation against the same lots divide them in the same proportion as the first.
+
+   A rename is safe here in a way editing an applied migration is not — rule 1 still stands, `V12`
+   is untouched — but it does mean **raw-SQL probes in tests have to be updated**, and two were.
+   That is the cost of the rename and it is worth paying once; the alternative was a column named
+   for what it used to be.

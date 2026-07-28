@@ -109,11 +109,17 @@ class JournalSourceTest {
     class Values {
 
         @Test
-        @DisplayName("all six of Q19's typed transactions plus the credit note, write-off and receipt")
+        @DisplayName("all six of Q19's typed transactions, plus the four the core posts by itself")
         void everySourceQ19AndQ26Named() {
+            // Q19's six are the documents a person records. The other four are postings the core makes
+            // on its own account, each added by the step that first needed one and each with the
+            // correction question answered deliberately rather than defaulted: the goods receipt
+            // (Q39), the credit note (Q26), the inventory write-off, and the freight allocation
+            // (Q18, ADR 0010).
             assertThat(JournalSource.values()).containsExactlyInAnyOrder(
                     JournalSource.PURCHASE_INVOICE,
                     JournalSource.GOODS_RECEIPT,
+                    JournalSource.FREIGHT_ALLOCATION,
                     JournalSource.SALES_INVOICE,
                     JournalSource.CREDIT_NOTE,
                     JournalSource.RECEIPT,
@@ -121,6 +127,19 @@ class JournalSourceTest {
                     JournalSource.BANK_TRANSFER,
                     JournalSource.MANUAL_JOURNAL_ENTRY,
                     JournalSource.INVENTORY_WRITE_OFF);
+        }
+
+        @Test
+        @DisplayName("Q18: a freight allocation is immutable and not reversible through the ledger alone")
+        void freightAllocationAnsweredInStepTen() {
+            // ADR 0010, and the reason is the goods receipt's rather than the invoice's: the posting
+            // changes what lots are carried at, so editing the entry would change the accounts without
+            // changing the lots. The ledger cannot see the per-unit cost it put on each lot either,
+            // which is why FreightAllocationService.reverse owns the correction.
+            assertThat(JournalSource.FREIGHT_ALLOCATION.isAmendable()).isFalse();
+            assertThat(JournalSource.FREIGHT_ALLOCATION.requiresReversalToCorrect()).isTrue();
+            assertThat(JournalSource.FREIGHT_ALLOCATION.isReversibleThroughTheLedgerAlone()).isFalse();
+            assertThat(JournalSource.FREIGHT_ALLOCATION.mayConsumeStock()).isFalse();
         }
 
         @Test

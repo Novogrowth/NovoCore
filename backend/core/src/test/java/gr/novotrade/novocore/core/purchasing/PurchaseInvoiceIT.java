@@ -730,9 +730,11 @@ class PurchaseInvoiceIT extends AbstractCoreIntegrationTest {
 
             assertThatThrownBy(() -> jdbc.update("""
                     INSERT INTO inventory_lot (
-                        product_id, quantity_received, quantity_remaining, unit_cost,
-                        unit_cost_currency, acquisition_date, location, goods_receipt_line_id)
-                    VALUES (?, 1, 1, 1, 'EUR', DATE '2026-03-10', 'INVENTORY', ?)
+                        product_id, quantity_received, quantity_remaining, received_unit_cost,
+                        received_unit_cost_currency, allocated_landed_unit_cost,
+                        allocated_landed_unit_cost_currency, acquisition_date, location,
+                        goods_receipt_line_id)
+                    VALUES (?, 1, 1, 1, 'EUR', 0, 'EUR', DATE '2026-03-10', 'INVENTORY', ?)
                     """, grinder.id(), receipt.lines().getFirst().id()))
                     .hasMessageContaining("inventory_lot_receipt_line_unique");
         }

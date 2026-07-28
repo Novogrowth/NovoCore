@@ -1,6 +1,5 @@
-package gr.novotrade.novocore.core.api.bundle;
+package gr.novotrade.novocore.core.api.shared;
 
-import gr.novotrade.novocore.core.api.shared.Money;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -11,11 +10,17 @@ import java.util.Objects;
 /**
  * Splits one amount across several parts in proportion to their weights, exactly.
  *
- * <p>Brief §5's "automatic proportional price/cost allocation" for bundles. A bundle sells for less
- * than the sum of its parts, so a bundle line's value has to be pushed down onto its components
- * before anything can be said about revenue or margin per product — and the parts must add back up to
- * the whole, to the cent, or the two levels of brief §5's dual-level reporting disagree and neither
- * can be trusted.
+ * <p><strong>Two callers, one rule.</strong> Brief §5's automatic proportional price allocation for
+ * bundles was the first: a bundle sells for less than the sum of its parts, so a bundle line's value
+ * has to be pushed down onto its components before anything can be said about revenue or margin per
+ * product, and the parts must add back up to the whole to the cent or the two levels of dual-level
+ * reporting disagree and neither can be trusted. Brief §4's landed-cost allocation is the second:
+ * one freight invoice divided across the lots it delivered, by value.
+ *
+ * <p>It lives in {@code shared} rather than in either slice because those two are the same
+ * arithmetic, and a second copy of it would be a second set of rounding behaviour — which is exactly
+ * the class of difference that shows up later as a report that is a cent out and nobody can say
+ * which half is wrong.
  *
  * <p><strong>The arithmetic is integer, in cents, with no division error anywhere.</strong> The
  * obvious implementation — divide, multiply, round each line — loses a cent or two on almost every
@@ -33,9 +38,9 @@ import java.util.Objects;
  * the same way it was sold. The split is computed on the magnitude and then negated, so returning a
  * bundle allocates back exactly what selling it allocated out.
  */
-public final class BundleAllocation {
+public final class ProportionalAllocation {
 
-    private BundleAllocation() {
+    private ProportionalAllocation() {
     }
 
     /**
@@ -44,9 +49,10 @@ public final class BundleAllocation {
      * <p>The result has one entry per weight, in the same order, and sums to {@code total} exactly.
      *
      * @param weights relative shares — for a bundle, each component's standalone value, being its own
-     *     selling price extended across its quantity in the bundle. Must be non-negative and must not
-     *     all be zero: proportional allocation across parts that all weigh nothing has no answer, and
-     *     splitting equally instead would be inventing one.
+     *     selling price extended across its quantity in the bundle; for a landed cost, each lot's
+     *     received value, being the quantity it received extended at the cost it was received at.
+     *     Must be non-negative and must not all be zero: proportional allocation across parts that
+     *     all weigh nothing has no answer, and splitting equally instead would be inventing one.
      * @throws IllegalArgumentException if there are no weights, if one is negative, or if they sum to
      *     zero
      */
@@ -59,7 +65,8 @@ public final class BundleAllocation {
 
         // Weights are scaled to whole numbers first, so every later step is exact integer work. The
         // common scale is the widest one present: a component's value is a 2-decimal price extended
-        // across a 6-decimal quantity, so this is bounded and small.
+        // across a 6-decimal quantity, and a lot's is a 6-decimal cost extended the same way, so this
+        // is bounded and small.
         int commonScale = 0;
         for (BigDecimal weight : weights) {
             Objects.requireNonNull(weight, "weight");
@@ -128,7 +135,8 @@ public final class BundleAllocation {
 
         // The property this whole class exists for. Provable from the arithmetic above, asserted here
         // anyway: it is the invariant a future edit would break, and a silent breakage would show up
-        // as a report where the component lines and the bundle line disagree by a cent.
+        // as a report where the component lines and the bundle line disagree by a cent, or as a
+        // freight allocation that credits a different amount from the one it debited.
         Money sum = Money.zero(total.currency());
         for (Money part : allocation) {
             sum = sum.plus(part);
@@ -136,7 +144,8 @@ public final class BundleAllocation {
         if (!sum.equals(total)) {
             throw new IllegalStateException(
                     "Allocation of " + total + " summed to " + sum + ". Proportional allocation must "
-                            + "be exact; the parts of a bundle are the same revenue as the bundle.");
+                            + "be exact; the parts of a bundle are the same revenue as the bundle, "
+                            + "and the shares of a freight invoice are the same cost as the invoice.");
         }
         return List.copyOf(allocation);
     }

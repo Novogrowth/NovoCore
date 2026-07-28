@@ -20,7 +20,7 @@ import java.util.Currency;
  * level.
  *
  * <p><strong>Materialised, never recomputed.</strong> These rows are a copy of what
- * {@code BundleAllocation} worked out when the sale was recorded, not a live read of the bundle's
+ * {@code ProportionalAllocation} worked out when the sale was recorded, not a live read of the bundle's
  * current definition. That is what discharges the step 6 obligation about dissolving a bundle that has
  * been sold: there is no history to strand, because a recorded invoice does not depend on the
  * definition still existing. It is brief §5's "alias forward, never rewrite history" achieved without
@@ -51,7 +51,7 @@ class SalesInvoiceLineComponent extends AuditableEntity {
     private BigDecimal quantity;
 
     /**
-     * This component's share of the bundle line's net, from {@code BundleAllocation} — exact integer
+     * This component's share of the bundle line's net, from {@code ProportionalAllocation} — exact integer
      * arithmetic in cents, largest-remainder, so the parts add up to the whole with no residual and no
      * rounding mode involved at all.
      */

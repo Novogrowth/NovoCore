@@ -58,14 +58,32 @@ interface InventoryLotRepository extends JpaRepository<InventoryLot, Long> {
     List<Object[]> sumRemainingByLocation(@Param("productId") long productId);
 
     /**
-     * The latest lot cost for every product that has one, in a single query.
+     * Lots carrying an allocated landed cost, oldest first — ADR 0010.
+     *
+     * <p>What answers "which stock is carrying freight" when a valuation comes out above the invoices
+     * behind it. Reads the partial index V18 creates.
+     */
+    @Query("""
+            SELECT lot FROM InventoryLot lot
+            WHERE lot.allocatedLandedUnitCost > 0
+            ORDER BY lot.acquisitionDate ASC, lot.id ASC
+            """)
+    List<InventoryLot> findWithAllocatedLandedCost();
+
+    /**
+     * The latest <em>received</em> lot cost for every product that has one, in a single query.
+     *
+     * <p>Received rather than carried, since step 10: brief §5 puts allocated landed costs into a
+     * lot's carrying cost, so the carrying figure stopped being a purchase price the day freight
+     * could be allocated. See {@code InventoryService.lastPurchaseCostOf}.
      *
      * <p>{@code DISTINCT ON} is PostgreSQL-specific and deliberate — NovoCore is PostgreSQL-only
      * (ADR 0001, and Flyway owns the schema). The alternative is one query per row of a product list,
      * which is the same N+1 in slower clothing.
      */
     @Query(value = """
-            SELECT DISTINCT ON (product_id) product_id, unit_cost, unit_cost_currency
+            SELECT DISTINCT ON (product_id)
+                   product_id, received_unit_cost, received_unit_cost_currency
             FROM inventory_lot
             ORDER BY product_id, acquisition_date DESC, id DESC
             """, nativeQuery = true)

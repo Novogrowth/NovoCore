@@ -394,7 +394,7 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
             List<BundleComponentLine> componentLines = List.of();
             if (product.bundle()) {
                 // Decomposed against the line's NET, so the two revenue levels are the same money.
-                // BundleAllocation is exact integer arithmetic in cents, so this produces no residual
+                // ProportionalAllocation is exact integer arithmetic in cents, so this produces no residual
                 // of its own — the only rounding on this invoice is the comparison with the document.
                 BundleDecomposition decomposition =
                         bundles.decompose(product.id(), line.quantity(), net);

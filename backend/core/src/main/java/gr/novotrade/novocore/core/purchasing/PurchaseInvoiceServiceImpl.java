@@ -632,28 +632,9 @@ class PurchaseInvoiceServiceImpl implements PurchaseInvoiceService {
         Quantity matchedQuantity = line.isInventory()
                 ? Quantity.of(matches.matchedAgainstInvoiceLine(line.getId()))
                 : Quantity.ZERO;
-        Quantity open = line.isInventory()
-                ? line.getQuantity().minus(matchedQuantity)
-                : Quantity.ZERO;
-
-        return new PurchaseInvoiceLineView(
-                line.getId(),
-                line.getLineNumber(),
-                line.getLineType(),
-                line.getProductId(),
-                line.getProductId() == null
-                        ? null : productService.require(line.getProductId()).sku(),
-                line.getQuantity(),
-                line.getUnitPrice(),
-                line.getExpenseAccountId(),
-                line.getNetAmount(),
-                line.getVatClassId(),
-                line.getVatAmount(),
-                line.getVatExemptionReasonId(),
-                line.isReverseCharge(),
-                line.getDescription(),
-                matchedQuantity,
-                open);
+        String sku = line.getProductId() == null
+                ? null : productService.require(line.getProductId()).sku();
+        return PurchaseInvoiceLineViews.of(line, sku, matchedQuantity);
     }
 
     private GrIrMatchView toView(GrIrMatch match) {

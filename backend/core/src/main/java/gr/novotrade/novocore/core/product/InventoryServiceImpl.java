@@ -284,7 +284,7 @@ class InventoryServiceImpl implements InventoryService {
                 Map.of(
                         "sku", product.getSku(),
                         "quantity", saved.getQuantityReceived().toString(),
-                        "unitCost", saved.getUnitCost().toString(),
+                        "receivedUnitCost", saved.getReceivedUnitCost().toString(),
                         "location", request.location().name(),
                         "serialTracked", String.valueOf(product.isSerialTracked())));
 
@@ -421,8 +421,97 @@ class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional(readOnly = true)
     public Optional<UnitCost> lastPurchaseCostOf(long productId) {
+        // The RECEIVED cost, not what the lot is carried at — the step 6 obligation, discharged in
+        // step 10. Brief §5 puts allocated landed costs into a lot's carrying cost, so the moment
+        // freight could be allocated the carrying figure stopped being a purchase price: a product
+        // whose last delivery came by air freight would have read as though the supplier had raised
+        // their price.
         return lots.findFirstByProductIdOrderByAcquisitionDateDescIdDesc(productId)
-                .map(InventoryLot::getUnitCost);
+                .map(InventoryLot::getReceivedUnitCost);
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Landed costs — Q18, answered (ADR 0010)
+    // ---------------------------------------------------------------------------------------
+
+    @Override
+    @Transactional
+    public InventoryLotView applyLandedCost(long lotId, UnitCost perUnit) {
+        Objects.requireNonNull(perUnit, "perUnit");
+        InventoryLot lot = lots.findById(lotId)
+                .orElseThrow(() -> new InventoryLotNotFoundException(lotId));
+        requireSameCurrencyAsLot(lot, perUnit);
+
+        if (perUnit.isZero()) {
+            // Refused rather than accepted as a no-op: an allocation line that moves nothing is
+            // either a share too small to reach a unit or a caller that has not worked out its
+            // proportions, and the second one should not look like success.
+            throw new InvalidInventoryLotException(
+                    "Nothing to allocate onto lot " + lotId + ": the per-unit landed cost is zero. A "
+                            + "share too small to raise a unit's cost belongs entirely in landed cost "
+                            + "variance rather than in a lot that is not going to change.");
+        }
+
+        UnitCost before = lot.getUnitCost();
+        lot.applyLandedCost(perUnit);
+
+        auditLog.record("inventory-lot.landed-cost-applied", LOT_ENTITY_TYPE, String.valueOf(lotId),
+                Map.of(
+                        "sku", lot.getProduct().getSku(),
+                        "perUnit", perUnit.toString(),
+                        "receivedUnitCost", lot.getReceivedUnitCost().toString(),
+                        "carriedBefore", before.toString(),
+                        "carriedAfter", lot.getUnitCost().toString()));
+
+        return toView(lot);
+    }
+
+    @Override
+    @Transactional
+    public InventoryLotView removeLandedCost(long lotId, UnitCost perUnit) {
+        Objects.requireNonNull(perUnit, "perUnit");
+        InventoryLot lot = lots.findById(lotId)
+                .orElseThrow(() -> new InventoryLotNotFoundException(lotId));
+        requireSameCurrencyAsLot(lot, perUnit);
+
+        if (lot.getAllocatedLandedUnitCost().compareTo(perUnit) < 0) {
+            // Named here rather than left to UnitCost's own refusal, which would say only that a unit
+            // cost cannot be negative and not which lot or which allocation.
+            throw new InvalidInventoryLotException(
+                    "Lot " + lotId + " carries " + lot.getAllocatedLandedUnitCost() + " of allocated "
+                            + "landed cost, so " + perUnit + " cannot be taken back off it: the lot "
+                            + "would be carried below what was paid for the goods. Reaching here means "
+                            + "an allocation is being reversed twice, or one that was never applied.");
+        }
+
+        UnitCost before = lot.getUnitCost();
+        lot.removeLandedCost(perUnit);
+
+        auditLog.record("inventory-lot.landed-cost-removed", LOT_ENTITY_TYPE, String.valueOf(lotId),
+                Map.of(
+                        "sku", lot.getProduct().getSku(),
+                        "perUnit", perUnit.toString(),
+                        "carriedBefore", before.toString(),
+                        "carriedAfter", lot.getUnitCost().toString()));
+
+        return toView(lot);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<InventoryLotView> lotsWithAllocatedLandedCost() {
+        return lots.findWithAllocatedLandedCost().stream().map(this::toView).toList();
+    }
+
+    private static void requireSameCurrencyAsLot(InventoryLot lot, UnitCost perUnit) {
+        UnitCost received = lot.getReceivedUnitCost();
+        if (!received.currency().equals(perUnit.currency())) {
+            throw new InvalidInventoryLotException(
+                    "Lot " + lot.getId() + " was received in "
+                            + received.currency().getCurrencyCode() + " and this landed cost is in "
+                            + perUnit.currency().getCurrencyCode() + ". NovoCore does not convert "
+                            + "between currencies and will not silently pick one (ADR 0005).");
+        }
     }
 
     // ---------------------------------------------------------------------------------------
@@ -1612,7 +1701,8 @@ class InventoryServiceImpl implements InventoryService {
                 lot.isSerialTracked(),
                 lot.getQuantityReceived(),
                 lot.getQuantityRemaining(),
-                lot.getUnitCost(),
+                lot.getReceivedUnitCost(),
+                lot.getAllocatedLandedUnitCost(),
                 lot.getAcquisitionDate(),
                 lot.getRoastDate(),
                 lot.getLocation(),

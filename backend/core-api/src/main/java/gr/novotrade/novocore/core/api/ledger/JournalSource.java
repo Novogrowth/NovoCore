@@ -102,6 +102,22 @@ public enum JournalSource {
     MANUAL_JOURNAL_ENTRY(true, true),
 
     /**
+     * A freight or duty cost allocated out of {@code Freight / Landed Cost — Unallocated} and into
+     * the lots it delivered — <strong>brief §4, Q18, ADR 0010</strong>.
+     *
+     * <p>Immutable, for the Goods Receipt's reason and not the invoice's: the posting changes what
+     * lots are carried at, and FIFO consumption from that moment on costs at the new figure. Editing
+     * the entry would change the accounts without changing the lots, or change the lots underneath
+     * costs that have already posted.
+     *
+     * <p>Not reversible through the ledger alone either: the ledger cannot see the per-unit cost this
+     * added to each lot. {@code FreightAllocationService.reverse} takes it back off and posts the
+     * mirror together, and refuses once any of the lots has moved since — the same stance
+     * {@code GoodsReceiptService.reverse} takes, and for the same reason.
+     */
+    FREIGHT_ALLOCATION(false, false),
+
+    /**
      * Stock derecognised without a sale — the write-off that carries a
      * {@link gr.novotrade.novocore.core.api.inventory.WriteOffReason}.
      *

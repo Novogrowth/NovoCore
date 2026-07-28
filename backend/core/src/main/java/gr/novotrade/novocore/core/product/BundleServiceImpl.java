@@ -3,7 +3,6 @@ package gr.novotrade.novocore.core.product;
 import gr.novotrade.novocore.core.api.audit.AuditLogService;
 import gr.novotrade.novocore.core.api.bundle.BundleComponentLine;
 import gr.novotrade.novocore.core.api.bundle.BundleComponentView;
-import gr.novotrade.novocore.core.api.bundle.BundleAllocation;
 import gr.novotrade.novocore.core.api.bundle.BundleDecomposition;
 import gr.novotrade.novocore.core.api.bundle.BundleNotDecomposableException;
 import gr.novotrade.novocore.core.api.bundle.BundleService;
@@ -12,6 +11,7 @@ import gr.novotrade.novocore.core.api.bundle.NewBundleComponent;
 import gr.novotrade.novocore.core.api.product.ProductNotFoundException;
 import gr.novotrade.novocore.core.api.product.ProductView;
 import gr.novotrade.novocore.core.api.shared.Money;
+import gr.novotrade.novocore.core.api.shared.ProportionalAllocation;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -238,7 +238,7 @@ class BundleServiceImpl implements BundleService {
             weights.add(standaloneValueOf(bundleProductId, component).amount());
         }
 
-        List<Money> allocations = BundleAllocation.proportionally(bundleTotal, weights);
+        List<Money> allocations = ProportionalAllocation.proportionally(bundleTotal, weights);
 
         List<BundleComponentLine> lines = new ArrayList<>(bundleComponents.size());
         for (int i = 0; i < bundleComponents.size(); i++) {

@@ -184,9 +184,11 @@ class InventoryIT extends AbstractCoreIntegrationTest {
             // And structurally, bypassing the service entirely.
             assertThatThrownBy(() -> jdbc.update("""
                     INSERT INTO inventory_lot (product_id, quantity_received, quantity_remaining,
-                                               unit_cost, unit_cost_currency, acquisition_date,
-                                               location)
-                    VALUES (?, 0, 0, 10, 'EUR', ?, 'INVENTORY')
+                                               received_unit_cost, received_unit_cost_currency,
+                                               allocated_landed_unit_cost,
+                                               allocated_landed_unit_cost_currency,
+                                               acquisition_date, location)
+                    VALUES (?, 0, 0, 10, 'EUR', 0, 'EUR', ?, 'INVENTORY')
                     """, product.id(), MARCH))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("inventory_lot_received_positive");
@@ -199,18 +201,22 @@ class InventoryIT extends AbstractCoreIntegrationTest {
 
             assertThatThrownBy(() -> jdbc.update("""
                     INSERT INTO inventory_lot (product_id, quantity_received, quantity_remaining,
-                                               unit_cost, unit_cost_currency, acquisition_date,
-                                               location)
-                    VALUES (?, 5, 6, 10, 'EUR', ?, 'INVENTORY')
+                                               received_unit_cost, received_unit_cost_currency,
+                                               allocated_landed_unit_cost,
+                                               allocated_landed_unit_cost_currency,
+                                               acquisition_date, location)
+                    VALUES (?, 5, 6, 10, 'EUR', 0, 'EUR', ?, 'INVENTORY')
                     """, product.id(), MARCH))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("inventory_lot_remaining_within_received");
 
             assertThatThrownBy(() -> jdbc.update("""
                     INSERT INTO inventory_lot (product_id, quantity_received, quantity_remaining,
-                                               unit_cost, unit_cost_currency, acquisition_date,
-                                               location)
-                    VALUES (?, 5, -1, 10, 'EUR', ?, 'INVENTORY')
+                                               received_unit_cost, received_unit_cost_currency,
+                                               allocated_landed_unit_cost,
+                                               allocated_landed_unit_cost_currency,
+                                               acquisition_date, location)
+                    VALUES (?, 5, -1, 10, 'EUR', 0, 'EUR', ?, 'INVENTORY')
                     """, product.id(), MARCH))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("inventory_lot_remaining_within_received");
@@ -228,12 +234,14 @@ class InventoryIT extends AbstractCoreIntegrationTest {
 
             assertThatThrownBy(() -> jdbc.update("""
                     INSERT INTO inventory_lot (product_id, quantity_received, quantity_remaining,
-                                               unit_cost, unit_cost_currency, acquisition_date,
-                                               location)
-                    VALUES (?, 1, 1, -5, 'EUR', ?, 'INVENTORY')
+                                               received_unit_cost, received_unit_cost_currency,
+                                               allocated_landed_unit_cost,
+                                               allocated_landed_unit_cost_currency,
+                                               acquisition_date, location)
+                    VALUES (?, 1, 1, -5, 'EUR', 0, 'EUR', ?, 'INVENTORY')
                     """, product.id(), MARCH))
                     .isInstanceOf(DataIntegrityViolationException.class)
-                    .hasMessageContaining("inventory_lot_unit_cost_not_negative");
+                    .hasMessageContaining("inventory_lot_received_unit_cost_not_negative");
         }
     }
 
@@ -250,16 +258,22 @@ class InventoryIT extends AbstractCoreIntegrationTest {
 
             assertThatThrownBy(() -> jdbc.update("""
                     INSERT INTO inventory_lot (product_id, quantity_received, quantity_remaining,
-                                               unit_cost, unit_cost_currency, acquisition_date)
-                    VALUES (?, 5, 5, 10, 'EUR', ?)
+                                               received_unit_cost, received_unit_cost_currency,
+                                               allocated_landed_unit_cost,
+                                               allocated_landed_unit_cost_currency,
+                                               acquisition_date)
+                    VALUES (?, 5, 5, 10, 'EUR', 0, 'EUR', ?)
                     """, product.id(), MARCH))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("inventory_lot_pooled_columns_go_together");
 
             assertThatThrownBy(() -> jdbc.update("""
-                    INSERT INTO inventory_lot (product_id, unit_cost, unit_cost_currency,
+                    INSERT INTO inventory_lot (product_id, received_unit_cost,
+                                               received_unit_cost_currency,
+                                               allocated_landed_unit_cost,
+                                               allocated_landed_unit_cost_currency,
                                                acquisition_date, location)
-                    VALUES (?, 10, 'EUR', ?, 'INVENTORY')
+                    VALUES (?, 10, 'EUR', 0, 'EUR', ?, 'INVENTORY')
                     """, product.id(), MARCH))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("inventory_lot_pooled_columns_go_together");

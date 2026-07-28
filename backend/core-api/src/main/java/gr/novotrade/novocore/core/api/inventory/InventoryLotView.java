@@ -26,14 +26,26 @@ import java.util.Optional;
  * creates a lot. It is nullable, and the null case is real rather than defensive: the phase 2b
  * migration from Manager brings in stock that no NovoCore delivery ever created.
  *
+ * <p><strong>The cost is two figures, and {@link #unitCost()} is their sum</strong> — step 10, ADR
+ * 0010. Brief §5 says a lot's unit cost includes allocated landed costs, and that is what
+ * {@link #unitCost()} answers: it is what FIFO costs at, what a write-off derecognises, and what the
+ * Inventory control account carries. But the allocation itself has to be computed against what the
+ * goods actually cost, or a second freight invoice would take its proportions from a figure the
+ * first one moved — so {@link #receivedUnitCost} is stored and never changes, and
+ * {@link #allocatedLandedUnitCost} accumulates beside it. Two independent facts rather than a total
+ * and one of its parts, which is why neither is derived from the other.
+ *
  * @param serialTracked whether this lot's items are individually identified. Frozen at receipt: it
  *     records how the lot arrived, and a product's flag changing later does not rewrite history.
  * @param quantityReceived what arrived. Derived from {@link #units} when serial-tracked.
  * @param quantityRemaining what is left. Equal to {@link #quantityReceived} until step 8 starts
  *     consuming lots FIFO, and derived from unit statuses when serial-tracked.
- * @param unitCost the cost of one unit, six decimals. Brief §5: "includes allocated landed costs" —
- *     which is a statement about step 10, since nothing allocates yet. Until then this is exactly
- *     what was paid.
+ * @param receivedUnitCost what one unit cost when the stock came in, six decimals. <strong>Frozen
+ *     for the life of the lot.</strong> Where a supplier's invoice later disagreed with it, ADR 0008
+ *     put the difference in {@code Purchase price variance} rather than in the lot, so this is what
+ *     stock was taken in at rather than what the final invoice said.
+ * @param allocatedLandedUnitCost freight and duty allocated onto one unit of this lot since (brief
+ *     §4). Zero until something allocates.
  * @param roastDate for coffee. Null for everything else, and the reason brief §9 can have a Roast
  *     Date Report at all.
  * @param location where pooled stock sits, and <strong>null when serial-tracked</strong> — each unit
@@ -46,7 +58,8 @@ public record InventoryLotView(
         boolean serialTracked,
         Quantity quantityReceived,
         Quantity quantityRemaining,
-        UnitCost unitCost,
+        UnitCost receivedUnitCost,
+        UnitCost allocatedLandedUnitCost,
         LocalDate acquisitionDate,
         LocalDate roastDate,
         StockLocation location,
@@ -57,7 +70,8 @@ public record InventoryLotView(
         Objects.requireNonNull(productSku, "productSku");
         Objects.requireNonNull(quantityReceived, "quantityReceived");
         Objects.requireNonNull(quantityRemaining, "quantityRemaining");
-        Objects.requireNonNull(unitCost, "unitCost");
+        Objects.requireNonNull(receivedUnitCost, "receivedUnitCost");
+        Objects.requireNonNull(allocatedLandedUnitCost, "allocatedLandedUnitCost");
         Objects.requireNonNull(acquisitionDate, "acquisitionDate");
         Objects.requireNonNull(units, "units");
         units = List.copyOf(units);
@@ -79,6 +93,36 @@ public record InventoryLotView(
             throw new IllegalArgumentException(
                     "Lot " + id + " is pooled stock and cannot have serialized units.");
         }
+    }
+
+    /**
+     * What one unit of this lot is <em>carried</em> at — the received cost plus everything allocated
+     * onto it since. Brief §5's "includes allocated landed costs".
+     *
+     * <p>This is the figure that costs a sale, derecognises a write-off and values what is left. Use
+     * {@link #receivedUnitCost} only where the question is genuinely about what was paid: the basis
+     * for a further landed-cost allocation, and the last purchase price.
+     */
+    public UnitCost unitCost() {
+        return receivedUnitCost.plus(allocatedLandedUnitCost);
+    }
+
+    /** Whether any landed cost has been allocated onto this lot. */
+    public boolean hasAllocatedLandedCost() {
+        return !allocatedLandedUnitCost.isZero();
+    }
+
+    /**
+     * The value this lot's share of a landed cost is computed against — <strong>ADR 0010</strong>.
+     *
+     * <p>Everything that arrived, extended at what it cost to buy: the whole quantity, not what is
+     * left, because the freight was paid to bring all of it in and the part that has since sold does
+     * not stop having been carried. And at the <em>received</em> cost, so that a second freight
+     * invoice against the same lots divides them in the same proportion as the first rather than in
+     * a proportion the first one moved.
+     */
+    public java.math.BigDecimal landedCostBasis() {
+        return receivedUnitCost.extendExactly(quantityReceived);
     }
 
     /**
@@ -116,7 +160,7 @@ public record InventoryLotView(
      * accounting consequence lives.
      */
     public Money remainingValue() {
-        return unitCost.extend(quantityRemaining, RoundingMode.HALF_UP);
+        return unitCost().extend(quantityRemaining, RoundingMode.HALF_UP);
     }
 
     /** The units still on hand. Empty for pooled stock, which has no units to name. */

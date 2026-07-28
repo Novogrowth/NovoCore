@@ -15,7 +15,7 @@ import java.util.Objects;
  * @param quantity the total for this line — the component's per-bundle quantity multiplied by the
  *     number of bundles, not the per-bundle figure.
  * @param allocatedAmount this component's share of the bundle line's value, from
- *     {@link BundleAllocation}. The shares sum to the bundle's total exactly.
+ *     {@link gr.novotrade.novocore.core.api.shared.ProportionalAllocation}. The shares sum to the bundle's total exactly.
  */
 public record BundleComponentLine(
         long bundleProductId,
