@@ -95,7 +95,8 @@ class ChartOfAccountsIT extends AbstractCoreIntegrationTest {
                 .containsEntry("Current Liabilities", 8)
                 .containsEntry("Non-Current Liabilities", 1)
                 .containsEntry("Equity", 2)
-                .containsEntry("Income", 10)
+                // Twelve since V7 added Delivery income and COD fee income (Q27).
+                .containsEntry("Income", 12)
                 .containsEntry("COGS", 3)
                 .containsEntry("Selling Expenses", 7)
                 .containsEntry("General Expenses", 10)
@@ -327,6 +328,48 @@ class ChartOfAccountsIT extends AbstractCoreIntegrationTest {
         // on which way the residuals happened to fall.
         assertThat(rounding.type()).isEqualTo(AccountType.EXPENSE);
         assertThat(rounding.kind()).isEqualTo(AccountKind.STANDARD);
+    }
+
+    @Test
+    @DisplayName("delivery and COD fees have dedicated income accounts, not Other income (Q27)")
+    void feeIncomeAccountsAreDedicated() {
+        // Routing these to Other income would make a residual bucket the largest income line in
+        // the business, and would make "is shipping costing us money?" unanswerable, since
+        // Delivery income has to be comparable against the Transportation costs expense account.
+        List<AccountView> income = seededAccounts().stream()
+                .filter(account -> account.groupName().equals("Income"))
+                .toList();
+
+        assertThat(income)
+                .filteredOn(account -> account.name().equals("Delivery income")
+                        || account.name().equals("COD fee income"))
+                .hasSize(2)
+                .allSatisfy(account -> {
+                    assertThat(account.type()).isEqualTo(AccountType.INCOME);
+                    assertThat(account.kind()).isEqualTo(AccountKind.STANDARD);
+                    // No channel split: that was a brief §4 mandate for Sales specifically.
+                    assertThat(account.name()).doesNotContain("—");
+                    // Located through charge_type.income_account_id, which is an operator
+                    // decision per fee, so neither is a keyed account.
+                    assertThat(account.systemKey()).isNull();
+                });
+
+        // V7 opened a gap at 6 and 7 so that everything arising from a sale reads together and
+        // the residual bucket stays last. A residual in the middle of the list invites postings
+        // that should have gone somewhere specific.
+        assertThat(income)
+                .extracting(AccountView::name)
+                .containsSubsequence(
+                        "Sales returns — Skroutz",
+                        "Delivery income",
+                        "COD fee income",
+                        "Services");
+        assertThat(income.getLast().name())
+                .as("Other income is a residual bucket, so it belongs last")
+                .isEqualTo("Other income");
+        assertThat(income).extracting(AccountView::displayOrder)
+                .as("the shift left no duplicate positions behind")
+                .doesNotHaveDuplicates();
     }
 
     // ---------------------------------------------------------------------------------------

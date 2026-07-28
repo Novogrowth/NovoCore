@@ -40,13 +40,31 @@ class ChargeTypeIT extends AbstractCoreIntegrationTest {
     private ChartOfAccountsService chartOfAccounts;
 
     @Test
-    @DisplayName("the table is unseeded pending the income-account decision")
-    void unseeded() {
-        // Seeding COD and delivery against the wrong income account would mean migrating posted
-        // history later, so the rows wait on that decision rather than defaulting to Other income.
-        assertThat(chargeTypes.all())
-                .noneMatch(type -> type.name().equalsIgnoreCase("COD fee")
-                        || type.name().equalsIgnoreCase("Delivery"));
+    @DisplayName("V7 seeds Delivery and COD fee against their own dedicated income accounts (Q27)")
+    void seededAgainstDedicatedIncomeAccounts() {
+        // The decision this asserts: dedicated accounts rather than Other income. Both halves
+        // matter — that the two rows exist, and specifically where they post. Seeding them
+        // against the wrong income account would mean migrating posted history later, which is
+        // why the rows waited for the decision instead of defaulting.
+        assertThat(chargeTypes.active()).extracting(ChargeTypeView::name)
+                .contains("Delivery", "COD fee");
+
+        ChargeTypeView delivery = requireChargeType("Delivery");
+        ChargeTypeView cod = requireChargeType("COD fee");
+
+        assertThat(delivery.incomeAccountId()).isEqualTo(accountNamed("Delivery income").id());
+        assertThat(cod.incomeAccountId()).isEqualTo(accountNamed("COD fee income").id());
+        assertThat(delivery.incomeAccountId())
+                .as("not the residual bucket, and not each other's account")
+                .isNotEqualTo(otherIncome().id())
+                .isNotEqualTo(cod.incomeAccountId());
+
+        // Both default to the standard rate. Note the known limitation recorded in V7: a delivery
+        // charge ancillary to a supply legally follows the rate of the goods it delivers, and
+        // nothing derives that automatically — the per-line override is the only route to it.
+        long standardRate = vatClasses.requireByCode("1410").id();
+        assertThat(delivery.defaultVatClassId()).isEqualTo(standardRate);
+        assertThat(cod.defaultVatClassId()).isEqualTo(standardRate);
     }
 
     @Test
@@ -122,10 +140,13 @@ class ChargeTypeIT extends AbstractCoreIntegrationTest {
     @Test
     @DisplayName("an inactive income account is refused")
     void inactiveAccountIsRefused() {
+        // In a group of its own, not in the seeded Income group. These tests share one database
+        // and are not transactional, so an extra account inside a seeded group would break
+        // ChartOfAccountsIT's per-group counts depending on which class happened to run first.
         AccountView temporary = chartOfAccounts.createAccount(NewAccount.standard(
                 "Test income to deactivate",
                 AccountType.INCOME,
-                accountNamed("Other income").groupId()));
+                chartOfAccounts.createGroup("Test — charge type income").id()));
         chartOfAccounts.deactivate(temporary.id());
 
         assertThatExceptionOfType(InvalidChargeTypeException.class)
@@ -239,6 +260,11 @@ class ChargeTypeIT extends AbstractCoreIntegrationTest {
     // ---------------------------------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------------------------------
+
+    private ChargeTypeView requireChargeType(String name) {
+        return chargeTypes.findByName(name).orElseThrow(() -> new AssertionError(
+                "Charge type '" + name + "' is missing; V7 should have seeded it."));
+    }
 
     private AccountView otherIncome() {
         return accountNamed("Other income");
