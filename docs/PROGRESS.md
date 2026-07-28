@@ -28,13 +28,17 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 8 | Purchase Invoice, Goods Receipt, GR/IR, purchase price variance, FIFO | **Done, committed** `c6e2513` — ADR 0004's open item, Q17 and Q39 answered as **ADR 0008**, see below |
 | 9 | Sales Invoice, Credit Note, Receipt, Payment, Bank Transfer, open items, rounding | **Done, committed** `29e9dcd` — Q10, Q15's remainder, Q16, Q26 answered as **ADR 0009**; Q31 confirmed; all seven obligations discharged, see below |
 | 10 | Freight / landed cost allocation | **Done, committed** `cf6f1e4` + `6f06cf8` — Q18 answered as **ADR 0010**, and a defect it introduced closed as **ADR 0011**, see below |
-| 11 | Email service | Not started. Needs SMTP credentials |
+| 11 | Email service | **Done, committed** `b542cf7` — SMTP credentials supplied and stored in Settings, see below |
 | 12 | Automated backups | Not started. Needs Drive paths/credentials, Q24 |
 | 13 | Test suite consolidation sweep | Not started |
 
-**Tests: 720 passing, `mvn clean verify` exit 0.** 179 unit (core-api), 514 core integration,
-4 app unit, 12 app integration, 11 architecture. Nothing was failing at the start of this session,
-and nothing is failing now.
+**Tests: 801 passing, `mvn clean verify` exit 0.** 205 unit (core-api), 24 core unit, 540 core
+integration, 8 app unit, 12 app integration, 12 architecture. Nothing was failing at the start of
+this session, and nothing is failing now.
+
+**Step 11 introduced the first non-container tests in `core`** (`RetryPolicyTest`,
+`SmtpConfigurationTest`). Until now everything in that module needed Docker; these do not, which is
+why the `core` row in the count above gained a "unit" half.
 
 `mvn test` runs the non-container tests in ~6 seconds and needs no Docker. `mvn verify`
 additionally runs the `*IT` tests under Failsafe against a real PostgreSQL 17 container.
@@ -72,13 +76,23 @@ no recovery path locks the owner out of their own financial system.
 
 ## ⚠️ To be aware of immediately
 
-1. **`docker/.env` is gitignored and machine-local.** It holds a generated 48-character
-   database password. A fresh clone must run `cp docker/.env.example docker/.env` and set
-   `NOVOCORE_DB_PASSWORD`, or nothing starts. This is deliberate — there is no fallback
-   password anywhere.
+1. **`docker/.env` is gitignored and machine-local.** It now holds **three** secrets: the
+   generated database password, the SMTP password, and the initial owner's password. A fresh
+   clone must run `cp docker/.env.example docker/.env` and set `NOVOCORE_DB_PASSWORD`, or nothing
+   starts. This is deliberate — there is no fallback password anywhere.
 2. **A fresh machine also needs the toolchain**: JDK 25 and a Docker daemon. Maven is not
    required — `backend/mvnw` is committed. `mvn verify` needs Docker for the `*IT` tests;
    `mvn test` does not.
+3. **The first Owner account now exists: `kostas`.** Created on 2026-07-28 by
+   `InitialOwnerBootstrap` from `docker/.env`, with a randomly generated 24-character password.
+   **Change it after first login**, and then remove `NOVOCORE_BOOTSTRAP_OWNER_USERNAME` and
+   `NOVOCORE_BOOTSTRAP_OWNER_PASSWORD` from `.env` — they are ignored from now on, and editing
+   them there will not change the account. The password is only in that gitignored file and in
+   the chat session that generated it.
+4. **The SMTP password is in the database, not in git.** `NOVOCORE_SMTP_PASSWORD` in `.env` has
+   already been consumed and can be removed. Changing the password means changing the
+   `smtp.password` setting, not the environment variable — the bootstrap logs a line saying so
+   if the variable is still set.
 
 ## Git state
 
@@ -107,6 +121,7 @@ were already on `origin`.
 | `29e9dcd` | Step 9 — sales invoices, credit notes, settlements, bank transfers, open-item matching, rounding, migration V17 |
 | `cf6f1e4` | Step 10 — freight / landed cost allocation, the lot's two cost figures, migration V18 (**ADR 0010**) |
 | `6f06cf8` | Step 10 (cont.) — stock returning into a re-costed lot, migration V19 (**ADR 0011**) |
+| `b542cf7` | Step 11 — the shared email service, outbox, dispatcher, retry, migration V20 |
 
 Interleaved with these are small docs-only commits (`e25fcee`, `a09428e`, `920044c`, `de16e58`,
 `b065901`, `8c27cb4`, `2c3fa8a`, `21b2231`, `d1111d0`, `610f785`, `836a4eb`) and this session's
@@ -199,10 +214,18 @@ Convention going forward is **one commit per build step**, so history stays chec
 - **Backup restore.** Brief §13 already flags this. Nothing exists yet (step 12).
 - **The REST surface is one read-only endpoint.** `GET /api/chart-of-accounts` and nothing else, so
   the frontend still has essentially nothing to call. Everything else — products, customers,
-  settings, users — has a service and no HTTP route.
-- **Nobody has logged in through a browser.** Authentication is proven by an integration test over
-  real HTTP, not by a human using the generated Spring Security login page against the Compose
-  stack. The frontend has no login screen.
+  settings, users, **and now the email outbox** — has a service and no HTTP route.
+- ~~**Nobody has logged in.**~~ **Done, against the running Compose stack over HTTPS**: 401
+  unauthenticated, 204 on login as the new `kostas` owner with a CSRF token, 200 returning the
+  full chart of accounts. So the whole path — Caddy, TLS, session cookie, CSRF, the core's own
+  password verification, `requireView` — works against real containers and not only in a test.
+  **Still true: no human has used a browser**, and **the frontend has no login screen.**
+- **The implicit-TLS path is verified by hand, not by the suite.** The automated tests run against
+  an in-process SMTP server over plain SMTP, so what they prove about TLS is the property mapping
+  (`SmtpConfigurationTest`), not a real handshake. The real 465 path was checked twice by throwaway
+  probes that were deleted: one authenticating without sending, and one sending real mail. **A
+  change to `SmtpConfiguration`'s TLS properties would not be caught by `mvn verify`** — re-probe
+  by hand, or point a test at a TLS-capable server.
 - **PostgreSQL 18.** Pinned to `postgres:17-alpine` in both `backend/pom.xml`
   (`postgres.docker.image`) and `docker/compose.yml`. Both must move together.
 
@@ -1704,6 +1727,175 @@ recoverable, a historical output was always in the entry.
 
 ---
 
+## Step 11 — done (the shared email service)
+
+Commit `b542cf7`, migration `V20`. Credentials and both configuration decisions were supplied at
+the start of the session, so this was built to the answers rather than around them.
+
+### The two decisions, as built
+
+- **All email configuration lives in Settings**, including the password — decided deliberately
+  against the environment-variable alternative the last close-out raised. The exposure argument
+  for the environment was that Settings sits inside the backup and step 12 copies backups to
+  Google Drive; that does not apply, because access to that Drive is scoped to one person.
+- **The sending address is `erp@novotrade.gr` and is unmonitored**, so **`smtp.reply-to` is
+  `kostas@novotrade.gr` and applied to every outgoing message**. This is the whole point of the
+  step, and it is why the setting is **required rather than optional**: treating it as optional
+  would mean a missing value quietly routing every customer reply into a mailbox nobody opens — a
+  failure with no symptom.
+
+### The interface, and what it deliberately cannot do
+
+`EmailSender` is the single door. `EmailMessage` **has no `from` and no `replyTo` field**, so a
+caller cannot choose either; both are resolved from Settings at send time and applied identically.
+A caller that could override them would be able to send as something else and route replies
+somewhere unread, which is exactly the scattered-configuration failure `CLAUDE.md`'s shared-service
+rule exists to prevent. A test asserts those record components do not exist.
+
+**An ArchUnit rule confines `jakarta.mail` and `org.springframework.mail` to
+`gr.novotrade.novocore.core.email`**, so "never configure SMTP or send email directly from within a
+module" is a build failure rather than a convention. **Proven to fail**, the same way every other
+guardrail here was: a probe class in `..core.settings..` holding a `JavaMailSenderImpl` tripped it,
+naming the field, the constructor call and the return type. Probe deleted.
+
+### Asynchronous by an outbox table, per rule 4
+
+`send` writes a row **in the caller's transaction** and returns; it never opens a socket. A
+scheduled dispatcher does the SMTP conversation with **no transaction open across the network**.
+
+The transaction detail is the reason it is a table and not an in-memory queue: a message is queued
+**if and only if** the operation that queued it committed. An approved Purchase Order always sends
+its PDF; a rolled-back one never does, with no compensating logic anywhere. An in-memory queue gets
+both wrong in opposite directions. A test rolls back a transaction around `send` and asserts no row
+survives.
+
+- **Three transactions per message, never one**: claim (commits before any socket opens), send,
+  record. `EmailOutbox` is a separate bean from `EmailDispatcher` for a concrete reason, not
+  tidiness — a `@Transactional` method called from another method of the same object bypasses the
+  proxy entirely, so the annotations would have done nothing.
+- **The claim uses `FOR UPDATE SKIP LOCKED`.** Currently belt and braces: one instance, one
+  scheduler thread, `fixedDelay`. It costs a clause and prevents sending the same email twice the
+  first time somebody runs two instances during a migration.
+- **A crash between the server accepting a message and the row being marked sent produces a
+  duplicate on retry.** Stated rather than hidden. It is the right direction to fail — a
+  confirmation arriving twice is a nuisance, never arriving is a lost order — and avoiding it would
+  mean holding a transaction open across a network conversation.
+- **Scheduling is enabled in `app`, not in the core.** So the core's tests hold a fully wired
+  dispatcher that never fires on its own and is driven by calling it. Nothing in the email tests
+  sleeps, and the retry assertions are exact rather than approximate.
+
+### Retry, and giving up in public
+
+Exponential backoff doubling from 30s to a 15-minute ceiling, 5 attempts — roughly eight minutes,
+which covers a mail server restart without leaving a genuinely undeliverable message retrying all
+day. `max_attempts` is **copied onto the row at queue time**, so lowering the limit cannot
+retroactively fail messages already waiting.
+
+- **A message that runs out of attempts is `FAILED`, kept and queryable**, never deleted and never
+  left `PENDING` forever (rule 8). A CHECK refuses a `FAILED` row with no stated reason — the row
+  this table exists to prevent is a silent drop wearing a status.
+- **Re-queueing is manual.** Nothing retries a failed message automatically, because it failed for
+  a reason that is still true; automatic re-queueing turns that into a loop that hides the problem.
+  `retry` resets the attempt count rather than granting one more, so a fix can actually be
+  confirmed.
+- **Only two failures are treated as permanent**: an address the server rejected outright, and a
+  message that could not be constructed. Authentication rejection is *not* — a wrong password would
+  otherwise mark a whole backlog `FAILED` the moment a password expired, turning one transient
+  problem into dozens needing individual attention. The attempt limit surfaces it within minutes
+  anyway.
+- **An unconfigured system consumes no attempts at all.** Nothing is claimed, so the moment the
+  configuration is corrected everything waiting goes out. The dispatcher logs the problem at WARN
+  when it changes and DEBUG thereafter, so a system waiting for its password does not write a
+  warning every fifteen seconds until the log becomes the thing nobody reads.
+
+### `smtp.start-tls` replaced by `smtp.transport-security`
+
+Step 2 declared a boolean `smtp.start-tls` and nothing ever wrote a value under it, so renaming
+cost nothing. **A boolean has two states and there are three**, and the two encrypted ones are not
+interchangeable: our server is implicit TLS on 465, and a STARTTLS client pointed at that port
+**hangs rather than failing**, so the symptom is a timeout minutes later rather than a refusal.
+That is why the property mapping has its own test.
+
+Also stated explicitly rather than relied upon: hostname verification on, TLS 1.2/1.3 only,
+STARTTLS **required** and not merely enabled (with only `enable`, a server that declines the
+upgrade receives the password in the clear and the send still reports success), and **finite
+network timeouts in every mode** — Jakarta Mail's own defaults are infinite, so one hung server
+would otherwise block the dispatcher thread permanently with the outbox showing nothing wrong.
+
+### The password is not in git, and that is not the same as not being in Settings
+
+V20 seeds host, port, transport security, username, sender address, sender name, Reply-To and the
+four retry settings. **It does not seed the password.** A migration is a file in git; a credential
+in git is in git permanently, readable by anyone who ever clones the repository, present in every
+CI checkout, and not removable by editing the file.
+
+So the password reaches Settings once from `NOVOCORE_SMTP_PASSWORD` — the same route
+`NOVOCORE_BOOTSTRAP_OWNER_PASSWORD` takes — and the variable can then be removed. **The decision
+that it lives in Settings is unaffected: the environment is how it arrives, not where it is kept.**
+`SmtpPasswordBootstrap` differs from `InitialOwnerBootstrap` in two deliberate ways: a missing
+value **does not stop the application** (an instance that cannot send email is entirely usable,
+unlike one nobody can log into), and a value that is set but ignored **is logged**, because
+somebody editing `.env` to change a password and finding authentication still failing needs to be
+told where the value actually lives.
+
+A test asserts that **no migration file anywhere inserts `smtp.password`** — checked against the
+files rather than the table, because "is it seeded?" is a question about what is committed, and the
+live table is written to by the email service's own tests.
+
+### Two defects found by tests, not by reasoning
+
+Both are recorded because both were invisible to inspection and are the kind that come back.
+
+1. **`EmailAttachment` sanitised the filename before checking for a line break.** Given
+   `june.pdf\r\nContent-Type: text/html`, the directory strip ran to the last `/` — the one *inside
+   the injected header* — leaving `html`, a name with no line break in it and nothing left to
+   refuse. **Sanitising first can destroy the evidence that a value should have been rejected
+   outright.** The check now runs on the raw input.
+2. **One unusable outbox row stopped all email indefinitely.** Materialising the claimed batch threw
+   inside the claim transaction, so the whole transaction aborted, nothing in the batch was sent,
+   and the next cycle claimed the same batch and failed identically — with no message of its own
+   ever marked failed. Such a row is now failed on its own and skipped. Found because a raw-SQL
+   probe left exactly such a row behind and nine unrelated tests went red.
+
+### Test hygiene worth keeping
+
+- The email tests **empty the outbox** before each test and **restore every setting they
+  overwrite** afterwards. These integration tests share one database and are deliberately not
+  transactional, and settings are global by nature — the suite's usual "use distinct keys" advice
+  has no equivalent. Without the first, a later test's batch picks up messages earlier tests queued
+  on purpose and every "this cycle sent exactly one" assertion silently becomes a statement about
+  the whole class's history. That is how one test first failed, reporting three sent instead of one.
+- **A raw-SQL probe written as a `'{...}'` array literal proved nothing.** PostgreSQL's array-literal
+  parser treats a backslash as an escape, so the intended `\n` became a plain `n`, the CHECK had
+  nothing to object to, and the row went in. Bind the value as a parameter and build the array with
+  `ARRAY[?]`.
+
+### Verified by hand, beyond the suite
+
+- **V20 applies on the Compose stack**, and `SmtpPasswordBootstrap` was observed in **both**
+  branches: storing the password on the first start, then reporting the variable as ignored on the
+  next.
+- **The real credentials authenticate against `mail.novotrade.gr:465`** over implicit TLS with
+  hostname verification on.
+- **Two real emails were sent to `kostas@novotrade.gr`** through the full production path — queue,
+  dispatcher, real SMTP — carrying Greek text and an attachment. Two rather than one because
+  `-Dtest=` made Surefire run the throwaway probe as well as Failsafe. Both probes were deleted.
+
+### Not built, deliberately
+
+- **No HTTP route.** The outbox, the failure list and `verifyConfiguration` all have services and no
+  controller, consistent with everything since step 4b. `verifyConfiguration` exists specifically so
+  a Settings screen can answer "is email working?" honestly, and is waiting for that screen.
+- **No templates, no HTML layout, no localisation.** `EmailMessage` carries a subject and a body,
+  and whichever module sends something composes it. The first module with a real template is where
+  that decision belongs.
+- **No retention policy on sent messages.** Rows accumulate. Worth revisiting alongside step 12,
+  since attachment bytes live in the database and therefore in every backup.
+- **No `Section` for the outbox.** Nothing reads it over HTTP yet, and a permission guarding
+  nothing is a half-built feature.
+
+---
+
 ## Open questions, by the step they block
 
 Numbering follows the original Phase 1 question list so references stay stable.
@@ -1930,23 +2122,21 @@ That placement decides the rest:
 ---
 ## Next action — read this first
 
-**Step 11 (the email service) is the next numbered step.** Steps 0–10 are done, committed and pushed.
-**Nothing is blocked on an open question** — for the first time since step 5, no numbered step is
-waiting on a decision.
+**Step 12 (automated backups) is the next numbered step.** Steps 0–11 are done and committed.
+**Step 12 is blocked on Q24** — the first numbered step to be blocked since step 10 closed.
 
-### Step 11 needs credentials before it needs code
+### Two things to do before anything else
 
-The shared email service is `CLAUDE.md`'s own example of a core-owned service: configured once via
-Settings (SMTP credentials, sender identity), exposed through one interface, called by any module that
-needs to send something. Nothing about its shape is open. What is missing is the **SMTP host, port,
-credentials and sender identity** — and a decision about whether the credentials live in Settings (as
-the brief implies) or in the environment alongside the database password.
+1. **Change the `kostas` owner password**, then remove `NOVOCORE_BOOTSTRAP_OWNER_USERNAME` and
+   `NOVOCORE_BOOTSTRAP_OWNER_PASSWORD` from `docker/.env`. The current password was randomly
+   generated on 2026-07-28 and exists only in that gitignored file. Note there is **no
+   change-password screen** — the REST surface is still one read-only endpoint — so this needs
+   `UserService` or a direct hash update until there is a UI.
+2. **Remove `NOVOCORE_SMTP_PASSWORD` from `docker/.env`.** It has already been consumed into
+   Settings and is ignored; the application logs a line saying so on every start while it is
+   still there.
 
-That second one is worth deciding deliberately rather than by default: `docker/.env` already holds one
-secret and is gitignored, while Settings is in the database and therefore inside the backup. A password
-in a backup that gets copied to Google Drive (step 12) is a different exposure from one that does not.
-
-### Step 12 then needs Q24
+### Step 12 needs Q24
 
 Google Drive API with credentials held by NovoCore, or `rclone` on the host (no Python, per
 `CLAUDE.md`), plus retention policy, whether dumps are encrypted at rest, and the two actual Drive
@@ -1974,11 +2164,20 @@ destinations.
   the list: a freight allocation has no number either, only an id.
 - **Q12 leftover — is the periodic depreciation posting run Phase 1 scope**, or only the register and
   the calculation? Still waiting on the statutory rates either way.
+- **Q43** *(new, step 11)* — **how long are sent emails kept?** Nothing prunes `email_outbox`, so rows
+  accumulate forever and their attachment bytes live in the database and therefore in every backup.
+  Not urgent at this volume, and it deliberately shares a decision with step 12's retention policy —
+  worth answering once, for both, rather than twice.
+- **Q44** *(new, step 11)* — **who may see the email outbox, and does it need a `Section`?** Nothing
+  reads it over HTTP yet, so no permission was invented for it (a permission guarding nothing is a
+  half-built feature). The question is real when the Settings screen arrives: the failure list carries
+  recipients and subjects, which is a customer-correspondence trail. Bodies are deliberately absent
+  from `QueuedEmailView` already.
 
 ### Standing note
 
 The REST surface is deliberately still one endpoint — **the ledger, inventory, purchasing, sales,
-settlements and now landed costs all have no HTTP route at all.** Building out the rest of the API
+landed costs and now the email outbox all have no HTTP route at all.** Building out the rest of the API
 needs its own scoping conversation, not incremental drift. When it happens, these lower-layer methods
 must **not** be what a controller exposes: `JournalService.post` (use `postManualEntry`),
 `InventoryService.receive` / `unreceive` (use `GoodsReceiptService`), `InventoryService.consume` /
@@ -1987,3 +2186,10 @@ must **not** be what a controller exposes: `JournalService.post` (use `postManua
 `...For(viewer)` variants). **PLB-1 (2FA) must be closed before any remote access is enabled** —
 including Remote/Order Staff logging in from outside the local network, which is that role's entire
 purpose.
+
+**Step 11 adds one to that list, in the other direction.** Any feature that needs to send something
+calls `EmailSender.send` and composes an `EmailMessage`. It **cannot** set a From or a Reply-To,
+cannot configure SMTP, and cannot construct a mail session — an ArchUnit rule confines
+`jakarta.mail` and `org.springframework.mail` to `..core.email..`. If `EmailSender` cannot express
+what a module needs, **add to that interface rather than around it**, exactly as rule 3 says for
+adapters.
