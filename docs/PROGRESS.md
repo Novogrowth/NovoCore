@@ -23,8 +23,8 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 4 | Users, auth, permissions | **Done, committed** — Q21 and Q22 answered, see below |
 | 4b | First REST endpoint (chart of accounts, read-only) | **Done, committed** — boundary validation, see below |
 | 5 | Product, Customer, Supplier, Asset | **Done, committed** — Q5, Q8, Q9, Q12 answered, see below |
-| 6 | Inventory Lot/Unit, Location, computed stock | **Next.** Not started. **Carries two step-3 obligations plus step 5's — see below** |
-| 7 | Journal engine, debits=credits invariant | Not started. Blocked on Q13, Q14 |
+| 6 | Inventory Lot/Unit, Location, stock queries, bundles | **Done, committed** — Q7, Q25, Q11 answered, see below |
+| 7 | Journal engine, debits=credits invariant | **Next.** Not started. **Blocked on Q13 and Q14 — both need a conversation, not a one-line answer** |
 | 8 | Purchase Invoice, Goods Receipt, GR/IR, FIFO | Not started |
 | 9 | Sales Invoice, Receipt, Payment, Bank Transfer, open items, rounding | Not started |
 | 10 | Freight / landed cost allocation | Not started. Blocked on Q18 |
@@ -32,11 +32,11 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 12 | Automated backups | Not started. Needs Drive paths/credentials, Q24 |
 | 13 | Test suite consolidation sweep | Not started |
 
-**Tests: 370 passing, `mvn clean verify` exit 0.** 112 unit (core-api), 231 core integration,
-4 app unit, 12 app integration, 11 architecture. Nothing was failing at the last close-out, and
-nothing is failing now.
+**Tests: 458 passing, `mvn clean verify` exit 0.** 148 unit (core-api), 283 core integration,
+4 app unit, 12 app integration, 11 architecture. Nothing was failing at the start of this session,
+and nothing is failing now.
 
-`mvn test` runs the 127 non-container tests in ~6 seconds and needs no Docker. `mvn verify`
+`mvn test` runs the 163 non-container tests in ~6 seconds and needs no Docker. `mvn verify`
 additionally runs the `*IT` tests under Failsafe against a real PostgreSQL 17 container.
 
 ---
@@ -101,9 +101,10 @@ were already on `origin`.
 | `ae7c31f` | Step 5 — Product, Customer, Supplier, Asset, migration V9 |
 | `9c25993` | VAT rate bound's blind spot closed, migration V10 |
 | `2dce5df` | Q34 — units of measure as a runtime-editable table, migration V11 |
+| `7182831` | Step 6 — inventory lots, serialized units, locations, bundles, migrations V12–V13 |
 
 Interleaved with these are small docs-only commits (`e25fcee`, `a09428e`, `920044c`, `de16e58`,
-`b065901`, `8c27cb4`) and this session's close-out commit.
+`b065901`, `8c27cb4`, `2c3fa8a`) and this session's close-out commit.
 
 Local branch `phase-1/core-skeleton` still exists and is fully merged; safe to delete.
 Convention going forward is **one commit per build step**, so history stays checkpoint-able.
@@ -145,6 +146,16 @@ Convention going forward is **one commit per build step**, so history stays chec
   `HttpOnly` / `Secure` / `SameSite=Strict` asserted against the real `Set-Cookie` header.
 - **The startup refusal when no user exists and no initial owner is supplied** — unit-tested,
   including the partial-credentials case.
+- **The widened monetary-currency rule proven to actually fail**, same method again: a temporary
+  `probe_cost` table with an unpaired `landed_cost numeric(19,6)` tripped
+  `SchemaConventionsIT.everyMonetaryColumnCarriesItsCurrency`, naming exactly that column while
+  correctly ignoring a properly paired `unit_cost`, a rate and a quantity in the same table. Probe
+  deleted.
+- **The two-shapes-of-lot invariant is enforced by the database**, proven by raw-SQL probes in
+  `InventoryIT` that bypass the service: a quantity with no location, a location with no quantity, a
+  lot with more remaining than received, a negative remaining, a negative unit cost, a bundle that is
+  also serial-tracked, a serialized service product, a self-referencing bundle component and a
+  duplicate component are all refused by CHECK or UNIQUE constraints, each named in the assertion.
 
 ## Not yet verified
 
@@ -524,13 +535,15 @@ of a list invites postings that should have gone somewhere specific. No channel 
 `AccountSystemKey`: these accounts are located through `charge_type.incomeAccountId`, which is an
 operator decision per fee rather than a rule compiled into the software.
 
-**✅ Q33 settled: a fee's VAT rate is independent of the products on the invoice.** Both charge
-types default to 24%, and that is the operative rate rather than a placeholder — a 13% order still
-carries 24% delivery. Raised as a possible defect (Greek practice treats an ancillary charge as
-following the main supply's rate) and answered explicitly the other way, so **nothing should later
-be built to derive a fee's rate from the lines around it.** The per-line override still exists for
-a deliberate exception; what is deliberately absent is anything automatic. V7's comment and
-`ChargeTypeIT` both state the decision rather than the former limitation.
+**✅ Q33 settled, and confirmed with the accountant: a fee's VAT rate is independent of the products
+on the invoice.** Both charge types default to 24%, and that is the operative rate rather than a
+placeholder — a 13% order still carries 24% delivery. It was raised here as a possible defect, on
+the general principle that an ancillary charge follows the main supply's rate; **the accountant
+confirmed the treatment as built**, so this is a settled decision rather than a recommendation that
+was overruled. Consequently **nothing should later be built to derive a fee's rate from the lines
+around it.** The per-line override still exists for a deliberate exception; what is deliberately
+absent is anything automatic. V7's comment and `ChargeTypeIT` both state the decision rather than
+the former limitation.
 
 **V8 (`09ea0d5`) seeds the real AADE VAT exemption reasons** — 29 rows from Prosvasis Go's
 "Διατάξεις απαλλαγής Φ.Π.Α." screen, in the **recodified** Κώδικας ΦΠΑ article numbering (άρθρο 2
@@ -754,6 +767,225 @@ table pointing at it.
 
 ---
 
+## Step 6 — done (inventory lots, serialized units, locations, bundles)
+
+Commit `7182831`, migrations `V12` and `V13`. All three blocking questions were answered at the
+start of the session, so this was built to the answers rather than around them.
+
+### The three answers, as built
+
+- **Q7 — stock per location, plus a computed sellable figure; sellable is the Inventory location
+  only, excluding Damaged Goods and Service.** `InventoryService.stockOf` returns `StockLevels`,
+  which carries **every** location with zero where there is none, and derives `sellable()` from
+  `StockLocation.sellableLocations()` rather than reading `INVENTORY` directly — so a second
+  sellable location is one edit on the enum instead of a search for hardcoded values. This is why
+  V9 was right to refuse a stock column: nine on hand and three sellable is the ordinary case, and
+  a single number has to pick one of them to be wrong about.
+- **Q25 — a fixed enum.** `WriteOffReason`: `SHRINKAGE` / `DAMAGE` / `EXPIRY` / `OTHER`. Free text
+  would give "damaged", "Damaged", "broken in transit" and "ΦΘΟΡΑ" as four categories, which is the
+  same as having none, and reportability is the entire reason the single write-off account was
+  chosen over three. `OTHER` exists so nobody is forced to pick the nearest-looking value and
+  corrupt the four that matter.
+- **Q11 — bundles built now, to brief §5 in full.** We currently sell bundled products, so this was
+  not speculative scope. All five requirements: own SKU, no stock of its own, proportional
+  allocation, decomposition into component lines, and the link between the two revenue levels.
+
+### `StockLocation` is an enum, not a runtime-editable table
+
+The opposite call from `VatClass` and `UnitOfMeasure`, and deliberately so. Those became tables
+because the authoritative list belongs to AADE or to Prosvasis Go. These three values are
+NovoCore's own, and **every one of them has behaviour attached that only NovoCore can supply**:
+`INVENTORY` is what sellability is computed from, and `DAMAGED_GOODS` is what phase 8's Clearing
+Checks must single out. A row an operator added at runtime would be storable and unhandled.
+
+Named `StockLocation` rather than `Location`, because a bare `Location` reads as an address and
+Customer and Supplier will need one of those (Q37). **Not a warehouse** — several physical
+warehouses are a different concept, absent from the brief, and would arrive alongside this rather
+than as extra values in it.
+
+### Two shapes of lot, and the nullable columns are the mechanism
+
+The load-bearing design decision of this step. A lot is one of exactly two things:
+
+| | quantity columns | `location` | `serialized_unit` rows |
+|---|---|---|---|
+| **Pooled** | on the lot | on the lot | none |
+| **Serial-tracked** | **absent** | **absent** | one per unit, each with its own location |
+
+The rule across both: **location lives wherever the quantity does.** A serial-tracked lot stores no
+quantity because the quantity *is* the count of its units — storing it as well would be two numbers
+that must agree and are therefore free to disagree after the first sale, the same argument that
+keeps `normal_balance_side` off `account`, a useful life off `asset`, and a cost off `asset`
+entirely. `InventoryLotView` still exposes concrete quantities for either shape, computed by
+counting, so a caller does not have to know which kind it is asking about.
+
+One CHECK (`inventory_lot_pooled_columns_go_together`) refuses any third shape, proven by raw-SQL
+probes. The consequences are symmetric and each fails loudly: **`moveLot` refuses a serial-tracked
+lot** (move its units — one machine going out for repair does not move the others) and **`moveUnit`
+refuses anything not on hand**.
+
+### `UnitCost` — the type `Money` has been pointing at since step 2
+
+Six decimals, its own type, in `core-api/shared`. `Money` is exactly two decimals and *rejects*
+anything more precise; a unit cost cannot live inside that, because brief §4's proportional
+landed-cost allocation produces repeating decimals per unit and rounding them before they are
+multiplied back out overstates the lot for no reason anyone can later find. Two euros of freight
+over three units is `0.666667`, and `extend()` is the only route back to `Money` — so every place
+that gives up precision does it in a method that names its rounding mode.
+
+**Zero is allowed, negative is not.** A supplier's free sample is a real lot, and unlike a zero
+*selling price* it gives nothing away by being recorded. A negative unit cost is not a fact about
+any lot: a purchase credit reduces the quantity or reverses the receipt.
+
+`inventory_lot.unit_cost` is therefore **the schema's first monetary `numeric(19,6)` column** — the
+others at that scale are a VAT rate, a depreciation rate and a quantity, none of which have a
+currency. See the schema-convention note below.
+
+### Bundles, and the allocation arithmetic
+
+`BundleAllocation.proportionally(total, weights)` is **exact integer arithmetic in cents** with
+largest-remainder distribution. The obvious implementation — divide, multiply, round each line —
+loses a cent or two on almost every split, and those are exactly the residuals brief §6 then has to
+reconcile. Instead each part's numerator is a whole number, floored by integer division, and the
+leftover cents go to the parts whose exact share was cut by the most, with ties broken by position
+so the answer is reproducible rather than dependent on iteration order.
+
+Two consequences worth keeping:
+
+- **It never needs a rounding mode and never produces a rounding difference.** `Rounding
+  differences` is for reconciling against an *external* document, not for absorbing our own
+  arithmetic.
+- **`BundleDecomposition` enforces in its constructor that the component lines sum to the bundle
+  line.** That is what makes brief §5's "linked, not duplicated" a property of the data rather than
+  a hope about whoever writes the phase 8 report: either level gives the same revenue, and adding
+  them together is visibly double-counting.
+
+The rest of the bundle rules:
+
+- **Components are one level deep** — a component may not itself be a bundle. Same rule and same
+  reasoning as V5's island-reduced VAT counterpart: it makes a cycle impossible by construction
+  rather than by a recursive check that has to be got right, and it keeps allocation single-pass.
+  Enforced in the service, because a CHECK cannot read the other row's flag; the self-reference half
+  *is* a CHECK.
+- **`define` replaces the whole component list**, never merges. A partial change leaves the rest in
+  a state nobody chose — the argument that makes a chart-of-accounts reorder name every member. It
+  also means the flag and the components are set in one transaction, so **a bundle never exists
+  empty**.
+- **A bundle has no stock of its own.** It cannot receive a lot, and a product that already has lots
+  cannot become one — either way the same goods would be counted twice. `stockOf` on a bundle
+  computes how many could be assembled per location, limited by whichever component runs out first,
+  by **integer** division: half a component is not half a bundle.
+- **A bundle may be GOODS or SERVICE and its components may be either.** A machine sold with its
+  installation is a real bundle; the installation takes allocated revenue and nothing off a shelf,
+  so only *stocked* components constrain availability. A bundle with no stocked components refuses
+  to report stock rather than answering zero, which would say the opposite of what is true.
+- **An unpriced component refuses decomposition** rather than weighing zero — a zero weight would
+  push the whole bundle's revenue onto the priced components and report the unpriced one as pure
+  margin. Same stance as having no fallback VAT rate. `bundlesWithUnpricedComponents()` exists so
+  that is found before a sale rather than during one, mirroring
+  `AssetService.withoutDepreciationRate()`.
+
+### Serial numbers are unique across all stock
+
+Strictly a stronger claim than the world supports — two manufacturers could issue the same string —
+and still the right constraint. Within one business's stock, the same serial appearing twice is
+overwhelmingly a duplicate scan or a unit received twice, and catching that is worth more than
+accommodating a collision nobody has seen. A real one becomes a per-product uniqueness rule as a
+deliberate migration, rather than being discovered as a silent overwrite of a warranty record.
+
+### `Section.INVENTORY` is new, and separate from `PRODUCTS` because of cost
+
+Stock **levels** are a product-level read: Remote/Order Staff has VIEW on Products and genuinely
+needs to know whether there are three left. A **lot** carries its unit cost, which is exactly what
+`PRODUCT_LAST_PURCHASE_PRICE` exists to keep from that role. So granting the ability to see stock
+must not grant the ability to see what it cost. No grants were seeded — access is default-deny.
+
+As in step 4b, the section each `InventoryService` method belongs to is **stated in its Javadoc and
+not enforced by the service**; the check belongs at the controller, and there is no controller yet.
+
+### Obligations discharged this step
+
+- ~~**Step 3 — a reason field on the inventory write-off**~~ — the enum exists (see the caveat
+  below about it having no consumer yet).
+- ~~**Step 5 — `SERVICE` must not answer "zero" for stock**~~ — `StockNotApplicableException`,
+  which says "not applicable" instead. Zero is indistinguishable from sold out on a screen and would
+  put a repair service into a back-in-stock reminder.
+- ~~**Step 5 / V11 — enforce `allowsFractionalQuantity`**~~ — enforced on lot receipts and on bundle
+  component quantities, read off the unit rather than from a list kept elsewhere.
+- ~~**V11 — `changeUnitOfMeasure` must refuse a product with stock**~~ — done, and
+  `changeSerialTracking` carries the same guard for the same reason, plus a stronger one: a pooled
+  quantity of five has no serial numbers to recover.
+- ~~**Q6 — last purchase price computed rather than stored**~~ — now populated from the most recent
+  lot's unit cost, by acquisition date rather than insertion order (a backdated receipt must not
+  win). Batched into one `DISTINCT ON` query for list reads rather than one per row.
+
+### ⚠️ Obligations this step created
+
+- **Step 7 — the write-off transaction must carry `WriteOffReason`.** The enum has **no consumer
+  yet**, and that is the one thing in this step that could silently not happen. Stated plainly: a
+  write-off derecognises an asset, so it is a posting; reducing a lot's quantity in step 6 without
+  the entry would leave the stock gone and the balance sheet still carrying it at cost, which is
+  worse than not building it. Step 7 must also honour brief §5's exception — **a serialized
+  write-off names the specific unit and uses its own actual cost, with no FIFO logic**, because a
+  serialized unit is not pooled stock. `SerializedUnitView` already carries that cost for it.
+- **Step 8 — a lot needs its source document reference.** Brief §5 lists one and ADR 0004 already
+  settles that the Goods Receipt is what creates a lot; neither exists yet, so no nullable column
+  was added early. Also step 8's: **FIFO consumption must use the order `lotsOf` already defines**
+  (acquisition date, then id) rather than inventing its own, and **Q17** — whether aggregate stock
+  may go negative — belongs with that consumption. A single lot already cannot go below zero, by
+  CHECK.
+- **Step 9 — the serialized unit's sale link.** `SerializedUnitStatus.SOLD` is declared and
+  unreachable: brief §5 wants the customer/invoice link recorded on the unit once sold, and a
+  nullable customer id added now would let a unit be marked sold to somebody with no document behind
+  it. The stock count is already written against the status column, so it will be right the day a
+  unit is sold without anyone revisiting the query. Also step 9's: **`BundleService.dissolve` on a
+  bundle that has been sold** would strand decomposed component lines pointing at something that is
+  no longer a bundle — brief §5's "alias forward, never rewrite history" is the shape of the answer
+  and it needs the ledger.
+- **Step 10 — last purchase price must stop coming from the lot.** Brief §5 says a lot's unit cost
+  *includes allocated landed costs*, so the day freight allocation exists this figure stops being
+  the **purchase** price and has to come from the purchase invoice line instead. It is correct today
+  because nothing allocates yet, and the day it stops being correct is knowable in advance. Recorded
+  in `InventoryService.lastPurchaseCostOf`'s Javadoc as well as here.
+- **Phase 8 — the Damaged Goods aging check now has its query.** `InventoryService.lotsAt` and
+  `unitsAt` are what it reads, and `lotsAt` deliberately covers serial-tracked lots (via any on-hand
+  unit at that location) and deliberately excludes exhausted lots, which are history rather than
+  stock aging at cost.
+
+### Two defects the tests caught, both fixed at the root
+
+Recorded because the pattern matters more than the incidents.
+
+1. **Multiplying two quantities overflowed the scale.** `quantityPerBundle.value().multiply(
+   bundleQuantity.value())` is 6dp × 6dp = 12dp, and `Quantity` allows six — so *one* bundle
+   containing *one* grinder failed on its own trailing zeros. The patch would have been a
+   `setScale` at the call site. The fix is `Quantity.times(Quantity)`, stated once: it strips
+   trailing zeros, and **throws rather than rounding** if the product genuinely needs more than six
+   places, because a quantity is a physical count and an inexpressible one is a modelling error, not
+   a rounding question. Steps 8–10 will multiply quantities constantly and now cannot re-make this
+   mistake.
+2. **`InventoryLot.getUnits()` returned two different orders.** `@OrderBy` sorts the list Hibernate
+   *loads*, and does nothing for a lot built in memory a moment earlier — so a freshly received lot
+   came back in scan order and the same lot re-read came back sorted. One projection returning two
+   orders is precisely the difference a test written against the second case never sees. Now sorted
+   in the getter, so both agree.
+
+### The schema-convention rule was widened, and proven to fail
+
+`SchemaConventionsIT.everyMonetaryColumnCarriesItsCurrency` previously covered `numeric(19,2)` only.
+`unit_cost` is monetary at six decimals, so the rule had to grow — but **scale alone cannot be the
+discriminator**, because a VAT rate and a quantity share it and are not money. The discriminator is
+the **name**: a monetary multiplier is named `..._cost`, and the rule requires a currency companion
+for any `numeric(19,6)` column whose name ends that way.
+
+**Proven to actually fail**, the same method this repo has used throughout: a temporary probe
+migration added a `probe_cost` table with an unpaired `landed_cost`, a correctly paired `unit_cost`,
+a rate and a quantity. The rule failed naming exactly `probe_cost.landed_cost` and ignored the other
+three. Probe deleted. A future monetary six-decimal column that is genuinely not a cost means
+widening the rule, not naming the column around it — which the migration README now says.
+
+---
+
 ## Open questions, by the step they block
 
 Numbering follows the original Phase 1 question list so references stay stable.
@@ -772,8 +1004,8 @@ supplied and seeded, built as a runtime-editable entity; precedence rule stated 
 
 ### ✅ Also resolved this session
 
-- ~~**Q33**~~ — **a fee's VAT rate is independent of the products purchased.** Nothing to build;
-  the seeded 24% default is the answer. See the V7 section.
+- ~~**Q33**~~ — **a fee's VAT rate is independent of the products purchased, confirmed with the
+  accountant.** Nothing to build; the seeded 24% default is the answer. See the V7 section.
 - ~~**Q34**~~ — **converted to a table** (V11). See above.
 - ~~**The VAT rate bound**~~ — **fixed** (V10). Not a question, a defect the user flagged.
 
@@ -861,23 +1093,21 @@ That placement decides the rest:
 - ~~**Step-4 obligation**~~ — **done.** `ProductView.redactedFor(RoleView)`, tested against the
   real seeded role. See the warning in the step 5 section about the `...For` naming convention.
 - ~~**Q5**~~, ~~**Q6**~~, ~~**Q8**~~, ~~**Q9**~~, ~~**Q12**~~ — **answered and built.** See above.
-- **Q7** *(still open, now blocks step 6)* Stock is not one number: Location lives on the lot and
-  sellability depends on stock at a *sellable* location. Confirm the API exposes stock per location
-  plus a "sellable" figure. **Nothing about stock was built in step 5** precisely because of this.
+- ~~**Q7**~~ — **answered and built in step 6.** Stock per location plus a computed sellable figure;
+  sellable is the Inventory location only.
+- ~~**Q11**~~ — **answered and built in step 6.** Bundles, to brief §5 in full.
 - **Q10** *(still open)* Confirm whether the shared generic "Πελάτης Λιανικής" retail record should
   be seeded. **Not seeded** — a catch-all customer absorbs every unmatched sale and then cannot be
   untangled, so it waits for the answer.
-- **Q11** *(still open)* **Bundle/Composite products** are in brief §5's core entities but were
-  absent from the agreed Phase 1 scope list. Build now or defer? **No bundle flag exists**, so
-  answering "build" is a migration plus decomposition logic, not a flag flip.
 - **Q12 leftover** *(still open)* Is the periodic depreciation **posting run** in Phase 1, or only
   the register and the calculation? The register is built; nothing posts.
 
-### Blocking step 6 — inventory
-- **Step-3 obligation:** the write-off reason field. See "Obligations" above.
-- **Q25** *(new)* Does the write-off reason need to be a fixed enum (shrinkage / damage /
-  expiry) or free text with a suggested list? An enum makes it reportable, which is the point;
-  free text makes it useless for the purchasing-vs-theft distinction it exists to draw.
+### Resolved in step 6 — inventory
+- ~~**Step-3 obligation:** the write-off reason field~~ — the enum exists. **But it has no consumer
+  until step 7**, which is now recorded as a step 7 obligation rather than a discharged one. See the
+  step 6 section.
+- ~~**Q25**~~ — **a fixed enum**: `SHRINKAGE` / `DAMAGE` / `EXPIRY` / `OTHER`. Reportability is the
+  whole point, and free text would give four spellings of "damaged" as four categories.
 
 ### Blocking steps 7–10 — the ledger
 - **Q13** *(hard blocker, needs discussion)* **Correction policy unspecified.** With no period
@@ -899,6 +1129,8 @@ That placement decides the rest:
 - **Q16** Overpayment producing "unallocated customer credit" — a standalone credit document
   that later invoices allocate against, or just an AR balance?
 - **Q17** Can stock go negative (sale posted before the receipt exists)? Block, warn, or allow?
+  *(Step 6 narrowed it: a single lot cannot go below zero, by CHECK. The aggregate policy is
+  undecided and belongs with step 8's FIFO consumption, which is what could breach it.)*
 - **Q18** Landed-cost allocation mutates a lot's unit cost after the fact. If any of that lot is
   already sold, posted COGS is now wrong. Block allocation after consumption, or post a COGS
   adjustment? The brief does not address it.
@@ -914,7 +1146,9 @@ That placement decides the rest:
   step 8.
 
 ### Blocking phase 8 — Clearing Checks
-- **Step-3 obligation:** surface lots aging in the Damaged Goods location. See "Obligations".
+- **Step-3 obligation:** surface lots aging in the Damaged Goods location. **Step 6 built the query
+  it needs** — `InventoryService.lotsAt(DAMAGED_GOODS)` and `unitsAt(DAMAGED_GOODS)`, covering both
+  shapes of lot and excluding exhausted ones. The *check* is still phase 8's to write.
 
 ### Blocking step 12 — backups
 - **Q24** Delivery mechanism: Google Drive API with credentials held by NovoCore, or `rclone` on
@@ -925,29 +1159,41 @@ That placement decides the rest:
 
 ## Next action — read this first
 
-**Step 6 (Inventory Lot/Unit, Location, computed stock) is the next numbered step.** Step 5 is done,
-committed and pushed.
+**Step 7 (the journal engine, with debits = credits enforced structurally) is the next numbered
+step.** Steps 0–6 are done, committed and pushed.
 
-### Step 6 is blocked on two answers
+### Step 7 is blocked on two answers, and neither is a one-liner
 
-1. **Q7 — how stock is exposed.** Per location, plus a single "sellable" figure? Nothing about stock
-   was built in step 5 because of this, so it is the first thing step 6 needs.
-2. **Q25 — is the write-off reason a fixed enum or free text?** A step-3 obligation, not optional:
-   with one write-off account instead of three, the shrinkage/damage/expiry distinction has nowhere
-   else to live.
+This is a different kind of block from step 6's. Q7, Q25 and Q11 were clarifications that could be
+answered in a sentence each. **Q13 and Q14 need a design conversation**, and starting step 7 without
+them means building the ledger against a guess:
 
-**The user will supply answers to Q7, Q25 and Q11 at the start of the next session.** Q11 (bundles)
-matters before step 6 rather than after, since a bundle decomposes into component lines for
-inventory and COGS.
+1. **Q13 — the correction policy.** With no period locking, may a posted entry be edited in place, or
+   is correction reversal-only? **Strong recommendation: immutable once posted**, corrections via
+   reversing entries, on top of the audit log that already exists. This decides the shape of every
+   typed transaction, so it cannot be retrofitted cheaply.
+2. **Q14 — VAT posting mechanics.** A real design gap in the brief rather than a clarification.
+   Step 3b narrowed it (the rates exist, `VatClassView.vatOn` does the arithmetic in one place, and
+   `VatClassPrecedence` picks the class) but what is still undefined is **where it posts**: one
+   `VAT payable` account or several, input versus output separation, per-line or per-document
+   computation, and how an exempt line posts now that exemption reasons are modelled.
 
-### Obligations step 6 must honour
+Also worth settling before or during step 7, since they interact with Q13: **Q19** (are all six typed
+transactions Phase 1?), **Q26** (is a credit note its own transaction type?), **Q15** (rounding
+compared per line or per document, and where a flagged item lives), and **Q16** (unallocated customer
+credit as a document or an AR balance).
 
-- **A reason field on the inventory write-off transaction** (step 3, not optional).
-- **`ProductType.SERVICE` must not answer "zero" when asked for stock** — it has no lots, and zero
-  is indistinguishable from "not applicable" on a screen.
-- **Enforce `UnitOfMeasureView.allowsFractionalQuantity()`** — 2.5 pieces is a data-entry error.
-- **`ProductService.changeUnitOfMeasure` must refuse a product that has stock** — reinterpreting 12
-  pieces as 12 kilograms is a different quantity, not a units change.
+### Obligations step 7 must honour
+
+- **The write-off transaction must carry `WriteOffReason`.** The enum was built in step 6 and **has
+  no consumer yet** — this is the item most likely to be silently forgotten. Note the brief §5
+  exception too: a *serialized* write-off names the specific unit and uses its own actual cost, with
+  no FIFO logic. `SerializedUnitView` already carries that cost.
+- **The `Depreciation` expense account has no `AccountSystemKey`.** The two fixed-asset control
+  accounts do; the expense side of a depreciation posting has no stable handle, so a posting rule
+  would have to find it by name. Extending `AccountSystemKey` is deliberately a migration.
+- **Journal lines on Control-kind accounts require a sub-ledger reference of the declared type**, and
+  Inventory means **one line per lot** (brief §6). The lot ids now exist for that.
 
 ### Waiting on the accountant, and blocking real data rather than code
 
@@ -956,16 +1202,18 @@ inventory and COGS.
 - **AADE exemption codes 24 and 28** (Q35), **the OSS/IOSS myDATA codes** (Q36), and **the myDATA
   unit-of-measure codes** (Q38) — all before phase 7, all NULL and fail-loud in the meantime.
 
-### Also still open, not blocking step 6
+### Also still open, not blocking step 7
 
 - **Q28 — dispatch purpose placement.** Recommendation is a core-owned `GoodsDispatch` in phase 4,
   conditional on whether Go already issues Δελτία Αποστολής and whether the AADE digital delivery
   note regime applies (accountant question). Nothing built.
-- **Q31 — single role per user.** Cheapest to change now; it was already more expensive after step 5
-  and gets worse with every entity added.
+- **Q31 — single role per user.** Cheapest to change now; it was already more expensive after step 5,
+  more so after step 6, and gets worse with every entity added.
 - **Q32 — the 8-hour session timeout.**
 - **Q37 — addresses on Customer and Supplier**, plus human-facing codes and multiple selling prices.
-- **Q10 — the generic retail customer**, and **Q13/Q14**, which still block step 7.
+- **Q10 — the generic retail customer.**
+- **Q17 (negative stock) and Q18 (landed cost after consumption)** — both now belong with steps 8
+  and 10 respectively, and step 6 deliberately decided neither.
 
 ### Standing note
 
