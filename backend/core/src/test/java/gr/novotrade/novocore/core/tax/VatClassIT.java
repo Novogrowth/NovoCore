@@ -194,16 +194,30 @@ class VatClassIT extends AbstractCoreIntegrationTest {
     }
 
     @Test
-    @DisplayName("a rate outside 0-100 is refused, naming the factor-of-100 mistake")
+    @DisplayName("a rate outside 0 or 1-100 is refused, naming the factor-of-100 mistake")
     void rateOutsideRangeIsRefused() {
         assertThatExceptionOfType(InvalidVatClassException.class)
                 .isThrownBy(() -> vatClasses.create(
                         new NewVatClass("TEST-BAD-HIGH", "Too high", new BigDecimal("101"))))
-                .withMessageContaining("percentage between 0 and 100");
+                .withMessageContaining("exactly 0, or between 1 and 100");
 
         assertThatExceptionOfType(InvalidVatClassException.class)
                 .isThrownBy(() -> vatClasses.create(
                         new NewVatClass("TEST-BAD-NEG", "Negative", new BigDecimal("-1"))));
+
+        // The case a plain 0-100 bound let through: 0.24 written for 24%, which was accepted as a
+        // quarter of one percent and undercharged by the exact factor V5's comment claimed to
+        // prevent. An undercharge is not recoverable from the customer once the invoice is issued.
+        assertThatExceptionOfType(InvalidVatClassException.class)
+                .isThrownBy(() -> vatClasses.create(
+                        new NewVatClass("TEST-BAD-FRAC", "Fraction", new BigDecimal("0.24"))))
+                .withMessageContaining("undercharge by a factor of 100");
+
+        // Zero remains valid: the zero-rated class is real and distinct from an exempt line, which
+        // is why the rule is "exactly 0 or at least 1" rather than a flat minimum.
+        assertThat(vatClasses.create(
+                new NewVatClass("TEST-OK-ZERO", "Zero rate (test)", new BigDecimal("0")))
+                .isZeroRated()).isTrue();
     }
 
     @Test
@@ -338,13 +352,25 @@ class VatClassIT extends AbstractCoreIntegrationTest {
     // ---------------------------------------------------------------------------------------
 
     @Test
-    @DisplayName("the database refuses a rate outside 0-100 even via raw SQL")
+    @DisplayName("the database refuses an impossible rate, including a fraction, via raw SQL")
     void databaseRefusesImpossibleRate() {
         assertThatThrownBy(() -> jdbc.update(
                 "INSERT INTO vat_class (code, description, rate_percent) VALUES (?, ?, ?)",
                 "TEST-RAW-HIGH", "Probe", new BigDecimal("100.000001")))
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .hasMessageContaining("vat_class_rate_is_a_percentage");
+
+        // V10's lower bound, in the database and not only in Java, so it holds against a psql
+        // session and a future migration too.
+        assertThatThrownBy(() -> jdbc.update(
+                "INSERT INTO vat_class (code, description, rate_percent) VALUES (?, ?, ?)",
+                "TEST-RAW-FRAC", "Probe fraction", new BigDecimal("0.240000")))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("vat_class_rate_is_a_percentage");
+
+        // And zero still passes it, which is the half of the rule that had to be preserved.
+        jdbc.update("INSERT INTO vat_class (code, description, rate_percent) VALUES (?, ?, ?)",
+                "TEST-RAW-ZERO", "Probe zero", new BigDecimal("0.000000"));
     }
 
     @Test

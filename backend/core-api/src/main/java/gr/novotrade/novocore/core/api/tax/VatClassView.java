@@ -43,6 +43,22 @@ public record VatClassView(
      */
     public static final int RATE_SCALE = 6;
 
+    /**
+     * The lowest non-zero rate accepted, as a percentage.
+     *
+     * <p>Zero is legitimate — the {@code '0'} class is real, seeded, and legally distinct from an
+     * exempt line. Anything strictly between zero and one is not: no VAT regime charges a fraction
+     * of a percent, which leaves the whole interval available as a trap for the factor-of-100
+     * error.
+     *
+     * <p><strong>This is the bound a plain 0–100 range was missing.</strong> V5 claimed its 0–100
+     * CHECK made a rate written as a fraction fail loudly; it did not, because {@code 0.24} sits
+     * comfortably inside it and was accepted as a quarter of one percent. The same mistake was
+     * caught on {@code Asset}'s depreciation rate in step 5, and it matters more here: brief §6
+     * notes that an undercharge is not recoverable from the customer once an invoice is issued.
+     */
+    public static final BigDecimal MIN_NON_ZERO_RATE_PERCENT = new BigDecimal("1");
+
     private static final BigDecimal MAX_RATE_PERCENT = new BigDecimal("100");
 
     public VatClassView {
@@ -55,16 +71,34 @@ public record VatClassView(
                             .formatted(ratePercent.toPlainString(), ratePercent.scale(),
                                     RATE_SCALE));
         }
-        if (ratePercent.signum() < 0 || ratePercent.compareTo(MAX_RATE_PERCENT) > 0) {
+        if (!isAcceptableRate(ratePercent)) {
             throw new IllegalArgumentException(
-                    "VAT rate %s is not a percentage between 0 and 100. A rate given as a "
+                    "VAT rate %s is not a percentage. Valid values are exactly 0 — the zero-rated "
                             .formatted(ratePercent.toPlainString())
-                            + "fraction (0.24 for 24%) would silently undercharge by a factor "
-                            + "of 100, so it is refused rather than accepted as 0.24%.");
+                            + "class is real and distinct from an exempt line — or between 1 and "
+                            + "100. A rate given as a fraction (0.24 for 24%) would otherwise be "
+                            + "accepted as 0.24% and undercharge by a factor of 100, which is not "
+                            + "recoverable from the customer once the invoice is issued.");
         }
         // Normalised so equality compares the rate rather than however precisely it arrived,
         // for the same reason Money and Quantity fix their scale.
         ratePercent = ratePercent.setScale(RATE_SCALE);
+    }
+
+    /**
+     * Whether a value is a rate NovoCore will accept: exactly zero, or 1 through 100.
+     *
+     * <p>Public and static so that {@code VatClassService} applies the identical rule on the way in
+     * rather than a second implementation of it that can drift. The database says the same thing in
+     * {@code vat_class_rate_is_a_percentage}, so all three agree by construction.
+     */
+    public static boolean isAcceptableRate(BigDecimal ratePercent) {
+        Objects.requireNonNull(ratePercent, "ratePercent");
+        if (ratePercent.signum() == 0) {
+            return true;
+        }
+        return ratePercent.compareTo(MIN_NON_ZERO_RATE_PERCENT) >= 0
+                && ratePercent.compareTo(MAX_RATE_PERCENT) <= 0;
     }
 
     /**

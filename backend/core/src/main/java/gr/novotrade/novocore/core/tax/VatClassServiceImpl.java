@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 class VatClassServiceImpl implements VatClassService {
 
     private static final String ENTITY_TYPE = "VatClass";
-    private static final BigDecimal MAX_RATE_PERCENT = new BigDecimal("100");
 
     private final VatClassRepository repository;
     private final AuditLogService auditLog;
@@ -82,11 +81,15 @@ class VatClassServiceImpl implements VatClassService {
         String description = requireText(request.description(), "VAT class description");
         BigDecimal rate = request.ratePercent();
 
-        if (rate.signum() < 0 || rate.compareTo(MAX_RATE_PERCENT) > 0) {
+        // Delegates to the same predicate VatClassView applies, rather than restating the bound
+        // here: two copies of "what counts as a rate" is how one of them ends up more permissive.
+        if (!VatClassView.isAcceptableRate(rate)) {
             throw new InvalidVatClassException(
-                    "Rate " + rate.toPlainString() + " is not a percentage between 0 and 100. A "
-                            + "rate given as a fraction (0.24 for 24%) would undercharge by a "
-                            + "factor of 100.");
+                    "Rate " + rate.toPlainString() + " is not a percentage. Valid values are "
+                            + "exactly 0, or between 1 and 100. A rate given as a fraction (0.24 "
+                            + "for 24%) would be accepted as 0.24% by a plain 0-100 check and "
+                            + "undercharge by a factor of 100, which cannot be recovered from the "
+                            + "customer once the invoice is issued.");
         }
         if (rate.scale() > VatClassView.RATE_SCALE) {
             throw new InvalidVatClassException(

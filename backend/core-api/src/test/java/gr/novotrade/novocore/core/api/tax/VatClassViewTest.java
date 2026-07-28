@@ -26,7 +26,7 @@ class VatClassViewTest {
         void rateAboveHundredIsRefused() {
             assertThatExceptionOfType(IllegalArgumentException.class)
                     .isThrownBy(() -> rate("101"))
-                    .withMessageContaining("percentage between 0 and 100");
+                    .withMessageContaining("between 1 and 100");
         }
 
         @Test
@@ -37,19 +37,54 @@ class VatClassViewTest {
         }
 
         @Test
-        @DisplayName("0.24 is accepted as 0.24%, and the message says why that is a trap")
-        void aFractionIsAcceptedAsATinyPercentage() {
-            // Honest about the limit: 0.24 is a *valid* percentage, so construction cannot reject
-            // it. What protects against "0.24 meaning 24%" is that the rate is documented as a
-            // percentage everywhere, the seed is stated in percent, and the exception message on
-            // the out-of-range path names the factor-of-100 mistake explicitly. A caller who
-            // writes 0.24 intending 24% gets a 0.24% invoice, which is why the convention is
-            // stated in the column comment, the record, the entity and the service.
-            VatClassView quarterOfAPercent = rate("0.24");
+        @DisplayName("a rate written as a fraction is refused, not accepted as 0.24%")
+        void aFractionIsRefused() {
+            // This test previously asserted the OPPOSITE and documented the gap as a known limit:
+            // 0.24 is inside 0-100, so a plain range check accepted it as a quarter of one percent
+            // and the invoice undercharged by exactly the factor V5's comment claimed to prevent.
+            // The interval (0, 1) is unreachable by legitimate VAT data, so it is now a trap for
+            // that specific mistake instead of a silent acceptance.
+            assertThatExceptionOfType(IllegalArgumentException.class)
+                    .isThrownBy(() -> rate("0.24"))
+                    .withMessageContaining("undercharge by a factor of 100")
+                    .withMessageContaining("not recoverable from the customer");
 
-            assertThat(quarterOfAPercent.multiplier()).isEqualByComparingTo("0.0024");
-            assertThat(quarterOfAPercent.vatOn(Money.ofEur("100.00"), RoundingMode.HALF_UP))
-                    .isEqualTo(Money.ofEur("0.24"));
+            // Every mainland and island rate expressed as a fraction fails, which is the set of
+            // values someone would plausibly type.
+            for (String fraction : new String[] {"0.24", "0.17", "0.13", "0.09", "0.06", "0.04",
+                    "0.03", "0.999999"}) {
+                assertThatExceptionOfType(IllegalArgumentException.class)
+                        .as("%s should be refused as a fraction", fraction)
+                        .isThrownBy(() -> rate(fraction));
+            }
+        }
+
+        @Test
+        @DisplayName("zero is still a valid rate, because the zero-rated class is real")
+        void zeroIsStillValid() {
+            // The reason the bound is "exactly 0 or at least 1" rather than a flat minimum. The
+            // '0' class (Μηδενικός Συντελεστής ΦΠΑ) is seeded and legally distinct from exempt, so
+            // a flat >= 1 would have refused real data.
+            assertThat(rate("0").isZeroRated()).isTrue();
+            assertThat(rate("0").multiplier()).isEqualByComparingTo("0");
+            assertThat(rate("0").vatOn(Money.ofEur("100.00"), RoundingMode.HALF_UP))
+                    .isEqualTo(Money.ofEur("0.00"));
+
+            // And 1% itself is the boundary, accepted.
+            assertThat(rate("1").multiplier()).isEqualByComparingTo("0.01");
+        }
+
+        @Test
+        @DisplayName("the accepted-rate rule is one predicate, shared with the service")
+        void oneRuleNotTwo() {
+            // VatClassService applies this same method rather than restating the bound, so the two
+            // cannot drift into disagreeing about what a rate is.
+            assertThat(VatClassView.isAcceptableRate(new BigDecimal("0"))).isTrue();
+            assertThat(VatClassView.isAcceptableRate(new BigDecimal("24"))).isTrue();
+            assertThat(VatClassView.isAcceptableRate(new BigDecimal("100"))).isTrue();
+            assertThat(VatClassView.isAcceptableRate(new BigDecimal("0.24"))).isFalse();
+            assertThat(VatClassView.isAcceptableRate(new BigDecimal("-1"))).isFalse();
+            assertThat(VatClassView.isAcceptableRate(new BigDecimal("100.000001"))).isFalse();
         }
 
         @Test
