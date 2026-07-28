@@ -25,18 +25,18 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 5 | Product, Customer, Supplier, Asset | **Done, committed** — Q5, Q8, Q9, Q12 answered, see below |
 | 6 | Inventory Lot/Unit, Location, stock queries, bundles | **Done, committed** — Q7, Q25, Q11 answered, see below |
 | 7 | Journal engine, debits=credits invariant | **Done, committed** `8e7e10e` — Q13, Q14, Q19, Q26, Q15, Q16 answered, see below |
-| 8 | Purchase Invoice, Goods Receipt, GR/IR, FIFO | **Next.** Not started. Blocked on the ADR 0004 open item; Q17 and Q18 belong here too |
-| 9 | Sales Invoice, Credit Note, Receipt, Payment, Bank Transfer, open items, rounding | Not started |
-| 10 | Freight / landed cost allocation | Not started. Blocked on Q18 |
+| 8 | Purchase Invoice, Goods Receipt, GR/IR, purchase price variance, FIFO | **Done, committed** `c6e2513` — ADR 0004's open item, Q17 and Q39 answered as **ADR 0008**, see below |
+| 9 | Sales Invoice, Credit Note, Receipt, Payment, Bank Transfer, open items, rounding | **Next.** Not started. Not blocked on anything; several obligations are waiting for it |
+| 10 | Freight / landed cost allocation | Not started. Blocked on Q18, whose shape ADR 0008 now constrains |
 | 11 | Email service | Not started. Needs SMTP credentials |
 | 12 | Automated backups | Not started. Needs Drive paths/credentials, Q24 |
 | 13 | Test suite consolidation sweep | Not started |
 
-**Tests: 550 passing, `mvn clean verify` exit 0.** 177 unit (core-api), 346 core integration,
+**Tests: 610 passing, `mvn clean verify` exit 0.** 178 unit (core-api), 405 core integration,
 4 app unit, 12 app integration, 11 architecture. Nothing was failing at the start of this session,
 and nothing is failing now.
 
-`mvn test` runs the 192 non-container tests in ~6 seconds and needs no Docker. `mvn verify`
+`mvn test` runs the 193 non-container tests in ~6 seconds and needs no Docker. `mvn verify`
 additionally runs the `*IT` tests under Failsafe against a real PostgreSQL 17 container.
 
 ---
@@ -103,9 +103,10 @@ were already on `origin`.
 | `2dce5df` | Q34 — units of measure as a runtime-editable table, migration V11 |
 | `7182831` | Step 6 — inventory lots, serialized units, locations, bundles, migrations V12–V13 |
 | `8e7e10e` | Step 7 — journal engine, VAT accounts, stock write-offs, migrations V14–V15 |
+| `c6e2513` | Step 8 — purchase invoices, goods receipts, GR/IR clearing, purchase price variance, FIFO consumption, migration V16 |
 
 Interleaved with these are small docs-only commits (`e25fcee`, `a09428e`, `920044c`, `de16e58`,
-`b065901`, `8c27cb4`, `2c3fa8a`, `21b2231`) and this session's close-out commit.
+`b065901`, `8c27cb4`, `2c3fa8a`, `21b2231`, `d1111d0`) and this session's close-out commit.
 
 Local branch `phase-1/core-skeleton` still exists and is fully merged; safe to delete.
 Convention going forward is **one commit per build step**, so history stays checkpoint-able.
@@ -169,6 +170,13 @@ Convention going forward is **one commit per build step**, so history stays chec
   lot with more remaining than received, a negative remaining, a negative unit cost, a bundle that is
   also serial-tracked, a serialized service product, a self-referencing bundle component and a
   duplicate component are all refused by CHECK or UNIQUE constraints, each named in the assertion.
+- **Step 8's purchasing invariants likewise**, by raw-SQL probes in `PurchaseInvoiceIT`: a duplicate
+  supplier invoice number (case-insensitively, by trigger), an invoice line that is neither an
+  inventory nor an expense shape, a line stating no VAT treatment, a second GR/IR match for the same
+  pair, and a second lot claiming one delivery line. **And the consumption-source CHECK is held to
+  `JournalSource.mayConsumeStock()`** the same way `journal_source_is_amendable` is held to
+  `isAmendable()` — per value, and by counting the constraint's literals so a value added to the
+  database alone cannot hide.
 
 ## Not yet verified
 
@@ -1175,6 +1183,162 @@ worse than neither. `SerializedUnitStatus.WRITTEN_OFF` is reachable at last.
 
 ---
 
+## Step 8 — done (purchase invoices, goods receipts, GR/IR, variance, FIFO)
+
+Commit `c6e2513`, migration `V16`, and **ADR 0008**, which answers all three blocking questions
+together because they share one principle: **a posting that reflects a physically verified event does
+not change after other things have come to depend on it.**
+
+### The three answers, as built
+
+- **ADR 0004's open item — a purchase price variance account, not retroactive lot re-costing.** The
+  lot keeps the unit cost it was received at; when the invoice lands at a different price the
+  difference posts to `Purchase price variance`. Re-costing a lot that FIFO has already consumed into
+  posted COGS is the same problem as editing a posted entry, expressed as a number instead of a
+  document. The account is in the **COGS group** so gross margin reflects it, is **not**
+  `expected_to_clear` (a variance balance is a result, not a discrepancy), and carries either sign —
+  an invoice *below* the expected price is a credit variance, and forcing it positive would hide the
+  good news with the bad.
+- **Q17 — aggregate stock may go negative, flagged not blocked.** A single lot still cannot, by the
+  V12 CHECK. What FIFO cannot fill is the difference between `quantity_requested` and
+  `quantity_filled` on the consumption, `stockOf` subtracts outstanding shortfalls so a product
+  genuinely reads **−2** rather than 0, and `consumptionsWithShortfall()` is the query phase 8's
+  Clearing Checks reads. **No COGS is posted for the shortfall** — there is no lot to take a cost
+  from, and reaching for the last purchase price would be the silent guess rule 7 forbids — so COGS
+  is understated while a shortfall stands and the flag is what says so.
+- **Q39 — a Goods Receipt is immutable, corrected by reversal.** `GOODS_RECEIPT` is deliberately
+  absent from `journal_source_is_amendable`, so the existing enum↔function test proves the two agree
+  without the function changing at all. `GoodsReceiptService.reverse` un-receives the lots and posts
+  the mirror together, and **refuses outright** once anything has happened to them.
+
+### The variance can only ever arise in one direction, and that is the design
+
+A receipt line matched to an invoice line that already exists **takes its unit cost from that
+invoice** — `NewGoodsReceiptLine` refuses to state one, and the refusal says why. So invoice-first
+clears GR/IR exactly and produces no variance at all; goods-first is the case ADR 0008 exists for.
+That asymmetry is worth remembering, because it is what makes "the lot keeps its cost" a rule rather
+than a compromise: the lot's cost is only ever provisional when nothing better existed at the time.
+
+### GR/IR matching happens at document creation, and there is deliberately no later matching
+
+Whichever document is created second names what it settles: a Goods Receipt names the invoice line it
+delivers against, or a Purchase Invoice names the receipt lines it pays for. There is **no separate
+"match these two later" operation** — it would need its own journal entry belonging to no document,
+and an unmatched GR/IR balance is already exactly what ADR 0004 says it is. Both halves are queryable
+(`linesAwaitingDelivery` / `linesAwaitingInvoice`) and that is what phase 8 reads. **⚠️ Adding
+after-the-fact matching is a real feature with a real decision attached (whose document is the
+variance entry?); it belongs with Clearing Checks, not with a later step reaching for it casually.**
+
+`gr_ir_match` is a table rather than a nullable foreign key either way, because brief §6 handles
+partial delivery across several days: one invoice line is routinely settled by several receipts, and
+a supplier billing in instalments splits one receipt across two invoices. **It carries no money** —
+the variance is stored per invoice *line*, computed as the residual that makes that line's debits sum
+exactly to what the supplier charged, so an unbalanced invoice is impossible by construction.
+
+### A rounding residual that is accepted rather than engineered away
+
+Every posted amount is rounded once at its own line. So when one receipt line is matched by two
+invoices, the two rounded portions can sum to a cent more or less than the single rounded amount the
+receipt credited, and **that cent stays in GR/IR clearing**. Accepted deliberately: GR/IR is
+`expected_to_clear` and `ledger.rounding.threshold` already exists to say what residual is noise,
+which is the mechanism brief §6 defines for exactly this. The alternative — a running-total clearing
+scheme with per-line cleared amounts — adds a column that must agree with the postings and buys a
+cent.
+
+### The step 7 obligation about `source_id`, discharged by deciding against it
+
+**There is no `source_id` on `journal_entry`, and that is the answer rather than an omission.** Two
+reasons: an entry from an immutable source cannot be `UPDATE`d after posting, so the id would have to
+be known before the document existed; and storing the link on both sides would be two copies of one
+fact, free to disagree — the argument that keeps `normal_balance_side` off `account`. The link lives
+on the **document** (`journal_entry_id`, UNIQUE), one direction only, exactly as V15 stores one
+direction of the reversal link and queries the other. `source` still says what *kind* of document
+produced an entry, which is what Q13's policy is keyed on, and each document service answers
+`findByJournalEntry`.
+
+### A fourth serialized-unit status, and a freed serial number
+
+Reversing a delivery of serial-tracked machines had no truthful status available: `IN_STOCK` is
+false, `SOLD` is false, and `WRITTEN_OFF` would put a loss that never happened into the shrinkage
+report the single write-off account was chosen over three *for*. So **`UNRECEIVED`**, and it is the
+one status that **does not hold its serial number**: the commonest reason to reverse a delivery is
+that it was entered wrong, and re-entering the same machines correctly must not be blocked by the
+mistake. The V12 UNIQUE constraint became a **partial unique index**, and
+`SerializedUnitStatus.holdsItsSerialNumber()` is the single statement of the rule that the Java check
+and the index both read.
+
+### The duplicate-invoice-number rule is a trigger, and the reason generalises
+
+A partial unique index cannot express it. Two documents legitimately share a supplier's number — the
+reversing document carries the original's, and once an invoice has been reversed, re-entering it
+correctly under the same number is the ordinary thing to want. **Whether a row is superseded depends
+on whether another row points at it**, which no index over this row's own columns can see, and a
+`superseded` flag maintained beside `reversal_of_id` would be the second copy of a fact this schema
+keeps refusing to create. Recorded in the migration README as a rule, not an incident.
+
+### What was built beyond the four things the step named, and why
+
+Both were flagged as judgement calls rather than added quietly:
+
+1. **Expense lines on a purchase invoice.** Without them a coffee retailer cannot record electricity,
+   rent or an accountant's fee at all, and step 9 is the sales side. The line **names its account**;
+   nothing is inferred. **Brief §7's automatic categorisation is deliberately not built** — the
+   suggest-from-product-then-supplier-then-`Unclassified` rule is about *choosing* a destination for
+   an invoice nobody typed, and it belongs with the myDATA import that creates those. Nothing lands in
+   `Unclassified — Needs Review` by accident here, which is the failure mode a half-built version
+   would have.
+2. **Reverse charge on the purchase side.** A Greek retailer importing from the EU is ordinary, and
+   posting input VAT the supplier never charged would reclaim tax nobody paid. Q14 already settled
+   that it needs no new structure. **It is a flag on the line and is never inferred**, but it must
+   agree with the supplier's `VatStatus` — required for `INTRA_EU_B2B`, refused for anything else,
+   and a disagreement is refused in both directions rather than resolved.
+
+Every invoice line states **either** a VAT class **or** a VAT exemption reason, never both and never
+neither: a line with no treatment cannot be filed from, and one with both states two legal positions
+about the same money. A purchase from outside the EU, where import VAT settles at customs, is an
+exempt line carrying the article that actually applies.
+
+### Obligations discharged this step
+
+- ~~**Step 8 — a lot needs its source document reference**~~ — `inventory_lot.goods_receipt_line_id`,
+  nullable and UNIQUE. Null means no NovoCore delivery created it, which is phase 2b's opening stock
+  and nothing else once that is done. **One direction only**: `goods_receipt_line` has no `lot_id`.
+- ~~**Step 8 — FIFO must use `lotsOf`'s order**~~ — acquisition date then id, read off the same
+  repository method, narrowed to lots at a *sellable* location. Selling out of Damaged Goods is not a
+  decision a costing rule gets to make quietly, so a product with five damaged units still records a
+  shortfall.
+- ~~**Step 8 — `GOODS_RECEIPT` needs a `JournalSource` value and an amendability answer**~~ — both,
+  above.
+- ~~**Step 8 — an entry needs its `source_id`**~~ — **decided against, with reasons.** See above.
+- ~~**`deactivate` does not check the balance**~~ — it does now, and **warns rather than refuses**,
+  which is what step 3 said it should do once a ledger existed. The warning is the *return value*, so
+  a caller cannot fail to receive it, and it is also written to the audit log. `JournalService` is
+  resolved through an `ObjectProvider` because `JournalServiceImpl` depends on
+  `ChartOfAccountsService` — a constructor dependency the other way would be a bean cycle.
+
+### ⚠️ Obligations this step created
+
+- **Step 9 — a sales invoice will produce two entries, not one.** `InventoryService.consume` posts
+  its own COGS entry, because reducing lots without posting is the "half is worse than neither"
+  problem the write-off settled. So a sale posts revenue in one entry and cost in another, linked by
+  the consumption record. That is an ordinary arrangement and it is stated here so step 9 does not
+  discover it as a surprise.
+- **Step 9 — serialized consumption.** `consume` refuses a serial-tracked product outright, naming
+  step 9: selling an identified unit means marking it `SOLD`, and brief §5 requires the customer and
+  invoice on it at that point. `SerializedUnitStatus.SOLD` is still unreachable.
+- **Step 10 — Q18 is now constrained.** Landed-cost allocation must allocate against the lot's
+  **received** cost and must not reach back into consumption already costed out. Whatever step 10
+  does with the sold portion of a lot, it is not "recompute the COGS that was posted". The mechanism
+  is still open; its shape is not.
+- **Phase 8 — two new checks have their queries.** `consumptionsWithShortfall()` for Q17's flag, and
+  `linesAwaitingDelivery()` / `linesAwaitingInvoice()` for the two halves of a non-zero GR/IR
+  balance. The checks themselves are still phase 8's to write.
+- **The first purchasing controller** must expose the document services and not
+  `InventoryService.receive`/`unreceive`, which are the lower layer — the same class of caution as
+  `postManualEntry` versus `post` and the `ProductService` `...For(viewer)` convention.
+
+---
+
 ## Open questions, by the step they block
 
 Numbering follows the original Phase 1 question list so references stay stable.
@@ -1325,23 +1489,34 @@ That placement decides the rest:
   consistent with treating every financial event as a trackable document with its own lifecycle.
   Nothing built; it belongs with open-item matching in step 9.
 
-### Still blocking steps 8–10
-- **Q17** Can stock go negative (sale posted before the receipt exists)? Block, warn, or allow?
-  *(Step 6 narrowed it: a single lot cannot go below zero, by CHECK. The aggregate policy is
-  undecided and belongs with step 8's FIFO consumption, which is what could breach it.)*
+### Resolved in step 8 — purchasing and FIFO
+- ~~**ADR 0004's open item**~~ — **answered and built. ADR 0008.** A purchase price variance account;
+  the lot keeps the cost it was received at.
+- ~~**Q17**~~ — **answered and built. ADR 0008.** Aggregate stock may go negative; the shortfall is
+  recorded, subtracted from the sellable figure, and queryable. No COGS is posted for it and a later
+  receipt does not retro-cost it.
+- ~~**Q39**~~ — **answered and built. ADR 0008.** A Goods Receipt is immutable; correction is
+  `GoodsReceiptService.reverse`, which un-receives the lots and posts the mirror together and refuses
+  once they have been touched.
+
+### Still blocking step 10
 - **Q18** Landed-cost allocation mutates a lot's unit cost after the fact. If any of that lot is
-  already sold, posted COGS is now wrong. Block allocation after consumption, or post a COGS
-  adjustment? The brief does not address it.
-- **ADR 0004 open item** — when a Goods Receipt precedes its invoice, the lot's unit cost is
-  provisional. If the invoice then carries a different price, does that adjust the lot cost
-  retroactively or post to a purchase price variance account? Interacts with Q18. Settle before
-  step 8.
-- **Q39** *(new)* **Is a Goods Receipt amendable?** `JournalSource` deliberately has no
-  `GOODS_RECEIPT` value: ADR 0004 settles that a Goods Receipt posts, so it needs one, and adding a
-  value is deliberately a migration so that the Q13 policy question gets asked rather than defaulted.
-- **Q40** *(new)* **Does a journal entry need a human-facing entry number?** The id is the handle
-  today. An accountant asking "what is entry 412" is a real request, and it carries a format decision
-  nobody has been asked — per-year reset? a prefix per source? Nothing was guessed.
+  already sold, posted COGS is now wrong. Block allocation after consumption, or post an adjustment?
+  The brief does not address it. **ADR 0008 constrains the shape of the answer**: allocate against
+  the lot's received cost, and do not reach back into consumption already costed out. The mechanism
+  is still genuinely open.
+
+### Not blocking anything, but unanswered
+- **Q40** **Does a journal entry need a human-facing entry number?** The id is the handle today. An
+  accountant asking "what is entry 412" is a real request, and it carries a format decision nobody
+  has been asked — per-year reset? a prefix per source? Nothing was guessed. The same question now
+  applies to the purchase invoice and goods receipt, which likewise have no NovoCore-facing number:
+  an invoice at least carries the *supplier's*, and a delivery may carry their note reference.
+- **Q41** *(new)* **After-the-fact GR/IR matching.** A match is made by whichever document is created
+  second; nothing matches an existing invoice to an existing delivery later. That leaves a real
+  balance sitting in GR/IR — which is exactly what ADR 0004 says a residual means, and phase 8's
+  Clearing Checks is what surfaces it. Building it needs an answer to "whose document is the variance
+  entry?", so it belongs with those checks rather than with a later step reaching for it casually.
 
 ### Blocking phase 8 — Clearing Checks
 - **Step-3 obligation:** surface lots aging in the Damaged Goods location. **Step 6 built the query
@@ -1357,38 +1532,41 @@ That placement decides the rest:
 
 ## Next action — read this first
 
-**Step 8 (Purchase Invoice, Goods Receipt, GR/IR, FIFO consumption) is the next numbered step.**
-Steps 0–7 are done, committed and pushed. The ledger exists, so from here every transaction posts.
+**Step 9 (Sales Invoice, Credit Note, Receipt, Payment, Bank Transfer, open-item matching, rounding)
+is the next numbered step.** Steps 0–8 are done, committed and pushed.
 
-### Step 8 is blocked on three answers, and two of them interact
+### Step 9 is not blocked on an answer, and that is a first
 
-Not the same shape of block as step 7's. Q13 and Q14 were design conversations; these are narrower,
-but all three change what gets built rather than only how:
+Q13, Q14, Q15, Q16, Q19 and Q26 were all answered in step 7, and Q17, Q39 and ADR 0004's open item in
+step 8. What step 9 has instead is a **pile of obligations already written down**, which is a
+different kind of risk: nothing will stop the work, so nothing will force these to be remembered
+either.
 
-1. **ADR 0004's open item.** A Goods Receipt creates lots before its invoice exists, so the lot's
-   unit cost is provisional. When the invoice lands with a different price, does that **adjust the
-   lot cost retroactively**, or post to a **purchase price variance** account? Interacts with Q18.
-2. **Q17 — may aggregate stock go negative?** A single lot cannot, by CHECK. FIFO consumption is what
-   could breach it across lots, so the policy has to be decided with the consumption that enforces
-   it. Block, warn, or allow.
-3. **Q39 — is a Goods Receipt amendable?** `JournalSource` has no `GOODS_RECEIPT` value on purpose,
-   so that Q13's policy question is asked rather than defaulted. Adding one is a migration.
-
-### Obligations step 8 must honour
-
-- **A lot needs its source document reference.** Brief §5 lists one and ADR 0004 settles that the
-  Goods Receipt is what creates a lot. V12 deliberately added no nullable column early.
-- **A journal entry needs its `source_id`.** Same reasoning, same deferral: `source` says what kind
-  of transaction produced an entry, and there was nothing to point at until step 8 has document
-  tables.
-- **FIFO consumption must use the order `lotsOf` already defines** — acquisition date, then id —
-  rather than inventing its own. That order is stated once, as an index in V12.
-- **Journal lines on Control-kind accounts require a sub-ledger reference of the declared type**, and
-  Inventory means **one line per lot** (brief §6). Already enforced by the ledger, in the service and
-  by trigger, so step 8 inherits it rather than re-implementing it.
-- **`ChartOfAccountsService.deactivate` still does not check the balance.** Its Javadoc said it could
-  not, because there was no ledger; there is one now, and the intended behaviour was already stated —
-  *warn*, not refuse. Small, and easy to lose.
+1. **Q13's second half is unimplemented.** Editing a Receipt or Payment below its already-allocated
+   total must reduce allocations **most-recent-first**. Nothing enforces it because allocations do not
+   exist yet. This is the item most easily forgotten — the write-off reason was the same shape and
+   took two steps to land.
+2. **The invoice postings must supply the VAT dimension.** It is *optional* at the ledger (the
+   periodic settlement legitimately has none), so nothing forces a sales invoice to carry it, and a
+   VAT return assembled without it would silently understate. The purchase side does this now and is
+   the worked example. Exempt lines carry their `VatExemptionReason` on the **invoice line**, which
+   makes exempt turnover by reason a document-level report rather than a ledger-level one.
+3. **A sale produces two entries.** `InventoryService.consume` posts its own COGS entry — revenue in
+   one entry, cost in another, linked by the consumption record. Stated in the step 8 section; it is
+   an ordinary arrangement and should not be discovered as a surprise.
+4. **Serialized consumption is step 9's.** `consume` refuses a serial-tracked product outright and
+   names step 9. Selling an identified unit means marking it `SOLD`, and brief §5 requires the
+   customer and invoice recorded on the unit at that point. `SerializedUnitStatus.SOLD` is still
+   unreachable, exactly as step 6 left it.
+5. **`BundleService.dissolve` on a bundle that has been sold** would strand decomposed component
+   lines. Brief §5's "alias forward, never rewrite history" is the shape of the answer.
+6. **Q15's remainder is still open** — whether a flagged-for-review item lives in a review queue or as
+   a flag on the record. Step 8 deliberately used a **flag plus a query** for Q17's shortfall rather
+   than inventing a queue, precisely so this stays an open question rather than being answered by
+   accident. Step 9 should settle it properly.
+7. **Q16 and Q26 are decisions with nothing built.** Unallocated credit is a standalone credit
+   document; a credit note is its own transaction type referencing the invoice it corrects and posting
+   to the per-channel `Sales returns` account.
 
 ### Waiting on the accountant, and blocking real data rather than code
 
@@ -1397,28 +1575,33 @@ but all three change what gets built rather than only how:
 - **AADE exemption codes 24 and 28** (Q35), **the OSS/IOSS myDATA codes** (Q36), and **the myDATA
   unit-of-measure codes** (Q38) — all before phase 7, all NULL and fail-loud in the meantime.
 
-### Also still open, not blocking step 8
+### Also still open, not blocking step 9
 
+- **Q18 — landed cost after consumption.** Blocks step 10. ADR 0008 constrains the shape of the
+  answer without settling the mechanism.
+- **Q41 — after-the-fact GR/IR matching.** New in step 8; belongs with phase 8's Clearing Checks.
 - **Q28 — dispatch purpose placement.** Recommendation is a core-owned `GoodsDispatch` in phase 4,
   conditional on whether Go already issues Δελτία Αποστολής and whether the AADE digital delivery
   note regime applies (accountant question). Nothing built.
-- **Q31 — single role per user.** Cheapest to change now; it was already more expensive after step 5,
-  more so after steps 6 and 7, and gets worse with every entity added.
+- **Q31 — single role per user.** Cheapest to change now; it has been getting more expensive with
+  every entity added since step 5, and step 8 added seven tables.
 - **Q32 — the 8-hour session timeout.**
 - **Q37 — addresses on Customer and Supplier**, plus human-facing codes and multiple selling prices.
-- **Q10 — the generic retail customer.**
-- **Q40 — a human-facing journal entry number.** New in step 7; nothing was guessed.
+- **Q10 — the generic retail customer.** This one starts to bite in step 9: a retail sale needs
+  somebody to be against.
+- **Q40 — a human-facing document number**, for journal entries and now for purchase invoices and
+  goods receipts too. Nothing was guessed.
 - **Q12 leftover — is the periodic depreciation posting run Phase 1 scope**, or only the register and
   the calculation? Step 7 added the `DEPRECIATION_EXPENSE` system key the run would need, and
   deliberately did not build the run. Still waiting on the statutory rates either way.
-- **Q15's remainder — where a flagged-for-review item lives.** The per-document rule is answered; a
-  review queue versus a flag on the record is not, and it lands in step 9.
 
 ### Standing note
 
-The REST surface is deliberately still one endpoint, and step 7 did not add one — **the ledger has no
-HTTP route at all.** Building out the rest of the API needs its own scoping conversation, not
-incremental drift. When it happens, note that the first ledger controller must expose
-`postManualEntry` rather than `post`, which takes a source and exists for the typed transactions
-inside the core. **PLB-1 (2FA) must be closed before any remote access is enabled** — including
+The REST surface is deliberately still one endpoint — **the ledger, inventory and purchasing all have
+no HTTP route at all.** Building out the rest of the API needs its own scoping conversation, not
+incremental drift. When it happens, three lower-layer methods must **not** be what a controller
+exposes: `JournalService.post` (use `postManualEntry`), `InventoryService.receive` and `unreceive`
+(use `GoodsReceiptService`), and `ProductService`'s unredacted reads (use the `...For(viewer)`
+variants). **PLB-1 (2FA) must be closed before any remote access is enabled** — including
 Remote/Order Staff logging in from outside the local network, which is that role's entire purpose.
+
