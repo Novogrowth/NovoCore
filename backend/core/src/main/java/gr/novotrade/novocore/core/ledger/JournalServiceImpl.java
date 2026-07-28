@@ -609,6 +609,7 @@ class JournalServiceImpl implements JournalService {
             case RECEIPT, PAYMENT -> " — the allocations it made against invoices";
             case SALES_INVOICE, CREDIT_NOTE -> " — its open amount, and the serialized units it sold";
             case PURCHASE_INVOICE -> " — its GR/IR clearing position and the lots behind it";
+            case GOODS_RECEIPT -> " — the inventory lots it created";
             default -> "";
         };
     }
@@ -616,8 +617,10 @@ class JournalServiceImpl implements JournalService {
     private static String whichServiceReverses(JournalSource source) {
         return switch (source) {
             case INVENTORY_WRITE_OFF -> "InventoryService.reverseWriteOff";
+            case GOODS_RECEIPT -> "GoodsReceiptService.reverse";
+            case PURCHASE_INVOICE -> "PurchaseInvoiceService.reverse";
             default -> "the service that owns that transaction type, which does not exist yet: "
-                    + source + " arrives in build step 8 or 9";
+                    + source + " arrives in build step 9";
         };
     }
 

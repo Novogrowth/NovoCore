@@ -22,10 +22,9 @@ package gr.novotrade.novocore.core.api.ledger;
  * {@code journal_entry_source_known} CHECK has to list them. A test asserts the enum and that CHECK
  * agree, so neither can gain a value the other does not have.
  *
- * <p><strong>Deliberately absent: {@code GOODS_RECEIPT}.</strong> ADR 0004 settles that a Goods Receipt
- * posts (it debits Inventory and credits GR/IR clearing), so it will need a value here — but whether it
- * is amendable is nobody's answer yet, and adding a value is deliberately a migration so that the
- * policy question gets asked. Step 8 obligation.
+ * <p><strong>{@code GOODS_RECEIPT} was deliberately absent until step 8</strong>, so that Q39 — is a
+ * Goods Receipt amendable? — had to be answered rather than defaulted. It is answered (ADR 0008: no),
+ * and the value exists.
  */
 public enum JournalSource {
 
@@ -36,6 +35,23 @@ public enum JournalSource {
      * position and the lots behind it (ADR 0004), which the ledger cannot see.
      */
     PURCHASE_INVOICE(false, false),
+
+    /**
+     * A Goods Receipt — the physical delivery verification that creates inventory lots and debits
+     * Inventory against GR/IR clearing (ADR 0004).
+     *
+     * <p><strong>Q39, answered: immutable (ADR 0008).</strong> The same reasoning that made the
+     * inventory write-off immutable, and stronger than the invoice's: this posting reflects a physical
+     * stock movement, so editing the entry would change what the accounts say arrived without changing
+     * the lots that arrived. Once a lot exists, FIFO order, its remaining quantity and its units all
+     * depend on it.
+     *
+     * <p>Not reversible through the ledger alone, for the write-off's reason: reversing the money
+     * without un-receiving the lots would leave stock on the shelf that the balance sheet no longer
+     * carries. {@code GoodsReceiptService.reverse} does both in one transaction, and refuses outright
+     * if anything has already happened to the lots.
+     */
+    GOODS_RECEIPT(false, false),
 
     /**
      * A sales invoice. Immutable once posted (Q13).
@@ -131,5 +147,23 @@ public enum JournalSource {
     /** True when correction means posting a reversing entry rather than editing this one. */
     public boolean requiresReversalToCorrect() {
         return !amendable;
+    }
+
+    /**
+     * Whether a transaction from this source may consume stock FIFO — {@code InventoryService.consume}
+     * refuses any other.
+     *
+     * <p>Only the sales invoice, today. Stated as a predicate rather than left implicit because
+     * consumption reduces lots <em>and</em> posts cost of goods sold in one transaction, so allowing an
+     * arbitrary source would let anything at all derecognise inventory as a cost of sale. A new consumer
+     * has to opt in here, deliberately, which is the same stance {@code AccountSystemKey} takes on
+     * gaining a value.
+     *
+     * <p>The write-off is absent on purpose: it derecognises stock too, but as a loss rather than a cost
+     * of sale, and it has its own path with its own reason code. The credit note is absent because
+     * returning stock is {@code reverseConsumption}, not a second consumption.
+     */
+    public boolean mayConsumeStock() {
+        return this == SALES_INVOICE;
     }
 }

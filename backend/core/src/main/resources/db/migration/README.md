@@ -46,9 +46,13 @@ new system keys, `V15` journal entries, journal lines and stock write-offs.
    `numeric(19,2)` is an amount and therefore money. A `numeric(19,6)` is a multiplier, and only
    *some* multipliers are money — a VAT rate and a quantity are not, a unit cost is. So the
    discriminator for the six-decimal case is the **name**: a monetary multiplier is named
-   `..._cost`, and the test requires a currency companion for any `numeric(19,6)` column whose
-   name ends that way. `inventory_lot.unit_cost` in `V12` is the first. A monetary six-decimal
-   column that is genuinely not a cost means widening that rule, not naming the column around it.
+   `..._cost` or `..._price`, and the test requires a currency companion for any `numeric(19,6)`
+   column whose name ends either way. `inventory_lot.unit_cost` in `V12` is the first;
+   `purchase_invoice_line.unit_price` in `V16` is what widened it, and it was widened rather than
+   renamed on purpose — what the supplier charged and what the goods were received at are different
+   things, and keeping the two words apart is what makes a purchase price variance readable at all
+   (ADR 0008). A monetary six-decimal column named neither way means widening the rule again, not
+   naming the column around it.
 
 6. **A cross-row invariant is a deferred constraint trigger, not stored totals.** `V15` is the
    first case: debits equal credits (`CLAUDE.md` rule 6) spans the rows of an entry, which a
@@ -65,6 +69,14 @@ new system keys, `V15` journal entries, journal lines and stock write-offs.
    replaces its whole line list, so line number 0 is inserted while the old line number 0 is still
    present. Relying on Hibernate ordering orphan removals before inserts would be relying on a
    library's implementation detail to keep a schema constraint satisfiable.
+
+   **And a uniqueness rule whose exceptions depend on *other* rows is a trigger, not a partial
+   index.** `V16`'s duplicate supplier-invoice-number check is the case: two documents legitimately
+   share a number — the reversing document carries the original's, and once an invoice has been
+   reversed, re-entering it correctly under the same number is the ordinary thing to want. Whether
+   a row is superseded depends on whether another row points at it, which no index over this row's
+   own columns can see. The obvious fix — a `superseded` boolean maintained beside `reversal_of_id`
+   — is the second-copy-of-a-fact this schema keeps refusing to create.
 
 7. **A rule that needs another table's row is a trigger, not Java.** `V15`'s
    `journal_line_agrees_with_its_account` checks three of these: a Control-account line carries a

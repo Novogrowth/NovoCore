@@ -35,6 +35,22 @@ public enum AccountSystemKey {
      */
     GOODS_RECEIVED_INVOICE_RECEIVED_CLEARING,
 
+    /**
+     * The difference between what a Goods Receipt valued stock at and what the supplier's invoice
+     * later charged for it — <strong>ADR 0008</strong>.
+     *
+     * <p>ADR 0004 left open whether that difference adjusts the lot's cost retroactively or posts
+     * somewhere of its own. It posts here, because retroactively re-costing a lot that FIFO has
+     * already consumed into posted COGS is the same problem as editing a posted entry, expressed as
+     * a number instead of a document.
+     *
+     * <p>In the COGS group so gross margin reflects it, and <em>not</em> {@code expected_to_clear}:
+     * a variance balance is a real result to look at, not a discrepancy waiting to be cleared. It
+     * carries either balance — an invoice below the expected price is a credit variance, and forcing
+     * it positive would hide the good news along with the bad.
+     */
+    PURCHASE_PRICE_VARIANCE,
+
     /** Where an invoice lands when no category could be determined (brief §7). */
     UNCLASSIFIED_NEEDS_REVIEW,
 

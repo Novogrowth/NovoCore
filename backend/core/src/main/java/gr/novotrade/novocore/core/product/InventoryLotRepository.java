@@ -25,6 +25,15 @@ interface InventoryLotRepository extends JpaRepository<InventoryLot, Long> {
 
     boolean existsByProductId(long productId);
 
+    /**
+     * The lot one delivery line created. One-to-one, by UNIQUE constraint — which is why the link is
+     * stored on the lot only and this query serves the other direction.
+     */
+    Optional<InventoryLot> findByGoodsReceiptLineId(long goodsReceiptLineId);
+
+    /** The lots several delivery lines created, in one query rather than one per line. */
+    List<InventoryLot> findByGoodsReceiptLineIdIn(java.util.Collection<Long> goodsReceiptLineIds);
+
     long countByProductId(long productId);
 
     List<InventoryLot> findByLocationOrderByAcquisitionDateAscIdAsc(StockLocation location);

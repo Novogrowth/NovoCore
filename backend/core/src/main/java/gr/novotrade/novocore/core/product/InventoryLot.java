@@ -84,6 +84,17 @@ class InventoryLot extends AuditableEntity {
     private StockLocation location;
 
     /**
+     * Brief §5's source document reference, added in step 8 once there was something to point at.
+     *
+     * <p>A plain id rather than an association: {@code GoodsReceiptLine} lives in the purchasing slice,
+     * which this package cannot see — the same boundary that makes {@code Product.defaultVatClassId}
+     * an id. Nullable, and the null case is real: phase 2b migrates opening stock that no NovoCore
+     * delivery created.
+     */
+    @Column(name = "goods_receipt_line_id")
+    private Long goodsReceiptLineId;
+
+    /**
      * Cascaded on purpose: a serialized lot and its units are created in one transaction, which is what
      * makes "the unit count is the quantity" true by construction rather than by a check that runs
      * later. No {@code REMOVE} and no {@code orphanRemoval} — nothing deletes stock, it is written off.
@@ -98,7 +109,8 @@ class InventoryLot extends AuditableEntity {
     }
 
     private InventoryLot(Product product, BigDecimal quantityReceived, UnitCost unitCost,
-            LocalDate acquisitionDate, LocalDate roastDate, StockLocation location) {
+            LocalDate acquisitionDate, LocalDate roastDate, StockLocation location,
+            Long goodsReceiptLineId) {
         this.product = product;
         this.quantityReceived = quantityReceived;
         this.quantityRemaining = quantityReceived;
@@ -107,13 +119,15 @@ class InventoryLot extends AuditableEntity {
         this.acquisitionDate = acquisitionDate;
         this.roastDate = roastDate;
         this.location = location;
+        this.goodsReceiptLineId = goodsReceiptLineId;
     }
 
     /** Pooled stock: a quantity at a location. */
     static InventoryLot pooled(Product product, Quantity quantityReceived, UnitCost unitCost,
-            LocalDate acquisitionDate, LocalDate roastDate, StockLocation location) {
+            LocalDate acquisitionDate, LocalDate roastDate, StockLocation location,
+            Long goodsReceiptLineId) {
         return new InventoryLot(product, quantityReceived.value(), unitCost, acquisitionDate,
-                roastDate, location);
+                roastDate, location, goodsReceiptLineId);
     }
 
     /**
@@ -121,8 +135,9 @@ class InventoryLot extends AuditableEntity {
      * {@link #addUnit} and persisted with the lot.
      */
     static InventoryLot serialTracked(Product product, UnitCost unitCost, LocalDate acquisitionDate,
-            LocalDate roastDate) {
-        return new InventoryLot(product, null, unitCost, acquisitionDate, roastDate, null);
+            LocalDate roastDate, Long goodsReceiptLineId) {
+        return new InventoryLot(product, null, unitCost, acquisitionDate, roastDate, null,
+                goodsReceiptLineId);
     }
 
     SerializedUnit addUnit(String serialNumber, StockLocation unitLocation) {
@@ -177,6 +192,11 @@ class InventoryLot extends AuditableEntity {
     /** Null when serial-tracked. */
     StockLocation getLocation() {
         return location;
+    }
+
+    /** Null for stock no NovoCore Goods Receipt created — phase 2b's opening balances. */
+    Long getGoodsReceiptLineId() {
+        return goodsReceiptLineId;
     }
 
     /**

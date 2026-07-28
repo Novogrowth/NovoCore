@@ -76,6 +76,20 @@ public enum Section {
      */
     JOURNAL(true),
 
+    /**
+     * Purchase invoices, goods receipts and the GR/IR position between them. Built in step 8.
+     *
+     * <p>Separate from {@link #SUPPLIERS} for the reason {@link #INVENTORY} is separate from
+     * {@link #PRODUCTS}: the supplier list is a directory, while a purchase invoice states what we pay
+     * for everything we sell. Whoever adds a supplier's phone number is not necessarily whoever may
+     * read the purchase price of every product in the catalogue.
+     *
+     * <p>Receiving goods and recording an invoice are the same section rather than two, because they
+     * are two halves of one document flow: someone verifying a delivery has to see the invoice line it
+     * is being received against, or the match cannot be made.
+     */
+    PURCHASING(true),
+
     /** Reserved for the Sales Order Fulfillment module (roadmap phase 4). */
     SALES_ORDER_FULFILLMENT(false),
 

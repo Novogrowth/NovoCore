@@ -100,7 +100,10 @@ class ChartOfAccountsIT extends AbstractCoreIntegrationTest {
                 .containsEntry("Equity", 2)
                 // Twelve since V7 added Delivery income and COD fee income (Q27).
                 .containsEntry("Income", 12)
-                .containsEntry("COGS", 3)
+                // Four since V16 added Purchase price variance — ADR 0008's answer that a lot keeps
+                // the cost it was received at and the difference posts somewhere visible. In this
+                // group so gross margin reflects what was actually paid for the goods.
+                .containsEntry("COGS", 4)
                 .containsEntry("Selling Expenses", 7)
                 .containsEntry("General Expenses", 10)
                 .containsEntry("Administrative Expenses", 5)

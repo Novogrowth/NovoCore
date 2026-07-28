@@ -98,6 +98,13 @@ class SchemaConventionsIT extends AbstractCoreIntegrationTest {
         // are money: a VAT rate and a quantity are not, a unit cost is. So the discriminator for the
         // six-decimal case is the name, and `_cost` is the naming convention V12 established for it —
         // inventory_lot.unit_cost being the first.
+        //
+        // WIDENED IN V16 to `_price` as well. purchase_invoice_line.unit_price is a six-decimal
+        // monetary multiplier that is emphatically not a cost — it is what the supplier charged, as
+        // against what the goods were received at, and keeping the two words apart is what makes a
+        // purchase price variance readable at all (ADR 0008). Widening the rule was the alternative to
+        // naming the column around it, which is what the migration README says to do and what the
+        // previous message here already warned against.
         List<Map<String, Object>> offenders = jdbc.queryForList("""
                 SELECT amount.table_name, amount.column_name
                 FROM information_schema.columns amount
@@ -111,14 +118,16 @@ class SchemaConventionsIT extends AbstractCoreIntegrationTest {
                   AND amount.table_name <> ?
                   AND amount.data_type = 'numeric'
                   AND (amount.numeric_scale = 2
-                       OR (amount.numeric_scale = 6 AND right(amount.column_name, 5) = '_cost'))
+                       OR (amount.numeric_scale = 6
+                           AND (right(amount.column_name, 5) = '_cost'
+                                OR right(amount.column_name, 6) = '_price')))
                   AND currency.column_name IS NULL
                 ORDER BY amount.table_name, amount.column_name
                 """, NOT_OURS);
 
         assertThat(offenders)
                 .as("A numeric(19,2) column is a posted monetary amount, and a numeric(19,6) column "
-                        + "whose name ends in _cost is a monetary multiplier. ADR 0005 requires "
+                        + "whose name ends in _cost or _price is a monetary multiplier. ADR 0005 requires "
                         + "every one to carry its currency in a companion char(3) column named "
                         + "<column>_currency — product.selling_price and "
                         + "inventory_lot.unit_cost being the first of each kind. Add the companion "
@@ -145,7 +154,10 @@ class SchemaConventionsIT extends AbstractCoreIntegrationTest {
                 .contains("audit_log", "setting", "attachment", "account", "account_group",
                         "product", "customer", "supplier", "asset",
                         "inventory_lot", "serialized_unit", "bundle_component",
-                        "journal_entry", "journal_line", "stock_write_off");
+                        "journal_entry", "journal_line", "stock_write_off",
+                        "purchase_invoice", "purchase_invoice_line", "goods_receipt",
+                        "goods_receipt_line", "gr_ir_match", "stock_consumption",
+                        "stock_consumption_line");
 
         // And the currency rule above is not passing vacuously either: there is a real
         // numeric(19,2) column in the schema for it to check.

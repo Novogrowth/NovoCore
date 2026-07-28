@@ -18,14 +18,20 @@ import java.util.Optional;
  * default. Whatever exposes these over HTTP must call {@code requireView} with the right one of the
  * two — the section each method belongs to is stated on it.
  *
- * <p><strong>What this does not do.</strong> Nothing consumes a lot through a sale. FIFO consumption, the
- * Goods Receipt that will create lots in earnest, and the source-document reference all belong to
- * step 8 (ADR 0004). The <em>write-off</em> that carries a {@link WriteOffReason} was step 7's, because
- * it derecognises an asset and therefore posts, and it is built — see the write-off section below.
+ * <p><strong>{@link #receive} is the lower layer, not the door.</strong> ADR 0004 makes the Goods
+ * Receipt the event that brings stock in, so ordinary operation goes through
+ * {@code GoodsReceiptService.record}, which creates the lots <em>and</em> posts. This method stands to
+ * that as {@code JournalService.post} stands to a typed transaction: it is how the core reaches the
+ * lower layer, and it is not what a controller exposes. It posts nothing by itself, deliberately —
+ * the Goods Receipt owns both halves of that transaction, the same way the write-off owns its own.
  *
- * <p><strong>Whether stock may go negative is still open (Q17)</strong> and is not decided here. A
- * single lot cannot go below zero — that is a CHECK constraint — but the aggregate policy belongs
- * with the consumption that could breach it, in step 8.
+ * <p><strong>Q17, answered (ADR 0008): aggregate stock may go negative, and it is flagged.</strong> A
+ * sale posts even when there is not enough stock behind it — brief §6 already treats goods arriving
+ * after their invoice as routine, so blocking a real sale over paperwork timing would contradict the
+ * design ADR 0004 exists to support. {@link #consume} records the part FIFO could not fill as a
+ * shortfall. A single lot still cannot go below zero, by CHECK; the negative lives on the consumption,
+ * which is where the fact actually is, and {@link #stockOf} subtracts it so a product reads negative
+ * rather than reading zero and hiding it.
  */
 public interface InventoryService {
 
@@ -73,8 +79,15 @@ public interface InventoryService {
     /**
      * Records stock arriving, as a new lot.
      *
-     * <p>Brief §5: every purchase creates a lot. From step 8 this is what a Goods Receipt calls
-     * (ADR 0004), and the lot will then carry the receipt it came from; until then it stands alone.
+     * <p>Brief §5: every purchase creates a lot. This is what a Goods Receipt calls (ADR 0004), and
+     * the lot then carries the receipt line it came from. <strong>It posts nothing</strong> — the
+     * Goods Receipt debits Inventory and credits GR/IR clearing for the lots it created, in the same
+     * transaction, because it is the document that knows the supplier the clearing is against.
+     *
+     * <p>A lot created here with no {@code goodsReceiptLineId} is stock with no ledger entry behind
+     * it, which is why nothing outside the core should be calling this: it exists for the Goods
+     * Receipt and, later, for the phase 2b migration, which will bring in opening stock alongside its
+     * own opening entry.
      *
      * <p>A serialized request creates the lot and all of its units in one transaction, which is what
      * makes "the unit count is the quantity" true by construction rather than by a later check.
@@ -141,6 +154,112 @@ public interface InventoryService {
      * here is a {@link Section#INVENTORY} operation for the same reason.
      */
     Optional<UnitCost> lastPurchaseCostOf(long productId);
+
+    /**
+     * The lot one delivery line created — brief §5's source document reference, read the other way.
+     *
+     * <p>One-to-one, by UNIQUE constraint. The link is stored on the lot alone, so this is how the
+     * purchasing slice gets from a receipt line to the stock it produced without a second copy of the
+     * relationship living on the delivery.
+     */
+    Optional<InventoryLotView> findLotByReceiptLine(long goodsReceiptLineId);
+
+    /** The same, for a whole delivery at once, so reading a receipt is not a query per line. */
+    List<InventoryLotView> lotsFromReceiptLines(java.util.Collection<Long> goodsReceiptLineIds);
+
+    /**
+     * Reduces a lot to nothing, for the reversal of the Goods Receipt that created it (Q39).
+     *
+     * <p>Posts nothing, and is not a general-purpose operation: {@code GoodsReceiptService.reverse} is
+     * the only caller, and it posts the mirror entry in the same transaction. Removing stock without
+     * the entry would leave the balance sheet carrying goods that are not there — the write-off's rule,
+     * applied to the other direction.
+     *
+     * <p>Refused once anything has happened to the lot, rather than partially undone: consumed,
+     * written off, moved, or a serialized unit no longer in stock all mean the goods went somewhere,
+     * and a delivery that has been dispersed cannot be un-made. The refusal names what got in the way,
+     * because "reverse the receipt" and "write off what is left" are different corrections and the
+     * operator has to know which one they are being pushed towards.
+     *
+     * @throws InvalidInventoryLotException if the lot has been touched since it was received
+     * @throws InventoryLotNotFoundException if there is no such lot
+     */
+    void unreceive(long lotId);
+
+    // ---------------------------------------------------------------------------------------
+    // FIFO consumption — Section.INVENTORY. Q17, answered (ADR 0008)
+    // ---------------------------------------------------------------------------------------
+
+    /**
+     * Takes stock out as a cost of sale, consuming lots FIFO, and posts the cost — in one transaction.
+     *
+     * <p><strong>One journal line per lot consumed</strong> (brief §6): debit {@code COST_OF_GOODS_SOLD}
+     * carrying the lot's {@code SubLedgerRef}, credit {@code INVENTORY} carrying the same. The debit
+     * carries a lot reference although COGS is a Standard rather than a Control account, because
+     * knowing which lots a cost came out of is the whole reason for having lots — that distinction is
+     * one the ledger deliberately permits.
+     *
+     * <p><strong>FIFO order is {@link #lotsOf}'s order</strong> — acquisition date, then id — so a
+     * backdated receipt is consumed where it belongs rather than where it was typed, and there is one
+     * definition of the order rather than one per caller. Only lots at a sellable location are
+     * candidates: stock in Damaged Goods is still an asset, and selling it is not a decision a costing
+     * rule gets to make quietly.
+     *
+     * <p><strong>Q17: a shortage does not block.</strong> What FIFO cannot fill is recorded as a
+     * shortfall on the result, {@link #stockOf} subtracts it so the product genuinely reads negative,
+     * and {@link #consumptionsWithShortfall()} is what a review reads. No cost is posted for the
+     * unbacked part, because there is no lot to take one from and reaching for the last purchase price
+     * would be the silent guess {@code CLAUDE.md} rule 7 forbids — so COGS is understated for as long
+     * as the shortfall stands, and the flag is what says so.
+     *
+     * <p>Nothing is posted when everything consumed was carried at zero, or when nothing could be
+     * filled at all. Both are real; {@link StockConsumptionView#costedNothing()} is how they read.
+     *
+     * @throws InvalidStockConsumptionException if the product is serial-tracked (that is a sale of a
+     *     named unit and needs step 9's customer link — see {@link SerializedUnitStatus#SOLD}), a
+     *     service, a bundle, or if the quantity has a fraction its unit of measure does not allow
+     * @throws gr.novotrade.novocore.core.api.product.ProductNotFoundException if the product is unknown
+     */
+    StockConsumptionView consume(NewStockConsumption request);
+
+    /**
+     * Puts consumed stock back into the lots it came from, and posts the mirror entry.
+     *
+     * <p>Both halves together, for {@link #reverseWriteOff}'s reason, and the correction route for a
+     * consumption that had a shortfall: reverse it, receive the stock that was missing, consume again.
+     * That is what ADR 0008 means by refusing to retro-cost a shortfall — the fix is to redo the
+     * consumption once there is something to cost it against, not to reach back into a posted figure.
+     *
+     * <p>Restores each lot by exactly what it gave, so FIFO order is undisturbed. Refused if a lot has
+     * since been consumed to the point where restoring would put it above what it ever received.
+     *
+     * @throws InvalidStockConsumptionException if already reversed, itself a reversal, or a lot cannot
+     *     take its quantity back
+     * @throws StockConsumptionNotFoundException if there is no such consumption
+     */
+    StockConsumptionView reverseConsumption(long consumptionId, LocalDate reversalDate, String note);
+
+    /** @throws StockConsumptionNotFoundException if absent */
+    StockConsumptionView requireConsumption(long consumptionId);
+
+    /** Every consumption of this product, oldest first — including reversals. */
+    List<StockConsumptionView> consumptionsOf(long productId);
+
+    /** Consumptions in a date range, oldest first. Includes reversals, for {@code writeOffsBetween}'s reason. */
+    List<StockConsumptionView> consumptionsBetween(LocalDate from, LocalDate to);
+
+    /**
+     * Consumptions that drove stock negative and have not been reversed — <strong>Q17's flag</strong>.
+     *
+     * <p>The compensating control for allowing the sale in the first place, and the same shape as
+     * {@link #lotsAt} for Damaged Goods: the model permits a state that needs a human to look at it,
+     * so there is a query that finds it. Phase 8's Clearing Checks reads this.
+     *
+     * <p>Deliberately a query over a flag rather than a review queue. Q15's remainder — whether a
+     * flagged item lives in a queue or on the record — is still open, and building a queue here would
+     * answer it by accident for everything else in the system that gets flagged.
+     */
+    List<StockConsumptionView> consumptionsWithShortfall();
 
     // ---------------------------------------------------------------------------------------
     // Serialized units — Section.INVENTORY

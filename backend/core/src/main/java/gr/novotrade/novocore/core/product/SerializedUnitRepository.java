@@ -18,9 +18,19 @@ interface SerializedUnitRepository extends JpaRepository<SerializedUnit, Long> {
 
     List<SerializedUnit> findByLotProductIdOrderBySerialNumberAsc(long productId);
 
-    Optional<SerializedUnit> findBySerialNumberIgnoreCase(String serialNumber);
+    /**
+     * The unit holding this serial number.
+     *
+     * <p>Excludes {@code UNRECEIVED} units, and that is what keeps this {@code Optional} rather than a
+     * list: since V16 a reversed delivery releases its serial numbers, so the same string can appear on
+     * a unit that was never really ours <em>and</em> on the one that genuinely is. The partial unique
+     * index guarantees at most one of the latter.
+     */
+    Optional<SerializedUnit> findBySerialNumberIgnoreCaseAndStatusNot(
+            String serialNumber, SerializedUnitStatus excluded);
 
-    boolean existsBySerialNumberIgnoreCase(String serialNumber);
+    boolean existsBySerialNumberIgnoreCaseAndStatusNot(
+            String serialNumber, SerializedUnitStatus excluded);
 
     List<SerializedUnit> findByStatusAndLocationOrderBySerialNumberAsc(
             SerializedUnitStatus status, StockLocation location);

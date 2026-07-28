@@ -108,4 +108,16 @@ class SerializedUnit extends AuditableEntity {
     void restoreToStock() {
         this.status = SerializedUnitStatus.IN_STOCK;
     }
+
+    /**
+     * Un-makes this unit's arrival — the reversal of the Goods Receipt that created it (Q39).
+     *
+     * <p>A status of its own rather than a write-off, because no loss occurred, and this is the one
+     * status that releases the serial number: the commonest reason to reverse a delivery is that it
+     * was entered wrong, and re-entering the same machines correctly must not be blocked by the
+     * mistake.
+     */
+    void unreceive() {
+        this.status = SerializedUnitStatus.UNRECEIVED;
+    }
 }

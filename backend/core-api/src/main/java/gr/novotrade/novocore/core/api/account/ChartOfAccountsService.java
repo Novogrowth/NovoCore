@@ -124,15 +124,23 @@ public interface ChartOfAccountsService {
      * Takes an account out of circulation without deleting it. It stops being offered for new
      * postings; its existing history and balance remain.
      *
-     * <p>Does not currently check whether the balance is zero. It cannot — there is no ledger
-     * until step 7. Once there is one, deactivating a non-zero account should warn rather than
-     * refuse, because taking a still-populated account out of use is a legitimate thing to do
-     * before a rearrangement.
+     * <p><strong>Warns rather than refuses when the account still carries a balance</strong>, which
+     * is what step 3 said it should do once a ledger existed. Taking a still-populated account out
+     * of use before a rearrangement is legitimate — the balance does not vanish, it simply stops
+     * being added to — so refusing would block a real operation. But a balance nobody can post
+     * against is a figure that quietly stops being maintained, so it is never silent either.
      *
+     * <p>The warning is the return value rather than a log line, so a caller cannot fail to receive
+     * it. It is also written to the audit log, because the fact that somebody retired an account
+     * holding money is worth retaining independently of whether the screen that did it showed the
+     * message.
+     *
+     * @return the balance the account was left carrying, or empty when it was zero or had no
+     *     activity at all
      * @throws InvalidAccountException if the account carries an {@link AccountSystemKey}, since
      *     the posting rule depending on it has no fallback
      */
-    void deactivate(long id);
+    java.util.Optional<gr.novotrade.novocore.core.api.shared.Money> deactivate(long id);
 
     void reactivate(long id);
 

@@ -25,10 +25,35 @@ public enum SerializedUnitStatus {
     SOLD,
 
     /** Derecognised. Set by the write-off posting in step 7, which carries the reason. */
-    WRITTEN_OFF;
+    WRITTEN_OFF,
+
+    /**
+     * The Goods Receipt that brought this unit in was reversed, so it was never really ours (Q39,
+     * ADR 0008).
+     *
+     * <p>A fourth value rather than reusing one of the three above, because none of them is true: the
+     * unit is not in stock, it was not sold, and calling it {@link #WRITTEN_OFF} would put a loss that
+     * never happened into the shrinkage report the single write-off account was chosen over three for.
+     *
+     * <p><strong>This status alone does not hold its serial number.</strong> Serial uniqueness across
+     * all stock exists to catch a duplicate scan, and the commonest reason to reverse a delivery is
+     * that it was entered wrong — so re-entering the same machines correctly must not be blocked by
+     * the mistake. The unique index is partial for exactly that.
+     */
+    UNRECEIVED;
 
     /** True when this unit still counts towards stock on hand. */
     public boolean isOnHand() {
         return this == IN_STOCK;
+    }
+
+    /**
+     * True when this unit's serial number still belongs to it and blocks a second record.
+     *
+     * <p>Everything except {@link #UNRECEIVED}. Stated here rather than as a list at each call site,
+     * so the Java check and the partial unique index behind it read the same rule.
+     */
+    public boolean holdsItsSerialNumber() {
+        return this != UNRECEIVED;
     }
 }

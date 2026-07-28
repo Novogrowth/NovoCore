@@ -21,10 +21,10 @@ import java.util.Optional;
  * fills the figure in by counting, because a caller asking how many are left should not have to know
  * which kind of lot it is asking.
  *
- * <p><strong>No source document.</strong> Brief §5 lists one, and there is nothing to point at: the
- * Purchase Invoice and the Goods Receipt arrive in step 8. That is a step 8 obligation rather than a
- * nullable column added early — ADR 0004 already settles that the Goods Receipt is what creates a
- * lot, so the reference gets added by the step that has something to put in it.
+ * <p><strong>The source document is {@link #goodsReceiptLineId}</strong>, added in step 8 once there
+ * was something to point at — brief §5 lists one, and ADR 0004 settles that the Goods Receipt is what
+ * creates a lot. It is nullable, and the null case is real rather than defensive: the phase 2b
+ * migration from Manager brings in stock that no NovoCore delivery ever created.
  *
  * @param serialTracked whether this lot's items are individually identified. Frozen at receipt: it
  *     records how the lot arrived, and a product's flag changing later does not rewrite history.
@@ -50,7 +50,8 @@ public record InventoryLotView(
         LocalDate acquisitionDate,
         LocalDate roastDate,
         StockLocation location,
-        List<SerializedUnitView> units) {
+        List<SerializedUnitView> units,
+        Long goodsReceiptLineId) {
 
     public InventoryLotView {
         Objects.requireNonNull(productSku, "productSku");
@@ -78,6 +79,14 @@ public record InventoryLotView(
             throw new IllegalArgumentException(
                     "Lot " + id + " is pooled stock and cannot have serialized units.");
         }
+    }
+
+    /**
+     * The delivery line this lot came from. Empty for stock that no NovoCore Goods Receipt created —
+     * the phase 2b migration's opening balances, and nothing else once that is done.
+     */
+    public Optional<Long> sourceReceiptLine() {
+        return Optional.ofNullable(goodsReceiptLineId);
     }
 
     /** Empty when serial-tracked, because the units carry the location then. */

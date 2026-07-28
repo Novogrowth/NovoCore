@@ -22,6 +22,14 @@ import java.util.Objects;
  * does not have stock at all" — is handled one level up: asking a service for its stock throws
  * {@link StockNotApplicableException} rather than answering with an instance of this full of zeros.
  *
+ * <p><strong>A quantity here can be negative, and that is Q17's answer showing through</strong>
+ * (ADR 0008). A sale may post against stock that has not been received yet, and the part FIFO could
+ * not fill is subtracted from the sellable location — so a product that has sold two more than it
+ * ever received reads −2 rather than 0. Reading zero would be the same failure as answering zero for
+ * a service: technically a number, and the opposite of informative. {@link #hasSellableStock()} is
+ * false either way, which is the answer a picker needs; {@link #isEmpty()} is deliberately not, since
+ * "nothing left" and "two short" are different situations.
+ *
  * @param productId the product these levels are for
  * @param byLocation quantity at each {@link StockLocation}; never null, never partial
  */
@@ -89,5 +97,15 @@ public record StockLevels(long productId, Map<StockLocation, Quantity> byLocatio
      */
     public boolean isEmpty() {
         return total().isZero();
+    }
+
+    /**
+     * True when more has been sold than was ever received — Q17's condition, seen from the stock side.
+     *
+     * <p>The consumption that caused it carries the detail and the flag; this answers the question a
+     * product screen asks, which is only whether the number in front of the reader is impossible.
+     */
+    public boolean isOversold() {
+        return sellable().isNegative();
     }
 }

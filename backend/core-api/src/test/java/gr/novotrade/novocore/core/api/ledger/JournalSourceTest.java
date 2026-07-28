@@ -109,10 +109,11 @@ class JournalSourceTest {
     class Values {
 
         @Test
-        @DisplayName("all six of Q19's typed transactions plus the credit note and the write-off")
+        @DisplayName("all six of Q19's typed transactions plus the credit note, write-off and receipt")
         void everySourceQ19AndQ26Named() {
             assertThat(JournalSource.values()).containsExactlyInAnyOrder(
                     JournalSource.PURCHASE_INVOICE,
+                    JournalSource.GOODS_RECEIPT,
                     JournalSource.SALES_INVOICE,
                     JournalSource.CREDIT_NOTE,
                     JournalSource.RECEIPT,
@@ -123,14 +124,28 @@ class JournalSourceTest {
         }
 
         @Test
-        @DisplayName("there is deliberately no GOODS_RECEIPT value yet")
-        void goodsReceiptIsAStepEightDecision() {
-            // ADR 0004 settles that a Goods Receipt posts, so it will need a value here. Whether it is
-            // amendable is nobody's answer yet, and adding a value is deliberately a migration so that
-            // the question gets asked rather than defaulted. This asserts the absence so it reads as a
-            // decision rather than an oversight.
+        @DisplayName("Q39: a goods receipt is immutable and not reversible through the ledger alone")
+        void goodsReceiptAnsweredInStepEight() {
+            // The value was deliberately absent until step 8 so that Q39 had to be answered rather
+            // than defaulted. ADR 0008 answers it: immutable, for the write-off's reason — the posting
+            // reflects a physical stock movement, so editing it would change what the accounts say
+            // arrived without changing the lots that arrived.
             assertThat(Arrays.stream(JournalSource.values()).map(Enum::name))
-                    .doesNotContain("GOODS_RECEIPT");
+                    .contains("GOODS_RECEIPT");
+            assertThat(JournalSource.GOODS_RECEIPT.isAmendable()).isFalse();
+            assertThat(JournalSource.GOODS_RECEIPT.requiresReversalToCorrect()).isTrue();
+            assertThat(JournalSource.GOODS_RECEIPT.isReversibleThroughTheLedgerAlone()).isFalse();
+        }
+
+        @Test
+        @DisplayName("only the sales invoice may consume stock")
+        void onlyTheSalesInvoiceConsumesStock() {
+            // Consuming reduces lots and posts cost of goods sold in one transaction, so the list of
+            // sources allowed to do it is deliberately short and a new one has to opt in here. The
+            // write-off is absent because it derecognises stock as a loss rather than a cost of sale.
+            assertThat(Arrays.stream(JournalSource.values())
+                    .filter(JournalSource::mayConsumeStock))
+                    .containsExactly(JournalSource.SALES_INVOICE);
         }
     }
 }

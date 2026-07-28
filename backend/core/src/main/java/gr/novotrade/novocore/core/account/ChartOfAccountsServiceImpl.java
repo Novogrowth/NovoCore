@@ -32,11 +32,25 @@ class ChartOfAccountsServiceImpl implements ChartOfAccountsService {
     private final AccountGroupRepository groups;
     private final AuditLogService auditLog;
 
+    /**
+     * Resolved at call time rather than injected, and that is not a style choice.
+     * {@code JournalServiceImpl} depends on <em>this</em> service to validate the accounts a line
+     * posts to, so a constructor dependency the other way would be a bean cycle. The only thing this
+     * service asks the ledger is what an account is carrying at the moment somebody retires it, which
+     * is a question with an answer long after startup — the same reasoning that put the ledger's
+     * sub-ledger existence check into a database trigger rather than into Java.
+     */
+    private final org.springframework.beans.factory.ObjectProvider<
+            gr.novotrade.novocore.core.api.ledger.JournalService> journal;
+
     ChartOfAccountsServiceImpl(AccountRepository accounts, AccountGroupRepository groups,
-            AuditLogService auditLog) {
+            AuditLogService auditLog,
+            org.springframework.beans.factory.ObjectProvider<
+                    gr.novotrade.novocore.core.api.ledger.JournalService> journal) {
         this.accounts = accounts;
         this.groups = groups;
         this.auditLog = auditLog;
+        this.journal = journal;
     }
 
     // ---------------------------------------------------------------------------------------
@@ -249,7 +263,7 @@ class ChartOfAccountsServiceImpl implements ChartOfAccountsService {
 
     @Override
     @Transactional
-    public void deactivate(long id) {
+    public Optional<gr.novotrade.novocore.core.api.shared.Money> deactivate(long id) {
         Account account = accounts.findById(id)
                 .orElseThrow(() -> new AccountNotFoundException(id));
 
@@ -263,12 +277,41 @@ class ChartOfAccountsServiceImpl implements ChartOfAccountsService {
                             + "rule resolves it at runtime and has no fallback.");
         }
         if (!account.isActive()) {
-            return;
+            return Optional.empty();
         }
 
+        // Warned about, not refused — the step 3 decision, now that there is a ledger to ask. The
+        // balance does not vanish when an account is retired; it stops being maintained, which is a
+        // different and quieter problem.
+        Optional<gr.novotrade.novocore.core.api.shared.Money> outstanding = balanceLeftBehind(id);
+
         account.setActive(false);
-        auditLog.record("account.deactivated", ACCOUNT_ENTITY, String.valueOf(id),
-                Map.of("name", account.getName()));
+        Map<String, String> detail = new LinkedHashMap<>();
+        detail.put("name", account.getName());
+        outstanding.ifPresent(balance -> detail.put("balanceLeftBehind", balance.toString()));
+        auditLog.record("account.deactivated", ACCOUNT_ENTITY, String.valueOf(id), detail);
+
+        return outstanding;
+    }
+
+    /**
+     * What this account is carrying right now, or empty when it is carrying nothing.
+     *
+     * <p>Empty for an account with no activity as well as one that nets to zero: neither is a warning
+     * anybody needs, and {@code AccountBalance.hasNoActivity()} is what tells them apart if a caller
+     * ever cares.
+     */
+    private Optional<gr.novotrade.novocore.core.api.shared.Money> balanceLeftBehind(long id) {
+        gr.novotrade.novocore.core.api.ledger.JournalService ledger = journal.getIfAvailable();
+        if (ledger == null) {
+            return Optional.empty();
+        }
+        gr.novotrade.novocore.core.api.ledger.AccountBalance balance =
+                ledger.balanceOf(id, java.time.LocalDate.now());
+        // onNormalSide(), so the warning reads the way the account does: an expense left carrying 40
+        // says 40, not −40, and an account sitting on the wrong side reads negative, which is itself
+        // worth seeing on the way out.
+        return balance.isZero() ? Optional.empty() : Optional.of(balance.onNormalSide());
     }
 
     @Override

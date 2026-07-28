@@ -292,12 +292,12 @@ class InventoryIT extends AbstractCoreIntegrationTest {
             assertThatExceptionOfType(IllegalArgumentException.class)
                     .isThrownBy(() -> new NewInventoryLot(1L, Quantity.of(5L),
                             UnitCost.ofEur("10.00"), MARCH, null, StockLocation.INVENTORY,
-                            List.of("A", "B", "C", "D")))
+                            List.of("A", "B", "C", "D"), null))
                     .withMessageContaining("the unit count is the quantity");
 
             assertThatExceptionOfType(IllegalArgumentException.class)
                     .isThrownBy(() -> new NewInventoryLot(1L, null, UnitCost.ofEur("10.00"), MARCH,
-                            null, StockLocation.INVENTORY, List.of()))
+                            null, StockLocation.INVENTORY, List.of(), null))
                     .withMessageContaining("either a quantity");
         }
     }
