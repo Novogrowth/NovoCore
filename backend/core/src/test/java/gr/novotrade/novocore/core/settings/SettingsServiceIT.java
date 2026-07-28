@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.settings;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -12,8 +13,13 @@ import gr.novotrade.novocore.core.api.settings.SettingValueException;
 import gr.novotrade.novocore.core.api.settings.SettingView;
 import gr.novotrade.novocore.core.api.settings.SettingsService;
 import gr.novotrade.novocore.core.api.shared.Money;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.math.RoundingMode;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,12 +54,86 @@ class SettingsServiceIT extends AbstractCoreIntegrationTest {
     }
 
     @Test
-    @DisplayName("SMTP settings are absent rather than seeded with placeholders")
-    void smtpIsNotSeeded() {
-        // A placeholder credential is worse than a missing one: it looks like configuration,
-        // and the email service would fail against a host nobody meant to configure.
-        assertThat(settings.find(SettingKeys.SMTP_HOST)).isEmpty();
-        assertThat(settings.find(SettingKeys.SMTP_PASSWORD)).isEmpty();
+    @DisplayName("no migration seeds the SMTP password")
+    void noMigrationSeedsTheSmtpPassword() throws Exception {
+        // Asserted against the migration files rather than against the settings table, and
+        // deliberately: "is it seeded?" is a question about what is committed to this
+        // repository, and the live table is written to by the email service's own tests, which
+        // would make a database-level assertion depend on test ordering.
+        //
+        // Why it matters: a migration is a file in git, and a credential in git is in git
+        // permanently — readable by anyone who ever clones the repository, present in every CI
+        // checkout, and not removable by editing the file. The password reaches Settings once
+        // from NOVOCORE_SMTP_PASSWORD instead, the same route the first owner's password takes.
+        // A placeholder value would be worse still, because it would look like configuration.
+        for (String migration : migrationSources()) {
+            assertThat(migration)
+                    .as("a migration must never insert a credential")
+                    .doesNotContain("'" + SettingKeys.SMTP_PASSWORD + "'");
+        }
+    }
+
+    @Test
+    @DisplayName("V20 seeds the real email configuration, and the reply address is not the sender")
+    void emailConfigurationIsSeeded() throws Exception {
+        String v20 = Files.readString(migrationPath("V20__email_outbox.sql"), UTF_8);
+
+        assertThat(v20)
+                .contains("'mail.novotrade.gr'")
+                .contains("'465'")
+                .contains("'IMPLICIT_TLS'")
+                .contains("'erp@novotrade.gr'")
+                .contains("'kostas@novotrade.gr'");
+
+        // The entire reason smtp.reply-to exists and is required: erp@novotrade.gr is a
+        // send-only mailbox nobody reads, so if these two were ever the same address, every
+        // customer reply would land in it with no visible symptom.
+        assertThat(settings.require(SettingKeys.SMTP_REPLY_TO))
+                .isNotEqualTo(settings.require(SettingKeys.SMTP_FROM_ADDRESS));
+    }
+
+    @Test
+    @DisplayName("every seeded email setting is actually present in the database")
+    void emailSettingsReachedTheDatabase() {
+        // Presence rather than exact values — those are asserted against V20 above. This is the
+        // half that proves the migration ran, and it holds regardless of what the email
+        // service's own tests have written over the top.
+        assertThat(List.of(
+                SettingKeys.SMTP_HOST,
+                SettingKeys.SMTP_PORT,
+                SettingKeys.SMTP_USERNAME,
+                SettingKeys.SMTP_TRANSPORT_SECURITY,
+                SettingKeys.SMTP_FROM_ADDRESS,
+                SettingKeys.SMTP_FROM_NAME,
+                SettingKeys.SMTP_REPLY_TO,
+                SettingKeys.EMAIL_MAX_ATTEMPTS,
+                SettingKeys.EMAIL_RETRY_BACKOFF_SECONDS,
+                SettingKeys.EMAIL_RETRY_BACKOFF_MAX_SECONDS,
+                SettingKeys.EMAIL_DISPATCH_BATCH_SIZE))
+                .allSatisfy(key -> assertThat(settings.find(key))
+                        .as("setting '%s'", key)
+                        .isPresent());
+    }
+
+    private static Path migrationPath(String filename) throws Exception {
+        return Path.of(SettingsServiceIT.class.getResource("/db/migration/" + filename).toURI());
+    }
+
+    private static List<String> migrationSources() throws Exception {
+        Path directory = Path.of(
+                SettingsServiceIT.class.getResource("/db/migration").toURI());
+        try (Stream<Path> files = Files.list(directory)) {
+            return files
+                    .filter(file -> file.toString().endsWith(".sql"))
+                    .map(file -> {
+                        try {
+                            return Files.readString(file, UTF_8);
+                        } catch (IOException e) {
+                            throw new UncheckedIOException(e);
+                        }
+                    })
+                    .toList();
+        }
     }
 
     @Test

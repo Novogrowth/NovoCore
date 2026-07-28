@@ -50,6 +50,12 @@ services:
       # Safe to leave empty here once the first owner has been created.
       NOVOCORE_BOOTSTRAP_OWNER_USERNAME: ${NOVOCORE_BOOTSTRAP_OWNER_USERNAME:-}
       NOVOCORE_BOOTSTRAP_OWNER_PASSWORD: ${NOVOCORE_BOOTSTRAP_OWNER_PASSWORD:-}
+      # The SMTP password, used only on the first start where none is stored yet. It then
+      # lives in Settings with the rest of the email configuration, which migration V20
+      # seeds. Absent from that migration deliberately: a credential committed to git is in
+      # git permanently. Unlike the owner password, leaving this empty does not stop the
+      # application — email queues and does not send, and the outbox says so.
+      NOVOCORE_SMTP_PASSWORD: ${NOVOCORE_SMTP_PASSWORD:-}
     depends_on:
       postgres:
         # Waits for readiness, not just container start, so Flyway does not race the database.

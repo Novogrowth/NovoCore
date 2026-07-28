@@ -48,6 +48,17 @@
     <archunit.version>1.4.2</archunit.version>
 
     <!--
+      GreenMail — an in-process SMTP server for the email service's tests. Not managed by
+      Spring Boot, so pinned here.
+
+      The plain `greenmail` artifact, NOT `greenmail-junit5`, for exactly the reason ADR 0002
+      gives for using plain `archunit`: the JUnit 5 extension binds to JUnit Platform 1.x and
+      Spring Boot 4 brings JUnit 6. Starting and stopping the server in @BeforeEach/@AfterEach
+      is three lines and has no such coupling.
+    -->
+    <greenmail.version>2.1.9</greenmail.version>
+
+    <!--
       Pinned so the Testcontainers image and the docker-compose image can never drift
       apart: tests must run against the same PostgreSQL major version as production.
     -->
@@ -72,6 +83,13 @@
         <groupId>com.tngtech.archunit</groupId>
         <artifactId>archunit</artifactId>
         <version>${archunit.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.icegreen</groupId>
+        <artifactId>greenmail</artifactId>
+        <version>${greenmail.version}</version>
+        <scope>test</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>

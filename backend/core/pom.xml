@@ -38,6 +38,21 @@
     </dependency>
 
     <!--
+      Email sending. CLAUDE.md names this a shared *core* service — configured once via
+      Settings and reached through one interface — so the SMTP client belongs here rather
+      than in an adapter: it is not translating an external system's model into ours, it is
+      a transport the core owns.
+
+      Confined to gr.novotrade.novocore.core.email by an ArchUnit rule, so a module cannot
+      grow its own mail session and recreate the scattered-credentials problem this whole
+      arrangement exists to prevent.
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-mail</artifactId>
+    </dependency>
+
+    <!--
       Password hashing only — deliberately NOT spring-boot-starter-security.
 
       The core hashes and verifies passwords itself so that a hash never crosses its boundary
@@ -98,6 +113,20 @@
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>testcontainers-postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!--
+      An in-process SMTP server, so the email service is tested by actually sending mail and
+      reading the received message back — including the Reply-To header, which is the one
+      thing about this feature that has no other way of being checked.
+
+      In-process rather than a Testcontainers mail server: this needs no Docker, so the
+      composition and header tests run under `mvn test` alongside everything else fast.
+    -->
+    <dependency>
+      <groupId>com.icegreen</groupId>
+      <artifactId>greenmail</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

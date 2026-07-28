@@ -28,6 +28,7 @@ class CoreBoundaryRulesTest {
     private static final String CORE_API = "gr.novotrade.novocore.core.api..";
     private static final String CORE_ALL = "gr.novotrade.novocore.core..";
     private static final String CORE_WEB = "gr.novotrade.novocore.core.web..";
+    private static final String CORE_EMAIL = "gr.novotrade.novocore.core.email..";
     private static final String ADAPTERS = "gr.novotrade.novocore.adapters..";
     private static final String MODULES = "gr.novotrade.novocore.modules..";
 
@@ -119,6 +120,33 @@ class CoreBoundaryRulesTest {
         // WebExceptionHandler now live in ..core.web.., so this rule has a real subject set and
         // fails if it is ever emptied. Re-adding the allowance would let the package be deleted
         // and take the guarantee with it silently.
+
+        rule.check(ImportedClasses.production());
+    }
+
+    /**
+     * The mail client, which only the shared email service may hold.
+     *
+     * <p>{@code jakarta.mail} is the API and {@code org.springframework.mail} the Spring layer
+     * over it. Both are named, because either one alone is enough to send an email.
+     */
+    private static final String[] MAIL_PACKAGES = {
+        "jakarta.mail..",
+        "org.springframework.mail..",
+    };
+
+    @Test
+    @DisplayName("only the shared email service may speak SMTP (CLAUDE.md shared core services)")
+    void onlyTheEmailServiceTouchesMail() {
+        ArchRule rule = noClasses()
+                .that().resideOutsideOfPackage(CORE_EMAIL)
+                .should().dependOnClassesThat().resideInAnyPackage(MAIL_PACKAGES)
+                .because("CLAUDE.md: email sending is a shared core service, configured once via "
+                        + "Settings and exposed through one interface. Never configure SMTP or "
+                        + "send email directly from within a module - that recreates the "
+                        + "scattered-credentials problem this rule exists to prevent. Call "
+                        + "EmailSender.send instead; if it cannot express what you need, add to "
+                        + "that interface rather than around it.");
 
         rule.check(ImportedClasses.production());
     }
