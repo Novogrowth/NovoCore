@@ -288,6 +288,11 @@ class RoleViewTest {
             assertThat(Section.SETTINGS.isAvailable()).isTrue();
             assertThat(Section.AUDIT_LOG.isAvailable()).isTrue();
             assertThat(Section.USERS_AND_ROLES.isAvailable()).isTrue();
+            // Step 5.
+            assertThat(Section.PRODUCTS.isAvailable()).isTrue();
+            assertThat(Section.CUSTOMERS.isAvailable()).isTrue();
+            assertThat(Section.SUPPLIERS.isAvailable()).isTrue();
+            assertThat(Section.FIXED_ASSETS.isAvailable()).isTrue();
         }
 
         @Test
@@ -295,8 +300,6 @@ class RoleViewTest {
         void reservedSections() {
             // Distinguishing "you may not see this" from "this does not exist yet" — two states
             // that look identical to a user and have entirely different fixes.
-            assertThat(Section.PRODUCTS.isAvailable()).isFalse();
-            assertThat(Section.CUSTOMERS.isAvailable()).isFalse();
             assertThat(Section.SALES_ORDER_FULFILLMENT.isAvailable()).isFalse();
             assertThat(Section.BACK_IN_STOCK_REMINDERS.isAvailable()).isFalse();
         }

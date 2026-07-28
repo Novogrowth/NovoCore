@@ -32,11 +32,24 @@ public enum Section {
     /** User and role administration. */
     USERS_AND_ROLES(true),
 
-    /** Products. Reserved — the entity arrives in step 5. */
-    PRODUCTS(false),
+    /** Products. Built in step 5, with three field-level restrictions — see {@link ProtectedField}. */
+    PRODUCTS(true),
 
-    /** Customers. Reserved — the entity arrives in step 5. */
-    CUSTOMERS(false),
+    /** Customers. Built in step 5. */
+    CUSTOMERS(true),
+
+    /**
+     * Suppliers. Built in step 5.
+     *
+     * <p>Its own section rather than part of {@link #PRODUCTS}, even though Remote/Order Staff's
+     * restrictions hide the supplier <em>of a product</em>. Those are different questions: that
+     * restriction narrows a product response, while this governs the supplier list itself, and
+     * granting one should not grant the other.
+     */
+    SUPPLIERS(true),
+
+    /** The fixed asset register. Built in step 5. */
+    FIXED_ASSETS(true),
 
     /** Reserved for the Sales Order Fulfillment module (roadmap phase 4). */
     SALES_ORDER_FULFILLMENT(false),

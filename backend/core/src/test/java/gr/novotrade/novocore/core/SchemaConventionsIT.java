@@ -20,15 +20,16 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * <p><strong>What each rule is worth right now.</strong> The no-floating-point rule is live and
  * meaningful today — it proves the absence of the thing {@code CLAUDE.md} rule 5 forbids across
  * every table that exists. The scale rule became live with {@code vat_class.rate_percent}, the
- * first {@code numeric} column in the schema. There are still no <em>monetary</em> columns: an
- * account's balance is the sum of its journal lines, computed on read and never stored, so the
- * {@code numeric(19,2)} half of the rule starts doing real work when the journal arrives in
- * step 7 — precisely when a mistake would be expensive.
+ * first {@code numeric} column in the schema. The {@code numeric(19,2)} half became live in step 5
+ * with {@code product.selling_price}, the first <em>monetary</em> column: an account balance is the
+ * sum of its journal lines and is never stored, so until a product had a price there was no amount
+ * anywhere in the schema.
  *
- * <p>Deliberately <em>not</em> asserted: V1 also says a monetary column carries a companion
- * {@code char(3)} currency column. There is no first money column yet, so the naming convention
- * for that companion is not established — asserting a guess at it would either be wrong or
- * silently dictate a naming decision that belongs to step 7.
+ * <p>That first monetary column also settles what V1 left open — the naming of the {@code char(3)}
+ * currency companion ADR 0005 requires. The convention is {@code <name>} and
+ * {@code <name>_currency}, and {@link #everyMonetaryColumnCarriesItsCurrency()} now enforces it
+ * across the whole schema, so step 7's monetary columns inherit the rule rather than re-deciding
+ * it once there are dozens of them.
  */
 class SchemaConventionsIT extends AbstractCoreIntegrationTest {
 
@@ -85,6 +86,41 @@ class SchemaConventionsIT extends AbstractCoreIntegrationTest {
     }
 
     @Test
+    @DisplayName("every numeric(19,2) amount has a char(3) currency column beside it")
+    void everyMonetaryColumnCarriesItsCurrency() {
+        // ADR 0005: EUR-only behaviour, but currency is modelled from day one, and every monetary
+        // column carries one. Enforced structurally rather than by convention, because the failure
+        // mode of a missing currency is a figure that looks right and means nothing once a second
+        // currency exists — and by then there is history in the table.
+        List<Map<String, Object>> offenders = jdbc.queryForList("""
+                SELECT amount.table_name, amount.column_name
+                FROM information_schema.columns amount
+                LEFT JOIN information_schema.columns currency
+                       ON currency.table_schema = amount.table_schema
+                      AND currency.table_name   = amount.table_name
+                      AND currency.column_name  = amount.column_name || '_currency'
+                      AND currency.data_type IN ('character', 'character varying')
+                      AND currency.character_maximum_length = 3
+                WHERE amount.table_schema = current_schema()
+                  AND amount.table_name <> ?
+                  AND amount.data_type = 'numeric'
+                  AND amount.numeric_scale = 2
+                  AND currency.column_name IS NULL
+                ORDER BY amount.table_name, amount.column_name
+                """, NOT_OURS);
+
+        assertThat(offenders)
+                .as("A numeric(19,2) column is a posted monetary amount, and ADR 0005 requires "
+                        + "every one to carry its currency in a companion char(3) column named "
+                        + "<column>_currency — product.selling_price and "
+                        + "product.selling_price_currency being the first pair. Add the companion "
+                        + "and a CHECK tying the two together, rather than exempting the column "
+                        + "here: an amount whose currency is implied is an amount that means "
+                        + "something different the day a second currency exists.")
+                .isEmpty();
+    }
+
+    @Test
     @DisplayName("the convention test is wired to a real schema, not silently querying nothing")
     void theSchemaIsActuallyVisible() {
         // Without this, both rules above would pass just as happily against an empty result set
@@ -96,6 +132,17 @@ class SchemaConventionsIT extends AbstractCoreIntegrationTest {
                 """, String.class);
 
         assertThat(tables)
-                .contains("audit_log", "setting", "attachment", "account", "account_group");
+                .contains("audit_log", "setting", "attachment", "account", "account_group",
+                        "product", "customer", "supplier", "asset");
+
+        // And the currency rule above is not passing vacuously either: there is a real
+        // numeric(19,2) column in the schema for it to check.
+        assertThat(jdbc.queryForObject("""
+                SELECT count(*) FROM information_schema.columns
+                WHERE table_schema = current_schema()
+                  AND data_type = 'numeric' AND numeric_scale = 2
+                """, Integer.class))
+                .as("the monetary-column rule needs at least one monetary column to be meaningful")
+                .isPositive();
     }
 }
