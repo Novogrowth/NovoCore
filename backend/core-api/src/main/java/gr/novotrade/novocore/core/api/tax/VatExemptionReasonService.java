@@ -6,11 +6,11 @@ import java.util.Optional;
 /**
  * The official AADE VAT exemption reasons.
  *
- * <p><strong>Currently unseeded.</strong> The structure is built; the ~29 rows are supplied
- * separately, because these are legally meaningful codes transmitted to AADE and transcribing
- * them from a screenshot is exactly the kind of thing that should be done once, deliberately,
- * rather than guessed at. Until then {@link #all()} returns empty, and any feature that requires
- * a reason must fail loudly rather than proceed without one.
+ * <p><strong>Seeded with the verified list</strong> as configured in Prosvasis Go — 29 entries in
+ * the recodified article numbering, with gaps at codes 24 and 28. These are legally meaningful
+ * values transmitted to AADE, so the list came from the invoicing system of record rather than
+ * from memory, and three of the entries deliberately carry no myDATA code at all; see
+ * {@link VatExemptionReasonView#mydataCode()}.
  */
 public interface VatExemptionReasonService {
 

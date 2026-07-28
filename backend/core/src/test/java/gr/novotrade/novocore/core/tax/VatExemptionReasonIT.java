@@ -9,30 +9,149 @@ import gr.novotrade.novocore.core.api.tax.NewVatExemptionReason;
 import gr.novotrade.novocore.core.api.tax.VatExemptionReasonNotFoundException;
 import gr.novotrade.novocore.core.api.tax.VatExemptionReasonService;
 import gr.novotrade.novocore.core.api.tax.VatExemptionReasonView;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * The AADE VAT exemption reason lookup — structure, with the real list still to come.
+ * The AADE VAT exemption reason lookup, against the real seeded list (V8).
  *
- * <p>These tests use codes in the 9000s so they cannot collide with AADE's real 1–31 range when
- * the verified rows are loaded. That matters more than usual here: the real codes are legally
- * meaningful, and a test fixture squatting on code 6 would have to be untangled from real data.
+ * <p>These tests use codes in the 9000s so they cannot collide with AADE's real 1–31 range, which
+ * is now populated. That mattered more than usual here: the real codes are legally meaningful, and
+ * a fixture squatting on code 6 would have had to be untangled from real data.
+ *
+ * <p>The seed assertions are scoped to codes 1–31 for the same reason the chart-of-accounts tests
+ * scope theirs to the seeded groups — these tests share one non-transactional database, so a
+ * fixture created by a neighbouring test must not be able to break a count.
  */
 class VatExemptionReasonIT extends AbstractCoreIntegrationTest {
 
     @Autowired
     private VatExemptionReasonService reasons;
 
+    /** AADE codes V8 seeds: 1–31 with 24 and 28 absent from Prosvasis Go's list. */
+    private static final List<Integer> SEEDED_CODES = List.of(
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+            20, 21, 22, 23, 25, 26, 27, 29, 30, 31);
+
+    /** The three OSS/IOSS reasons Go has no myDATA mapping for. */
+    private static final List<Integer> CODES_WITHOUT_MYDATA_MAPPING = List.of(29, 30, 31);
+
     @Test
-    @DisplayName("the table is deliberately unseeded until the verified AADE list arrives")
-    void aadeRangeIsUnseeded() {
-        // An empty table is visibly incomplete. A plausible wrong list transcribed from memory
-        // would not be, and these codes are transmitted to AADE.
-        assertThat(reasons.all())
-                .as("nothing in AADE's real 1-31 code range should exist yet")
-                .noneMatch(reason -> reason.code() >= 1 && reason.code() <= 31);
+    @DisplayName("the verified AADE list is seeded, with the gaps Go's list actually has")
+    void aadeListIsSeeded() {
+        assertThat(seeded()).extracting(VatExemptionReasonView::code)
+                .containsExactlyElementsOf(SEEDED_CODES);
+
+        // Stated as an assertion rather than left implicit: 24 and 28 are missing from Go's list,
+        // not known to be retired by AADE. If AADE defines them and we need them, that is two
+        // INSERTs — but nothing should quietly assume the range is contiguous in the meantime.
+        assertThat(reasons.findByCode(24)).isEmpty();
+        assertThat(reasons.findByCode(28)).isEmpty();
+
+        assertThat(seeded()).allSatisfy(reason -> {
+            assertThat(reason.active()).isTrue();
+            // AADE's "Δικαίωμα έκπτωσης Φ.Π.Α. εισροών" reads Όχι for every entry in this list.
+            assertThat(reason.inputVatDeductible()).isFalse();
+            // Go repeats the code inside its description text ("1 - Χωρίς ΦΠΑ - ..."); the code is
+            // its own column here, so the prefix is stripped rather than stored twice.
+            assertThat(reason.description())
+                    .as("description should not repeat the code")
+                    .doesNotStartWith(reason.code() + " -")
+                    .doesNotStartWith(reason.code() + "-");
+        });
+    }
+
+    @Test
+    @DisplayName("Greek and the recodified article numbering survive the seed intact")
+    void seededTextIsIntact() {
+        // Mojibake here would be silent and would reach AADE. Flyway's encoding is pinned to
+        // UTF-8 explicitly (step 3) precisely so this holds on Windows too.
+        assertThat(reasons.requireByCode(1).description())
+                .isEqualTo("Χωρίς ΦΠΑ - άρθρο 2 και 3 του Κώδικα ΦΠΑ");
+        assertThat(reasons.requireByCode(20).description())
+                .as("\"ΦΠΑ εμπεριεχόμενος\" is a different thing from \"Χωρίς ΦΠΑ\" — VAT included "
+                        + "in the price rather than absent — so the distinction must survive")
+                .isEqualTo("ΦΠΑ εμπεριεχόμενος - άρθρο 50 του Κώδικα ΦΠΑ");
+        assertThat(reasons.requireByCode(31).description())
+                .isEqualTo("Χωρίς ΦΠΑ - άρθρο 58 του Κώδικα ΦΠΑ (IOSS)");
+    }
+
+    @Test
+    @DisplayName("storing the myDATA string verbatim was load-bearing: codes 12 and 13 differ")
+    void verbatimMydataCodeIsJustified() {
+        // V5 stored mydata_code separately rather than composing it from code and description, and
+        // recorded that a test should check whether the composition holds once the real rows
+        // landed. It does not — for exactly two rows, whose Go description names
+        // "Πλοία Ανοικτής Θαλάσσης" while their myDATA string does not. Had the value been
+        // composed, those two would have been transmitted wrong.
+        assertThat(seeded())
+                .filteredOn(reason -> reason.mydataCodeIfAny().isPresent()
+                        && !reason.mydataCodeMatchesDescription())
+                .extracting(VatExemptionReasonView::code)
+                .containsExactly(12, 13);
+
+        assertThat(reasons.requireByCode(12).description()).contains("Πλοία Ανοικτής Θαλάσσης");
+        assertThat(reasons.requireByCode(12).requireMydataCode())
+                .isEqualTo("12-Χωρίς ΦΠΑ - άρθρο 32 του Κώδικα ΦΠΑ")
+                .doesNotContain("Πλοία");
+
+        // Every other mapped row does compose cleanly, which is what makes the two exceptions
+        // worth naming rather than a general disclaimer.
+        assertThat(seeded())
+                .filteredOn(reason -> reason.mydataCodeIfAny().isPresent()
+                        && reason.code() != 12 && reason.code() != 13)
+                .allSatisfy(reason ->
+                        assertThat(reason.mydataCodeMatchesDescription()).isTrue());
+    }
+
+    @Test
+    @DisplayName("the OSS and IOSS reasons have no myDATA code, and refuse to invent one")
+    void ossAndIossHaveNoMydataMapping() {
+        assertThat(seeded())
+                .filteredOn(reason -> reason.mydataCodeIfAny().isEmpty())
+                .extracting(VatExemptionReasonView::code)
+                .containsExactlyElementsOf(CODES_WITHOUT_MYDATA_MAPPING);
+
+        VatExemptionReasonView ioss = reasons.requireByCode(31);
+        assertThat(ioss.mydataCodeMatchesDescription())
+                .as("absence is not a match")
+                .isFalse();
+
+        // The point of the distinction. A transmitting caller must fail here, naming the reason,
+        // rather than sending a blank or a value composed on the spot — phase 7's obligation.
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(ioss::requireMydataCode)
+                .withMessageContaining("31")
+                .withMessageContaining("cannot be transmitted");
+    }
+
+    @Test
+    @DisplayName("a reason may be created with no myDATA code, but never with a blank one")
+    void blankMydataCodeIsNormalisedToAbsent() {
+        // Blank and null would otherwise be two representations of the same state, and the CHECK
+        // constraint refuses '' outright.
+        VatExemptionReasonView unmapped = reasons.create(
+                NewVatExemptionReason.withoutMydataCode(9030, "Unmapped reason (test)", false));
+        assertThat(unmapped.mydataCodeIfAny()).isEmpty();
+
+        VatExemptionReasonView blank = reasons.create(new NewVatExemptionReason(
+                9031, "Blank myDATA code (test)", "   ", false));
+        assertThat(blank.mydataCodeIfAny())
+                .as("blank normalised to absent rather than stored")
+                .isEmpty();
+
+        // Two unmapped reasons do not collide: absence is not a duplicate myDATA string.
+        assertThat(reasons.requireByCode(9030).mydataCodeIfAny()).isEmpty();
+        assertThat(reasons.requireByCode(9031).mydataCodeIfAny()).isEmpty();
+    }
+
+    /** The rows V8 seeded, i.e. excluding the 9000-range fixtures these tests create. */
+    private List<VatExemptionReasonView> seeded() {
+        return reasons.all().stream()
+                .filter(reason -> reason.code() >= 1 && reason.code() <= 31)
+                .toList();
     }
 
     @Test

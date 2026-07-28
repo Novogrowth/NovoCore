@@ -40,8 +40,15 @@ class VatExemptionReason extends AuditableEntity {
     @Column(name = "description", nullable = false, length = 400)
     private String description;
 
-    /** The exact string myDATA expects. Stored verbatim, not composed at use time. */
-    @Column(name = "mydata_code", nullable = false, length = 500)
+    /**
+     * The exact string myDATA expects. Stored verbatim, not composed at use time.
+     *
+     * <p>Nullable, because a reason can exist without our invoicing system having mapped it to a
+     * myDATA value — the OSS and IOSS reasons (codes 29–31) are exactly that case. Null means "no
+     * mapping", not "not filled in yet", and anything transmitting to myDATA must refuse it rather
+     * than compose a substitute.
+     */
+    @Column(name = "mydata_code", length = 500)
     private String mydataCode;
 
     /** AADE's "Δικαίωμα έκπτωσης Φ.Π.Α. εισροών". */
