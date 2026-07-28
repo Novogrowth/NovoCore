@@ -24,19 +24,19 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 4b | First REST endpoint (chart of accounts, read-only) | **Done, committed** — boundary validation, see below |
 | 5 | Product, Customer, Supplier, Asset | **Done, committed** — Q5, Q8, Q9, Q12 answered, see below |
 | 6 | Inventory Lot/Unit, Location, stock queries, bundles | **Done, committed** — Q7, Q25, Q11 answered, see below |
-| 7 | Journal engine, debits=credits invariant | **Next.** Not started. **Blocked on Q13 and Q14 — both need a conversation, not a one-line answer** |
-| 8 | Purchase Invoice, Goods Receipt, GR/IR, FIFO | Not started |
-| 9 | Sales Invoice, Receipt, Payment, Bank Transfer, open items, rounding | Not started |
+| 7 | Journal engine, debits=credits invariant | **Done, committed** `8e7e10e` — Q13, Q14, Q19, Q26, Q15, Q16 answered, see below |
+| 8 | Purchase Invoice, Goods Receipt, GR/IR, FIFO | **Next.** Not started. Blocked on the ADR 0004 open item; Q17 and Q18 belong here too |
+| 9 | Sales Invoice, Credit Note, Receipt, Payment, Bank Transfer, open items, rounding | Not started |
 | 10 | Freight / landed cost allocation | Not started. Blocked on Q18 |
 | 11 | Email service | Not started. Needs SMTP credentials |
 | 12 | Automated backups | Not started. Needs Drive paths/credentials, Q24 |
 | 13 | Test suite consolidation sweep | Not started |
 
-**Tests: 458 passing, `mvn clean verify` exit 0.** 148 unit (core-api), 283 core integration,
+**Tests: 550 passing, `mvn clean verify` exit 0.** 177 unit (core-api), 346 core integration,
 4 app unit, 12 app integration, 11 architecture. Nothing was failing at the start of this session,
 and nothing is failing now.
 
-`mvn test` runs the 163 non-container tests in ~6 seconds and needs no Docker. `mvn verify`
+`mvn test` runs the 192 non-container tests in ~6 seconds and needs no Docker. `mvn verify`
 additionally runs the `*IT` tests under Failsafe against a real PostgreSQL 17 container.
 
 ---
@@ -102,9 +102,10 @@ were already on `origin`.
 | `9c25993` | VAT rate bound's blind spot closed, migration V10 |
 | `2dce5df` | Q34 — units of measure as a runtime-editable table, migration V11 |
 | `7182831` | Step 6 — inventory lots, serialized units, locations, bundles, migrations V12–V13 |
+| `8e7e10e` | Step 7 — journal engine, VAT accounts, stock write-offs, migrations V14–V15 |
 
 Interleaved with these are small docs-only commits (`e25fcee`, `a09428e`, `920044c`, `de16e58`,
-`b065901`, `8c27cb4`, `2c3fa8a`) and this session's close-out commit.
+`b065901`, `8c27cb4`, `2c3fa8a`, `21b2231`) and this session's close-out commit.
 
 Local branch `phase-1/core-skeleton` still exists and is fully merged; safe to delete.
 Convention going forward is **one commit per build step**, so history stays checkpoint-able.
@@ -151,6 +152,18 @@ Convention going forward is **one commit per build step**, so history stays chec
   `SchemaConventionsIT.everyMonetaryColumnCarriesItsCurrency`, naming exactly that column while
   correctly ignoring a properly paired `unit_cost`, a rate and a quantity in the same table. Probe
   deleted.
+- **`CLAUDE.md` rule 6 is proven to be a database guarantee, not a service check.** Raw-SQL probes
+  in `JournalIT` write straight to the tables and are refused: an unbalanced entry, an entry with no
+  lines at all, a one-line entry, an entry spanning two currencies, a zero line amount, a deleted
+  entry, a changed `source`, a dangling sub-ledger reference, and a VAT class on an account that is
+  not a VAT account. **The balance probes use a `DO` block**, because the constraint is *deferred*
+  and under autocommit each separate statement would be its own transaction.
+- **Q13's correction policy is proven to be enforced in the database too** — the `UPDATE` and
+  `DELETE` halves of `immutableSourcesAreRefused` bypass the service entirely — and **the two
+  statements of the policy are proven to agree**: a test calls
+  `journal_source_is_amendable(varchar)` for every value of the Java `JournalSource` enum and
+  compares against `isAmendable()`, and a second test checks the `journal_entry_source_known` CHECK
+  lists exactly the enum's values and no others.
 - **The two-shapes-of-lot invariant is enforced by the database**, proven by raw-SQL probes in
   `InventoryIT` that bypass the service: a quantity with no location, a location with no quantity, a
   lot with more remaining than received, a negative remaining, a negative unit cost, a bundle that is
@@ -251,7 +264,8 @@ Both are recorded here deliberately so they are not rediscovered cold.
 - **No account balance is stored anywhere.** A balance is the sum of an account's journal lines,
   computed on read from step 7. Consequently **step 3 introduced no monetary columns at all** —
   the assumption last session that it would was wrong. The schema-convention test's scale rule
-  is therefore dormant until step 7; its no-floating-point rule is live now.
+  was dormant until step 7, which brought the first monetary columns; its no-floating-point rule
+  was live from the start.
 - **`account_control_iff_sub_ledger` is a biconditional CHECK.** A Control account without a
   sub-ledger has nothing to reconcile against; a sub-ledger on a non-Control account is a rule
   never enforced on its lines. Both directions are refused.
@@ -391,8 +405,8 @@ an adapter would use, and the FK constraints still exist in the database.
 of the two shapes V1 named. The convention now reads: `numeric(19,2)` for a posted **amount**
 (two decimals because that is what a cent is), `numeric(19,6)` for a **multiplier** — quantity,
 unit cost, or rate — which must not itself lose precision before the product is rounded once.
-`SchemaConventionsIT` was updated to say so. Its scale rule is therefore now live; the
-`numeric(19,2)` half still waits for step 7.
+`SchemaConventionsIT` was updated to say so. Its scale rule became live here; the `numeric(19,2)`
+half waited until step 5's `product.selling_price` and now covers the journal's own amounts.
 
 ---
 
@@ -601,8 +615,10 @@ Migration `V9`, four entities, four services, and all four blocking questions an
   weight; a second method arriving is a migration with a decision attached.
 - **Any monetary field at all.** Both fixed-asset control accounts declare `ASSET` as their
   sub-ledger, so every posting names its asset and cost and accumulated depreciation are **sums of
-  journal lines**. Consequence, stated plainly: **until step 7 this is a register, not a
-  valuation** — the same shape as a product having no stock until lots exist.
+  journal lines**. Consequence, stated plainly at the time: **until step 7 this was a register, not
+  a valuation** — the same shape as a product having no stock until lots exist. The ledger exists
+  now, so an asset's carrying value is `subLedgerBalanceOf` on its `ASSET` reference; nothing posts
+  to it yet, because the depreciation run is still open.
 
 ### The depreciation rate is bounded 1–100, and the lower bound is the point
 
@@ -701,10 +717,10 @@ exists:
 - **Step 6 — `UnitOfMeasure.allowsFractionalQuantity()` exists and nothing enforces it.** Three of
   a product sold by the piece is three; 2.5 pieces is a data-entry error worth catching. The rule
   is stated on the unit so step 6 reads it off there rather than re-deriving its own list.
-- **Step 7 — the `Depreciation` expense account has no `AccountSystemKey`.** The two fixed-asset
-  control accounts do, but the expense side of a depreciation posting has no stable handle, so a
-  posting rule would have to look it up by name. Extending `AccountSystemKey` is deliberately a
-  migration; this is the flag that it needs one.
+- ~~**Step 7 — the `Depreciation` expense account has no `AccountSystemKey`**~~ — **done in step 7.**
+  `DEPRECIATION_EXPENSE` was added in V14, so the expense side of a depreciation posting has a stable
+  handle instead of being found by an editable name. **Nothing posts to it**: whether the periodic
+  run is Phase 1 scope is still open, and the statutory rates are still with the accountant.
 - **The first Products controller must use the `...For` variants.** See the warning above.
 
 ---
@@ -921,13 +937,10 @@ not enforced by the service**; the check belongs at the controller, and there is
 
 ### ⚠️ Obligations this step created
 
-- **Step 7 — the write-off transaction must carry `WriteOffReason`.** The enum has **no consumer
-  yet**, and that is the one thing in this step that could silently not happen. Stated plainly: a
-  write-off derecognises an asset, so it is a posting; reducing a lot's quantity in step 6 without
-  the entry would leave the stock gone and the balance sheet still carrying it at cost, which is
-  worse than not building it. Step 7 must also honour brief §5's exception — **a serialized
-  write-off names the specific unit and uses its own actual cost, with no FIFO logic**, because a
-  serialized unit is not pooled stock. `SerializedUnitView` already carries that cost for it.
+- ~~**Step 7 — the write-off transaction must carry `WriteOffReason`**~~ — **done in step 7.**
+  `stock_write_off` carries it and reduces the lot (or the named unit) *and* posts in one
+  transaction. Brief §5's exception is honoured **by construction**: a write-off always names its
+  lot, so nothing picks one for the caller and no FIFO logic can creep in.
 - **Step 8 — a lot needs its source document reference.** Brief §5 lists one and ADR 0004 already
   settles that the Goods Receipt is what creates a lot; neither exists yet, so no nullable column
   was added early. Also step 8's: **FIFO consumption must use the order `lotsOf` already defines**
@@ -983,6 +996,182 @@ migration added a `probe_cost` table with an unpaired `landed_cost`, a correctly
 a rate and a quantity. The rule failed naming exactly `probe_cost.landed_cost` and ignored the other
 three. Probe deleted. A future monetary six-decimal column that is genuinely not a cost means
 widening the rule, not naming the column around it — which the migration README now says.
+
+---
+
+## Step 7 — done (the journal engine)
+
+Commit `8e7e10e`, migrations `V14` and `V15`, plus **ADR 0006** (correction policy) and **ADR 0007**
+(VAT posting). Six questions were answered before the step started — Q13, Q14, Q19, Q26, Q15 and
+Q16 — so this was built to the answers rather than around them.
+
+### Rule 6, and what "structurally" turned out to mean
+
+**Debits equal credits is a `DEFERRABLE INITIALLY DEFERRED` constraint trigger**, checked at commit.
+A CHECK cannot express it — it spans rows — and deferral is load-bearing rather than a nicety: an
+entry is legitimately unbalanced between its first line and its last, so a per-statement check would
+make writing one impossible.
+
+**Two triggers, not one.** A trigger on `journal_line` never fires for an entry that has *no* lines,
+so without a second one on `journal_entry` an empty entry would be perfectly storable. The
+entry-level trigger also enforces the minimum of two lines and refuses an entry spanning two
+currencies.
+
+**Stored `total_debits` / `total_credits` columns with a single-row CHECK were considered and
+rejected.** They would have made the invariant far easier to express, and they would be a second
+copy of what the lines already say — the argument that keeps `normal_balance_side` off `account` and
+a quantity off a serial-tracked lot.
+
+**A named side plus a strictly positive amount, never a signed one.** Signed makes the invariant a
+question of whether every producer of a line remembered to negate; the named side makes it a sum per
+side, which no accidental sign can satisfy. Zero is refused as firmly as negative — a zero line
+balances while stating nothing, so an entry padded with them would satisfy rule 6 and mean nothing.
+A `debit_amount`/`credit_amount` pair was also rejected, on a schema ground: ADR 0005 needs a
+currency companion per monetary column, and two amount columns give either two currencies that must
+agree or one that breaks the naming convention `SchemaConventionsIT` enforces.
+
+### Q13, answered — ADR 0006
+
+Invoices and credit notes are **immutable once posted**; receipts, payments, bank transfers and
+manual journal entries are **editable in place**, with the previous date, description and lines
+written to the audit log *before* being overwritten. The line drawn is whether the record exists
+outside NovoCore: an invoice has been issued to somebody else and will be transmitted to AADE, so
+editing it makes NovoCore disagree with what the counterparty holds.
+
+- **The policy is stated once, in SQL.** `journal_source_is_amendable(varchar)` is what both triggers
+  call, and a test calls it for every value of the Java enum and compares. "Immutable" that holds
+  only for callers who came through the service is not immutability.
+- **⚠️ Immutability was extended to the inventory write-off** — not covered by Q13's wording, flagged
+  as an addition rather than folded in quietly, and **explicitly approved**. The reason is stronger
+  than the invoice's: editing the entry would change the loss recognised without changing the lot
+  quantity it came out of.
+- **Nothing is ever deleted**, from either table, whatever the source.
+- **A reversal is verified to be the exact mirror** of its original — same accounts, amounts and
+  references, opposite sides. That is what makes `post(..., reversalOfEntryId)` a safe path for a
+  service reversing its own document rather than a second and weaker write path. Line *descriptions*
+  are excluded from the comparison, since a reversal legitimately re-words them.
+- **`reverse` refuses a source that owns state the ledger cannot see**, naming the service to use
+  instead. Reversing a receipt's money without releasing its allocations would leave invoices
+  reported as settled by a receipt that no longer exists.
+- Reversing a **reversal** is permitted and needs no special rule; the "reversed at most once"
+  UNIQUE constraint already stops the real mistake.
+
+### Q14, answered — ADR 0007
+
+**Separate `Output VAT` (liability) and `Input VAT` (asset), never netted.** `V14` repurposes V4's
+single `VAT payable` into the output side and adds the input side; repurposing is safe **only**
+because nothing had posted anywhere yet, and an account that has been posted to is never repurposed.
+Neither is `expected_to_clear` — a balance between filings is the ordinary state of affairs, and
+flagging them would put a permanent false positive into phase 8's Clearing Checks.
+
+**The load-bearing consequence: a journal line carries `vat_class_id` and `taxable_base`.** Q14 says
+VAT is computed per line and summed by rate — and "summed by rate" is only meaningful if the sum can
+be told apart afterwards. Without the class on the line, two Output VAT lines at different rates are
+two indistinguishable amounts against one account, and one could have posted a single total and lost
+nothing. It also cannot live only on the invoice, because a Manual Journal Entry can post to a VAT
+account directly and a figure assembled from documents alone would omit it. The **class** is stored,
+never the rate, because `1040` and `1041` both charge 4%.
+
+- **Permitted, not required, on the two VAT accounts; forbidden everywhere else**, by trigger.
+  Required would break the periodic settlement, which moves money at no rate at all.
+- **Reverse charge needed no new structure** — two lines in one ordinary entry, one to each VAT
+  account, same class and base. Both figures stay separately reportable while netting to zero in
+  cash, which is exactly what netting the accounts would have destroyed.
+- **An exempt line posts no VAT line at all**; its exemption reason belongs on the invoice line,
+  because there is no VAT line to hang it on.
+- **`vatTotals(from, to)`** reads the dimension back, netted per direction so a credit note reduces
+  output VAT rather than appearing as a second figure. It is here rather than with the reports
+  because a column nothing reads is indistinguishable from a column nobody thought about. There is
+  deliberately **no third "VAT payable to authorities" account**: settlement is debit Output, credit
+  Input, net to the bank, and NovoCore never accrues a return it has no duty to file.
+
+### The write-off obligation, discharged
+
+`stock_write_off` carries the `WriteOffReason` the single write-off account was chosen against three
+for. It reduces the lot (or the named unit) **and posts, in one transaction** — either alone is
+worse than neither. `SerializedUnitStatus.WRITTEN_OFF` is reachable at last.
+
+- **Brief §5's serialized exception is honoured by construction**: a write-off always names its lot,
+  so nothing picks one for the caller and no FIFO logic can creep in. A test posts two lots at
+  different costs and proves the named unit's own cost is used.
+- **A lot carried at zero cost posts nothing, and the stock still leaves.** A free sample
+  derecognises nothing because nothing was carried, and the ledger rightly refuses a zero-amount
+  line, so `journalEntryId` is nullable and `derecognisedNothing()` is the honest reading. This is a
+  real case, not a defensive one — `UnitCost` explicitly allows zero.
+- **No amount column on the write-off.** What was posted is in the entry, and recomputing it from the
+  lot's unit cost would give a different answer once step 10 allocates freight.
+- **Reversal restores the quantity or the unit status and posts the mirror together**, refuses a
+  second reversal, refuses reversing a reversal, and refuses restoring more than the lot ever
+  received (reachable, if something consumed the lot in between).
+- The **location of a written-off unit is deliberately left alone** — the machine is often still
+  physically in Damaged Goods, and the stock count excludes it by status rather than by place.
+- `writeOffsOf` and `writeOffsBetween` **include reversals**: netting them out is the reader's
+  decision, not the query's.
+
+### Other decisions worth keeping
+
+- **`GOODS_RECEIPT` is deliberately absent from `JournalSource`.** ADR 0004 settles that a Goods
+  Receipt posts, so it will need a value — but whether it is amendable has not been asked, and
+  adding one is deliberately a migration so the question gets asked. **Step 8 obligation.**
+- **No `source_id` on an entry.** `source` says what *kind* of transaction produced it, because Q13's
+  policy is keyed on that and needs it now. There is nothing to point at until steps 8 and 9 — the
+  same stance V12 took on a lot's source document. **Step 8 obligation.**
+- **No entry number.** The id is the handle. A human-facing sequential number is a real thing an
+  accountant asks for and carries a format decision (per-year reset? prefix per source?) nobody has
+  been asked. Recorded as an open question rather than guessed at.
+- **`entry_date` has a floor of 2000-01-01 and no upper bound.** The floor catches the transposed or
+  two-digit year, which a plain "is a date" check cannot — the same lesson V10 recorded about the VAT
+  rate, that a bound only earns its keep if it sits inside the plausible-typo range. No upper bound,
+  because a forward-dated accrual is legitimate and there is no period locking.
+- **A dangling sub-ledger reference is refused by trigger**, using dynamic SQL, because the reference
+  is polymorphic and cannot be a foreign key. Doing it in Java would have made the ledger depend on
+  the inventory service, which already depends on the ledger to post a write-off — a bean cycle for a
+  check the database makes directly.
+- **`journal_line_number_unique_in_entry` is DEFERRABLE.** An amendment replaces the whole line list,
+  so line number 0 is inserted while the old one is still present. Relying on Hibernate ordering
+  orphan removals before inserts would be relying on a library's implementation detail to keep a
+  schema constraint satisfiable.
+- **Balances are computed on every read** and carry the date they were computed for.
+  `AccountBalance` keeps both totals rather than only their difference, because an account with
+  equal, large debits and credits is a different situation from one with no activity while both net
+  to zero. A balance on the *wrong* side reads negative rather than being made positive — a credit
+  balance on a bank account is an overdraft and a debit balance on Accounts payable is an overpaid
+  supplier, and an absolute value would hide both.
+- **`subLedgerBalanceOf` is debit-positive**, not presented on a normal side: one sub-ledger
+  reference legitimately appears on accounts with opposite normal sides — an asset's cost and its
+  accumulated depreciation both carry the same `ASSET` reference — so flipping per account first
+  would make their net the sum of the two rather than the carrying value.
+- **`linesOf` returns lines, not a ledger type with a running balance.** A running balance depends on
+  where the reader started and is meaningless against a filtered list; that is presentation, and it
+  belongs to phase 8's report.
+- **`Section.JOURNAL` is separate from `CHART_OF_ACCOUNTS`**, for the reason `INVENTORY` is separate
+  from `PRODUCTS`: seeing the list of accounts is close to harmless, while seeing what has posted to
+  them is every financial figure in the business. No grants seeded — default-deny.
+- **`AccountSystemKey` gained three values.** `OUTPUT_VAT` and `INPUT_VAT` are Q14's;
+  **`DEPRECIATION_EXPENSE` discharges the step 5 obligation** — it is the handle a depreciation run
+  will need, and creating it is not building the run.
+
+### ⚠️ Obligations this step created
+
+- **Step 8 — `GOODS_RECEIPT` needs a `JournalSource` value and an amendability answer**, and an entry
+  needs its `source_id` once there is a document table to point at. Both above.
+- **Step 9 — Q13's second half is unimplemented.** Editing a Receipt or Payment below its
+  already-allocated total must reduce allocations **starting with the most recently applied one,
+  working backward**. Nothing enforces that yet because allocations do not exist. This is the item
+  most easily forgotten, in the same way the write-off reason was.
+- **Step 9 — the invoice postings must supply the VAT dimension.** It is *optional* at the ledger
+  (the settlement entry legitimately has none), so nothing forces a sales invoice to carry it, and a
+  VAT return assembled without it would silently understate. Exempt lines must carry their
+  `VatExemptionReason` on the invoice line, which makes exempt turnover by reason a document-level
+  report rather than a ledger-level one.
+- **The first ledger controller must expose `postManualEntry`, not `post`.** `post` takes a source
+  and is the entry point every typed transaction uses from inside the core; `postManualEntry` takes
+  no source and is the shape a request from a person can be turned into. Same class of caution as the
+  `ProductService` `...For(viewer)` convention.
+- **`deactivate` on the chart of accounts still does not check the balance.** Its Javadoc said it
+  could not, because there was no ledger; there is one now. The intended behaviour was stated then —
+  *warn* rather than refuse, since taking a populated account out of use before a rearrangement is
+  legitimate — and nothing implements it yet.
 
 ---
 
@@ -1103,47 +1292,56 @@ That placement decides the rest:
   the register and the calculation? The register is built; nothing posts.
 
 ### Resolved in step 6 — inventory
-- ~~**Step-3 obligation:** the write-off reason field~~ — the enum exists. **But it has no consumer
-  until step 7**, which is now recorded as a step 7 obligation rather than a discharged one. See the
-  step 6 section.
+- ~~**Step-3 obligation:** the write-off reason field~~ — **fully discharged in step 7.** The enum
+  landed in step 6 with no consumer, which was recorded then as the item most likely to be silently
+  forgotten; `stock_write_off` is now the transaction that carries it. See the step 7 section.
 - ~~**Q25**~~ — **a fixed enum**: `SHRINKAGE` / `DAMAGE` / `EXPIRY` / `OTHER`. Reportability is the
   whole point, and free text would give four spellings of "damaged" as four categories.
 
-### Blocking steps 7–10 — the ledger
-- **Q13** *(hard blocker, needs discussion)* **Correction policy unspecified.** With no period
-  locking, can a posted entry be edited in place, or is correction reversal-only? Strong
-  recommendation: immutable once posted, corrections via reversing entries, plus the audit log
-  that now exists.
-- **Q14** *(hard blocker, real design gap)* **VAT posting mechanics are undefined.** Nothing in
-  the brief says how input and output VAT post. NovoCore has no filing duty but the ledger must
-  still carry VAT correctly on every purchase and sales invoice. Needs the account structure and
-  the per-line computation rule. This is a design conversation, not a one-line answer.
-  **Step 3b narrowed it but did not close it:** the rates now exist, `VatClassView.vatOn` does the
-  multiply-and-round-once arithmetic in one place, and the precedence rule picks the class. What
-  is still undefined is *where it posts* — one `VAT payable` account or several, input vs output
-  separation, and whether the computation is per line or per document. Also still open: how an
-  exempt line posts, now that exemption reasons are modelled.
-- **Q15** Rounding: is the independent recomputation compared against the document total only,
-  or line by line? And "flagged for review" needs somewhere to live — is a review queue in
-  Phase 1 scope, or just a flag on the record? *(The destination account now exists.)*
-- **Q16** Overpayment producing "unallocated customer credit" — a standalone credit document
-  that later invoices allocate against, or just an AR balance?
+### Resolved in step 7 — the ledger
+- ~~**Q13**~~ — **answered and built. ADR 0006.** Invoices and credit notes immutable once posted,
+  corrected by reversal; receipts, payments, transfers and manual entries editable in place with the
+  previous state written to the audit log. Enforced in the database, not only in the service.
+  **Approved extension: the inventory write-off is immutable too.** ⚠️ Its second half — editing a
+  Receipt/Payment below its allocated total reduces allocations most-recent-first — is a **step 9
+  obligation** and is not implemented, because allocations do not exist yet.
+- ~~**Q14**~~ — **answered and built. ADR 0007.** Separate Output VAT (liability) and Input VAT
+  (asset), never netted; per-line computation summed by rate, which is why a journal line carries its
+  VAT class and taxable base; reverse charge as its own path, needing no new structure; exempt lines
+  posting no VAT line at all. ⚠️ **Step 9 obligation:** the invoice postings must actually supply the
+  VAT dimension, which is optional at the ledger.
+- ~~**Q19**~~ — **confirmed.** All six typed transactions are Phase 1. `JournalSource` declares all of
+  them plus the credit note and the write-off; six have no producer until steps 8 and 9.
+- ~~**Q26**~~ — **answered.** A credit note is its own transaction type, not a negative Sales
+  Invoice: it references the original, posts against the existing per-channel `Sales returns`
+  account, and is immutable once issued — the same policy as the invoice it corrects.
+  `JournalSource.CREDIT_NOTE` exists and carries that policy; the transaction itself is step 9.
+- ~~**Q15**~~ — **answered: per document**, as the brief already stated. The recomputation is
+  compared against the source document total, not line by line. Nothing built — the comparison
+  belongs with the invoice transactions in step 9, and the destination account already exists.
+  ⚠️ Still unanswered within Q15: **where a flagged-for-review item lives** — a review queue, or a
+  flag on the record.
+- ~~**Q16**~~ — **answered: a standalone credit document**, not a bare AR balance adjustment,
+  consistent with treating every financial event as a trackable document with its own lifecycle.
+  Nothing built; it belongs with open-item matching in step 9.
+
+### Still blocking steps 8–10
 - **Q17** Can stock go negative (sale posted before the receipt exists)? Block, warn, or allow?
   *(Step 6 narrowed it: a single lot cannot go below zero, by CHECK. The aggregate policy is
   undecided and belongs with step 8's FIFO consumption, which is what could breach it.)*
 - **Q18** Landed-cost allocation mutates a lot's unit cost after the fact. If any of that lot is
   already sold, posted COGS is now wrong. Block allocation after consumption, or post a COGS
   adjustment? The brief does not address it.
-- **Q19** Confirm all six typed transactions are Phase 1 (Purchase Invoice, Sales Invoice,
-  Receipt, Payment, Bank Transfer, Manual Journal Entry), with Sales Invoice as a *recording*
-  transaction since Go still issues until phase 11.
-- **Q26** *(new)* Credit notes now debit a per-channel `Sales returns` account. Confirm a credit
-  note is a distinct typed transaction rather than a negative Sales Invoice — it interacts with
-  Q13's correction policy and Q16's unallocated credit.
 - **ADR 0004 open item** — when a Goods Receipt precedes its invoice, the lot's unit cost is
   provisional. If the invoice then carries a different price, does that adjust the lot cost
   retroactively or post to a purchase price variance account? Interacts with Q18. Settle before
   step 8.
+- **Q39** *(new)* **Is a Goods Receipt amendable?** `JournalSource` deliberately has no
+  `GOODS_RECEIPT` value: ADR 0004 settles that a Goods Receipt posts, so it needs one, and adding a
+  value is deliberately a migration so that the Q13 policy question gets asked rather than defaulted.
+- **Q40** *(new)* **Does a journal entry need a human-facing entry number?** The id is the handle
+  today. An accountant asking "what is entry 412" is a real request, and it carries a format decision
+  nobody has been asked — per-year reset? a prefix per source? Nothing was guessed.
 
 ### Blocking phase 8 — Clearing Checks
 - **Step-3 obligation:** surface lots aging in the Damaged Goods location. **Step 6 built the query
@@ -1159,41 +1357,38 @@ That placement decides the rest:
 
 ## Next action — read this first
 
-**Step 7 (the journal engine, with debits = credits enforced structurally) is the next numbered
-step.** Steps 0–6 are done, committed and pushed.
+**Step 8 (Purchase Invoice, Goods Receipt, GR/IR, FIFO consumption) is the next numbered step.**
+Steps 0–7 are done, committed and pushed. The ledger exists, so from here every transaction posts.
 
-### Step 7 is blocked on two answers, and neither is a one-liner
+### Step 8 is blocked on three answers, and two of them interact
 
-This is a different kind of block from step 6's. Q7, Q25 and Q11 were clarifications that could be
-answered in a sentence each. **Q13 and Q14 need a design conversation**, and starting step 7 without
-them means building the ledger against a guess:
+Not the same shape of block as step 7's. Q13 and Q14 were design conversations; these are narrower,
+but all three change what gets built rather than only how:
 
-1. **Q13 — the correction policy.** With no period locking, may a posted entry be edited in place, or
-   is correction reversal-only? **Strong recommendation: immutable once posted**, corrections via
-   reversing entries, on top of the audit log that already exists. This decides the shape of every
-   typed transaction, so it cannot be retrofitted cheaply.
-2. **Q14 — VAT posting mechanics.** A real design gap in the brief rather than a clarification.
-   Step 3b narrowed it (the rates exist, `VatClassView.vatOn` does the arithmetic in one place, and
-   `VatClassPrecedence` picks the class) but what is still undefined is **where it posts**: one
-   `VAT payable` account or several, input versus output separation, per-line or per-document
-   computation, and how an exempt line posts now that exemption reasons are modelled.
+1. **ADR 0004's open item.** A Goods Receipt creates lots before its invoice exists, so the lot's
+   unit cost is provisional. When the invoice lands with a different price, does that **adjust the
+   lot cost retroactively**, or post to a **purchase price variance** account? Interacts with Q18.
+2. **Q17 — may aggregate stock go negative?** A single lot cannot, by CHECK. FIFO consumption is what
+   could breach it across lots, so the policy has to be decided with the consumption that enforces
+   it. Block, warn, or allow.
+3. **Q39 — is a Goods Receipt amendable?** `JournalSource` has no `GOODS_RECEIPT` value on purpose,
+   so that Q13's policy question is asked rather than defaulted. Adding one is a migration.
 
-Also worth settling before or during step 7, since they interact with Q13: **Q19** (are all six typed
-transactions Phase 1?), **Q26** (is a credit note its own transaction type?), **Q15** (rounding
-compared per line or per document, and where a flagged item lives), and **Q16** (unallocated customer
-credit as a document or an AR balance).
+### Obligations step 8 must honour
 
-### Obligations step 7 must honour
-
-- **The write-off transaction must carry `WriteOffReason`.** The enum was built in step 6 and **has
-  no consumer yet** — this is the item most likely to be silently forgotten. Note the brief §5
-  exception too: a *serialized* write-off names the specific unit and uses its own actual cost, with
-  no FIFO logic. `SerializedUnitView` already carries that cost.
-- **The `Depreciation` expense account has no `AccountSystemKey`.** The two fixed-asset control
-  accounts do; the expense side of a depreciation posting has no stable handle, so a posting rule
-  would have to find it by name. Extending `AccountSystemKey` is deliberately a migration.
+- **A lot needs its source document reference.** Brief §5 lists one and ADR 0004 settles that the
+  Goods Receipt is what creates a lot. V12 deliberately added no nullable column early.
+- **A journal entry needs its `source_id`.** Same reasoning, same deferral: `source` says what kind
+  of transaction produced an entry, and there was nothing to point at until step 8 has document
+  tables.
+- **FIFO consumption must use the order `lotsOf` already defines** — acquisition date, then id —
+  rather than inventing its own. That order is stated once, as an index in V12.
 - **Journal lines on Control-kind accounts require a sub-ledger reference of the declared type**, and
-  Inventory means **one line per lot** (brief §6). The lot ids now exist for that.
+  Inventory means **one line per lot** (brief §6). Already enforced by the ledger, in the service and
+  by trigger, so step 8 inherits it rather than re-implementing it.
+- **`ChartOfAccountsService.deactivate` still does not check the balance.** Its Javadoc said it could
+  not, because there was no ledger; there is one now, and the intended behaviour was already stated —
+  *warn*, not refuse. Small, and easy to lose.
 
 ### Waiting on the accountant, and blocking real data rather than code
 
@@ -1202,22 +1397,28 @@ credit as a document or an AR balance).
 - **AADE exemption codes 24 and 28** (Q35), **the OSS/IOSS myDATA codes** (Q36), and **the myDATA
   unit-of-measure codes** (Q38) — all before phase 7, all NULL and fail-loud in the meantime.
 
-### Also still open, not blocking step 7
+### Also still open, not blocking step 8
 
 - **Q28 — dispatch purpose placement.** Recommendation is a core-owned `GoodsDispatch` in phase 4,
   conditional on whether Go already issues Δελτία Αποστολής and whether the AADE digital delivery
   note regime applies (accountant question). Nothing built.
 - **Q31 — single role per user.** Cheapest to change now; it was already more expensive after step 5,
-  more so after step 6, and gets worse with every entity added.
+  more so after steps 6 and 7, and gets worse with every entity added.
 - **Q32 — the 8-hour session timeout.**
 - **Q37 — addresses on Customer and Supplier**, plus human-facing codes and multiple selling prices.
 - **Q10 — the generic retail customer.**
-- **Q17 (negative stock) and Q18 (landed cost after consumption)** — both now belong with steps 8
-  and 10 respectively, and step 6 deliberately decided neither.
+- **Q40 — a human-facing journal entry number.** New in step 7; nothing was guessed.
+- **Q12 leftover — is the periodic depreciation posting run Phase 1 scope**, or only the register and
+  the calculation? Step 7 added the `DEPRECIATION_EXPENSE` system key the run would need, and
+  deliberately did not build the run. Still waiting on the statutory rates either way.
+- **Q15's remainder — where a flagged-for-review item lives.** The per-document rule is answered; a
+  review queue versus a flag on the record is not, and it lands in step 9.
 
 ### Standing note
 
-The REST surface is deliberately still one endpoint. Building out the rest of the API needs its own
-scoping conversation, not incremental drift. **PLB-1 (2FA) must be closed before any remote access
-is enabled** — including Remote/Order Staff logging in from outside the local network, which is that
-role's entire purpose.
+The REST surface is deliberately still one endpoint, and step 7 did not add one — **the ledger has no
+HTTP route at all.** Building out the rest of the API needs its own scoping conversation, not
+incremental drift. When it happens, note that the first ledger controller must expose
+`postManualEntry` rather than `post`, which takes a source and exists for the typed transactions
+inside the core. **PLB-1 (2FA) must be closed before any remote access is enabled** — including
+Remote/Order Staff logging in from outside the local network, which is that role's entire purpose.
