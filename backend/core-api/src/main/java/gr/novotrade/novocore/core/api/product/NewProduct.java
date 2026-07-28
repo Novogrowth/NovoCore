@@ -21,7 +21,7 @@ public record NewProduct(
         String ean,
         String name,
         ProductType type,
-        UnitOfMeasure unitOfMeasure,
+        long unitOfMeasureId,
         long defaultVatClassId,
         Money sellingPrice,
         Long supplierId,
@@ -31,20 +31,19 @@ public record NewProduct(
         Objects.requireNonNull(sku, "sku");
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(type, "type");
-        Objects.requireNonNull(unitOfMeasure, "unitOfMeasure");
     }
 
-    /** A stocked item sold by the piece, with no supplier recorded yet. */
-    public static NewProduct goods(
-            String sku, String name, long defaultVatClassId, Money sellingPrice) {
-        return new NewProduct(sku, null, name, ProductType.GOODS, UnitOfMeasure.PIECE,
+    /** A stocked item, with no barcode and no supplier recorded yet. */
+    public static NewProduct goods(String sku, String name, long unitOfMeasureId,
+            long defaultVatClassId, Money sellingPrice) {
+        return new NewProduct(sku, null, name, ProductType.GOODS, unitOfMeasureId,
                 defaultVatClassId, sellingPrice, null, null);
     }
 
     /** A service: no stock, no supplier, no barcode. */
-    public static NewProduct service(
-            String sku, String name, long defaultVatClassId, Money sellingPrice) {
-        return new NewProduct(sku, null, name, ProductType.SERVICE, UnitOfMeasure.PIECE,
+    public static NewProduct service(String sku, String name, long unitOfMeasureId,
+            long defaultVatClassId, Money sellingPrice) {
+        return new NewProduct(sku, null, name, ProductType.SERVICE, unitOfMeasureId,
                 defaultVatClassId, sellingPrice, null, null);
     }
 }

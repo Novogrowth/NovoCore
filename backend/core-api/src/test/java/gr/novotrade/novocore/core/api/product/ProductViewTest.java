@@ -31,6 +31,15 @@ class ProductViewTest {
     private static final Money PRICE = Money.ofEur("42.50");
     private static final Money LAST_PURCHASE_PRICE = Money.ofEur("27.30");
 
+    /**
+     * Units as they arrive from the lookup table (Q34), with no myDATA code — which is the state
+     * every seeded unit is actually in until the verified AADE list is supplied.
+     */
+    private static final UnitOfMeasureView PIECE =
+            new UnitOfMeasureView(1L, "PIECE", "Piece", false, null, true);
+    private static final UnitOfMeasureView KILOGRAM =
+            new UnitOfMeasureView(4L, "KILOGRAM", "Kilogram", true, null, true);
+
     /** Exactly the role V6 seeds: Products view-only, the three cost/supplier fields hidden. */
     private static RoleView remoteOrderStaff() {
         return new RoleView(3L, "REMOTE_ORDER_STAFF", "Home-based order staff", false, false, true,
@@ -52,7 +61,7 @@ class ProductViewTest {
     private static ProductView fullyPopulated() {
         return new ProductView(
                 7L, "JJ-ESP-001", "5201234567890", "Espresso machine",
-                ProductType.GOODS, UnitOfMeasure.PIECE, 9L,
+                ProductType.GOODS, PIECE, 9L,
                 PRICE, 4L, "SUP-ESP-77", LAST_PURCHASE_PRICE, true, Set.of());
     }
 
@@ -91,7 +100,7 @@ class ProductViewTest {
             assertThat(redacted.sku()).isEqualTo("JJ-ESP-001");
             assertThat(redacted.name()).isEqualTo("Espresso machine");
             assertThat(redacted.eanIfAny()).contains("5201234567890");
-            assertThat(redacted.unitOfMeasure()).isEqualTo(UnitOfMeasure.PIECE);
+            assertThat(redacted.unitOfMeasure()).isEqualTo(PIECE);
             assertThat(redacted.defaultVatClassId()).isEqualTo(9L);
             assertThat(redacted.id()).isEqualTo(7L);
             assertThat(redacted.active()).isTrue();
@@ -194,7 +203,7 @@ class ProductViewTest {
             // where the supplier is null because it was blanked rather than because none exists.
             ProductView noSupplier = new ProductView(
                     8L, "JJ-BLEND-01", null, "House blend 250g",
-                    ProductType.GOODS, UnitOfMeasure.KILOGRAM, 9L,
+                    ProductType.GOODS, KILOGRAM, 9L,
                     Money.ofEur("9.90"), null, null, null, true, Set.of());
 
             ProductView redacted = noSupplier.redactedFor(remoteOrderStaff());
@@ -214,7 +223,7 @@ class ProductViewTest {
             assertThatExceptionOfType(IllegalArgumentException.class)
                     .isThrownBy(() -> new ProductView(
                             9L, "JJ-X", null, "Orphan supplier code",
-                            ProductType.GOODS, UnitOfMeasure.PIECE, 9L,
+                            ProductType.GOODS, PIECE, 9L,
                             null, null, "SUP-ORPHAN", null, true, Set.of()))
                     .withMessageContaining("supplier SKU but no supplier");
         }
@@ -224,7 +233,7 @@ class ProductViewTest {
         void supplierWithoutSupplierSkuIsFine() {
             ProductView product = new ProductView(
                     10L, "JJ-Y", null, "Bought under our own reference",
-                    ProductType.GOODS, UnitOfMeasure.PIECE, 9L,
+                    ProductType.GOODS, PIECE, 9L,
                     null, 4L, null, null, true, Set.of());
 
             assertThat(product.supplier()).contains(4L);
@@ -239,7 +248,7 @@ class ProductViewTest {
 
         ProductView repair = new ProductView(
                 11L, "JJ-SVC-REPAIR", null, "Machine service",
-                ProductType.SERVICE, UnitOfMeasure.PIECE, 9L,
+                ProductType.SERVICE, PIECE, 9L,
                 Money.ofEur("60.00"), null, null, null, true, Set.of());
 
         assertThat(repair.isStocked()).isFalse();

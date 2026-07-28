@@ -23,4 +23,7 @@ interface ProductRepository extends JpaRepository<Product, Long> {
     boolean existsByEan(String ean);
 
     List<Product> findBySupplierIdOrderBySkuAsc(long supplierId);
+
+    /** Whether any product still refers to a unit, before it may be deactivated. */
+    long countByUnitOfMeasureId(long unitOfMeasureId);
 }

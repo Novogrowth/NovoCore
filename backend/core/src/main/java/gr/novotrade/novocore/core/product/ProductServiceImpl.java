@@ -36,13 +36,18 @@ class ProductServiceImpl implements ProductService {
     private static final String ENTITY_TYPE = "Product";
 
     private final ProductRepository repository;
+    private final UnitOfMeasureRepository unitsOfMeasure;
     private final VatClassService vatClasses;
     private final SupplierService suppliers;
     private final AuditLogService auditLog;
 
-    ProductServiceImpl(ProductRepository repository, VatClassService vatClasses,
-            SupplierService suppliers, AuditLogService auditLog) {
+    ProductServiceImpl(ProductRepository repository, UnitOfMeasureRepository unitsOfMeasure,
+            VatClassService vatClasses, SupplierService suppliers, AuditLogService auditLog) {
         this.repository = repository;
+        // The unit repository directly, not through UnitOfMeasureService: units live in this
+        // package, so they are the same slice of the core rather than another aggregate reached
+        // through a published interface. The VAT class and supplier above are the other case.
+        this.unitsOfMeasure = unitsOfMeasure;
         this.vatClasses = vatClasses;
         this.suppliers = suppliers;
         this.auditLog = auditLog;
@@ -160,11 +165,12 @@ class ProductServiceImpl implements ProductService {
                             + "make a scan ambiguous, which is the one thing scanning is for.");
         }
         requireActiveVatClass(request.defaultVatClassId());
+        UnitOfMeasure unit = requireActiveUnitOfMeasure(request.unitOfMeasureId());
         requireSupplierPair(request.supplierId(), supplierSku);
         requireUsablePrice(request.sellingPrice());
 
         Product saved = repository.save(new Product(
-                sku, ean, name, request.type(), request.unitOfMeasure(),
+                sku, ean, name, request.type(), unit,
                 request.defaultVatClassId(), request.sellingPrice(),
                 request.supplierId(), supplierSku));
 
@@ -217,6 +223,26 @@ class ProductServiceImpl implements ProductService {
 
         auditLog.record("product.vat-class-changed", ENTITY_TYPE, String.valueOf(id),
                 Map.of("sku", product.getSku(), "vatClass", vatClass.code()));
+
+        return toView(product);
+    }
+
+    @Override
+    @Transactional
+    public ProductView changeUnitOfMeasure(long id, long unitOfMeasureId) {
+        Product product = load(id);
+        UnitOfMeasure unit = requireActiveUnitOfMeasure(unitOfMeasureId);
+
+        // Step 6 obligation, recorded where it will be read: once lots exist this must refuse a
+        // change on a product that has stock. Reinterpreting 12 pieces as 12 kilograms is not a
+        // units change, it is a different quantity.
+        String previous = product.getUnitOfMeasure().getCode();
+        product.changeUnitOfMeasure(unit);
+
+        auditLog.record("product.unit-of-measure-changed", ENTITY_TYPE, String.valueOf(id), Map.of(
+                "sku", product.getSku(),
+                "from", previous,
+                "to", unit.getCode()));
 
         return toView(product);
     }
@@ -285,6 +311,21 @@ class ProductServiceImpl implements ProductService {
 
     private Product load(long id) {
         return repository.findById(id).orElseThrow(() -> new ProductNotFoundException(id));
+    }
+
+    /**
+     * An inactive unit is refused for the same reason an inactive VAT class is: a unit is
+     * deactivated precisely so nothing new is expressed in it.
+     */
+    private UnitOfMeasure requireActiveUnitOfMeasure(long unitOfMeasureId) {
+        UnitOfMeasure unit = unitsOfMeasure.findById(unitOfMeasureId).orElseThrow(() ->
+                new InvalidProductException("No unit of measure with id " + unitOfMeasureId + "."));
+        if (!unit.isActive()) {
+            throw new InvalidProductException(
+                    "Unit of measure '" + unit.getCode() + "' is inactive, so a product cannot be "
+                            + "newly expressed in it.");
+        }
+        return unit;
     }
 
     private VatClassView requireActiveVatClass(long vatClassId) {
@@ -360,7 +401,7 @@ class ProductServiceImpl implements ProductService {
                 product.getEan(),
                 product.getName(),
                 product.getType(),
-                product.getUnitOfMeasure(),
+                UnitOfMeasureServiceImpl.toView(product.getUnitOfMeasure()),
                 product.getDefaultVatClassId(),
                 product.getSellingPrice(),
                 product.getSupplierId(),

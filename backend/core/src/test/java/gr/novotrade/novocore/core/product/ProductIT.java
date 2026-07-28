@@ -11,7 +11,7 @@ import gr.novotrade.novocore.core.api.product.ProductNotFoundException;
 import gr.novotrade.novocore.core.api.product.ProductService;
 import gr.novotrade.novocore.core.api.product.ProductType;
 import gr.novotrade.novocore.core.api.product.ProductView;
-import gr.novotrade.novocore.core.api.product.UnitOfMeasure;
+import gr.novotrade.novocore.core.api.product.UnitOfMeasureService;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.NewRole;
 import gr.novotrade.novocore.core.api.security.ProtectedField;
@@ -50,6 +50,9 @@ class ProductIT extends AbstractCoreIntegrationTest {
     private VatClassService vatClasses;
 
     @Autowired
+    private UnitOfMeasureService unitsOfMeasure;
+
+    @Autowired
     private RoleService roles;
 
     @Autowired
@@ -59,11 +62,20 @@ class ProductIT extends AbstractCoreIntegrationTest {
         return vatClasses.requireByCode("1410").id();
     }
 
+    /** Units come from the V11 lookup table now (Q34), not from an enum. */
+    private long pieceId() {
+        return unitsOfMeasure.requireByCode("PIECE").id();
+    }
+
+    private long kilogramId() {
+        return unitsOfMeasure.requireByCode("KILOGRAM").id();
+    }
+
     @Test
     @DisplayName("a product round-trips, with the price reassembled as Money")
     void createAndRead() {
         ProductView created = products.create(NewProduct.goods(
-                "ProdIT-ESP-01", "ProdIT espresso machine", standardRateId(),
+                "ProdIT-ESP-01", "ProdIT espresso machine", pieceId(), standardRateId(),
                 Money.ofEur("899.00")));
 
         assertThat(created.sku()).isEqualTo("ProdIT-ESP-01");
@@ -97,7 +109,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
 
         // Present on the view but empty: derived from lot costs, and lots arrive in step 6.
         ProductView product = products.create(NewProduct.goods(
-                "ProdIT-DERIVED-01", "ProdIT derived values", standardRateId(),
+                "ProdIT-DERIVED-01", "ProdIT derived values", pieceId(), standardRateId(),
                 Money.ofEur("10.00")));
         assertThat(product.lastPurchasePriceIfAny()).isEmpty();
     }
@@ -108,20 +120,20 @@ class ProductIT extends AbstractCoreIntegrationTest {
         // ADR 0005 made structural. This is the schema's first monetary column, so it is where the
         // amount/currency pairing convention starts being enforced rather than described.
         assertThatThrownBy(() -> jdbc.update("""
-                INSERT INTO product (sku, name, product_type, unit_of_measure,
+                INSERT INTO product (sku, name, product_type, unit_of_measure_id,
                                      default_vat_class_id, selling_price)
-                VALUES ('ProdIT-PROBE-NOCCY', 'Probe: amount without currency', 'GOODS', 'PIECE',
+                VALUES ('ProdIT-PROBE-NOCCY', 'Probe: amount without currency', 'GOODS', ?,
                         ?, 10.00)
-                """, standardRateId()))
+                """, pieceId(), standardRateId()))
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .hasMessageContaining("product_selling_price_has_currency");
 
         assertThatThrownBy(() -> jdbc.update("""
-                INSERT INTO product (sku, name, product_type, unit_of_measure,
+                INSERT INTO product (sku, name, product_type, unit_of_measure_id,
                                      default_vat_class_id, selling_price_currency)
-                VALUES ('ProdIT-PROBE-CCYONLY', 'Probe: currency without amount', 'GOODS', 'PIECE',
+                VALUES ('ProdIT-PROBE-CCYONLY', 'Probe: currency without amount', 'GOODS', ?,
                         ?, 'EUR')
-                """, standardRateId()))
+                """, pieceId(), standardRateId()))
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .hasMessageContaining("product_selling_price_has_currency");
     }
@@ -133,20 +145,20 @@ class ProductIT extends AbstractCoreIntegrationTest {
         // nothing without anyone deciding to give the goods away.
         assertThatExceptionOfType(InvalidProductException.class)
                 .isThrownBy(() -> products.create(NewProduct.goods(
-                        "ProdIT-ZERO-01", "ProdIT zero price", standardRateId(),
+                        "ProdIT-ZERO-01", "ProdIT zero price", pieceId(), standardRateId(),
                         Money.ofEur("0.00"))))
                 .withMessageContaining("silently free sale");
 
         // Unpriced is allowed: an imported or barcode-first product may not have a price yet.
         ProductView unpriced = products.create(NewProduct.goods(
-                "ProdIT-UNPRICED-01", "ProdIT unpriced", standardRateId(), null));
+                "ProdIT-UNPRICED-01", "ProdIT unpriced", pieceId(), standardRateId(), null));
         assertThat(unpriced.sellingPriceIfAny()).isEmpty();
 
         assertThatThrownBy(() -> jdbc.update("""
-                INSERT INTO product (sku, name, product_type, unit_of_measure,
+                INSERT INTO product (sku, name, product_type, unit_of_measure_id,
                                      default_vat_class_id, selling_price, selling_price_currency)
-                VALUES ('ProdIT-PROBE-ZERO', 'Probe: zero price', 'GOODS', 'PIECE', ?, 0.00, 'EUR')
-                """, standardRateId()))
+                VALUES ('ProdIT-PROBE-ZERO', 'Probe: zero price', 'GOODS', ?, ?, 0.00, 'EUR')
+                """, pieceId(), standardRateId()))
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .hasMessageContaining("product_selling_price_positive");
     }
@@ -163,7 +175,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
 
         ProductView product = products.create(new NewProduct(
                 "ProdIT-SUP-01", null, "ProdIT supplied item", ProductType.GOODS,
-                UnitOfMeasure.KILOGRAM, standardRateId(), Money.ofEur("24.00"),
+                kilogramId(), standardRateId(), Money.ofEur("24.00"),
                 importer.id(), "IMP-77-A"));
 
         assertThat(product.supplier()).contains(importer.id());
@@ -195,16 +207,16 @@ class ProductIT extends AbstractCoreIntegrationTest {
         assertThatExceptionOfType(InvalidProductException.class)
                 .isThrownBy(() -> products.create(new NewProduct(
                         "ProdIT-ORPHAN-01", null, "ProdIT orphan code", ProductType.GOODS,
-                        UnitOfMeasure.PIECE, standardRateId(), null, null, "ORPHAN-1")))
+                        pieceId(), standardRateId(), null, null, "ORPHAN-1")))
                 .withMessageContaining("identifies nothing without knowing whose code it is");
 
         // And in the database, not only in Java.
         assertThatThrownBy(() -> jdbc.update("""
-                INSERT INTO product (sku, name, product_type, unit_of_measure,
+                INSERT INTO product (sku, name, product_type, unit_of_measure_id,
                                      default_vat_class_id, supplier_sku)
-                VALUES ('ProdIT-PROBE-ORPHAN', 'Probe: orphan supplier code', 'GOODS', 'PIECE',
+                VALUES ('ProdIT-PROBE-ORPHAN', 'Probe: orphan supplier code', 'GOODS', ?,
                         ?, 'ORPHAN-PROBE')
-                """, standardRateId()))
+                """, pieceId(), standardRateId()))
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .hasMessageContaining("product_supplier_sku_needs_supplier");
     }
@@ -217,7 +229,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
 
         ProductView product = products.create(new NewProduct(
                 "ProdIT-SUP-02", null, "ProdIT own reference", ProductType.GOODS,
-                UnitOfMeasure.PIECE, standardRateId(), null, supplier.id(), null));
+                pieceId(), standardRateId(), null, supplier.id(), null));
         assertThat(product.supplierSkuIfAny()).isEmpty();
 
         // Clearing the supplier clears its code with it — one setter, so the code cannot outlive
@@ -241,13 +253,13 @@ class ProductIT extends AbstractCoreIntegrationTest {
         assertThatExceptionOfType(InvalidProductException.class)
                 .isThrownBy(() -> products.create(new NewProduct(
                         "ProdIT-BADSUP-01", null, "ProdIT unknown supplier", ProductType.GOODS,
-                        UnitOfMeasure.PIECE, standardRateId(), null, 999_999L, null)))
+                        pieceId(), standardRateId(), null, 999_999L, null)))
                 .withMessageContaining("No supplier with id 999999");
 
         assertThatExceptionOfType(InvalidProductException.class)
                 .isThrownBy(() -> products.create(new NewProduct(
                         "ProdIT-BADSUP-02", null, "ProdIT inactive supplier", ProductType.GOODS,
-                        UnitOfMeasure.PIECE, standardRateId(), null, retired.id(), null)))
+                        pieceId(), standardRateId(), null, retired.id(), null)))
                 .withMessageContaining("inactive");
     }
 
@@ -269,7 +281,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
                 "ProdIT — Hidden supplier", "EL066666004"));
         ProductView product = products.create(new NewProduct(
                 "ProdIT-REDACT-01", "5209999900001", "ProdIT redacted item", ProductType.GOODS,
-                UnitOfMeasure.PIECE, standardRateId(), Money.ofEur("129.00"),
+                pieceId(), standardRateId(), Money.ofEur("129.00"),
                 supplier.id(), "HID-99"));
 
         ProductView asStaffSees = products.requireFor(product.id(), remoteStaff);
@@ -298,7 +310,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
                 "ProdIT — Visible supplier", "EL066666005"));
         ProductView product = products.create(new NewProduct(
                 "ProdIT-OWNER-01", null, "ProdIT owner view", ProductType.GOODS,
-                UnitOfMeasure.PIECE, standardRateId(), Money.ofEur("55.00"),
+                pieceId(), standardRateId(), Money.ofEur("55.00"),
                 supplier.id(), "VIS-1"));
 
         assertThat(products.requireFor(product.id(), owner).supplier()).contains(supplier.id());
@@ -328,7 +340,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
     void defaultVatClassIsRequired() {
         VatClassView reduced = vatClasses.requireByCode("1131");
         ProductView product = products.create(NewProduct.goods(
-                "ProdIT-VAT-01", "ProdIT reduced-rate item", reduced.id(), Money.ofEur("12.00")));
+                "ProdIT-VAT-01", "ProdIT reduced-rate item", pieceId(), reduced.id(), Money.ofEur("12.00")));
 
         assertThat(product.defaultVatClassId()).isEqualTo(reduced.id());
         // Bottom of the precedence chain, and the only level present here.
@@ -346,7 +358,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
 
         assertThatExceptionOfType(InvalidProductException.class)
                 .isThrownBy(() -> products.create(NewProduct.goods(
-                        "ProdIT-VAT-02", "ProdIT unknown rate", 999_999L, null)))
+                        "ProdIT-VAT-02", "ProdIT unknown rate", pieceId(), 999_999L, null)))
                 .withMessageContaining("No VAT class with id 999999");
     }
 
@@ -359,17 +371,17 @@ class ProductIT extends AbstractCoreIntegrationTest {
     void skuAndEanAreUnique() {
         products.create(new NewProduct(
                 "ProdIT-UNIQ-01", "5209999900002", "ProdIT unique one", ProductType.GOODS,
-                UnitOfMeasure.PIECE, standardRateId(), null, null, null));
+                pieceId(), standardRateId(), null, null, null));
 
         assertThatExceptionOfType(InvalidProductException.class)
                 .isThrownBy(() -> products.create(NewProduct.goods(
-                        "prodit-uniq-01", "ProdIT duplicate SKU", standardRateId(), null)))
+                        "prodit-uniq-01", "ProdIT duplicate SKU", pieceId(), standardRateId(), null)))
                 .withMessageContaining("already exists");
 
         assertThatExceptionOfType(InvalidProductException.class)
                 .isThrownBy(() -> products.create(new NewProduct(
                         "ProdIT-UNIQ-02", "5209999900002", "ProdIT duplicate barcode",
-                        ProductType.GOODS, UnitOfMeasure.PIECE, standardRateId(),
+                        ProductType.GOODS, pieceId(), standardRateId(),
                         null, null, null)))
                 .withMessageContaining("scan ambiguous");
 
@@ -383,7 +395,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
     @DisplayName("a service product carries no stock, and says so")
     void servicesAreNotStocked() {
         ProductView repair = products.create(NewProduct.service(
-                "ProdIT-SVC-01", "ProdIT machine service", standardRateId(),
+                "ProdIT-SVC-01", "ProdIT machine service", pieceId(), standardRateId(),
                 Money.ofEur("60.00")));
 
         assertThat(repair.type()).isEqualTo(ProductType.SERVICE);
@@ -397,7 +409,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
     @DisplayName("a product is deactivated, never deleted")
     void deactivateAndReactivate() {
         ProductView product = products.create(NewProduct.goods(
-                "ProdIT-DISC-01", "ProdIT discontinued", standardRateId(), Money.ofEur("5.00")));
+                "ProdIT-DISC-01", "ProdIT discontinued", pieceId(), standardRateId(), Money.ofEur("5.00")));
 
         products.deactivate(product.id());
         assertThat(products.require(product.id()).active()).isFalse();

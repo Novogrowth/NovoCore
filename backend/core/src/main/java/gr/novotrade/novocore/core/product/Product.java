@@ -1,16 +1,18 @@
 package gr.novotrade.novocore.core.product;
 
 import gr.novotrade.novocore.core.api.product.ProductType;
-import gr.novotrade.novocore.core.api.product.UnitOfMeasure;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.support.AuditableEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.util.Currency;
@@ -55,8 +57,15 @@ class Product extends AuditableEntity {
     @Column(name = "product_type", nullable = false, length = 20)
     private ProductType type;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "unit_of_measure", nullable = false, length = 20)
+    /**
+     * A real association, unlike the VAT class and supplier references, which are plain ids.
+     *
+     * <p>Not an inconsistency: {@code UnitOfMeasure} lives in this package, so it is part of the
+     * same slice of the core rather than another aggregate reached through a published service.
+     * Lazy because the unit is only needed when a product is projected for a caller.
+     */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "unit_of_measure_id", nullable = false)
     private UnitOfMeasure unitOfMeasure;
 
     /** The product level of the VAT precedence rule. Not null: there is no fallback rate. */
@@ -135,6 +144,10 @@ class Product extends AuditableEntity {
 
     UnitOfMeasure getUnitOfMeasure() {
         return unitOfMeasure;
+    }
+
+    void changeUnitOfMeasure(UnitOfMeasure newUnitOfMeasure) {
+        this.unitOfMeasure = newUnitOfMeasure;
     }
 
     Long getDefaultVatClassId() {

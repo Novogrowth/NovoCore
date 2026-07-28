@@ -62,7 +62,7 @@ public record ProductView(
         String ean,
         String name,
         ProductType type,
-        UnitOfMeasure unitOfMeasure,
+        UnitOfMeasureView unitOfMeasure,
         long defaultVatClassId,
         Money sellingPrice,
         Long supplierId,

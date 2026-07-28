@@ -95,10 +95,21 @@ public interface ProductService {
      * Adds a product.
      *
      * @throws InvalidProductException if the SKU or EAN duplicates an existing product, the VAT
-     *     class does not exist or is inactive, the supplier does not exist or is inactive, or a
-     *     supplier SKU is given with no supplier
+     *     class, unit of measure or supplier does not exist or is inactive, or a supplier SKU is
+     *     given with no supplier
      */
     ProductView create(NewProduct request);
+
+    /**
+     * Changes the unit a product's quantity is expressed in.
+     *
+     * <p>Once lots exist (step 6) this will need to refuse a change on a product that has stock:
+     * reinterpreting 12 pieces as 12 kilograms is not a units change, it is a different quantity.
+     * There is nothing to guard yet, and stating the obligation here is what makes it findable.
+     *
+     * @throws InvalidProductException if the unit does not exist or is inactive
+     */
+    ProductView changeUnitOfMeasure(long id, long unitOfMeasureId);
 
     /** @throws InvalidProductException if the name is blank */
     ProductView rename(long id, String newName);
