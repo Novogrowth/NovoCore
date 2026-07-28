@@ -1,6 +1,6 @@
 # NovoCore — Build Progress
 
-*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-07-27.*
+*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-07-28.*
 
 *Close-out now also pushes to `origin` automatically (`CLAUDE.md`), so this file no longer tracks
 unpushed commits.*
@@ -22,8 +22,8 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 3b | VAT classes, VAT exemption reasons, charge types | **Done, committed** — inserted step, see below |
 | 4 | Users, auth, permissions | **Done, committed** — Q21 and Q22 answered, see below |
 | 4b | First REST endpoint (chart of accounts, read-only) | **Done, committed** — boundary validation, see below |
-| 5 | Product, Customer, Supplier, Asset | **Next.** Not started. Blocked on Q5 + the VatExemptionReason seed |
-| 6 | Inventory Lot/Unit, Location, computed stock | Not started. **Carries two step-3 obligations — see below** |
+| 5 | Product, Customer, Supplier, Asset | **Done, committed** — Q5, Q8, Q9, Q12 answered, see below |
+| 6 | Inventory Lot/Unit, Location, computed stock | **Next.** Not started. **Carries two step-3 obligations plus step 5's — see below** |
 | 7 | Journal engine, debits=credits invariant | Not started. Blocked on Q13, Q14 |
 | 8 | Purchase Invoice, Goods Receipt, GR/IR, FIFO | Not started |
 | 9 | Sales Invoice, Receipt, Payment, Bank Transfer, open items, rounding | Not started |
@@ -32,10 +32,11 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 12 | Automated backups | Not started. Needs Drive paths/credentials, Q24 |
 | 13 | Test suite consolidation sweep | Not started |
 
-**Tests: 259 passing, `mvn clean verify` exit 0.** 86 unit (core-api), 146 core integration,
-4 app unit, 12 app integration, 11 architecture. Nothing was failing at the last close-out.
+**Tests: 356 passing, `mvn clean verify` exit 0.** 110 unit (core-api), 219 core integration,
+4 app unit, 12 app integration, 11 architecture. Nothing was failing at the last close-out, and
+nothing is failing now.
 
-`mvn test` runs the 101 non-container tests in ~6 seconds and needs no Docker. `mvn verify`
+`mvn test` runs the 125 non-container tests in ~6 seconds and needs no Docker. `mvn verify`
 additionally runs the `*IT` tests under Failsafe against a real PostgreSQL 17 container.
 
 ---
@@ -95,6 +96,9 @@ were already on `origin`.
 | `15627d2` | Step 3b — VAT classes, exemption reasons, charge types, migration V5 |
 | `a1da425` | Step 4 — users, roles, permissions, session auth, migration V6 |
 | `91543fa` | Step 4b — first REST endpoint, web boundary rule made real |
+| `efe897e` | Q27 — `Delivery income` / `COD fee income` accounts, ChargeType seed, migration V7 |
+| `09ea0d5` | The real AADE VAT exemption reason seed, migration V8 |
+| `ae7c31f` | Step 5 — Product, Customer, Supplier, Asset, migration V9 |
 
 Interleaved with these are small docs-only commits (`e25fcee`, `a09428e`, `920044c`, `de16e58`,
 `b065901`, `8c27cb4`) and this session's close-out commit.
@@ -122,6 +126,14 @@ Convention going forward is **one commit per build step**, so history stays chec
 - **The chart-of-accounts invariants are enforced by the database, not only by Java** — proven
   by raw-SQL probes in `ChartOfAccountsIT` that bypass the service and are rejected by CHECK
   constraints. Same for the VAT class rules in `VatClassIT`.
+- **The currency-companion rule proven to actually fail**, same method: a temporary migration
+  adding a `probe_money` table with a `numeric(19,2)` column and no `_currency` companion tripped
+  `SchemaConventionsIT.everyMonetaryColumnCarriesItsCurrency`, naming the offending column, while
+  correctly ignoring a properly paired column in the same table. Probe deleted.
+- **Hibernate's `ddl-auto: validate` caught a real mismatch during step 5** — the entity mapped
+  `selling_price_currency` as a `varchar` against a `char(3)` column and the context refused to
+  start. Fixed with `@JdbcTypeCode(SqlTypes.CHAR)` rather than by widening the column. Worth
+  recording because it is the first time that setting has earned its keep.
 - **The `..core.web..` boundary rule proven to actually fail**, same method: a probe class in
   `..core.web..` referencing a public core-internal class tripped it, naming both the offending
   field and constructor parameter. Probe deleted. Its `allowEmptyShould` allowance is gone, so the
@@ -500,36 +512,228 @@ a default when its real implementation is missing is precisely what later fails 
 
 ---
 
+## V7 and V8 — the two queued items, done
+
+**V7 (`efe897e`) closes Q27.** `Delivery income` and `COD fee income` added to the Income group
+(65 → 67 accounts), and the two `ChargeType` rows seeded against them, so `charge_type` is no
+longer empty. V7 opens a display-order gap at 6 and 7 **by position rather than by name**, so the
+sales-related lines read together and `Other income` stays last — a residual bucket in the middle
+of a list invites postings that should have gone somewhere specific. No channel split, and no
+`AccountSystemKey`: these accounts are located through `charge_type.incomeAccountId`, which is an
+operator decision per fee rather than a rule compiled into the software.
+
+> ⚠️ **Recorded limitation, not silently accepted.** Both charge types default to 24%. Under Greek
+> practice a delivery charge **ancillary to a supply follows the VAT rate of the goods it
+> delivers**, so 24% is wrong on a 13% order. The per-line override can express the right rate;
+> nothing derives it. See Q33.
+
+**V8 (`09ea0d5`) seeds the real AADE VAT exemption reasons** — 29 rows from Prosvasis Go's
+"Διατάξεις απαλλαγής Φ.Π.Α." screen, in the **recodified** Κώδικας ΦΠΑ article numbering (άρθρο 2
+και 3, 5, 17, … 58) rather than the older numbering most documentation still uses. Three findings:
+
+1. **Codes 24 and 28 are absent from Go's list.** Gaps were anticipated, but these are missing from
+   *Go* rather than known to be retired by AADE. See Q35.
+2. **Codes 29, 30 and 31 — the OSS and IOSS reasons — have no myDATA code in Go**, so
+   `mydata_code` is now **nullable**. NULL means "no mapping exists", not "not filled in yet".
+   Composing a string would fabricate a value that later gets transmitted, and omitting the three
+   rows would leave an exempt OSS/IOSS sale with no reason to select. **Phase 7 obligation:
+   transmission must refuse a NULL**, which is what `VatExemptionReasonView.requireMydataCode()`
+   exists to do. See Q36.
+3. **Storing the myDATA string verbatim was load-bearing**, which step 3b said a test should check
+   once the real rows landed. It was: codes 12 and 13 name "Πλοία Ανοικτής Θαλάσσης" in their
+   description and **not** in their myDATA string. Composing the value would have transmitted those
+   two wrong. A test asserts exactly which rows break the pattern.
+
+Descriptions drop Go's numeric prefix (`"1 - Χωρίς ΦΠΑ …"`), since the code is its own column here
+— keeping it would render as "1 - 1 - …". That also sidesteps a source quirk: Go's row for code 9
+appears to carry the prefix `"8 - "`.
+
+---
+
+## Step 5 — done (Product, Customer, Supplier, Asset)
+
+Migration `V9`, four entities, four services, and all four blocking questions answered.
+
+### The four answers, as built
+
+- **Q5 — one product, one supplier.** A plain nullable foreign key, no many-to-many. The supplier
+  SKU is **refused without a supplier**, in the service and by a CHECK constraint: that meaningless
+  state is the whole content of the question. A test asserts no join table exists.
+- **Q8 — a single email and a single phone**, on Customer and Supplier alike.
+- **Q9 — `VatStatus`, shared by both parties** so the two lists cannot diverge. **Five values, not
+  four:** `NON_EU_EXPORT` is split out of `OTHER`, because an export and an intra-EU B2B supply are
+  both VAT-free **under different articles** and are reported differently — "other" would lose
+  exactly what has to be stated on the document. `INTRA_EU_B2B` requires a VAT number and `EXEMPT`
+  requires an exemption reason; both are definitional rather than policy, and both are CHECK
+  constraints as well as service checks. `OTHER` exists so an unusual party can be recorded
+  truthfully, and **nothing defaults to it**. No VIES validation, as instructed.
+- **Q12 — a manually set depreciation rate on Asset, nullable.** Null means "the statutory rate is
+  not known yet", which is the register's actual state. `AssetService.withoutDepreciationRate()`
+  exists so that stops being forgettable, and `AssetView.canDepreciate()` is what a run must check
+  instead of substituting a default. **No rate was invented and no category table was created** —
+  both wait on the accountant, the way the VAT class list did.
+
+### Deliberately omitted from Asset, with reasons
+
+- **Useful life** — for straight-line it is `100 / rate`, so storing both invites them to disagree.
+  Same argument that keeps `normal_balance_side` out of the chart of accounts.
+- **Salvage value** — Greek tax depreciation writes down to zero, and it would be the one monetary
+  field on an otherwise ledger-derived record.
+- **A depreciation method field** — straight-line only (brief §5). A single-valued column is dead
+  weight; a second method arriving is a migration with a decision attached.
+- **Any monetary field at all.** Both fixed-asset control accounts declare `ASSET` as their
+  sub-ledger, so every posting names its asset and cost and accumulated depreciation are **sums of
+  journal lines**. Consequence, stated plainly: **until step 7 this is a register, not a
+  valuation** — the same shape as a product having no stock until lots exist.
+
+### The depreciation rate is bounded 1–100, and the lower bound is the point
+
+A plain 0–100 range **cannot** catch `0.1` written for 10%: it sits comfortably inside, and the
+charge would be a hundred times too small every year with nothing complaining. 1% is a hundred-year
+life, which no statutory category has. **A test caught this**: the first version of the validation
+claimed in its message to reject fractions and did not. Worth knowing that
+`vat_class_rate_is_a_percentage` has the same blind spot — its 0–100 bound does not catch `0.24`
+written for 24% either.
+
+### Step 4's field-restriction obligation is discharged
+
+`ProductView.redactedFor(RoleView)` is the **single** implementation, delegating every decision to
+`RoleView.canSee`. Tested against the real seeded `REMOTE_ORDER_STAFF` role loaded from the
+database, and — as pure logic in `core-api` — against a last purchase price that cannot exist in
+real data until step 6, so all three restricted fields are covered now rather than two of them.
+
+**One rule beyond the stored restrictions: hiding the supplier hides the supplier's SKU too**,
+since a supplier code identifies the supplier indirectly. Narrowing only, which is the safe
+direction and the direction field restrictions are allowed to move in.
+
+> ⚠️ **A named convention, not an enforced one.** `ProductService` has plain read methods
+> (unredacted, for the core's own costing and posting rules) and `...For(viewer)` variants that
+> redact. **Anything answering a request from a person must use the `...For` variants.** Making
+> redaction mandatory would mean inventing a pretend-role for the posting rules to pass, and a
+> "system role that sees everything" is precisely the thing a controller later reuses. The `For`
+> suffix is in the name so its absence is visible at the call site — but the first Products
+> controller must be reviewed for this specifically.
+
+### `product.selling_price` is the schema's first monetary column
+
+Which settles what V1 left open. The convention is now stated and enforced:
+
+    <name>            numeric(19,2)   the amount
+    <name>_currency   char(3)         its ISO 4217 code, present exactly when the amount is
+
+Tied by a biconditional CHECK, and `SchemaConventionsIT.everyMonetaryColumnCarriesItsCurrency`
+enforces the pairing **across the whole schema**, so step 7's monetary columns inherit the rule
+rather than re-deciding it once there are dozens. Proven to fail against a probe table.
+
+A **zero price is refused**; null is how "not priced yet" is said. Zero and unset look identical on
+a screen, and zero produces an invoice line worth nothing without anyone choosing to give the goods
+away. Null is permitted because a product imported from an external catalogue or created
+barcode-first may genuinely not have a price — the refusal belongs at invoicing, not at creation.
+
+### Other decisions worth keeping
+
+- **`ProductType`** is `GOODS` / `SERVICE`, and it decides real behaviour: a service has no lots,
+  credits `Services` rather than a channel `Sales` account, and costs against `Cost of service
+  sold` — three accounts the seeded chart already distinguishes.
+- **Matching is split by certainty** (`CLAUDE.md` rule 7). `findByVatNumber` is an exact match on
+  an authority-issued identifier and may be applied automatically; `suggestMatches` returns
+  candidates a human confirms. A blank VAT number matches **nothing** rather than the first party
+  without one — that would be an automatic match on the absence of the identifier that makes
+  automatic matching safe.
+- **Customer names are not unique; VAT numbers are.** Two unrelated retail customers genuinely can
+  share a name, and refusing the second would push whoever is serving them into inventing a suffix.
+- **Phone numbers are compared as stored.** Nothing normalises `+30` / `0030` / bare local yet, so a
+  differently formatted number will not match. That belongs with the adapters that import contact
+  data, where the source format is known.
+- **`suggestMatches` runs one derived query per supplied criterion and merges in Java.** The
+  compact single-JPQL-query version does not work: a named parameter appearing only inside
+  `:x IS NOT NULL` gives Hibernate nothing to infer a type from, it binds as `bytea`, and
+  PostgreSQL rejects `lower(bytea)` at runtime. A test caught it.
+- **Cross-slice references are plain ids**, validated through the published services — the same
+  pattern `ChargeType` established, and the only route available since each slice's entities are
+  package-private.
+- **Sections `PRODUCTS` and `CUSTOMERS` are now available; `SUPPLIERS` and `FIXED_ASSETS` are new.**
+  No grants were seeded: access is default-deny, so the two new sections are invisible to
+  Remote/Order Staff without saying so, and visible to Owner and Admin at once via `full_access`.
+- **The migration README was corrected** — it still said there were no migrations yet, and told
+  writers to use PostgreSQL DOMAINs that V1 explicitly rejected.
+
+### Not built, deliberately — each asserted absent by a test
+
+So they read as decisions rather than oversights, and so a later step cannot quietly assume one
+exists:
+
+- **No bundle flag** (Q11 still open). A flag nothing honours reads as a half-built feature.
+- **No customer merge.** Brief §5's alias-forward needs an alias table and a decision about
+  postings already made under the retired id; neither exists until the ledger does. Half of it is
+  worse than none — a merge that appears to work and loses references.
+- **No generic retail customer** (Q10 unanswered). A seeded catch-all is the row that quietly
+  absorbs every unmatched sale and then cannot be untangled.
+- **No address fields** on Customer or Supplier. Go issues the invoices until phase 11, so nothing
+  needs to print one yet. See Q37.
+- **No stock in any form**, and no `last_purchase_price` column (Q6 answered by implementation:
+  computed, like stock). `ProductView.lastPurchasePriceIfAny()` exists and is always empty until
+  step 6.
+
+### ⚠️ Obligations this step created
+
+- **Step 6 — `ProductType.SERVICE` must not answer "zero" when asked for stock.** A service has no
+  lots. Zero and "not applicable" look identical on a screen and would produce a back-in-stock
+  reminder for a service.
+- **Step 6 — `UnitOfMeasure.allowsFractionalQuantity()` exists and nothing enforces it.** Three of
+  a product sold by the piece is three; 2.5 pieces is a data-entry error worth catching. The rule
+  is stated on the unit so step 6 reads it off there rather than re-deriving its own list.
+- **Step 7 — the `Depreciation` expense account has no `AccountSystemKey`.** The two fixed-asset
+  control accounts do, but the expense side of a depreciation posting has no stable handle, so a
+  posting rule would have to look it up by name. Extending `AccountSystemKey` is deliberately a
+  migration; this is the flag that it needs one.
+- **The first Products controller must use the `...For` variants.** See the warning above.
+
+---
+
 ## Open questions, by the step they block
 
 Numbering follows the original Phase 1 question list so references stay stable.
 **Resolved:** Q1–Q3 (chart of accounts), Q20 (money scale), **Q4 (VAT classes — real rate list
 supplied and seeded, built as a runtime-editable entity; precedence rule stated as code)**.
 
-### ✅ Q27 — RESOLVED (decision made; implementation still outstanding)
+### ✅ Resolved and built this session
 
-**Decided: dedicated income accounts.** `Delivery income` and `COD fee income`, in the Income
-group, rather than routing fees to the existing `Other income`. **No channel split** for them —
-the channel split was a brief mandate for Sales specifically.
+- ~~**Q27**~~ dedicated `Delivery income` / `COD fee income` accounts — **built** in V7.
+- ~~**The VatExemptionReason seed**~~ — **built** in V8, 29 real rows.
+- ~~**Q5**~~ Product↔Supplier — one supplier, plain foreign key, no many-to-many.
+- ~~**Q8**~~ single email and single phone per customer.
+- ~~**Q9**~~ `VatStatus` classification plus a VAT number field; VIES deferred to phase 7.
+- ~~**Q12**~~ a manually set depreciation rate on Asset; automatic pre-fill deferred.
+- ~~**Q6**~~ last purchase price is **computed, not stored**, for consistency with stock.
 
-Reasons on record: these fees appear on most invoices, so routing them to a residual bucket makes
-that bucket the largest income line and destroys the one thing it is for; and `Delivery income`
-needs to be comparable against the existing `Transportation costs` expense account to answer "is
-shipping costing us money?", which is unanswerable once it is merged. Not a blanket policy —
-`ChargeType.incomeAccountId` is per-type precisely so low-volume future fees can point at
-`Other income`.
+### ⚠️ New, and waiting on input
 
-> **⚠️ Nothing is built for this yet.** The decision is settled; the code is not. `Delivery income`
-> and `COD fee income` **do not exist in the chart of accounts**, and `charge_type` is still empty.
-> Outstanding work: a **`V7` migration** adding the two accounts (65 → 67) and seeding the two
-> ChargeType rows against them, plus test updates for the changed seed counts. Small and
-> self-contained — a good first task for the next session, and it needs no further input.
-
-### ⚠️ Waiting on input
-
-- **The VatExemptionReason seed** — ~29 verified AADE rows. **Being supplied at the start of the
-  next session.** Structure is built and unseeded; see step 3b.
-- **Q5** — the Product↔Supplier link. The single hard blocker on step 5's Product entity.
+- **Q33** *(new)* **Should a delivery or COD fee follow the VAT rate of the goods it delivers?**
+  Under Greek practice an ancillary charge takes the rate of the main supply, so the seeded 24%
+  default is wrong on a 13% order. The per-line override can already express the right rate;
+  nothing derives it. Interacts with Q14. **Nothing is built either way** — say which behaviour is
+  wanted and it becomes a rule in the sales-invoice step (9).
+- **Q34** *(new)* **Should `UnitOfMeasure` be a runtime-editable lookup table rather than an enum?**
+  Built as an enum (`PIECE`, `SET`, `PACK`, `KILOGRAM`, `GRAM`, `LITRE`, `MILLILITRE`, `METRE`),
+  because the set NovoCore needs is small, known and physical rather than statutory. Two arguments
+  for a table: Prosvasis Go holds "Μονάδες μέτρησης" as an editable list, and myDATA has its own
+  unit codes a transmitted line must carry. Cheap to change now, less so after step 6's lots.
+- **Q35** *(new)* **AADE exemption codes 24 and 28 are absent from Go's list.** Confirm with the
+  accountant whether AADE defines them and whether we need them, before the myDATA adapter is built
+  (phase 7). If so it is two `INSERT`s, not a restructuring.
+- **Q36** *(new)* **The OSS and IOSS reasons (codes 29–31) have no myDATA code.** Seeded as NULL
+  deliberately. Supply the values if they exist, or confirm that Go genuinely has no mapping —
+  either way, phase 7 must refuse to transmit a NULL rather than compose one.
+- **Q37** *(new)* **Customer and Supplier have no address fields.** Not needed while Go issues the
+  invoices, but needed by phase 11 at the latest, and possibly sooner for courier vouchers in phase
+  4. Also unasked: whether Customer and Supplier want human-facing codes (the internal id is a
+  bigint), and whether more than one selling price per product is ever needed.
+- **⚠️ Statutory depreciation rates and the asset category taxonomy** — **needs the accountant**,
+  the same way the VAT class list did. The rate field exists per asset and is nullable; no rates
+  and no category table were invented. Do not create real assets with real values until these are
+  confirmed. When they arrive, the natural home for defaults is an `AssetCategory` lookup carrying a
+  default rate — which is also where Q12's deferred pre-fill would live.
 - **Q28** **Where "Σκοπός διακίνησης" (dispatch purpose) belongs.** Analysis and recommendation
   below; **nothing built**. Correctly identified as unrelated to VAT — it is not folded into
   either VAT entity.
@@ -586,34 +790,25 @@ That placement decides the rest:
 - **Q32** *(still open)* Session timeout is 8 hours. Reasonable for a working day; confirm or
   change.
 
-### Blocking step 5 — core entities
-- ~~**Q4** VAT class list~~ — **resolved and built.** See step 3b.
-- **Step-3b obligation:** Product needs a default VAT class reference, and Customer needs a
-  *nullable* VAT class override, so that `VatClassPrecedence` has real levels to read. Overlaps
-  Q9 below.
-- **Step-4 obligation (not optional):** `ProductView` must consult
-  `RoleView.canSee(ProtectedField)` for `PRODUCT_LAST_PURCHASE_PRICE`, `PRODUCT_SUPPLIER` and
-  `PRODUCT_SUPPLIER_SKU`. The restrictions are seeded and enforced by the permission model, but
-  until Products exist there is no response being redacted — this is the step where Q21's
-  field-level answer either takes effect or silently does not.
-- **Q5** *(hard blocker)* Product has "Supplier's SKU" but **no Supplier link** — meaningless
-  without knowing which supplier. Add a reference (one? many?) or drop the field.
-- **Q6** `last purchase price` is derivable from lots, like `Stock` which the brief says is
-  never stored. Compute it too, for consistency?
-- **Q7** Stock is not one number: Location lives on the lot and sellability depends on stock at
-  a *sellable* location. Confirm the API exposes stock per location plus a "sellable" figure.
-- **Q8** Customer fields omit email and phone, yet the identity model matches on exactly those.
-  They need structuring (multiple per customer) for matching to work.
-- **Q9** Customer has no VAT status field although Supplier does. Exempt/intra-EU customers.
-  **Now partly answered by step 3b:** Customer gets a nullable VAT class override for the
-  precedence rule, and an exempt customer needs a `VatExemptionReason` reference rather than a
-  rate. Still open is whether "VAT status" is anything more than those two fields.
-- **Q10** Confirm the shared generic "Πελάτης Λιανικής" retail record is seeded.
-- **Q11** **Bundle/Composite products** are in brief §5's core entities but were absent from the
-  agreed Phase 1 scope list. Build now or defer?
-- **Q12** Asset has a depreciation *rate* but no useful life, salvage value, depreciation start
-  date, disposal fields, or the three linked accounts. Also: is the periodic depreciation
-  *posting run* in Phase 1, or only the entity and calculation?
+### Resolved in step 5 — core entities
+- ~~**Q4** VAT class list~~ — resolved and built in step 3b.
+- ~~**Step-3b obligation**~~ — **done.** `Product.defaultVatClassId` is required (there is no
+  fallback rate, so a product without one could not be invoiced), and
+  `Customer.vatClassOverrideId` is nullable. `VatClassPrecedence` now has real stored levels.
+- ~~**Step-4 obligation**~~ — **done.** `ProductView.redactedFor(RoleView)`, tested against the
+  real seeded role. See the warning in the step 5 section about the `...For` naming convention.
+- ~~**Q5**~~, ~~**Q6**~~, ~~**Q8**~~, ~~**Q9**~~, ~~**Q12**~~ — **answered and built.** See above.
+- **Q7** *(still open, now blocks step 6)* Stock is not one number: Location lives on the lot and
+  sellability depends on stock at a *sellable* location. Confirm the API exposes stock per location
+  plus a "sellable" figure. **Nothing about stock was built in step 5** precisely because of this.
+- **Q10** *(still open)* Confirm whether the shared generic "Πελάτης Λιανικής" retail record should
+  be seeded. **Not seeded** — a catch-all customer absorbs every unmatched sale and then cannot be
+  untangled, so it waits for the answer.
+- **Q11** *(still open)* **Bundle/Composite products** are in brief §5's core entities but were
+  absent from the agreed Phase 1 scope list. Build now or defer? **No bundle flag exists**, so
+  answering "build" is a migration plus decomposition logic, not a flag flip.
+- **Q12 leftover** *(still open)* Is the periodic depreciation **posting run** in Phase 1, or only
+  the register and the calculation? The register is built; nothing posts.
 
 ### Blocking step 6 — inventory
 - **Step-3 obligation:** the write-off reason field. See "Obligations" above.
@@ -667,43 +862,45 @@ That placement decides the rest:
 
 ## Next action — read this first
 
-**Step 5 (Product, Customer, Supplier, Asset) is the next numbered step. It was deliberately not
-started this session.**
+**Step 6 (Inventory Lot/Unit, Location, computed stock) is the next numbered step.** Step 5 is done,
+committed and pushed.
 
-### Step 5 is blocked on two things, both expected from the user
+### Step 6 is blocked on two answers
 
-1. **Q5 — the Product↔Supplier link.** Product has "Supplier's SKU" but no supplier reference,
-   which makes the field meaningless. One reference or many, or drop the field. **Hard blocker for
-   the Product entity.**
-2. **The VatExemptionReason seed data** — ~29 verified AADE rows. **The user will provide this at
-   the start of the next session; it was explicitly not provided this one.** The entity structure
-   is built and waiting.
+1. **Q7 — how stock is exposed.** Per location, plus a single "sellable" figure? Nothing about stock
+   was built in step 5 because of this, so it is the first thing step 6 needs.
+2. **Q25 — is the write-off reason a fixed enum or free text?** A step-3 obligation, not optional:
+   with one write-off account instead of three, the shrinkage/damage/expiry distinction has nowhere
+   else to live.
 
-### Unblocked work available immediately, needing no input
+Also worth settling before step 6 rather than after: **Q11 (bundles)**, since a bundle decomposes
+into component lines for inventory and COGS, and **Q34 (unit of measure as a table)**, which is
+cheap now and less so once lots carry quantities.
 
-- **Q27's implementation** — a `V7` migration adding `Delivery income` and `COD fee income` to the
-  Income group and seeding the two ChargeType rows against them, plus updating the seed-count
-  assertions in `ChartOfAccountsIT`. The decision is settled (see Q27 above); only the code is
-  missing. Small, self-contained, and the obvious first task.
+### Obligations step 6 must honour
 
-### Also still open, not blocking step 5
+- **A reason field on the inventory write-off transaction** (step 3, not optional).
+- **`ProductType.SERVICE` must not answer "zero" when asked for stock** — it has no lots, and zero
+  is indistinguishable from "not applicable" on a screen.
+- **Enforce `UnitOfMeasure.allowsFractionalQuantity()`** — 2.5 pieces is a data-entry error.
 
+### Waiting on the accountant, and blocking real data rather than code
+
+- **Statutory depreciation rates per asset category**, plus the category taxonomy. The field exists
+  and is nullable; **do not create real assets with real values until these are confirmed.**
+- **AADE exemption codes 24 and 28** (Q35) and **the OSS/IOSS myDATA codes** (Q36), before phase 7.
+
+### Also still open, not blocking step 6
+
+- **Q33** delivery/COD VAT following the main supply's rate — interacts with Q14.
 - **Q28 — dispatch purpose placement.** Recommendation is a core-owned `GoodsDispatch` in phase 4,
   conditional on whether Go already issues Δελτία Αποστολής and whether the AADE digital delivery
   note regime applies (accountant question). Nothing built.
-- **Q31 — single role per user.** Cheapest to change now, most expensive after step 5.
+- **Q31 — single role per user.** Cheapest to change now; it was already more expensive after step 5
+  and gets worse with every entity added.
 - **Q32 — the 8-hour session timeout.**
-- **Q8, Q9, Q12** — Customer email/phone structuring, Customer VAT status, and the Asset field list.
-  Worth noting: **Q5 blocks Product specifically, not all of step 5.** Customer needs Q8 and Q9,
-  and Asset needs Q12, so answering Q5 alone unblocks roughly a quarter of the step. If the aim is
-  to start step 5 in one go, all four want answering together.
-
-### Obligations already recorded that step 5 must honour
-
-- Product needs a default VAT class; Customer needs a *nullable* VAT class override (step 3b).
-- `ProductView` **must** apply `RoleView.canSee(ProtectedField)` for the three restricted Product
-  fields (step 4). The permission model enforces them, but nothing is being redacted until Products
-  exist — this is where Q21's field-level answer takes effect or silently does not.
+- **Q37 — addresses on Customer and Supplier**, plus human-facing codes and multiple selling prices.
+- **Q10 — the generic retail customer**, and **Q13/Q14**, which still block step 7.
 
 ### Standing note
 
