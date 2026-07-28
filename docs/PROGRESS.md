@@ -28,13 +28,14 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 8 | Purchase Invoice, Goods Receipt, GR/IR, purchase price variance, FIFO | **Done, committed** `c6e2513` — ADR 0004's open item, Q17 and Q39 answered as **ADR 0008**, see below |
 | 9 | Sales Invoice, Credit Note, Receipt, Payment, Bank Transfer, open items, rounding | **Done, committed** `29e9dcd` — Q10, Q15's remainder, Q16, Q26 answered as **ADR 0009**; Q31 confirmed; all seven obligations discharged, see below |
 | 10 | Freight / landed cost allocation | **Done, committed** `cf6f1e4` + `6f06cf8` — Q18 answered as **ADR 0010**, and a defect it introduced closed as **ADR 0011**, see below |
-| 11 | Email service | **Done, committed** `b542cf7` — SMTP credentials supplied and stored in Settings, see below |
+| 11 | Email service | **Done, committed** `b542cf7` + `0790c74` — SMTP credentials supplied and stored in Settings, see below |
 | 12 | Automated backups | Not started. Needs Drive paths/credentials, Q24 |
 | 13 | Test suite consolidation sweep | Not started |
 
-**Tests: 801 passing, `mvn clean verify` exit 0.** 205 unit (core-api), 24 core unit, 540 core
+**Tests: 802 passing, `mvn clean verify` exit 0.** 205 unit (core-api), 24 core unit, 541 core
 integration, 8 app unit, 12 app integration, 12 architecture. Nothing was failing at the start of
-this session, and nothing is failing now.
+this session, and nothing is failing now. (Commit `0790c74`'s message says 804; it was written
+before the final count and is wrong by two. This line is the counted one.)
 
 **Step 11 introduced the first non-container tests in `core`** (`RetryPolicyTest`,
 `SmtpConfigurationTest`). Until now everything in that module needed Docker; these do not, which is
@@ -101,6 +102,25 @@ no recovery path locks the owner out of their own financial system.
    of the file and the first key, so the value came back empty and the failure looked like a
    password problem. Docker Compose copes with both. **Anything else reading this file must strip
    the BOM and the CRs** — `sed '1s/^\xEF\xBB\xBF//' docker/.env | tr -d '\r'`.
+6. **⚠️ A test cannot be pointed at a non-Testcontainers database just by setting
+   `spring.datasource.*`.** `PostgresTestContainerConfiguration` lives in
+   `..core.testsupport..`, which is inside the package `CoreTestApplication` component-scans — and
+   because that `@ComponentScan` is declared explicitly, it does **not** carry Boot's
+   `TypeExcludeFilter`, which is what normally keeps `@TestConfiguration` classes out of a scan.
+   So the container bean is registered by scanning, and its `@ServiceConnection` **overrides any
+   datasource properties the test sets**.
+
+   Two consequences. First, `AbstractCoreIntegrationTest`'s `@Import` of that configuration is
+   **redundant** — the container would be there regardless. Second, and the reason this is a
+   warning rather than a curiosity: a test that sets a datasource URL gets a container anyway and
+   **reports the URL it asked for while talking to somewhere else**. It cost real time during the
+   owner password rotation, where the symptom was an empty user table on a database that
+   demonstrably had a user in it. The diagnostic that settles it in one line is
+   `SELECT current_database()` — a Testcontainers PostgreSQL answers `test`.
+
+   To genuinely reach another database, declare a boot configuration that excludes
+   `..core.testsupport..` from the scan, and put it in the `gr.novotrade.novocoretest` sibling
+   package for the reason `CoreTestApplication` documents at length.
 
 ## Git state
 
@@ -130,6 +150,7 @@ were already on `origin`.
 | `cf6f1e4` | Step 10 — freight / landed cost allocation, the lot's two cost figures, migration V18 (**ADR 0010**) |
 | `6f06cf8` | Step 10 (cont.) — stock returning into a re-costed lot, migration V19 (**ADR 0011**) |
 | `b542cf7` | Step 11 — the shared email service, outbox, dispatcher, retry, migration V20 |
+| `0790c74` | Step 11 (cont.) — the second route into the batch-wide stall, and the credential cleanup |
 
 Interleaved with these are small docs-only commits (`e25fcee`, `a09428e`, `920044c`, `de16e58`,
 `b065901`, `8c27cb4`, `2c3fa8a`, `21b2231`, `d1111d0`, `610f785`, `836a4eb`) and this session's
@@ -139,6 +160,13 @@ close-out commit.
 complete, green step on its own; `6f06cf8` is a distinct decision found by *reviewing* it, with its
 own ADR and its own migration. Folding it in would have buried that story inside another commit's
 message, which is the opposite of what the convention is for.
+
+**Step 11 is two commits for the same reason.** `b542cf7` is a complete, green step; `0790c74`
+corrects a claim that step made — the poison-pill guard was narrower than its commit message said —
+and carries the credential cleanup with it. **This has now happened on two consecutive steps, and
+both times the second commit came from reviewing the first rather than from testing it.** Worth
+treating as a habit rather than a coincidence: the review pass after a step looks green is earning
+its keep.
 
 Local branch `phase-1/core-skeleton` still exists and is fully merged; safe to delete.
 Convention going forward is **one commit per build step**, so history stays checkpoint-able.
@@ -1918,6 +1946,11 @@ not safe.**
   parser treats a backslash as an escape, so the intended `\n` became a plain `n`, the CHECK had
   nothing to object to, and the row went in. Bind the value as a parameter and build the array with
   `ARRAY[?]`.
+- **A test that sets a datasource URL still gets a Testcontainers database.** See item 6 of "To be
+  aware of immediately" — the container configuration is picked up by component scanning, not by
+  the `@Import` that appears to control it, and `@ServiceConnection` then overrides the properties.
+  Worth knowing before writing any test meant to run against something other than a throwaway
+  container.
 
 ### Verified by hand, beyond the suite
 
@@ -2171,8 +2204,8 @@ That placement decides the rest:
 ---
 ## Next action — read this first
 
-**Step 12 (automated backups) is the next numbered step.** Steps 0–11 are done and committed.
-**Step 12 is blocked on Q24** — the first numbered step to be blocked since step 10 closed.
+**Step 12 (automated backups) is the next numbered step.** Steps 0–11 are done, committed and
+pushed. **Step 12 is blocked on Q24** — the first numbered step to be blocked since step 10 closed.
 
 ### Credential housekeeping — done, nothing outstanding
 
