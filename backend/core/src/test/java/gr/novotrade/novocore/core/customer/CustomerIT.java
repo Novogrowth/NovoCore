@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import gr.novotrade.novocore.core.AbstractCoreIntegrationTest;
+import gr.novotrade.novocore.core.api.shared.Rate;
 import gr.novotrade.novocore.core.api.customer.CustomerNotFoundException;
 import gr.novotrade.novocore.core.api.customer.CustomerService;
 import gr.novotrade.novocore.core.api.customer.CustomerSystemKey;
@@ -192,7 +193,7 @@ class CustomerIT extends AbstractCoreIntegrationTest {
         // The code fits vat_class.code's varchar(20); a longer fixture name fails on insert rather
         // than testing anything about customers.
         VatClassView retired = vatClasses.create(new NewVatClass(
-                "TEST-CUST-INACTIVE", "Retired rate (test)", new BigDecimal("11")));
+                "TEST-CUST-INACTIVE", "Retired rate (test)", Rate.of("11")));
         vatClasses.deactivate(retired.id());
 
         CustomerView customer = customers.create(NewCustomer.domestic(

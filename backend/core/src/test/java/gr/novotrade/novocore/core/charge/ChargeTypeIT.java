@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import gr.novotrade.novocore.core.AbstractCoreIntegrationTest;
+import gr.novotrade.novocore.core.api.shared.Rate;
 import gr.novotrade.novocore.core.api.account.AccountSystemKey;
 import gr.novotrade.novocore.core.api.account.AccountType;
 import gr.novotrade.novocore.core.api.account.AccountView;
@@ -178,7 +179,7 @@ class ChargeTypeIT extends AbstractCoreIntegrationTest {
     @DisplayName("an inactive VAT class cannot be a default")
     void inactiveVatClassIsRefused() {
         VatClassView temporary = vatClasses.create(new NewVatClass(
-                "TEST-CHARGE-INACTIVE", "Inactive rate (test)", new BigDecimal("12")));
+                "TEST-CHARGE-INACTIVE", "Inactive rate (test)", Rate.of("12")));
         vatClasses.deactivate(temporary.id());
 
         assertThatExceptionOfType(InvalidChargeTypeException.class)

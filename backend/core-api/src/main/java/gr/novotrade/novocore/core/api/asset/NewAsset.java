@@ -1,6 +1,6 @@
 package gr.novotrade.novocore.core.api.asset;
 
-import java.math.BigDecimal;
+import gr.novotrade.novocore.core.api.shared.Rate;
 import java.time.LocalDate;
 import java.util.Objects;
 
@@ -20,7 +20,7 @@ public record NewAsset(
         String code,
         String name,
         LocalDate acquisitionDate,
-        BigDecimal depreciationRatePercent,
+        Rate depreciationRatePercent,
         LocalDate depreciationStartDate) {
 
     public NewAsset {

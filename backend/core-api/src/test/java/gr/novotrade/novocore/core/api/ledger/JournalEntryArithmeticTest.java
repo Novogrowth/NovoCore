@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import gr.novotrade.novocore.core.api.account.AccountType;
 import gr.novotrade.novocore.core.api.account.BalanceSide;
 import gr.novotrade.novocore.core.api.shared.Money;
+import gr.novotrade.novocore.core.api.shared.Rate;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Currency;
@@ -257,13 +258,13 @@ class JournalEntryArithmeticTest {
             // of 0.10 gives 0.02 as well — so this example diverges by nothing, and that is the point
             // of having the method: a gap of euros rather than cents means a wrong rate, not rounding.
             VatTotal total = new VatTotal(VatDirection.OUTPUT, 1L, "1410",
-                    new BigDecimal("24.000000"), Money.ofEur("0.10"), Money.ofEur("0.02"));
+                    Rate.of("24.000000"), Money.ofEur("0.10"), Money.ofEur("0.02"));
 
             assertThat(total.vatImpliedByTheRate()).isEqualTo(Money.ofEur("0.02"));
             assertThat(total.roundingDivergence()).isEqualTo(Money.ofEur("0.00"));
 
             VatTotal drifted = new VatTotal(VatDirection.OUTPUT, 1L, "1410",
-                    new BigDecimal("24.000000"), Money.ofEur("100.00"), Money.ofEur("24.03"));
+                    Rate.of("24.000000"), Money.ofEur("100.00"), Money.ofEur("24.03"));
             assertThat(drifted.roundingDivergence()).isEqualTo(Money.ofEur("0.03"));
         }
 

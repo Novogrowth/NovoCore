@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.asset;
 
+import gr.novotrade.novocore.core.api.shared.Rate;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
@@ -47,7 +48,7 @@ public record AssetView(
         String code,
         String name,
         LocalDate acquisitionDate,
-        BigDecimal depreciationRatePercent,
+        Rate depreciationRatePercent,
         LocalDate depreciationStartDate,
         AssetStatus status,
         LocalDate disposalDate) {
@@ -59,7 +60,7 @@ public record AssetView(
      * or a quantity, as opposed to a posted amount's two. The rate multiplies a cost and the product
      * is rounded once, so the rate must not be what loses the precision.
      */
-    public static final int RATE_SCALE = 6;
+    public static final int RATE_SCALE = Rate.SCALE;
 
     /**
      * The lowest depreciation rate accepted, as a percentage.
@@ -68,16 +69,14 @@ public record AssetView(
      * — the lowest is buildings, and the highest life among them is a small fraction of that — so a
      * rate below this is overwhelmingly likely to be a fraction typed where a percentage was meant.
      *
-     * <p>This bound exists because a plain 0–100 range <em>cannot</em> catch that mistake: 0.1
-     * meaning 10% sits comfortably inside it, and the resulting depreciation charge would be a
-     * hundred times too small every year with nothing complaining. That is precisely the invisible
-     * arithmetic failure {@code CLAUDE.md} rules 5 and 7 exist to prevent, so it is refused rather
-     * than accepted as one tenth of one percent. If a genuine sub-1% rate ever appears, raising
-     * this is a deliberate change with a reason attached rather than a value nobody chose.
+     * <p><strong>The bound itself moved to {@link Rate} in step 15a.</strong> It existed here and,
+     * separately, on {@code VatClassView} — the same factor-of-100 trap guarded twice by two pieces
+     * of code that did not know about each other. What is left here is the name, and the one rule
+     * that is genuinely this type's own: <strong>zero is refused</strong>, because "never
+     * depreciates" is what a null rate already says and two ways to state it is one too many.
+     * {@code Rate} permits zero, since the zero-rated VAT class is real.
      */
-    public static final BigDecimal MIN_RATE_PERCENT = new BigDecimal("1");
-
-    private static final BigDecimal MAX_RATE_PERCENT = new BigDecimal("100");
+    public static final BigDecimal MIN_RATE_PERCENT = Rate.MIN_NON_ZERO_PERCENT;
 
     public AssetView {
         Objects.requireNonNull(name, "name");
@@ -85,22 +84,14 @@ public record AssetView(
         Objects.requireNonNull(status, "status");
 
         if (depreciationRatePercent != null) {
-            if (depreciationRatePercent.scale() > RATE_SCALE) {
+            // Rate already refuses anything strictly between 0 and 1, and anything above 100. The
+            // only thing left to say is that an asset's rate may not be exactly zero.
+            if (depreciationRatePercent.isZero()) {
                 throw new IllegalArgumentException(
-                        "Depreciation rate %s has %d decimal places, but at most %d are allowed."
-                                .formatted(depreciationRatePercent.toPlainString(),
-                                        depreciationRatePercent.scale(), RATE_SCALE));
-            }
-            if (depreciationRatePercent.compareTo(MIN_RATE_PERCENT) < 0
-                    || depreciationRatePercent.compareTo(MAX_RATE_PERCENT) > 0) {
-                throw new IllegalArgumentException(
-                        "Depreciation rate %s is not a percentage between 1 and 100. A rate given "
-                                .formatted(depreciationRatePercent.toPlainString())
-                                + "as a fraction (0.1 for 10%) would sit inside a plain 0-100 "
-                                + "range and depreciate the asset a hundred times too slowly every "
-                                + "year with nothing complaining, so anything below 1% — a "
-                                + "hundred-year life, which no statutory category has — is "
-                                + "refused. Use null for \"rate not yet known\".");
+                        "A depreciation rate of zero is not a rate — an asset that never "
+                                + "depreciates is what a null rate already says, and having two "
+                                + "ways to state it means a report has to handle both. Use null "
+                                + "for \"rate not yet known\" or \"does not depreciate\".");
             }
         }
 
@@ -129,7 +120,7 @@ public record AssetView(
     }
 
     /** Empty until the statutory rate for this asset's category has been supplied. */
-    public Optional<BigDecimal> depreciationRate() {
+    public Optional<Rate> depreciationRate() {
         return Optional.ofNullable(depreciationRatePercent);
     }
 
@@ -168,6 +159,6 @@ public record AssetView(
                             + "computed for it. The statutory rate for its category has to be "
                             + "supplied — it must not be assumed.");
         }
-        return depreciationRatePercent.movePointLeft(2);
+        return depreciationRatePercent.multiplier();
     }
 }

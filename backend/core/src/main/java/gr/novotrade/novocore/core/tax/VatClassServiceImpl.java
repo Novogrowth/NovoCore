@@ -1,6 +1,7 @@
 package gr.novotrade.novocore.core.tax;
 
 import gr.novotrade.novocore.core.api.audit.AuditLogService;
+import gr.novotrade.novocore.core.api.shared.Rate;
 import gr.novotrade.novocore.core.api.tax.InvalidVatClassException;
 import gr.novotrade.novocore.core.api.tax.NewVatClass;
 import gr.novotrade.novocore.core.api.tax.VatClassNotFoundException;
@@ -79,23 +80,18 @@ class VatClassServiceImpl implements VatClassService {
         Objects.requireNonNull(request, "request");
         String code = requireText(request.code(), "VAT class code");
         String description = requireText(request.description(), "VAT class description");
-        BigDecimal rate = request.ratePercent();
-
-        // Delegates to the same predicate VatClassView applies, rather than restating the bound
-        // here: two copies of "what counts as a rate" is how one of them ends up more permissive.
-        if (!VatClassView.isAcceptableRate(rate)) {
-            throw new InvalidVatClassException(
-                    "Rate " + rate.toPlainString() + " is not a percentage. Valid values are "
-                            + "exactly 0, or between 1 and 100. A rate given as a fraction (0.24 "
-                            + "for 24%) would be accepted as 0.24% by a plain 0-100 check and "
-                            + "undercharge by a factor of 100, which cannot be recovered from the "
-                            + "customer once the invoice is issued.");
-        }
-        if (rate.scale() > VatClassView.RATE_SCALE) {
-            throw new InvalidVatClassException(
-                    "Rate " + rate.toPlainString() + " has more than "
-                            + VatClassView.RATE_SCALE + " decimal places.");
-        }
+        // Since step 15a the rate arrives as a Rate, which cannot exist outside the bound or above
+        // six decimals — so the two guards that used to stand here have become impossible to fail
+        // and were removed rather than left as reassuring dead code. The rule did not move away
+        // from this service so much as move *earlier*: a caller can no longer even construct the
+        // request that this would have refused, which is the stronger position.
+        //
+        // The one thing that changes for a caller: a bad rate is now an IllegalArgumentException
+        // from Rate's constructor naming the factor-of-100 trap, not an InvalidVatClassException.
+        // Over HTTP that is a 400 from RateDeserializer rather than a 422, which is the right code
+        // for a value that was never a rate — and VAT class administration has no HTTP route today
+        // in any case.
+        Rate rate = request.ratePercent();
         if (repository.existsByCodeIgnoreCase(code)) {
             throw new InvalidVatClassException(
                     "A VAT class with code '" + code + "' already exists. Codes come from the "
@@ -104,7 +100,7 @@ class VatClassServiceImpl implements VatClassService {
         }
 
         VatClass saved = repository.save(
-                new VatClass(code, description, rate.setScale(VatClassView.RATE_SCALE)));
+                new VatClass(code, description, rate.percent()));
 
         auditLog.record("vat-class.created", ENTITY_TYPE, String.valueOf(saved.getId()), Map.of(
                 "code", code,
@@ -243,7 +239,7 @@ class VatClassServiceImpl implements VatClassService {
                 vatClass.getId(),
                 vatClass.getCode(),
                 vatClass.getDescription(),
-                vatClass.getRatePercent(),
+                Rate.of(vatClass.getRatePercent()),
                 counterpart == null ? null : counterpart.getId(),
                 vatClass.isActive());
     }

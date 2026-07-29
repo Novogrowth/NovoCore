@@ -3,6 +3,7 @@ package gr.novotrade.novocore.core.api.asset;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+import gr.novotrade.novocore.core.api.shared.Rate;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
@@ -20,9 +21,18 @@ class AssetViewTest {
 
     private static final LocalDate ACQUIRED = LocalDate.of(2026, 3, 15);
 
-    private static AssetView asset(BigDecimal ratePercent) {
+    private static AssetView asset(Rate ratePercent) {
         return new AssetView(1L, "FA-001", "Roaster", ACQUIRED, ratePercent, null,
                 AssetStatus.IN_USE, null);
+    }
+
+    /**
+     * Takes the rate as text so a refusal test can cover both gates in one lambda: since step 15a
+     * the bound lives in {@link Rate}'s constructor and only the zero rule is {@code AssetView}'s
+     * own, so {@code asset("0.1")} must throw from the first and {@code asset("0")} from the second.
+     */
+    private static AssetView asset(String ratePercent) {
+        return asset(Rate.of(ratePercent));
     }
 
     @Nested
@@ -35,7 +45,7 @@ class AssetViewTest {
             // The state the register is actually in right now: assets are real, the statutory rates
             // per category have not been supplied. Recording the asset is right; charging
             // depreciation against a guessed rate is not.
-            AssetView awaitingRate = asset(null);
+            AssetView awaitingRate = asset((Rate) null);
 
             assertThat(awaitingRate.depreciationRate()).isEmpty();
             assertThat(awaitingRate.canDepreciate()).isFalse();
@@ -45,7 +55,7 @@ class AssetViewTest {
         @DisplayName("asking for the multiplier without a rate throws instead of defaulting")
         void multiplierThrowsWithoutRate() {
             assertThatExceptionOfType(IllegalStateException.class)
-                    .isThrownBy(() -> asset(null).annualMultiplier())
+                    .isThrownBy(() -> asset((Rate) null).annualMultiplier())
                     .withMessageContaining("no depreciation rate")
                     .withMessageContaining("must not be assumed");
         }
@@ -58,7 +68,7 @@ class AssetViewTest {
         @Test
         @DisplayName("10% is 10, and its multiplier is 0.10")
         void percentageConvertsExactly() {
-            AssetView tenPercent = asset(new BigDecimal("10"));
+            AssetView tenPercent = asset(Rate.of("10"));
 
             assertThat(tenPercent.canDepreciate()).isTrue();
             // movePointLeft, not a division: exact, and never has to be told what to do about a
@@ -72,43 +82,47 @@ class AssetViewTest {
             // The case a plain 0-100 range CANNOT catch, which is why the lower bound exists: 0.1
             // meaning 10% sits comfortably inside 0-100, and the charge would simply be a hundred
             // times too small every year with nothing complaining.
+            // Since step 15a the bound is Rate's, so this is refused before an AssetView exists —
+            // which is the stronger position: no caller can construct the value at all.
             assertThatExceptionOfType(IllegalArgumentException.class)
-                    .isThrownBy(() -> asset(new BigDecimal("0.1")))
+                    .isThrownBy(() -> asset("0.1"))
                     .withMessageContaining("between 1 and 100")
-                    .withMessageContaining("hundred times too slowly");
+                    .withMessageContaining("wrong by a factor of 100");
 
             // 1% is the boundary and is accepted — a hundred-year life is implausible but at least
             // states itself as a percentage.
-            assertThat(asset(BigDecimal.ONE).annualMultiplier()).isEqualByComparingTo("0.01");
+            assertThat(asset("1").annualMultiplier()).isEqualByComparingTo("0.01");
             assertThatExceptionOfType(IllegalArgumentException.class)
-                    .isThrownBy(() -> asset(new BigDecimal("0.99")));
+                    .isThrownBy(() -> asset("0.99"));
         }
 
         @Test
         @DisplayName("zero and negative rates are refused; null is how \"unknown\" is said")
         void zeroAndNegativeAreRefused() {
-            // Zero is excluded for a different reason from the fraction bound: an asset that never
-            // depreciates is what null already expresses, so zero would be a second way to say it.
+            // Zero is excluded for a different reason from the fraction bound, and by a different
+            // gate: an asset that never depreciates is what null already expresses, so zero would
+            // be a second way to say it. Rate itself permits zero — the zero-rated VAT class is
+            // real — so this refusal is AssetView's own and has to keep being tested here.
             assertThatExceptionOfType(IllegalArgumentException.class)
-                    .isThrownBy(() -> asset(BigDecimal.ZERO));
+                    .isThrownBy(() -> asset("0"))
+                    .withMessageContaining("what a null rate already says");
             assertThatExceptionOfType(IllegalArgumentException.class)
-                    .isThrownBy(() -> asset(new BigDecimal("-10")));
+                    .isThrownBy(() -> asset("-10"));
         }
 
         @Test
         @DisplayName("100% is allowed — written off in its first year")
         void hundredPercentIsAllowed() {
-            assertThat(asset(new BigDecimal("100")).annualMultiplier())
-                    .isEqualByComparingTo("1.00");
+            assertThat(asset("100").annualMultiplier()).isEqualByComparingTo("1.00");
             assertThatExceptionOfType(IllegalArgumentException.class)
-                    .isThrownBy(() -> asset(new BigDecimal("100.000001")));
+                    .isThrownBy(() -> asset("100.000001"));
         }
 
         @Test
         @DisplayName("a rate more precise than the schema allows is refused, not rounded")
         void tooPreciseIsRefused() {
             assertThatExceptionOfType(IllegalArgumentException.class)
-                    .isThrownBy(() -> asset(new BigDecimal("10.1234567")))
+                    .isThrownBy(() -> asset("10.1234567"))
                     .withMessageContaining("decimal places");
         }
     }
@@ -120,12 +134,12 @@ class AssetViewTest {
         @Test
         @DisplayName("depreciation starts at acquisition unless a later date says otherwise")
         void startDateDefaultsToAcquisition() {
-            assertThat(asset(new BigDecimal("10")).effectiveDepreciationStartDate())
+            assertThat(asset(Rate.of("10")).effectiveDepreciationStartDate())
                     .isEqualTo(ACQUIRED);
 
             LocalDate inService = ACQUIRED.plusMonths(2);
             AssetView placedLater = new AssetView(2L, null, "Grinder", ACQUIRED,
-                    new BigDecimal("20"), inService, AssetStatus.IN_USE, null);
+                    Rate.of("20"), inService, AssetStatus.IN_USE, null);
 
             // Bought in one period, placed in service in another: charging from the invoice date
             // would put the depreciation in the wrong period.
@@ -150,7 +164,7 @@ class AssetViewTest {
         @DisplayName("a disposed asset stops depreciating even with a rate set")
         void disposedAssetsDoNotDepreciate() {
             AssetView disposed = new AssetView(5L, null, "Sold roaster", ACQUIRED,
-                    new BigDecimal("10"), null, AssetStatus.DISPOSED, ACQUIRED.plusYears(3));
+                    Rate.of("10"), null, AssetStatus.DISPOSED, ACQUIRED.plusYears(3));
 
             assertThat(disposed.depreciationRate()).isPresent();
             assertThat(disposed.canDepreciate()).isFalse();
@@ -167,7 +181,7 @@ class AssetViewTest {
 
             assertThatExceptionOfType(IllegalArgumentException.class)
                     .isThrownBy(() -> new AssetView(7L, null, "Early starter", ACQUIRED,
-                            new BigDecimal("10"), ACQUIRED.minusDays(1), AssetStatus.IN_USE, null))
+                            Rate.of("10"), ACQUIRED.minusDays(1), AssetStatus.IN_USE, null))
                     .withMessageContaining("before it was acquired");
         }
     }

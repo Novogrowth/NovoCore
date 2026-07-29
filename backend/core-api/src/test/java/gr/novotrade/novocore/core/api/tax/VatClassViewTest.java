@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import gr.novotrade.novocore.core.api.shared.Money;
+import gr.novotrade.novocore.core.api.shared.Rate;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import org.junit.jupiter.api.DisplayName;
@@ -14,7 +15,7 @@ import org.junit.jupiter.api.Test;
 class VatClassViewTest {
 
     private static VatClassView rate(String ratePercent) {
-        return new VatClassView(1L, "test", "Test rate", new BigDecimal(ratePercent), null, true);
+        return new VatClassView(1L, "test", "Test rate", Rate.of(ratePercent), null, true);
     }
 
     @Nested
@@ -46,7 +47,7 @@ class VatClassViewTest {
             // that specific mistake instead of a silent acceptance.
             assertThatExceptionOfType(IllegalArgumentException.class)
                     .isThrownBy(() -> rate("0.24"))
-                    .withMessageContaining("undercharge by a factor of 100")
+                    .withMessageContaining("wrong by a factor of 100")
                     .withMessageContaining("not recoverable from the customer");
 
             // Every mainland and island rate expressed as a fraction fails, which is the set of
@@ -99,7 +100,7 @@ class VatClassViewTest {
         @DisplayName("the rate is normalised so equality compares the rate, not its precision")
         void rateIsNormalised() {
             assertThat(rate("24")).isEqualTo(rate("24.000000"));
-            assertThat(rate("24").ratePercent().scale()).isEqualTo(VatClassView.RATE_SCALE);
+            assertThat(rate("24").ratePercent().percent().scale()).isEqualTo(VatClassView.RATE_SCALE);
         }
     }
 
@@ -133,9 +134,9 @@ class VatClassViewTest {
             // 1040 and 1041 differ in legal basis and code, not in arithmetic. Worth pinning:
             // it is the reason a lookup by rate is ambiguous while the maths is not.
             VatClassView standardFour =
-                    new VatClassView(1L, "1040", "ΦΠΑ 4%", new BigDecimal("4"), null, true);
+                    new VatClassView(1L, "1040", "ΦΠΑ 4%", Rate.of("4"), null, true);
             VatClassView islandFour = new VatClassView(
-                    2L, "1041", "ΦΠΑ 4% (αρ.31 ν.5057/2023)", new BigDecimal("4"), null, true);
+                    2L, "1041", "ΦΠΑ 4% (αρ.31 ν.5057/2023)", Rate.of("4"), null, true);
 
             Money net = Money.ofEur("250.00");
             assertThat(standardFour.vatOn(net, RoundingMode.HALF_UP))
@@ -162,7 +163,7 @@ class VatClassViewTest {
         @DisplayName("a counterpart is reported when one is recorded")
         void counterpartIsReported() {
             VatClassView mainland =
-                    new VatClassView(9L, "1410", "ΦΠΑ 24%", new BigDecimal("24"), 8L, true);
+                    new VatClassView(9L, "1410", "ΦΠΑ 24%", Rate.of("24"), 8L, true);
 
             assertThat(mainland.hasReducedCounterpart()).isTrue();
             assertThat(mainland.reducedCounterpart()).contains(8L);

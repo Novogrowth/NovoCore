@@ -7,6 +7,7 @@ import gr.novotrade.novocore.core.api.asset.AssetView;
 import gr.novotrade.novocore.core.api.asset.InvalidAssetException;
 import gr.novotrade.novocore.core.api.asset.NewAsset;
 import gr.novotrade.novocore.core.api.audit.AuditLogService;
+import gr.novotrade.novocore.core.api.shared.Rate;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -24,8 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 class AssetServiceImpl implements AssetService {
 
     private static final String ENTITY_TYPE = "Asset";
-    private static final BigDecimal MAX_RATE_PERCENT = new BigDecimal("100");
-    private static final BigDecimal MIN_RATE_PERCENT = AssetView.MIN_RATE_PERCENT;
 
     private final AssetRepository repository;
     private final AuditLogService auditLog;
@@ -99,7 +98,7 @@ class AssetServiceImpl implements AssetService {
 
         Asset saved = repository.save(new Asset(
                 code, name, request.acquisitionDate(),
-                normaliseRate(request.depreciationRatePercent()),
+                percentOrNull(request.depreciationRatePercent()),
                 request.depreciationStartDate()));
 
         auditLog.record("asset.created", ENTITY_TYPE, String.valueOf(saved.getId()), Map.of(
@@ -108,7 +107,7 @@ class AssetServiceImpl implements AssetService {
                 // Recorded explicitly as "(not set)" so that an asset created before its statutory
                 // rate was known is distinguishable in the log from one created with a rate.
                 "depreciationRatePercent", request.depreciationRatePercent() == null
-                        ? "(not set)" : request.depreciationRatePercent().toPlainString()));
+                        ? "(not set)" : request.depreciationRatePercent().toString()));
 
         return toView(saved);
     }
@@ -130,17 +129,17 @@ class AssetServiceImpl implements AssetService {
 
     @Override
     @Transactional
-    public AssetView changeDepreciationRate(long id, BigDecimal ratePercent) {
+    public AssetView changeDepreciationRate(long id, Rate ratePercent) {
         Asset asset = load(id);
         requireValidRate(ratePercent);
 
         BigDecimal previous = asset.getDepreciationRatePercent();
-        asset.changeDepreciationRate(normaliseRate(ratePercent));
+        asset.changeDepreciationRate(percentOrNull(ratePercent));
 
         auditLog.record("asset.depreciation-rate-changed", ENTITY_TYPE, String.valueOf(id), Map.of(
                 "name", asset.getName(),
                 "from", previous == null ? "(not set)" : previous.toPlainString(),
-                "to", ratePercent == null ? "(cleared)" : ratePercent.toPlainString()));
+                "to", ratePercent == null ? "(cleared)" : ratePercent.toString()));
 
         return toView(asset);
     }
@@ -218,35 +217,39 @@ class AssetServiceImpl implements AssetService {
     /**
      * Null is permitted and means "the statutory rate is not known yet".
      *
-     * <p>Zero is not: an asset that never depreciates is what null already expresses. Nor is
-     * anything below {@link AssetView#MIN_RATE_PERCENT}, because that is the only way to catch a
-     * rate written as a fraction — {@code 0.1} for 10% sits inside a plain 0–100 range and would
-     * depreciate the asset a hundred times too slowly with nothing complaining.
+     * <p>Since step 15a, {@link Rate} refuses anything strictly between 0 and 1, anything above 100,
+     * and anything finer than six decimals — the factor-of-100 trap, guarded once for every rate in
+     * the system instead of separately here and on {@code VatClassView}.
+     *
+     * <p>What is left is the one rule that is genuinely an asset's own: <strong>zero is not a
+     * depreciation rate.</strong> {@code Rate} has to permit it, because the zero-rated VAT class
+     * is real; an asset that never depreciates is what a null rate already says, and two ways to
+     * say it means every report has to handle both. The database says the same in
+     * {@code asset_depreciation_rate_is_a_percentage}, which excludes zero for that reason.
      */
-    private static void requireValidRate(BigDecimal ratePercent) {
+    private static void requireValidRate(Rate ratePercent) {
         if (ratePercent == null) {
             return;
         }
-        if (ratePercent.compareTo(MIN_RATE_PERCENT) < 0
-                || ratePercent.compareTo(MAX_RATE_PERCENT) > 0) {
+        if (ratePercent.isZero()) {
             throw new InvalidAssetException(
-                    "Depreciation rate " + ratePercent.toPlainString() + " is not a percentage "
-                            + "between 1 and 100. A rate written as a fraction (0.1 for 10%) would "
-                            + "depreciate the asset a hundred times too slowly every year, and a "
-                            + "rate below 1% is a hundred-year life that no statutory category "
-                            + "has. Leave it unset if the statutory rate is not known.");
-        }
-        if (ratePercent.scale() > AssetView.RATE_SCALE) {
-            throw new InvalidAssetException(
-                    "Depreciation rate " + ratePercent.toPlainString() + " has "
-                            + ratePercent.scale() + " decimal places, but at most "
-                            + AssetView.RATE_SCALE + " are allowed.");
+                    "A depreciation rate of zero is not a rate. An asset that never depreciates is "
+                            + "what an unset rate already says, so leave it unset rather than "
+                            + "recording a second way to mean the same thing.");
         }
     }
 
-    /** Fixed to the schema's scale so equality compares the rate, not how precisely it arrived. */
-    private static BigDecimal normaliseRate(BigDecimal ratePercent) {
-        return ratePercent == null ? null : ratePercent.setScale(AssetView.RATE_SCALE);
+    /**
+     * The entity still stores a plain {@code BigDecimal}, because the column is a
+     * {@code numeric(19,6)} and a JPA converter would buy nothing here — {@link Rate} normalises on
+     * construction, so what goes in is already at the schema's scale.
+     */
+    private static BigDecimal percentOrNull(Rate rate) {
+        return rate == null ? null : rate.percent();
+    }
+
+    private static Rate rateOrNull(BigDecimal percent) {
+        return percent == null ? null : Rate.of(percent);
     }
 
     private static void requireStartNotBeforeAcquisition(
@@ -279,7 +282,7 @@ class AssetServiceImpl implements AssetService {
                 asset.getCode(),
                 asset.getName(),
                 asset.getAcquisitionDate(),
-                asset.getDepreciationRatePercent(),
+                rateOrNull(asset.getDepreciationRatePercent()),
                 asset.getDepreciationStartDate(),
                 asset.getStatus(),
                 asset.getDisposalDate());

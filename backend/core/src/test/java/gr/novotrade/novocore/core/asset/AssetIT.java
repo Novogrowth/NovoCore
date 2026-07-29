@@ -9,6 +9,7 @@ import gr.novotrade.novocore.core.api.account.AccountKind;
 import gr.novotrade.novocore.core.api.account.AccountSystemKey;
 import gr.novotrade.novocore.core.api.account.AccountView;
 import gr.novotrade.novocore.core.api.account.ChartOfAccountsService;
+import gr.novotrade.novocore.core.api.shared.Rate;
 import gr.novotrade.novocore.core.api.asset.AssetNotFoundException;
 import gr.novotrade.novocore.core.api.asset.AssetService;
 import gr.novotrade.novocore.core.api.asset.AssetStatus;
@@ -18,7 +19,6 @@ import gr.novotrade.novocore.core.api.asset.NewAsset;
 import gr.novotrade.novocore.core.api.audit.AuditEntry;
 import gr.novotrade.novocore.core.api.audit.AuditLogService;
 import gr.novotrade.novocore.core.api.shared.SubLedgerType;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -54,7 +54,7 @@ class AssetIT extends AbstractCoreIntegrationTest {
     void createAndRead() {
         AssetView created = assets.create(new NewAsset(
                 "AssetIT-001", "AssetIT — Probat roaster", ACQUIRED,
-                new BigDecimal("10"), null));
+                Rate.of("10"), null));
 
         assertThat(created.name()).isEqualTo("AssetIT — Probat roaster");
         assertThat(created.codeIfAny()).contains("AssetIT-001");
@@ -139,7 +139,7 @@ class AssetIT extends AbstractCoreIntegrationTest {
         AssetView asset = assets.create(NewAsset.awaitingRate(
                 "AssetIT — Rate to be set", ACQUIRED));
 
-        assets.changeDepreciationRate(asset.id(), new BigDecimal("20"));
+        assets.changeDepreciationRate(asset.id(), Rate.of("20"));
         assertThat(assets.depreciable()).extracting(AssetView::id).contains(asset.id());
         assertThat(assets.require(asset.id()).annualMultiplier()).isEqualByComparingTo("0.20");
 
@@ -161,21 +161,26 @@ class AssetIT extends AbstractCoreIntegrationTest {
     @DisplayName("a rate written as a fraction is refused rather than accepted as 0.1%")
     void fractionalRateIsRefused() {
         // The mistake a plain 0-100 range cannot catch: 0.1 meaning 10% is inside it.
-        assertThatExceptionOfType(InvalidAssetException.class)
-                .isThrownBy(() -> assets.create(new NewAsset(
-                        null, "AssetIT — Fractional rate", ACQUIRED,
-                        new BigDecimal("0.1"), null)))
-                .withMessageContaining("hundred times too slowly");
+        //
+        // Since step 15a this is refused by Rate rather than by the service, so the value never
+        // reaches a NewAsset at all — which is why the expected exception is different here from
+        // the zero case below. Both refusals still exist; they are enforced at different depths,
+        // and that split is the point of the type rather than an accident of it.
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> Rate.of("0.1"))
+                .withMessageContaining("wrong by a factor of 100");
 
-        assertThatExceptionOfType(InvalidAssetException.class)
-                .isThrownBy(() -> assets.create(new NewAsset(
-                        null, "AssetIT — Zero rate", ACQUIRED, BigDecimal.ZERO, null)))
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> Rate.of("150"))
                 .withMessageContaining("between 1 and 100");
 
+        // Zero is the one rate rule that is genuinely the asset's own, because Rate has to permit
+        // zero for the zero-rated VAT class. So it is still the service that refuses it, and this
+        // is the assertion that would notice if that rule were lost in the move.
         assertThatExceptionOfType(InvalidAssetException.class)
                 .isThrownBy(() -> assets.create(new NewAsset(
-                        null, "AssetIT — Over 100", ACQUIRED, new BigDecimal("150"), null)))
-                .withMessageContaining("between 1 and 100");
+                        null, "AssetIT — Zero rate", ACQUIRED, Rate.ZERO, null)))
+                .withMessageContaining("what an unset rate already says");
     }
 
     @Test
@@ -200,7 +205,7 @@ class AssetIT extends AbstractCoreIntegrationTest {
     void depreciationStartDate() {
         LocalDate inService = ACQUIRED.plusMonths(2);
         AssetView asset = assets.create(new NewAsset(
-                null, "AssetIT — Installed later", ACQUIRED, new BigDecimal("10"), inService));
+                null, "AssetIT — Installed later", ACQUIRED, Rate.of("10"), inService));
 
         // Bought in one period, placed in service in another: charging from the invoice date would
         // put the depreciation in the wrong period.
@@ -221,7 +226,7 @@ class AssetIT extends AbstractCoreIntegrationTest {
     @DisplayName("disposal stops depreciation, and a second disposal is refused not overwritten")
     void disposal() {
         AssetView asset = assets.create(new NewAsset(
-                null, "AssetIT — Sold machine", ACQUIRED, new BigDecimal("10"), null));
+                null, "AssetIT — Sold machine", ACQUIRED, Rate.of("10"), null));
         LocalDate sold = ACQUIRED.plusYears(2);
 
         AssetView disposed = assets.dispose(asset.id(), sold);

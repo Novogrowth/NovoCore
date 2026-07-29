@@ -8,7 +8,7 @@ import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.web.Requires;
-import java.math.BigDecimal;
+import gr.novotrade.novocore.core.api.shared.Rate;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -167,7 +167,7 @@ class AssetController {
     }
 
     /** A percentage: 10 means 10%. Null means the statutory rate is still unknown. */
-    record DepreciationRateRequest(BigDecimal ratePercent) {
+    record DepreciationRateRequest(Rate ratePercent) {
     }
 
     record DepreciationStartDateRequest(LocalDate depreciationStartDate) {

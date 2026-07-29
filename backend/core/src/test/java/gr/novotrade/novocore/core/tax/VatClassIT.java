@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import gr.novotrade.novocore.core.AbstractCoreIntegrationTest;
+import gr.novotrade.novocore.core.api.shared.Rate;
 import gr.novotrade.novocore.core.api.audit.AuditEntry;
 import gr.novotrade.novocore.core.api.audit.AuditLogService;
 import gr.novotrade.novocore.core.api.shared.Money;
@@ -89,7 +90,7 @@ class VatClassIT extends AbstractCoreIntegrationTest {
         assertThat(seeded()).hasSize(9);
 
         long distinctRates = seeded().stream()
-                .map(view -> view.ratePercent().stripTrailingZeros())
+                .map(view -> view.ratePercent().percent().stripTrailingZeros())
                 .distinct()
                 .count();
         assertThat(distinctRates)
@@ -97,7 +98,7 @@ class VatClassIT extends AbstractCoreIntegrationTest {
                 .isEqualTo(8);
 
         List<VatClassView> fourPercent = seeded().stream()
-                .filter(view -> view.ratePercent().compareTo(new BigDecimal("4")) == 0)
+                .filter(view -> view.ratePercent().percent().compareTo(new BigDecimal("4")) == 0)
                 .toList();
 
         assertThat(fourPercent)
@@ -168,10 +169,10 @@ class VatClassIT extends AbstractCoreIntegrationTest {
     @DisplayName("a new rate can be added at runtime without a migration")
     void createNewRate() {
         VatClassView created = vatClasses.create(
-                new NewVatClass("TEST-1100", "ΦΠΑ 11% (test)", new BigDecimal("11")));
+                new NewVatClass("TEST-1100", "ΦΠΑ 11% (test)", Rate.of("11")));
 
         assertThat(created.code()).isEqualTo("TEST-1100");
-        assertThat(created.ratePercent()).isEqualByComparingTo("11");
+        assertThat(created.ratePercent()).isEqualTo(Rate.of("11"));
         assertThat(created.active()).isTrue();
         assertThat(created.hasReducedCounterpart()).isFalse();
 
@@ -189,34 +190,38 @@ class VatClassIT extends AbstractCoreIntegrationTest {
     void duplicateCodeIsRefused() {
         assertThatExceptionOfType(InvalidVatClassException.class)
                 .isThrownBy(() -> vatClasses.create(
-                        new NewVatClass("1410", "Duplicate", new BigDecimal("24"))))
+                        new NewVatClass("1410", "Duplicate", Rate.of("24"))))
                 .withMessageContaining("already exists");
     }
 
     @Test
     @DisplayName("a rate outside 0 or 1-100 is refused, naming the factor-of-100 mistake")
     void rateOutsideRangeIsRefused() {
-        assertThatExceptionOfType(InvalidVatClassException.class)
-                .isThrownBy(() -> vatClasses.create(
-                        new NewVatClass("TEST-BAD-HIGH", "Too high", new BigDecimal("101"))))
+        // Since step 15a the refusal happens one step earlier and is stronger for it: the bad value
+        // cannot become a Rate, so it never reaches a NewVatClass, let alone the service. What used
+        // to be an InvalidVatClassException from create() is now an IllegalArgumentException from
+        // Rate's constructor — the same rule, applied at the only place that can enforce it for
+        // every rate in the system rather than once per service that happens to remember.
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> Rate.of("101"))
                 .withMessageContaining("exactly 0, or between 1 and 100");
 
-        assertThatExceptionOfType(InvalidVatClassException.class)
-                .isThrownBy(() -> vatClasses.create(
-                        new NewVatClass("TEST-BAD-NEG", "Negative", new BigDecimal("-1"))));
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> Rate.of("-1"));
 
         // The case a plain 0-100 bound let through: 0.24 written for 24%, which was accepted as a
         // quarter of one percent and undercharged by the exact factor V5's comment claimed to
         // prevent. An undercharge is not recoverable from the customer once the invoice is issued.
-        assertThatExceptionOfType(InvalidVatClassException.class)
-                .isThrownBy(() -> vatClasses.create(
-                        new NewVatClass("TEST-BAD-FRAC", "Fraction", new BigDecimal("0.24"))))
-                .withMessageContaining("undercharge by a factor of 100");
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> Rate.of("0.24"))
+                .withMessageContaining("wrong by a factor of 100")
+                .withMessageContaining("not recoverable from the customer");
 
         // Zero remains valid: the zero-rated class is real and distinct from an exempt line, which
-        // is why the rule is "exactly 0 or at least 1" rather than a flat minimum.
+        // is why the rule is "exactly 0 or at least 1" rather than a flat minimum. Asserted through
+        // the service, because that is the path that has to keep accepting it.
         assertThat(vatClasses.create(
-                new NewVatClass("TEST-OK-ZERO", "Zero rate (test)", new BigDecimal("0")))
+                new NewVatClass("TEST-OK-ZERO", "Zero rate (test)", Rate.of("0")))
                 .isZeroRated()).isTrue();
     }
 
@@ -235,9 +240,9 @@ class VatClassIT extends AbstractCoreIntegrationTest {
     @DisplayName("a rate change is modelled as a new class plus deactivation of the old one")
     void rateChangeBySupersession() {
         VatClassView old = vatClasses.create(
-                new NewVatClass("TEST-OLD", "Superseded rate", new BigDecimal("20")));
+                new NewVatClass("TEST-OLD", "Superseded rate", Rate.of("20")));
         VatClassView replacement = vatClasses.create(
-                new NewVatClass("TEST-NEW", "Replacement rate", new BigDecimal("21")));
+                new NewVatClass("TEST-NEW", "Replacement rate", Rate.of("21")));
 
         vatClasses.deactivate(old.id());
 
@@ -261,9 +266,9 @@ class VatClassIT extends AbstractCoreIntegrationTest {
     @DisplayName("a mapping can be set and cleared, and is audited")
     void mapAndClearCounterpart() {
         VatClassView mainland = vatClasses.create(
-                new NewVatClass("TEST-MAP-30", "Mainland 30 (test)", new BigDecimal("30")));
+                new NewVatClass("TEST-MAP-30", "Mainland 30 (test)", Rate.of("30")));
         VatClassView reduced = vatClasses.create(
-                new NewVatClass("TEST-MAP-20", "Reduced 20 (test)", new BigDecimal("20")));
+                new NewVatClass("TEST-MAP-20", "Reduced 20 (test)", Rate.of("20")));
 
         VatClassView mapped = vatClasses.mapToReducedCounterpart(mainland.id(), reduced.id());
         assertThat(mapped.reducedCounterpart()).contains(reduced.id());
@@ -282,9 +287,9 @@ class VatClassIT extends AbstractCoreIntegrationTest {
     @DisplayName("a counterpart must be rated lower than the class it reduces")
     void counterpartMustBeLower() {
         VatClassView lower = vatClasses.create(
-                new NewVatClass("TEST-LOW", "Low (test)", new BigDecimal("5")));
+                new NewVatClass("TEST-LOW", "Low (test)", Rate.of("5")));
         VatClassView higher = vatClasses.create(
-                new NewVatClass("TEST-HIGH", "High (test)", new BigDecimal("15")));
+                new NewVatClass("TEST-HIGH", "High (test)", Rate.of("15")));
 
         assertThatExceptionOfType(InvalidVatClassException.class)
                 .isThrownBy(() -> vatClasses.mapToReducedCounterpart(lower.id(), higher.id()))
@@ -292,7 +297,7 @@ class VatClassIT extends AbstractCoreIntegrationTest {
 
         // Equal is refused too: the mapping means "the reduced rate for this one".
         VatClassView sameRate = vatClasses.create(
-                new NewVatClass("TEST-SAME", "Same rate (test)", new BigDecimal("5")));
+                new NewVatClass("TEST-SAME", "Same rate (test)", Rate.of("5")));
         assertThatExceptionOfType(InvalidVatClassException.class)
                 .isThrownBy(() -> vatClasses.mapToReducedCounterpart(lower.id(), sameRate.id()));
     }
@@ -301,7 +306,7 @@ class VatClassIT extends AbstractCoreIntegrationTest {
     @DisplayName("a class cannot be its own counterpart")
     void noSelfMapping() {
         VatClassView self = vatClasses.create(
-                new NewVatClass("TEST-SELF", "Self (test)", new BigDecimal("7")));
+                new NewVatClass("TEST-SELF", "Self (test)", Rate.of("7")));
 
         assertThatExceptionOfType(InvalidVatClassException.class)
                 .isThrownBy(() -> vatClasses.mapToReducedCounterpart(self.id(), self.id()))
@@ -312,11 +317,11 @@ class VatClassIT extends AbstractCoreIntegrationTest {
     @DisplayName("mappings are one level deep, not a chain")
     void noChains() {
         VatClassView top = vatClasses.create(
-                new NewVatClass("TEST-CHAIN-A", "Chain A", new BigDecimal("40")));
+                new NewVatClass("TEST-CHAIN-A", "Chain A", Rate.of("40")));
         VatClassView middle = vatClasses.create(
-                new NewVatClass("TEST-CHAIN-B", "Chain B", new BigDecimal("35")));
+                new NewVatClass("TEST-CHAIN-B", "Chain B", Rate.of("35")));
         VatClassView bottom = vatClasses.create(
-                new NewVatClass("TEST-CHAIN-C", "Chain C", new BigDecimal("30")));
+                new NewVatClass("TEST-CHAIN-C", "Chain C", Rate.of("30")));
 
         vatClasses.mapToReducedCounterpart(middle.id(), bottom.id());
 
@@ -329,11 +334,11 @@ class VatClassIT extends AbstractCoreIntegrationTest {
     @DisplayName("a reduced class cannot be claimed by two mainland classes")
     void counterpartIsOneToOne() {
         VatClassView firstMainland = vatClasses.create(
-                new NewVatClass("TEST-CLAIM-A", "Claim A", new BigDecimal("45")));
+                new NewVatClass("TEST-CLAIM-A", "Claim A", Rate.of("45")));
         VatClassView secondMainland = vatClasses.create(
-                new NewVatClass("TEST-CLAIM-B", "Claim B", new BigDecimal("44")));
+                new NewVatClass("TEST-CLAIM-B", "Claim B", Rate.of("44")));
         VatClassView shared = vatClasses.create(
-                new NewVatClass("TEST-CLAIM-C", "Claim C", new BigDecimal("22")));
+                new NewVatClass("TEST-CLAIM-C", "Claim C", Rate.of("22")));
 
         vatClasses.mapToReducedCounterpart(firstMainland.id(), shared.id());
 
@@ -444,7 +449,7 @@ class VatClassIT extends AbstractCoreIntegrationTest {
     }
 
     private void assertRate(String code, String expectedPercent) {
-        assertThat(vatClasses.requireByCode(code).ratePercent())
+        assertThat(vatClasses.requireByCode(code).ratePercent().percent())
                 .as("rate of VAT class %s", code)
                 .isEqualByComparingTo(expectedPercent);
     }

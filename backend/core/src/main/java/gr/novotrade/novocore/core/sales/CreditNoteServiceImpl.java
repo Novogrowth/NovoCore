@@ -325,7 +325,7 @@ class CreditNoteServiceImpl implements CreditNoteService {
             // The rate the SALE charged, never re-resolved: a credit note issued after the customer's
             // override changed must still return the VAT that was actually collected.
             VatClassView vatClass = vatClasses.require(invoiceLine.getVatClassId());
-            vat = Money.rounded(net.amount().multiply(vatClass.ratePercent()).divide(ONE_HUNDRED),
+            vat = Money.rounded(net.amount().multiply(vatClass.ratePercent().percent()).divide(ONE_HUNDRED),
                     currency, roundingMode);
         }
 

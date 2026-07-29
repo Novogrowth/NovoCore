@@ -2,6 +2,7 @@ package gr.novotrade.novocore.core.web.json;
 
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
+import gr.novotrade.novocore.core.api.shared.Rate;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
 import java.math.BigDecimal;
 import java.util.Currency;
@@ -70,6 +71,8 @@ public final class NovoCoreJsonModule extends SimpleModule {
         addDeserializer(UnitCost.class, new UnitCostDeserializer());
         addSerializer(Quantity.class, new QuantitySerializer());
         addDeserializer(Quantity.class, new QuantityDeserializer());
+        addSerializer(Rate.class, new RateSerializer());
+        addDeserializer(Rate.class, new RateDeserializer());
     }
 
     // -------------------------------------------------------------------------------------------
@@ -106,6 +109,21 @@ public final class NovoCoreJsonModule extends SimpleModule {
         @Override
         public void serialize(Quantity value, JsonGenerator gen, SerializationContext ctxt) {
             gen.writeString(value.value().toPlainString());
+        }
+    }
+
+    /**
+     * A rate is a bare string, like a quantity — {@code "24.000000"}, never {@code 24.000000}.
+     *
+     * <p>No currency, obviously, so it takes {@link Quantity}'s shape rather than {@link Money}'s.
+     * <strong>The scale is preserved as stored</strong> rather than normalised to {@code "24"}: a
+     * client should never have to work out whether trailing precision was dropped deliberately or
+     * lost, and it is the same convention {@link UnitCost} already follows.
+     */
+    static final class RateSerializer extends ValueSerializer<Rate> {
+        @Override
+        public void serialize(Rate value, JsonGenerator gen, SerializationContext ctxt) {
+            gen.writeString(value.percent().toPlainString());
         }
     }
 
@@ -205,6 +223,30 @@ public final class NovoCoreJsonModule extends SimpleModule {
             } catch (NumberFormatException notANumber) {
                 return ctxt.reportInputMismatch(Quantity.class,
                         "not a valid decimal quantity: \"%s\"", parser.getString());
+            }
+        }
+    }
+
+    static final class RateDeserializer extends ValueDeserializer<Rate> {
+        @Override
+        public Rate deserialize(JsonParser parser, DeserializationContext ctxt) {
+            if (parser.currentToken() != JsonToken.VALUE_STRING) {
+                return ctxt.reportInputMismatch(Rate.class,
+                        "a rate must be a JSON string such as \"24.000000\", not %s. A rate is a "
+                                + "percentage carrying six decimals, and a JSON number cannot "
+                                + "represent them exactly in a JavaScript client.",
+                        parser.currentToken());
+            }
+            String raw = parser.getString().trim();
+            try {
+                return Rate.of(new BigDecimal(raw));
+            } catch (NumberFormatException notANumber) {
+                return ctxt.reportInputMismatch(Rate.class,
+                        "not a valid decimal rate: \"%s\"", raw);
+            } catch (IllegalArgumentException outOfRange) {
+                // Rate's own message names the factor-of-100 trap, which is the whole reason the
+                // bound exists — repeating it here would be a second wording of one rule.
+                return ctxt.reportInputMismatch(Rate.class, "%s", outOfRange.getMessage());
             }
         }
     }

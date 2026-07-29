@@ -1,6 +1,6 @@
 package gr.novotrade.novocore.core.api.asset;
 
-import java.math.BigDecimal;
+import gr.novotrade.novocore.core.api.shared.Rate;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -72,7 +72,7 @@ public interface AssetService {
      *
      * @throws InvalidAssetException if the rate is not above 0 and up to 100
      */
-    AssetView changeDepreciationRate(long id, BigDecimal ratePercent);
+    AssetView changeDepreciationRate(long id, Rate ratePercent);
 
     /**
      * Sets or clears the date depreciation begins, when it differs from acquisition.

@@ -383,7 +383,7 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
         Money vat = vatClass == null
                 ? Money.zero(currency)
                 : Money.rounded(
-                        net.amount().multiply(vatClass.ratePercent()).divide(ONE_HUNDRED),
+                        net.amount().multiply(vatClass.ratePercent().percent()).divide(ONE_HUNDRED),
                         currency, roundingMode);
 
         if (line.isProduct()) {

@@ -1,7 +1,7 @@
 package gr.novotrade.novocore.core.api.ledger;
 
 import gr.novotrade.novocore.core.api.shared.Money;
-import java.math.BigDecimal;
+import gr.novotrade.novocore.core.api.shared.Rate;
 import java.math.RoundingMode;
 import java.util.Objects;
 
@@ -26,7 +26,7 @@ public record VatTotal(
         VatDirection direction,
         long vatClassId,
         String vatClassCode,
-        BigDecimal ratePercent,
+        Rate ratePercent,
         Money taxableBase,
         Money vatAmount) {
 
@@ -48,7 +48,7 @@ public record VatTotal(
      * rather than cents means something posted at the wrong rate.
      */
     public Money vatImpliedByTheRate() {
-        return taxableBase.times(ratePercent.movePointLeft(2), RoundingMode.HALF_UP);
+        return taxableBase.times(ratePercent.multiplier(), RoundingMode.HALF_UP);
     }
 
     /** How far the posted VAT is from what one rounding of the whole base would have given. */
