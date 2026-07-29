@@ -23,16 +23,26 @@ import org.springframework.util.MultiValueMap;
  * <p><strong>Cookies are carried by hand rather than by a client cookie jar</strong>, deliberately.
  * A jar would hide the {@code Set-Cookie} header, and {@code Secure} / {@code HttpOnly} /
  * {@code SameSite} are attributes a test has to be able to assert on — without needing TLS to do it.
+ *
+ * <p><strong>Step 15a moved the wire onto {@link HttpTransport}</strong>, so one scenario can run
+ * both under Failsafe and against a live server, and <strong>put {@link JsonNumberSweep} on every
+ * response</strong>. The sweep is here rather than at the call sites for the reason
+ * {@code WebConfiguration} gives for registering the money serialiser globally: a check applied per
+ * call is forgotten on the call that mattered.
  */
 final class ApiClient {
 
     static final String SESSION_COOKIE = "NOVOCORESESSION";
     static final String CSRF_COOKIE = "XSRF-TOKEN";
 
-    private final TestRestTemplate rest;
+    private final HttpTransport transport;
 
     ApiClient(TestRestTemplate rest) {
-        this.rest = rest;
+        this(HttpTransport.of(rest));
+    }
+
+    ApiClient(HttpTransport transport) {
+        this.transport = transport;
     }
 
     /** @throws AssertionError if the login did not produce a session */
@@ -49,7 +59,8 @@ final class ApiClient {
     LoginAttempt attemptLogin(String username, String password) {
         // The CSRF token cookie is written on the first response because deferred token loading is
         // switched off in SecurityConfiguration; without that there would be no token to send.
-        ResponseEntity<String> initial = rest.getForEntity("/login", String.class);
+        ResponseEntity<String> initial =
+                exchange("/login", HttpMethod.GET, new HttpEntity<>(new HttpHeaders()));
         String csrfCookie = cookie(initial, CSRF_COOKIE).orElseThrow(() ->
                 new AssertionError("No " + CSRF_COOKIE + " cookie on the login page response."));
         String csrfToken = valueOf(csrfCookie);
@@ -67,14 +78,21 @@ final class ApiClient {
         // header — is directly observable. Relying on redirect behaviour would not be: Boot 4
         // dropped TestRestTemplate's ENABLE_REDIRECTS option, so whether a 302 is followed is no
         // longer something a test can pin down.
-        ResponseEntity<String> response = rest.exchange(
-                "/login", HttpMethod.POST, new HttpEntity<>(form, headers), String.class);
+        ResponseEntity<String> response = exchange(
+                "/login", HttpMethod.POST, new HttpEntity<>(form, headers));
 
         return new LoginAttempt(response, cookie(response, SESSION_COOKIE), csrfToken);
     }
 
+    /**
+     * The one place a request leaves this class, which is why the sweep is here: every response
+     * this client ever returns has been checked for a decimal that arrived as a JSON number.
+     */
     ResponseEntity<String> exchange(String path, HttpMethod method, HttpEntity<?> entity) {
-        return rest.exchange(path, method, entity, String.class);
+        ResponseEntity<String> response = transport.exchange(path, method, entity);
+        JsonNumberSweep.check(method, path,
+                response.getHeaders().getFirst(HttpHeaders.CONTENT_TYPE), response.getBody());
+        return response;
     }
 
     static Optional<String> cookie(ResponseEntity<?> response, String name) {

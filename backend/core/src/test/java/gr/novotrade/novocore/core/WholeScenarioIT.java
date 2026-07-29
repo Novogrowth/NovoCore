@@ -3,7 +3,6 @@ package gr.novotrade.novocore.core;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import gr.novotrade.novocore.core.api.account.AccountSystemKey;
-import gr.novotrade.novocore.core.api.account.AccountView;
 import gr.novotrade.novocore.core.api.account.ChartOfAccountsService;
 import gr.novotrade.novocore.core.api.backup.BackupRunStatus;
 import gr.novotrade.novocore.core.api.backup.BackupService;
@@ -26,7 +25,6 @@ import gr.novotrade.novocore.core.api.inventory.StockLocation;
 import gr.novotrade.novocore.core.api.inventory.WriteOffReason;
 import gr.novotrade.novocore.core.api.ledger.JournalService;
 import gr.novotrade.novocore.core.api.ledger.JournalSource;
-import gr.novotrade.novocore.core.api.ledger.TrialBalance;
 import gr.novotrade.novocore.core.api.ledger.VatTotal;
 import gr.novotrade.novocore.core.api.product.NewProduct;
 import gr.novotrade.novocore.core.api.product.ProductService;
@@ -56,13 +54,10 @@ import gr.novotrade.novocore.core.api.sales.SettlementMethod;
 import gr.novotrade.novocore.core.api.settings.SettingsService;
 import gr.novotrade.novocore.core.api.settlement.NewAllocation;
 import gr.novotrade.novocore.core.api.settlement.NewSettlement;
-import gr.novotrade.novocore.core.api.settlement.PartyType;
 import gr.novotrade.novocore.core.api.settlement.SettlementService;
 import gr.novotrade.novocore.core.api.settlement.SettlementView;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
-import gr.novotrade.novocore.core.api.shared.SubLedgerRef;
-import gr.novotrade.novocore.core.api.shared.SubLedgerType;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
 import gr.novotrade.novocore.core.api.supplier.NewSupplier;
 import gr.novotrade.novocore.core.api.supplier.SupplierService;
@@ -71,20 +66,24 @@ import gr.novotrade.novocore.core.api.tax.VatClassSource;
 import gr.novotrade.novocore.core.api.tax.VatStatus;
 import gr.novotrade.novocore.core.backup.PostgresTools;
 import gr.novotrade.novocore.core.backup.StubDriveServer;
+import gr.novotrade.novocore.core.testsupport.LedgerInvariants;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -161,6 +160,7 @@ class WholeScenarioIT extends AbstractCoreIntegrationTest {
     @Autowired private BackupService backups;
     @Autowired private PostgresTools postgres;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private ApplicationContext applicationContext;
 
     @TempDir
     static Path backupDirectory;
@@ -396,45 +396,24 @@ class WholeScenarioIT extends AbstractCoreIntegrationTest {
     // The invariants — over the whole database, not over what the acts above returned
     // =======================================================================================
 
-    @Test
+    /**
+     * <strong>Every invariant that holds over any database, asked of this one.</strong>
+     *
+     * <p>These used to be nine separate test methods here. They are now defined once in
+     * {@link LedgerInvariants} and shared with step 15's HTTP-driven scenario, because the same
+     * questions have to be asked of a database built through the REST surface and two copies of
+     * "the Inventory account equals what the lots carry" are two copies that can disagree.
+     *
+     * <p>A {@code @TestFactory} rather than a loop inside one test: JUnit reports one result per
+     * invariant, so a break in VAT still says it is VAT — which is the property this class was
+     * built around and the reason {@link LedgerInvariants} has no {@code sweepAll} method.
+     */
+    @TestFactory
     @Order(10)
-    @DisplayName("no entry anywhere in the database is unbalanced, empty or one-sided")
-    void noEntryInTheDatabaseIsUnbalanced() {
-        // Straight to the tables. Nothing here goes through a service, a view or a Java check, so
-        // what it reports is a fact about the data. The deferred constraint trigger should make
-        // every one of these impossible; this asserts that it did, over every entry that exists.
-        List<Map<String, Object>> broken = jdbc.queryForList("""
-                SELECT e.id,
-                       count(l.id)                                                    AS line_count,
-                       coalesce(sum(l.amount) FILTER (WHERE l.side = 'DEBIT'),  0)     AS debits,
-                       coalesce(sum(l.amount) FILTER (WHERE l.side = 'CREDIT'), 0)     AS credits,
-                       count(DISTINCT l.amount_currency)                              AS currencies
-                FROM   journal_entry e
-                LEFT   JOIN journal_line l ON l.entry_id = e.id
-                GROUP  BY e.id
-                HAVING coalesce(sum(l.amount) FILTER (WHERE l.side = 'DEBIT'),  0)
-                    <> coalesce(sum(l.amount) FILTER (WHERE l.side = 'CREDIT'), 0)
-                    OR count(l.id) < 2
-                    OR count(DISTINCT l.amount_currency) <> 1
-                ORDER  BY e.id
-                """);
-
-        assertThat(broken)
-                .as("journal entries that do not balance, have fewer than two lines, or span "
-                        + "currencies — CLAUDE.md rule 6, asserted against the data")
-                .isEmpty();
-    }
-
-    @Test
-    @Order(11)
-    @DisplayName("no journal line states nothing: every amount is strictly positive")
-    void noLineIsZeroOrNegative() {
-        // A named side plus a strictly positive amount, never signed. A zero line balances while
-        // saying nothing, which is why it is refused as firmly as a negative one.
-        assertThat(jdbc.queryForObject(
-                "SELECT count(*) FROM journal_line WHERE amount <= 0", Long.class))
-                .as("journal lines with a zero or negative amount")
-                .isZero();
+    @DisplayName("the universal ledger invariants")
+    Stream<DynamicTest> theUniversalInvariantsHold() {
+        return LedgerInvariants.from(applicationContext).all(JANUARY, YEAR_END).stream()
+                .map(invariant -> DynamicTest.dynamicTest(invariant.name(), invariant::run));
     }
 
     @Test
@@ -442,84 +421,9 @@ class WholeScenarioIT extends AbstractCoreIntegrationTest {
     @DisplayName("the scenario actually produced a substantial ledger, so the sweeps mean something")
     void theLedgerIsNotTrivial() {
         // Guards the failure mode every whole-system test has: passing because it did nothing. An
-        // empty database satisfies every invariant above perfectly.
-        Long entries = jdbc.queryForObject("SELECT count(*) FROM journal_entry", Long.class);
-        Long lines = jdbc.queryForObject("SELECT count(*) FROM journal_line", Long.class);
-        assertThat(entries).as("journal entries produced by the year").isGreaterThan(15L);
-        assertThat(lines).as("journal lines produced by the year").isGreaterThan(60L);
-        assertThat(journal.trialBalance(YEAR_END).balances())
-                .as("accounts with activity")
-                .hasSizeGreaterThan(10);
-    }
-
-    @Test
-    @Order(13)
-    @DisplayName("the trial balance balances — rule 6 restated for the whole ledger")
-    void theTrialBalanceBalances() {
-        TrialBalance trialBalance = journal.trialBalance(YEAR_END);
-        assertThat(trialBalance.isBalanced()).isTrue();
-        assertThat(trialBalance.difference().isZero()).isTrue();
-        assertThat(trialBalance.totalDebits()).isEqualTo(trialBalance.totalCredits());
-    }
-
-    @Test
-    @Order(20)
-    @DisplayName("every control account equals the sum of its own sub-ledger")
-    void controlAccountsReconcileToTheirSubLedgers() {
-        // What makes a Control account reconcilable rather than merely declared to be one: the
-        // account's balance and the sum of its per-entity positions are the same rows read two
-        // ways, so they cannot disagree unless a line carries a reference it should not.
-        for (AccountView account : chart.allAccounts()) {
-            if (account.subLedgerType() == null) {
-                continue;
-            }
-            Money fromTheAccount = journal.balanceOf(account.id(), YEAR_END).net();
-            Money fromTheSubLedger = Money.zero(Money.EUR);
-            for (Long entityId : subLedgerEntityIdsOn(account.id())) {
-                fromTheSubLedger = fromTheSubLedger.plus(
-                        positionOnAccount(account.id(), account.subLedgerType(), entityId));
-            }
-            assertThat(fromTheSubLedger)
-                    .as("control account '%s' vs the sum of its %s sub-ledger",
-                            account.name(), account.subLedgerType())
-                    .isEqualTo(fromTheAccount);
-        }
-    }
-
-    @Test
-    @Order(21)
-    @DisplayName("every line on a Control account names a sub-ledger entity that exists")
-    void everyControlLineCarriesALiveReference() {
-        // The trigger enforces this on write. Asserted again here over the finished ledger,
-        // because a dangling reference is exactly what makes a control account unreconcilable and
-        // the check above would silently under-count rather than fail.
-        assertThat(jdbc.queryForList("""
-                SELECT l.id, a.name, l.sub_ledger_type, l.sub_ledger_id
-                FROM   journal_line l
-                JOIN   account a ON a.id = l.account_id
-                WHERE  a.account_kind = 'CONTROL'
-                AND   (l.sub_ledger_type IS NULL OR l.sub_ledger_id IS NULL)
-                """))
-                .as("Control-account lines with no sub-ledger reference")
-                .isEmpty();
-    }
-
-    @Test
-    @Order(30)
-    @DisplayName("the Inventory account equals what every lot says it is carrying")
-    void inventoryAgreesWithTheLots() {
-        // The invariant that found ADR 0011's defect, applied to a whole year rather than to one
-        // allocation. Restricted to the lots this scenario created, which is all of them.
-        Money fromTheLots = Money.zero(Money.EUR);
-        for (InventoryLotView lot : allLots()) {
-            fromTheLots = fromTheLots.plus(lot.remainingValue());
-        }
-        Money fromTheLedger =
-                journal.balanceOf(AccountSystemKey.INVENTORY, YEAR_END).net();
-
-        assertThat(fromTheLedger)
-                .as("Inventory control account vs the sum of every lot's remaining value")
-                .isEqualTo(fromTheLots);
+        // empty database satisfies every invariant above perfectly. The thresholds are this
+        // scenario's own claim about itself, which is why they are passed in rather than built in.
+        LedgerInvariants.from(applicationContext).theLedgerIsNotTrivial(YEAR_END, 15L, 60L, 10);
     }
 
     @Test
@@ -529,35 +433,23 @@ class WholeScenarioIT extends AbstractCoreIntegrationTest {
         // ADR 0004's clearing account earning its name. Everything matched has netted out; what is
         // left is the timing difference, and both halves of it are queryable rather than merely
         // asserted to exist.
-        Money clearing =
-                journal.balanceOf(AccountSystemKey.GOODS_RECEIVED_INVOICE_RECEIVED_CLEARING,
-                        YEAR_END).net();
-
-        assertThat(purchaseInvoices.linesAwaitingDelivery())
-                .as("invoice lines with no delivery behind them")
-                .isEmpty();
-        assertThat(goodsReceipts.linesAwaitingInvoice())
-                .as("deliveries with no invoice against them")
-                .isEmpty();
-        assertThat(clearing.isZero())
-                .as("GR/IR is %s while nothing on either side is outstanding", clearing)
-                .isTrue();
+        //
+        // Zero tolerance, stated rather than assumed: step 8 accepted that one receipt line matched
+        // by two invoices can leave a cent behind, and this year contains no such partial match.
+        LedgerInvariants.from(applicationContext)
+                .grIrHoldsOnlyTheTimingGap(YEAR_END, Money.zero(Money.EUR));
     }
 
     @Test
     @Order(32)
-    @DisplayName("the variance accounts carry exactly the differences the documents recorded")
-    void varianceAccountsAgreeWithTheDocuments() {
-        // ADR 0008's purchase price variance and ADR 0010's landed cost variance are both residuals
-        // — the amount that could not go on a lot. Each document stores its own figure, so the
-        // account and the documents are two independent records of the same thing.
-        Money purchaseVariance = journal
-                .balanceOf(AccountSystemKey.PURCHASE_PRICE_VARIANCE, YEAR_END).net();
-        Money fromInvoices = purchaseInvoices.totalVarianceBetween(JANUARY, YEAR_END);
-        assertThat(purchaseVariance)
-                .as("purchase price variance vs what the invoices recorded")
-                .isEqualTo(fromInvoices);
-        assertThat(purchaseVariance.isPositive())
+    @DisplayName("both variances actually posted, in the directions this year should produce them")
+    void theVariancesArePresentAndPointTheRightWay() {
+        // That each variance account equals what the documents recorded is universal, and moved to
+        // LedgerInvariants. What stays here is the part that is a claim about *this* year: that the
+        // year actually exercised both of them, and in which direction. Without these the
+        // equalities above would be satisfied perfectly by two accounts holding nothing.
+        assertThat(journal.balanceOf(AccountSystemKey.PURCHASE_PRICE_VARIANCE, YEAR_END).net()
+                .isPositive())
                 .as("the goods-first invoice charged more than the receipt provisioned, so a "
                         + "variance must actually have posted — otherwise this test proves nothing")
                 .isTrue();
@@ -580,13 +472,6 @@ class WholeScenarioIT extends AbstractCoreIntegrationTest {
             }
         }
 
-        Money fromAllocations = Money.zero(Money.EUR);
-        for (FreightAllocationView allocation : freight.between(JANUARY, YEAR_END)) {
-            fromAllocations = fromAllocations.plus(allocation.variance());
-        }
-        assertThat(allocatedToVariance)
-                .as("what the allocations put into landed cost variance vs what they recorded")
-                .isEqualTo(fromAllocations);
         assertThat(allocatedToVariance.isPositive())
                 .as("beans had been sold before the freight was allocated, so part of the freight "
                         + "belonged to stock that was already gone")
@@ -595,9 +480,6 @@ class WholeScenarioIT extends AbstractCoreIntegrationTest {
                 .as("the credit note returned stock into a re-costed lot, so ADR 0011's catch-up "
                         + "credited some of the variance back")
                 .isTrue();
-        assertThat(journal.balanceOf(AccountSystemKey.LANDED_COST_VARIANCE, YEAR_END).net())
-                .as("the account is exactly the two contributions together")
-                .isEqualTo(allocatedToVariance.plus(caughtUpByReturns));
     }
 
     @Test
@@ -648,7 +530,6 @@ class WholeScenarioIT extends AbstractCoreIntegrationTest {
         // dimension every VAT line carries, and compared against the accounts those lines posted
         // to — two readings of the same rows, which is the only kind of check worth having here.
         List<VatTotal> totals = journal.vatTotals(JANUARY, YEAR_END);
-        assertThat(totals).as("VAT totals over the year").isNotEmpty();
 
         Money output = Money.zero(Money.EUR);
         Money input = Money.zero(Money.EUR);
@@ -659,50 +540,22 @@ class WholeScenarioIT extends AbstractCoreIntegrationTest {
             }
         }
 
+        // That each account equals its own side is universal and moved to LedgerInvariants. What
+        // stays is this year's own claim: that it actually charged and suffered VAT, without which
+        // the equality is satisfied by two empty accounts.
+        assertThat(totals).as("VAT totals over the year").isNotEmpty();
         assertThat(output.isPositive()).as("the year charged output VAT").isTrue();
         assertThat(input.isPositive()).as("the year suffered input VAT").isTrue();
-        assertThat(journal.balanceOf(AccountSystemKey.OUTPUT_VAT, YEAR_END).net().negated())
-                .as("Output VAT account vs the sum of the output side")
-                .isEqualTo(output);
-        assertThat(journal.balanceOf(AccountSystemKey.INPUT_VAT, YEAR_END).net())
-                .as("Input VAT account vs the sum of the input side")
-                .isEqualTo(input);
-    }
-
-    @Test
-    @Order(50)
-    @DisplayName("open items equal the receivable and payable control accounts")
-    void openItemsEqualTheControlAccounts() {
-        // ADR 0009: open item matching is a layer over AR/AP and posts nothing, so the two must
-        // agree by construction. If they ever diverge, an allocation has posted something.
-        Money openReceivables = Money.zero(Money.EUR);
-        for (var item : settlements.allOpenItems(PartyType.CUSTOMER)) {
-            openReceivables = openReceivables.plus(item.openAmount());
-        }
-        Money openPayables = Money.zero(Money.EUR);
-        for (var item : settlements.allOpenItems(PartyType.SUPPLIER)) {
-            openPayables = openPayables.plus(item.openAmount());
-        }
-
-        assertThat(journal.balanceOf(AccountSystemKey.ACCOUNTS_RECEIVABLE, YEAR_END).net())
-                .as("Accounts Receivable vs the open sales invoices and credit notes")
-                .isEqualTo(openReceivables);
-        assertThat(journal.balanceOf(AccountSystemKey.ACCOUNTS_PAYABLE, YEAR_END).net().negated())
-                .as("Accounts Payable vs the open purchase invoices")
-                .isEqualTo(openPayables);
     }
 
     @Test
     @Order(51)
-    @DisplayName("a settlement never allocates more than it received")
-    void settlementsNeverOverAllocate() {
+    @DisplayName("the receipt this year recorded did not over-allocate")
+    void theReceiptDidNotOverAllocate() {
+        // The sweep over every settlement is universal and moved to LedgerInvariants; this names
+        // the one document the year built, so a failure says which.
         SettlementView receipt = settlements.require(world.receiptSettlementId());
         assertThat(receipt.allocatedAmount()).isLessThanOrEqualTo(receipt.amount());
-        for (SettlementView settlement : settlements.between(JANUARY, YEAR_END)) {
-            assertThat(settlement.allocatedAmount())
-                    .as("settlement %d allocated more than it was", settlement.id())
-                    .isLessThanOrEqualTo(settlement.amount());
-        }
     }
 
     @Test
@@ -849,33 +702,4 @@ class WholeScenarioIT extends AbstractCoreIntegrationTest {
         return inventory.lotsOf(beansId).stream().map(InventoryLotView::id).toList();
     }
 
-    private List<InventoryLotView> allLots() {
-        List<InventoryLotView> lots = new ArrayList<>();
-        for (Long productId : jdbc.queryForList(
-                "SELECT DISTINCT product_id FROM inventory_lot", Long.class)) {
-            lots.addAll(inventory.lotsOf(productId));
-        }
-        return lots;
-    }
-
-    private List<Long> subLedgerEntityIdsOn(long accountId) {
-        return jdbc.queryForList(
-                "SELECT DISTINCT sub_ledger_id FROM journal_line "
-                        + "WHERE account_id = ? AND sub_ledger_id IS NOT NULL",
-                Long.class, accountId);
-    }
-
-    /** One entity's position on one account, debit-positive — the account's own side only. */
-    private Money positionOnAccount(long accountId, SubLedgerType type, long entityId) {
-        Money position = Money.zero(Money.EUR);
-        for (var line : journal.linesFor(SubLedgerRef.of(type, entityId))) {
-            if (line.accountId() != accountId) {
-                continue;
-            }
-            position = line.isDebit()
-                    ? position.plus(line.amount())
-                    : position.minus(line.amount());
-        }
-        return position;
-    }
 }
