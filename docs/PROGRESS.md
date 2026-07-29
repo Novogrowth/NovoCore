@@ -30,13 +30,17 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 10 | Freight / landed cost allocation | **Done, committed** `cf6f1e4` + `6f06cf8` — Q18 answered as **ADR 0010**, and a defect it introduced closed as **ADR 0011**, see below |
 | 11 | Email service | **Done, committed** `b542cf7` + `0790c74` — SMTP credentials supplied and stored in Settings, see below |
 | 12 | Automated backups | **Done, and operationally verified 2026-07-29** — V23, ADR 0013. Real encrypted dump uploaded to both Drives; all three owner action items closed |
-| 13 | Test suite consolidation sweep | Not started |
+| 13 | Test suite consolidation sweep | **Done** — property tests on the money types and on FIFO, one whole-scenario invariant sweep, **ADR 0014**, and **one real defect found (Q45)**, see below |
 
-**Tests: 866 passing, `mvn clean verify` exit 0.** 210 unit (core-api), 44 core unit, 574 core
-integration, 8 app unit, 12 app integration, 18 architecture. **Counted from CI run
-[30446419236](https://github.com/Novogrowth/NovoCore/actions/runs/30446419236) on `5a6dfa5`**, not
-from a local run, so this is the number a clean checkout produces. This line previously said 802,
-which was two sessions stale — the audit-log and self-invocation work took it to 866.
+**Tests: 952 passing, `mvn clean verify` exit 0.** 263 unit (core-api), 44 core unit, 607 core
+integration, 8 app unit, 12 app integration, 18 architecture. **Counted from a local run on this
+machine**, where 17 of the core integration tests skip because `pg_dump` is not installed — 16 in
+`BackupIT` and the backup leg of `WholeScenarioIT`. On CI, which puts PostgreSQL 17's client tools
+on the PATH deliberately (`5a6dfa5`), all 952 run and none skip.
+
+Step 13 added 86: 53 in `core-api` (the property harness, its own self-test, and properties over
+`Money`, `Quantity`, `UnitCost` and `ProportionalAllocation`) and 33 in `core` (12 FIFO properties
+against a real database, 21 whole-scenario invariants).
 
 **Step 11 introduced the first non-container tests in `core`** (`RetryPolicyTest`,
 `SmtpConfigurationTest`). Until now everything in that module needed Docker; these do not, which is
@@ -213,6 +217,8 @@ were already on `origin`.
 | `24a3cd7` | Proxy self-invocation made a build failure — `SelfInvocationRulesTest`, and the two real defects it found |
 | `a4ec7db` | The audit-log fix proven behaviourally rather than structurally |
 | `5a6dfa5` | CI — `pg_dump` made to actually mean 17 on the runner (workflow only, no application code) |
+| `e907a9e` | Step 12 commissioned — backups running for real, off-site and proven |
+| `9c7ed41` | Step 13 — property-based tests, the whole-scenario invariant sweep, **ADR 0014**, and **Q45** raised |
 
 Interleaved with these are small docs-only commits (`e25fcee`, `a09428e`, `920044c`, `de16e58`,
 `b065901`, `8c27cb4`, `2c3fa8a`, `21b2231`, `d1111d0`, `610f785`, `836a4eb`) and this session's
@@ -306,8 +312,27 @@ Convention going forward is **one commit per build step**, so history stays chec
   `JournalSource.mayConsumeStock()`** the same way `journal_source_is_amendable` is held to
   `isAmendable()` — per value, and by counting the constraint's literals so a value added to the
   database alone cannot hide.
+- **The whole system, played as one trading year and then swept** (step 13, `WholeScenarioIT`).
+  After buying before and after invoicing, allocating freight onto partly-sold stock, decomposing a
+  bundle, overselling, crediting stock back, settling both ways, reversing and writing off: **no
+  entry in the database is unbalanced**, asked in raw SQL; the trial balance balances; every control
+  account equals the sum of its own sub-ledger; GR/IR, both variance accounts, AR, AP and Inventory
+  each agree with the documents behind them; and the whole thing restores into a fresh database and
+  still balances there.
+- **The value types and FIFO, over generated input rather than chosen examples** (step 13). The
+  properties are listed in the step 13 section; the ones worth knowing exist are that `compareTo`
+  agrees with `equals` on `Money`, that the currency guard holds on every operation, that
+  `ProportionalAllocation` agrees with an independently written largest-remainder split, and that
+  FIFO's allocation agrees with an independently written FIFO over twenty random histories.
+- **The property runner itself is proven to fail** (`PropertyTest`), the same way the ArchUnit rules
+  and `SchemaConventionsIT` are — a checker that is silently broken is worse than no checker.
 
 ## Not yet verified
+
+- **⚠️ Q45 — the Inventory rounding residue is a known, measured, unfixed defect.** See the open
+  questions. The FIFO ledger-agreement properties are restricted to whole-cent unit costs because
+  below the cent they are false. This is the one place in the suite where a restriction exists to
+  accommodate a defect rather than to scope a test, and it is labelled as such in the code.
 
 - ~~**Backup restore.**~~ **Closed, in code and in operation.** Proven in the suite and on CI
   (`5a6dfa5`) — a real `pg_dump`, a real `pg_restore` into a real scratch database, and an assertion
@@ -2345,6 +2370,136 @@ behavioural audit-log tests).
 
 ---
 
+## Step 13 — done (the test suite consolidation sweep), ADR 0014
+
+Three things, in the order they were built: a property-based testing harness and the properties it
+exists for, property tests over FIFO against a real database, and one whole-scenario test that plays
+a trading year and then sweeps every invariant the system has over the resulting database.
+
+**952 tests, `mvn clean verify` exit 0.**
+
+### jqwik could not be used, for the third time in a row, and for the same reason (ADR 0014)
+
+jqwik is a JUnit Platform **test engine**, and `net.jqwik:jqwik-engine:1.10.1` — the newest release
+— declares `junit-platform-engine:1.14.4`. Spring Boot 4.1 brings JUnit 6, whose platform artefacts
+are `6.x`. There is no jqwik 2. **Verified against Maven Central rather than assumed.**
+
+This is exactly the situation ADR 0002 resolved for `archunit-junit5` and step 11 resolved for
+`greenmail-junit5`, and it is resolved the same way: *take the idea, not the artifact.* The
+difference is that jqwik has no plain-library form — the engine **is** the product — so the harness
+was written: `Gen`, `Property` and `ValueGenerators` in `..core.api.testsupport..`, about 500 lines,
+published from `core-api` as a test-jar so `core` uses the same generators and the same shrinking.
+
+**The seed is fixed by default.** 500 cases, the same ones on every machine and every CI run, so a
+red build always means a defect rather than today's dice — `CLAUDE.md`'s "a check that cries wolf is
+one somebody deletes", applied to a runner rather than to a rule. `-Dnovocore.property.seed=<n>`
+explores further, deliberately, and **anything a new seed finds belongs in a named example test**
+rather than being left to luck. The breadth a fixed seed costs is bought back in the generators:
+roughly a third of every sample comes from a hand-written edge list — zero, one cent, the scale
+limit, a rounding midpoint — because that is where these types break, and a uniformly random
+twelve-digit decimal never lands there.
+
+**The harness is proven to fail** (`PropertyTest`), for the reason the `..core.web..` ArchUnit rule
+taught: a checker that is itself broken produces a green suite that proves nothing. It proves a
+false property is reported, that a non-assertion exception counts as a failure, that the value
+reported is the *shrunk* one, and that generation is reproducible. **Writing it immediately caught a
+weakness in the shrinker**: the first version offered "half" and "one unit closer to zero" and
+nothing between, so a property failing above 1000 shrank 12345 to 1543 and then crawled down by 0.01
+until the round limit stopped it. A halving ladder replaced it and converges in tens of rounds.
+
+### What the properties actually claim
+
+Over `Money`, `Quantity`, `UnitCost` and `ProportionalAllocation` — the laws, not the examples. That
+equality is numeric equality (the whole reason the scale is fixed on construction); that `compareTo`
+agrees with `equals`, which nothing in the suite had ever said although `Money` is `Comparable` and
+gets sorted; that the currency guard holds on **every** binary operation rather than the two an
+example test happened to cover; that rounding never moves a value by a whole cent in any mode; that
+`Quantity.times` refuses **exactly** when the product needs more than six decimals, not merely that
+it can refuse.
+
+`ProportionalAllocation` gains the most. Its two callers — a bundle's price pushed onto its
+components, a freight invoice split across lots — are both wrong in ways nobody notices if a single
+cent goes astray. The properties assert that the parts sum exactly to the whole, that **no part is
+ever more than a cent from its exact share** (which is what distinguishes largest-remainder from
+"floor everything and dump the residual on the last part" — both sum correctly, only one is an
+allocation), that a weightless part takes nothing, and that negating the total negates every part.
+It is also checked against **an independently written largest-remainder split** that shares no code
+with the implementation. One tempting property is deliberately absent and says so: permuting the
+weights does not permute the result, because ties are broken by position — asserting the stronger
+claim would be asserting a bug.
+
+### FIFO, over generated histories rather than chosen ones
+
+`FifoPropertiesIT` generates a whole history — several deliveries at different dates, costs and
+locations, then several sales, some of which oversell — and replays it against the real services,
+twenty histories per property. It asserts conservation (`filled + shortfall == requested`, lines sum
+to filled), that no lot leaves its own bounds, that aggregate stock reconciles to the lots less the
+shortfalls, that the entry balances and every line names its lot, and that a shortfall is never
+costed. FIFO's allocation is compared against **an independently written FIFO** computed from the
+lots' captured before-state, which subsumes ordering, exhaustion and never-touching-Damaged-Goods —
+those three are still asserted separately, because "the allocation differs" is a worse bug report
+than "it sold out of Damaged Goods".
+
+**The first thing it found was a mistake in its own fixture, and the finding is worth keeping.**
+Building lots through `InventoryService.receive` creates stock with **no ledger entry behind it** —
+ADR 0004 puts the Inventory debit on the Goods Receipt, which is the document that knows the
+supplier the GR/IR clearing is against. The interface says so explicitly ("nothing outside the core
+should be calling this"). `StockConsumptionIT` uses the same shortcut and is right to, because it
+asserts nothing about the ledger; anything that does assert about the ledger must go through a
+Goods Receipt.
+
+**The second thing it found is Q45**, above: the Inventory rounding residue. That is a real defect
+in posted money, and it is written up rather than fixed.
+
+### One trading year, then every invariant at once
+
+`WholeScenarioIT` builds a year — purchases arriving before and after their invoices, freight
+allocated onto stock partly sold, a bundle decomposed, a sale nobody had the stock for, a credit
+note that brings stock back, settlements both ways, a reversal, a write-off, a bank transfer — and
+then asserts, as separate ordered tests so a break names itself:
+
+- **No entry anywhere in the database is unbalanced, empty, one-sided or multi-currency**, asked in
+  raw SQL straight against the tables. It bypasses every service, view and Java check, which is what
+  makes it a statement about the *data*. It is the one assertion here that would still be worth
+  keeping if everything else in the file were deleted.
+- No journal line is zero or negative.
+- **The ledger is not trivial** — over 15 entries and 60 lines. Guards the failure mode every
+  whole-system test has: passing because it did nothing.
+- The trial balance balances.
+- **Every control account equals the sum of its own sub-ledger**, swept over the whole chart rather
+  than over named accounts, and every Control-account line carries a reference.
+- Inventory equals what every lot says it is carrying; GR/IR holds exactly the timing gap and is
+  zero when both sides are clear; both variance accounts equal what the documents recorded.
+- VAT precedence resolved at all three levels on one document, with each line recording *which*
+  level won — the beans line is `CUSTOMER` even though the customer's rate and the product's rate
+  are both 13%, because recording only the number would make "why is this line at 13%?"
+  unanswerable.
+- Output and input VAT are separate figures and each equals its own account.
+- Open items equal AR and AP, which ADR 0009 requires by construction since allocations post
+  nothing.
+- The oversold product reads negative and is findable; the bundle is stored decomposed and the
+  components sum to the line; a reversal is an exact mirror; the write-off both reduced stock and
+  posted.
+- **And the whole year backs up, restores into a fresh database, and still balances there.** This is
+  worth more here than in `BackupIT`, where the restore check asserts that a nearly-empty ledger
+  balances. (Skipped on a machine without `pg_dump`; it runs on CI.)
+
+**It found a real gap in its own reasoning too**, which is the kind of thing only a whole-scenario
+test can: `Landed cost variance` has **two** contributors, not one. The allocations put the share
+belonging to already-sold stock into it (ADR 0010) and ADR 0011's catch-up takes some back out when
+returned stock re-enters a re-costed lot. Comparing the account against the allocations alone was
+wrong — 18.38 against 22.98, the 4.60 being exactly the credit note's four returned units. The test
+now reads both contributions off the ledger by source and asserts they add up.
+
+### Why this class gets its own database, and what that buys
+
+`WholeScenarioIT` declares a `@DynamicPropertySource` for the backup leg, so Spring gives it its own
+context and therefore its own container. That is a feature: the sweeps cover exactly the scenario
+this class built and nothing else, so "Inventory equals the sum of what the lots carry" is an
+equality rather than a delta against whatever the rest of the suite left behind.
+
+---
+
 ## Open questions, by the step they block
 
 Numbering follows the original Phase 1 question list so references stay stable.
@@ -2536,6 +2691,59 @@ That placement decides the rest:
   ten-unit lot. Recorded here because the asymmetry is the kind of thing a later reader would otherwise
   try to "make consistent".
 
+### 🐛 Blocking nothing yet, and the most serious thing on this page
+
+- **Q45** *(new, step 13)* — **a lot whose unit cost is not a whole number of cents leaves a
+  permanent residue in the Inventory control account when it is fully consumed.** Found by the FIFO
+  property tests, reproduced by a throwaway probe, then deleted; the numbers below are measured, not
+  reasoned about.
+
+  **What happens.** A Goods Receipt debits Inventory with the whole delivery rounded once
+  (`quantity × unitCost`, one rounding). Each consumption credits Inventory with *its own* line
+  rounded once. Those two roundings are at different granularities, so they do not add up:
+
+      22 units @ 12.505000, sold one at a time
+        Goods Receipt debited Inventory        275.11
+        each sale credited                      12.51   (12.505 rounded, HALF_UP)
+        22 sales credited                      275.22
+        >>> lot empty, Inventory residue        -0.11
+
+      3 units @ 10.666667 (a landed-cost-allocated lot), sold one at a time
+        >>> lot empty, Inventory residue        -0.01
+
+  **Why it matters, and why it is not cosmetic.** The residue is real journal lines on a real
+  account. It does not net out across lots — `HALF_UP` rounds away from zero, so the drift is
+  systematically negative — and there is no document behind it, nothing to reconcile it against and
+  no report that would explain it. The Inventory line on the balance sheet and COGS are both wrong
+  by the accumulated amount, permanently. It also makes `InventoryLotView.remainingValue()` and the
+  Inventory account disagree part-way through a lot's life, which is the invariant ADR 0011 exists
+  to protect.
+
+  **It is reachable by design, not by accident.** `UnitCost` carries six decimals precisely so
+  ADR 0010's landed-cost allocation can divide freight across lots without losing precision —
+  €2.00 over three units is 0.666667. Every re-costed lot is a candidate.
+
+  **Recommended fix, for the decision rather than as a fait accompli:** post the *change in the
+  lot's carrying value* rather than `quantity × unitCost` rounded. That is, a movement's amount is
+  `round(remainingBefore × cost) − round(remainingAfter × cost)`. It makes the ADR 0011 invariant
+  true by construction at every point, guarantees a lot self-liquidates to exactly zero, and needs
+  no new account and no migration. The cost is that COGS per unit varies by a cent within a lot,
+  which is the honest answer — the lot cost what it cost and all of it has to leave. Rejected
+  alternatives: posting the residue to `Rounding differences` (that account is for reconciling
+  against an *external* document, never for absorbing our own arithmetic — the same stance
+  `ProportionalAllocation` takes) and accepting it with a tolerance (which is how a wrong number
+  becomes permanent).
+
+  **Not fixed in step 13, deliberately.** It changes how COGS is posted, which is the most
+  consequential kind of change in this system, and step 13 was a test sweep. It touches `consume`,
+  `writeOff`, `returnConsumed`, `reverseConsumption` and `reverseWriteOff` together — they must
+  agree or the asymmetry ADR 0011 documents stops holding.
+
+  **What the suite says in the meantime.** `FifoPropertiesIT.wholeCentCosts()` restricts the
+  ledger-agreement and self-liquidation properties to costs where they do hold, and says so at
+  length in place. **Widening that generator is the way to check the fix, and must not be done
+  before there is one.**
+
 ### Not blocking anything, but unanswered
 - **Q40** **Does a journal entry need a human-facing entry number?** The id is the handle today. An
   accountant asking "what is entry 412" is a real request, and it carries a format decision nobody
@@ -2679,17 +2887,29 @@ copied anywhere it was not meant to go.**
 ---
 ## Next action — read this first
 
-**Step 13 (test suite consolidation sweep) is the next numbered step, and nothing blocks it.** Steps
-0–12 are done, committed and pushed; **CI is green on `5a6dfa5`** and the suite is 866 tests. Q24 is
-answered and step 12 is built, so this section's previous claim that step 12 was next and blocked on
-Q24 was two sessions stale.
+**Step 13 is done. Steps 0–13 are complete, committed and pushed, and `mvn clean verify` is green
+at 952 tests.**
 
-**The hold is lifted.** Work was paused mid-session pending the owner's three step 12 action items;
-**all three were completed on 2026-07-29** and step 12 is commissioned — see "Step 12, commissioned"
-above. Nothing now blocks step 13.
+**⚠️ The one thing needing a decision before anything else is Q45** — see "Open questions" below.
+Step 13's FIFO property tests found a real defect in how consumption is costed: a lot whose unit
+cost is not a whole number of cents **leaves a permanent residue in the Inventory control account
+after it has been entirely consumed**, and the residue is systematically negative. It is measured,
+reproduced and written up rather than fixed, because the fix is a change to how COGS is posted and
+that is an accounting decision, not a test-suite one. **The property tests are currently restricted
+to whole-cent costs so the suite states something true; widening that restriction is how the fix
+gets verified.**
 
-**The one genuinely open item from this stretch is Q44's access-path check**, which is decided and
-unbuilt, and is unaffected by any of the backup commissioning work.
+**Step 14 is not defined.** The Phase 1 build order ran to step 13, so the next session should
+start by agreeing what Phase 1's remaining work is. The obvious candidates, none of them chosen:
+
+1. **Fix Q45** — the only known correctness defect in the ledger.
+2. **Q44's access-path check** — decided in step 11's revision, still unbuilt, and the one thing
+   that must exist before an outbox screen does.
+3. **The REST surface.** Still one read-only endpoint. Everything built in steps 5 to 12 has a
+   service and no HTTP route, and the frontend has had nothing to call since it was scaffolded.
+4. **PLB-1 (2FA)**, which blocks any external access and is likely to be needed sooner than a
+   public launch, since Remote/Order Staff logging in from outside the network is that role's
+   entire purpose.
 
 ### Credential housekeeping — done, nothing outstanding
 
