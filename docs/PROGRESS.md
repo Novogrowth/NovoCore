@@ -2221,6 +2221,27 @@ resort.
 **Fixed:** all three public overloads now carry the annotation and delegate to a private, unannotated
 `write(...)`. No self-invocation of an annotated method remains.
 
+**Verified behaviourally, not just structurally — and this distinction is the whole lesson.**
+`AuditLogIT` had seven tests and **not one of them involved a rollback**, which is exactly why the
+defect survived from the day the class was written. Two new tests now assert the property the
+`REQUIRES_NEW` exists for:
+
+- `entriesSurviveTheRollbackOfTheirOperation` — writes through **all three overloads** inside a
+  transaction that then throws, and asserts all three entries are still there afterwards.
+- `theEntryIsVisibleWhileTheCallerIsStillOpen` — reads through a **separate JDBC connection** while
+  the caller's transaction is still open, proving the entry was genuinely committed by its own
+  transaction rather than merely happening not to be rolled back. A `JdbcTemplate` would have
+  joined the caller's transaction and passed either way.
+
+**Both were confirmed to fail against the reintroduced bug** before being accepted — the defect was
+temporarily restored, the tests failed, and the fix was put back. A regression test that has never
+been seen to fail is a regression test nobody has verified.
+
+**⚠️ The ArchUnit rules cannot protect this property.** Deleting the annotation from an overload and
+calling the private `write(...)` directly is structurally spotless and reintroduces the defect in
+full. Only these two tests would notice. Structural rules catch the *shape*; only a behavioural test
+holds the *guarantee*.
+
 ### 🐛 `BackupRetentionService` — step 12, plus a latent lazy-loading failure
 
 `apply()` is deliberately not transactional (it deletes files and calls Drive) and self-invoked a
@@ -2248,7 +2269,8 @@ identically, nor a call reached through a captured lambda. `CLAUDE.md` names the
 anti-pattern, the remedy, and the related trap of returning lazily-associated entities from a
 non-transactional method.
 
-**864 tests passing, `mvn clean verify` exit 0** (up from 858; ArchUnit 13 → 18).
+**866 tests passing, `mvn clean verify` exit 0** (up from 858; ArchUnit 13 → 18, plus the two
+behavioural audit-log tests).
 
 ---
 
