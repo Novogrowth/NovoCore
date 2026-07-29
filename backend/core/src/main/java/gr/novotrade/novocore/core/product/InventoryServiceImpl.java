@@ -10,6 +10,7 @@ import gr.novotrade.novocore.core.api.inventory.InvalidStockWriteOffException;
 import gr.novotrade.novocore.core.api.inventory.InventoryLotNotFoundException;
 import gr.novotrade.novocore.core.api.inventory.InventoryLotView;
 import gr.novotrade.novocore.core.api.inventory.InventoryService;
+import gr.novotrade.novocore.core.api.inventory.LotValuation;
 import gr.novotrade.novocore.core.api.inventory.NewInventoryLot;
 import gr.novotrade.novocore.core.api.inventory.NewStockConsumption;
 import gr.novotrade.novocore.core.api.inventory.NewStockWriteOff;
@@ -26,19 +27,18 @@ import gr.novotrade.novocore.core.api.inventory.StockNotApplicableException;
 import gr.novotrade.novocore.core.api.inventory.StockWriteOffNotFoundException;
 import gr.novotrade.novocore.core.api.inventory.StockWriteOffView;
 import gr.novotrade.novocore.core.api.ledger.JournalEntryView;
+import gr.novotrade.novocore.core.api.ledger.JournalLineView;
 import gr.novotrade.novocore.core.api.ledger.JournalService;
 import gr.novotrade.novocore.core.api.ledger.JournalSource;
 import gr.novotrade.novocore.core.api.ledger.NewJournalEntry;
 import gr.novotrade.novocore.core.api.ledger.NewJournalLine;
 import gr.novotrade.novocore.core.api.product.ProductNotFoundException;
-import gr.novotrade.novocore.core.api.settings.SettingKeys;
-import gr.novotrade.novocore.core.api.settings.SettingsService;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.SubLedgerRef;
+import gr.novotrade.novocore.core.api.shared.SubLedgerType;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -85,14 +85,13 @@ class InventoryServiceImpl implements InventoryService {
     private final StockConsumptionLineRepository consumptionLines;
     private final ChartOfAccountsService chartOfAccounts;
     private final JournalService journal;
-    private final SettingsService settings;
     private final AuditLogService auditLog;
 
     InventoryServiceImpl(ProductRepository products, InventoryLotRepository lots,
             SerializedUnitRepository units, BundleComponentRepository bundleComponents,
             StockWriteOffRepository writeOffs, StockConsumptionRepository consumptions,
             StockConsumptionLineRepository consumptionLines, ChartOfAccountsService chartOfAccounts,
-            JournalService journal, SettingsService settings, AuditLogService auditLog) {
+            JournalService journal, AuditLogService auditLog) {
         this.products = products;
         this.lots = lots;
         this.units = units;
@@ -102,7 +101,6 @@ class InventoryServiceImpl implements InventoryService {
         this.consumptionLines = consumptionLines;
         this.chartOfAccounts = chartOfAccounts;
         this.journal = journal;
-        this.settings = settings;
         this.auditLog = auditLog;
     }
 
@@ -848,6 +846,12 @@ class InventoryServiceImpl implements InventoryService {
                 returnDate, original.getSource(), note, null);
         returned.returns(consumptionId);
 
+        // Collected rather than applied as we go, so the stock moves only after the posting has been
+        // accepted — consume's and writeOff's order, and now this one's. It became load-bearing with
+        // ADR 0015: the entry's Inventory line is the change in each lot's carrying value, so the
+        // posting has to be able to see what the lot held *before* the return, and a pooled lot that
+        // had already been restored by the time postReturn ran would have reported the "after".
+        Map<InventoryLot, Quantity> comingBack = new LinkedHashMap<>();
         Quantity outstanding = quantity;
         for (StockConsumptionLine line : takenLast) {
             if (!outstanding.isPositive()) {
@@ -867,16 +871,10 @@ class InventoryServiceImpl implements InventoryService {
                                 + "it than it ever received. Something has happened to the lot since, "
                                 + "so the honest record is a new receipt rather than a return.");
             }
-            if (!lot.isSerialTracked()) {
-                // A serial-tracked lot stores no quantity — the quantity IS the count of its on-hand
-                // units (V12's rule: location lives wherever the quantity does). So the stock comes
-                // back by the units changing status, which restoreSerializedUnits does below;
-                // restoring a number here would be a second copy of what the units already say.
-                lot.restore(intoThisLot);
-            }
             // The cost the stock LEFT at, off the consumption's own line — never off the lot as it
             // stands now, which step 10 will move when freight is allocated.
             returned.addLine(lot, intoThisLot, line.getUnitCost());
+            comingBack.put(lot, intoThisLot);
             outstanding = outstanding.minus(intoThisLot);
         }
 
@@ -889,6 +887,16 @@ class InventoryServiceImpl implements InventoryService {
 
         returned.postedAs(postReturn(returned, original.getProduct(), returnDate,
                 original.getSource(), consumptionId));
+
+        // A serial-tracked lot stores no quantity — the quantity IS the count of its on-hand units
+        // (V12's rule: location lives wherever the quantity does). So its stock comes back by the
+        // units changing status, and restoring a number as well would be a second copy of what the
+        // units already say.
+        comingBack.forEach((lot, back) -> {
+            if (!lot.isSerialTracked()) {
+                lot.restore(back);
+            }
+        });
 
         // Serialized units come back on hand and stop being sold to anybody — brief §5 puts that link
         // on a SOLD unit, and a machine on the shelf is not one.
@@ -976,7 +984,6 @@ class InventoryServiceImpl implements InventoryService {
      */
     private Long postReturn(StockConsumption record, Product product, LocalDate date,
             JournalSource source, long originalConsumptionId) {
-        RoundingMode roundingMode = settings.requireRoundingMode(SettingKeys.LEDGER_ROUNDING_MODE);
         AccountView cogs = chartOfAccounts.requireAccount(AccountSystemKey.COST_OF_GOODS_SOLD);
         AccountView inventory = chartOfAccounts.requireAccount(AccountSystemKey.INVENTORY);
         AccountView landedCostVariance =
@@ -984,23 +991,48 @@ class InventoryServiceImpl implements InventoryService {
 
         List<NewJournalLine> lines = new ArrayList<>();
         for (StockConsumptionLine line : record.getLines()) {
-            SubLedgerRef lotRef = SubLedgerRef.inventoryLot(line.getLot().getId());
+            InventoryLot lot = line.getLot();
+            SubLedgerRef lotRef = SubLedgerRef.inventoryLot(lot.getId());
 
-            Money cost = line.getUnitCost().extend(line.getQuantity(), roundingMode);
-            if (cost.isPositive()) {
-                lines.add(NewJournalLine.debit(inventory.id(), cost).forSubLedger(lotRef));
-                lines.add(NewJournalLine.credit(cogs.id(), cost)
+            // ADR 0015. What Inventory takes back is the rise in the lot's carrying value, computed
+            // at the cost the lot carries NOW — which is what makes this exact even when a freight
+            // allocation landed while the stock was out. The two credits then divide that figure
+            // between them rather than each being rounded on its own.
+            Quantity before = lot.getQuantityRemaining();
+            Money absorbed = LotValuation.valueAbsorbed(
+                    lot.getUnitCost(), before, before.plus(line.getQuantity()));
+            if (!absorbed.isPositive()) {
+                // A lot carried at zero absorbed nothing on the way out and absorbs nothing back.
+                continue;
+            }
+
+            Money catchUp = landedCostCatchUp(line);
+            if (catchUp.compareTo(absorbed) > 0) {
+                // Reachable only by a cent, and only on a lot received at zero cost whose entire
+                // value is allocated freight: then the catch-up is the whole of the carrying value
+                // and the two roundings can disagree. Inventory is the figure that must be right,
+                // so the catch-up yields rather than the entry failing to balance.
+                catchUp = absorbed;
+            }
+            // Cost of goods sold takes the remainder, so the sale is credited back what the stock is
+            // worth less the freight those units never bore. It absorbs the sub-cent residue too,
+            // which is the right place for it: a return's COGS credit differing from the original
+            // debit by a cent is invisible, while Inventory differing by a cent is the whole defect
+            // ADR 0015 exists to remove.
+            Money cogsCredit = absorbed.minus(catchUp);
+
+            if (cogsCredit.isPositive()) {
+                lines.add(NewJournalLine.debit(inventory.id(), cogsCredit).forSubLedger(lotRef));
+                lines.add(NewJournalLine.credit(cogs.id(), cogsCredit)
                         .forSubLedger(lotRef)
                         .describedAs(line.getQuantity() + " x " + product.getSku() + " returned"));
             }
-
-            Money catchUp = landedCostCatchUp(line, roundingMode);
             if (catchUp.isPositive()) {
                 lines.add(NewJournalLine.debit(inventory.id(), catchUp).forSubLedger(lotRef));
                 lines.add(NewJournalLine.credit(landedCostVariance.id(), catchUp)
                         .forSubLedger(lotRef)
                         .describedAs("Landed cost on returned stock — " + product.getSku()
-                                + " (lot " + line.getLot().getId() + ")"));
+                                + " (lot " + lot.getId() + ")"));
             }
         }
         if (lines.isEmpty()) {
@@ -1022,7 +1054,7 @@ class InventoryServiceImpl implements InventoryService {
      * against what is allocated now is the catch-up. Zero whenever nothing has been allocated since,
      * which is the ordinary case.
      */
-    private Money landedCostCatchUp(StockConsumptionLine line, RoundingMode roundingMode) {
+    private Money landedCostCatchUp(StockConsumptionLine line) {
         InventoryLot lot = line.getLot();
         UnitCost received = lot.getReceivedUnitCost();
         UnitCost leftAt = line.getUnitCost();
@@ -1044,7 +1076,69 @@ class InventoryServiceImpl implements InventoryService {
                             + "is less. A freight allocation cannot be reversed while stock it costed "
                             + "is out of the lot, so reaching here means that guard was bypassed.");
         }
-        return allocatedNow.minus(allocatedWhenItLeft).extend(line.getQuantity(), roundingMode);
+        return allocatedNow.minus(allocatedWhenItLeft)
+                .extend(line.getQuantity(), LotValuation.ROUNDING);
+    }
+
+    /**
+     * Refuses a reversal whose mirror would leave Inventory disagreeing with the lot — ADR 0015.
+     *
+     * <p><strong>The one place the carrying-value rule and the reversal rule pull apart.</strong> A
+     * reversal must post the exact mirror of the entry it reverses (Q13, ADR 0006, enforced by
+     * {@code JournalService.post}), and the mirror is the amount that came off Inventory when the
+     * original posted. That is the right amount to put back only if the lot is where it was: if
+     * something else has consumed it since, the lot's carrying value has moved to a different point
+     * on the rounding staircase and the mirror is a cent out.
+     *
+     * <p>So this compares the two directly and refuses <strong>if and only if</strong> they differ,
+     * which is what keeps it from being a broad restriction on reversing sales. It cannot fire at
+     * all for a lot whose unit cost is a whole number of cents, and it fires for the others only
+     * when the lot has moved in between. The remedy is exact and is named, in the shape ADR 0011
+     * already established for the re-costed case.
+     *
+     * <p>The alternative — post the mirror anyway and accept the cent — was rejected: it is the same
+     * unexplainable residue in the same account that ADR 0015 exists to remove, merely rarer.
+     */
+    private Optional<String> mirrorWouldStrandValue(Long originalEntryId, InventoryLot lot,
+            Quantity comingBack, String what, String remedy) {
+        if (originalEntryId == null) {
+            // A lot carried at zero posted nothing, so there is no mirror and nothing to check.
+            return Optional.empty();
+        }
+        Money mirror = inventoryReleasedBy(originalEntryId, lot.getId());
+        Quantity before = lot.getQuantityRemaining();
+        Money required = LotValuation.valueAbsorbed(lot.getUnitCost(), before,
+                before.plus(comingBack));
+        if (mirror.equals(required)) {
+            return Optional.empty();
+        }
+        return Optional.of(
+                what + " took " + mirror + " off Inventory for lot " + lot.getId() + ", but putting "
+                        + comingBack + " back into it now is worth " + required + " — the lot has "
+                        + "moved since, so its value no longer sits where it did. A reversal must "
+                        + "post the exact mirror of what it reverses, and posting this one would "
+                        + "leave Inventory disagreeing with the lot by "
+                        + required.minus(mirror).abs() + " with nothing to explain it. To correct "
+                        + "it: " + remedy + ".");
+    }
+
+    /** What one entry took off the Inventory control account for one lot, as a magnitude. */
+    private Money inventoryReleasedBy(long entryId, long lotId) {
+        long inventoryAccountId = chartOfAccounts.requireAccount(AccountSystemKey.INVENTORY).id();
+        Money released = Money.zero(Money.EUR);
+        for (JournalLineView line : journal.requireEntry(entryId).lines()) {
+            if (line.accountId() != inventoryAccountId) {
+                continue;
+            }
+            boolean thisLot = line.subLedger()
+                    .filter(ref -> ref.type() == SubLedgerType.INVENTORY_LOT)
+                    .filter(ref -> ref.id() == lotId)
+                    .isPresent();
+            if (thisLot) {
+                released = released.minus(line.debitPositiveEffect());
+            }
+        }
+        return released;
     }
 
     /**
@@ -1142,6 +1236,12 @@ class InventoryServiceImpl implements InventoryService {
                                 + "Something has happened to the lot since, so the correction is a "
                                 + "new receipt rather than a reversal.");
             }
+            mirrorWouldStrandValue(original.getJournalEntryId(), lot, line.getQuantity(),
+                    "Consumption " + consumptionId,
+                    "reverse the later movements on this lot first, then this one")
+                    .ifPresent(refusal -> {
+                        throw new InvalidStockConsumptionException(refusal);
+                    });
         }
 
         Long reversingEntryId = null;
@@ -1249,17 +1349,24 @@ class InventoryServiceImpl implements InventoryService {
      * <p>Nothing is posted when every lot consumed was carried at zero, or when nothing could be
      * filled at all. Both are real: a free sample being sold derecognises nothing, and an unbacked
      * shortfall has no lot to take a cost from.
+     *
+     * <p><strong>The amount is the change in the lot's carrying value, not the quantity extended at
+     * the cost</strong> — {@link LotValuation}, ADR 0015. Those are different numbers whenever the
+     * unit cost is not a whole number of cents, which is every lot a landed cost has been allocated
+     * onto, and the difference used to strand a cent in Inventory on every movement. This is called
+     * <em>before</em> the lots are consumed, so {@code lot.getQuantityRemaining()} is still what the
+     * lot had when this sale reached it — which is exactly the "before" the calculation needs.
      */
     private Long postConsumption(StockConsumption record, Product product, LocalDate date,
             JournalSource source) {
-        RoundingMode roundingMode = settings.requireRoundingMode(SettingKeys.LEDGER_ROUNDING_MODE);
-
         AccountView cogs = chartOfAccounts.requireAccount(AccountSystemKey.COST_OF_GOODS_SOLD);
         AccountView inventory = chartOfAccounts.requireAccount(AccountSystemKey.INVENTORY);
 
         List<NewJournalLine> lines = new ArrayList<>();
         for (StockConsumptionLine line : record.getLines()) {
-            Money cost = line.getUnitCost().extend(line.getQuantity(), roundingMode);
+            Quantity before = line.getLot().getQuantityRemaining();
+            Money cost = LotValuation.valueReleased(
+                    line.getUnitCost(), before, before.minus(line.getQuantity()));
             if (!cost.isPositive()) {
                 // A lot carried at zero derecognises nothing, and the ledger rightly refuses a
                 // zero-amount line. The stock still leaves; the consumption line still records it.
@@ -1323,7 +1430,31 @@ class InventoryServiceImpl implements InventoryService {
                         .map(StockConsumption::getId).orElse(null));
     }
 
-    private static StockConsumptionView toView(StockConsumption record,
+    /**
+     * What reached {@code Cost of goods sold} for each lot on one entry, as a magnitude.
+     *
+     * <p>Debited on the way out, credited on the way back; either way what a line's {@code cost}
+     * field means is "how much cost this quantity carried", so the sign is the entry's business and
+     * not the view's. A lot carried at zero appears in no line and is absent from the map.
+     */
+    private Map<Long, Money> costRecognisedPerLot(JournalEntryView entry) {
+        if (entry == null) {
+            return Map.of();
+        }
+        long cogsAccountId = chartOfAccounts.requireAccount(AccountSystemKey.COST_OF_GOODS_SOLD).id();
+        Map<Long, Money> perLot = new LinkedHashMap<>();
+        for (JournalLineView line : entry.lines()) {
+            if (line.accountId() != cogsAccountId) {
+                continue;
+            }
+            line.subLedger()
+                    .filter(ref -> ref.type() == SubLedgerType.INVENTORY_LOT)
+                    .ifPresent(ref -> perLot.merge(ref.id(), line.amount(), Money::plus));
+        }
+        return perLot;
+    }
+
+    private StockConsumptionView toView(StockConsumption record,
             Map<Long, JournalEntryView> entries, Long reversedByConsumptionId) {
         Product product = record.getProduct();
 
@@ -1331,8 +1462,9 @@ class InventoryServiceImpl implements InventoryService {
         // allocated landed costs, so once step 10 allocates freight a recomputation would give a
         // different figure from the one that posted, with no way to tell which was historical.
         Money totalCost = null;
+        JournalEntryView entry = null;
         if (record.getJournalEntryId() != null) {
-            JournalEntryView entry = entries.get(record.getJournalEntryId());
+            entry = entries.get(record.getJournalEntryId());
             if (entry == null) {
                 throw new IllegalStateException(
                         "Consumption " + record.getId() + " names journal entry "
@@ -1342,15 +1474,19 @@ class InventoryServiceImpl implements InventoryService {
             totalCost = entry.totalDebits();
         }
 
+        // Per line, what actually reached Cost of goods sold for that lot — read back off the entry
+        // rather than recomputed. Since ADR 0015 the posted amount is the change in the lot's
+        // carrying value, which depends on what the lot held at the time and is therefore not
+        // recoverable from the line's own quantity and cost once the lot has moved on. Reading it
+        // off the entry needs no new column and cannot drift from what was posted.
+        Map<Long, Money> postedPerLot = costRecognisedPerLot(entry);
         List<StockConsumptionLineView> lineViews = record.getLines().stream()
                 .map(line -> new StockConsumptionLineView(
                         line.getId(),
                         line.getLot().getId(),
                         line.getQuantity(),
                         line.getUnitCost(),
-                        // Per line the rounding is the same one the posting used, stated here so a
-                        // reader can see how the total decomposes rather than only its sum.
-                        line.getUnitCost().extend(line.getQuantity(), RoundingMode.HALF_UP)))
+                        postedPerLot.getOrDefault(line.getLot().getId(), Money.zero(Money.EUR))))
                 .toList();
 
         return new StockConsumptionView(
@@ -1538,6 +1674,15 @@ class InventoryServiceImpl implements InventoryService {
                             + "than a reversal.");
         }
 
+        // ADR 0015, as reverseConsumption does: the mirror is only the right amount to put back if
+        // the lot's carrying value is where it was.
+        mirrorWouldStrandValue(original.getJournalEntryId(), lot, quantity,
+                "Write-off " + writeOffId,
+                "reverse the movements that have touched this lot since, then this write-off")
+                .ifPresent(refusal -> {
+                    throw new InvalidStockWriteOffException(refusal);
+                });
+
         Long reversingEntryId = null;
         if (original.getJournalEntryId() != null) {
             long originalEntryId = original.getJournalEntryId();
@@ -1606,13 +1751,16 @@ class InventoryServiceImpl implements InventoryService {
      * a warranty replacement — and writing it off derecognises nothing, because nothing was carried. The
      * ledger refuses a zero-amount line for good reason, so the honest record is a write-off with no
      * entry rather than an entry that says nothing happened.
+     *
+     * <p><strong>The amount is the change in the lot's carrying value</strong> (ADR 0015), for the
+     * reason {@code postConsumption} gives: stock leaving is stock leaving, and a write-off must
+     * take exactly as much off Inventory as a sale of the same units would. Called before the lot
+     * is reduced, so its remaining quantity is still the "before".
      */
     private Long postWriteOff(InventoryLot lot, Quantity quantity, NewStockWriteOff request) {
-        // The single rounding, with its mode read from settings rather than chosen here: brief §6 makes
-        // the mode configurable, and this is its first real consumer.
-        RoundingMode roundingMode =
-                settings.requireRoundingMode(SettingKeys.LEDGER_ROUNDING_MODE);
-        Money amount = lot.getUnitCost().extend(quantity, roundingMode);
+        Quantity before = lot.getQuantityRemaining();
+        Money amount =
+                LotValuation.valueReleased(lot.getUnitCost(), before, before.minus(quantity));
         if (!amount.isPositive()) {
             return null;
         }

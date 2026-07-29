@@ -6,6 +6,7 @@ import gr.novotrade.novocore.core.api.account.ChartOfAccountsService;
 import gr.novotrade.novocore.core.api.audit.AuditLogService;
 import gr.novotrade.novocore.core.api.inventory.InventoryLotView;
 import gr.novotrade.novocore.core.api.inventory.InventoryService;
+import gr.novotrade.novocore.core.api.inventory.LotValuation;
 import gr.novotrade.novocore.core.api.ledger.JournalService;
 import gr.novotrade.novocore.core.api.ledger.JournalSource;
 import gr.novotrade.novocore.core.api.ledger.NewJournalEntry;
@@ -49,12 +50,22 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p><strong>Two roundings, and each is where it has to be.</strong> The split across lots is exact
  * integer cents ({@code ProportionalAllocation}), so the shares sum to the amount allocated and the
- * entry balances by construction. The split of one lot's share into the capitalised half and the
- * variance half is the same arithmetic again, weighted by what is still in the lot against what has
- * gone, so those two also sum exactly and neither can come out negative. The only genuine rounding is
- * the per-unit increment, which is six decimals with the mode from {@code ledger.rounding.mode} — and
- * a lot's carrying value therefore moves by within a cent of what was debited to Inventory for it,
- * which is the same order of residual a partial consumption already leaves.
+ * entry balances by construction. The only genuine rounding is the per-unit increment, which is six
+ * decimals with the mode from {@code ledger.rounding.mode}.
+ *
+ * <p><strong>The split of one lot's share changed in step 13 (ADR 0015), and the change is the
+ * point.</strong> The capitalised half used to be a second proportional split — the share divided by
+ * what was still in the lot against what had gone. It is now <em>exactly how much this allocation
+ * raises that lot's carrying value</em>, which is the figure that will actually reach the Inventory
+ * control account. The old way put a proportional estimate on the Inventory line and left the lot
+ * carrying something else, which is Q45 reached from this direction.
+ *
+ * <p>ADR 0010 is untouched: the two halves are still "what the stock on hand carries" and "what
+ * belongs to stock already gone". What changed is that the first is now stated exactly and the
+ * second is the remainder — and the remainder can be one cent <em>negative</em>, because a
+ * six-decimal per-unit cost cannot always express a total. {@code V24} relaxed the CHECK that
+ * forbade that and explains it at length; {@code Landed cost variance} is credited in that case,
+ * which needs nothing new, since ADR 0011's return catch-up already credits it.
  */
 @Service
 class FreightAllocationServiceImpl implements FreightAllocationService {
@@ -446,9 +457,19 @@ class FreightAllocationServiceImpl implements FreightAllocationService {
             return new AllocatedLot(lot, Money.zero(currency), share, UnitCost.zero(currency));
         }
 
-        List<Money> halves = ProportionalAllocation.proportionally(share, List.of(
-                remaining.value(), received.minus(remaining).value()));
-        return new AllocatedLot(lot, halves.get(0), halves.get(1), perUnit);
+        // ADR 0015. The capitalised half is not a proportional estimate of what the stock on hand
+        // should absorb — it is *exactly* how much this allocation raises the lot's carrying value,
+        // which is the amount that will land on the Inventory control account when perUnit is
+        // applied. Computing it any other way puts a figure on the Inventory line that the lot does
+        // not agree with, which is the defect Q45 recorded, reached from the other direction.
+        //
+        // ADR 0010 is untouched by this: the split is still "the part the stock on hand carries" and
+        // "the part belonging to stock already gone". This says the first half exactly rather than
+        // approximately, and the second is what is left over — which also absorbs the fraction of a
+        // cent that expressing a total as a six-decimal per-unit cost cannot represent.
+        Money capitalised =
+                LotValuation.valueRecosted(lot.unitCost(), lot.unitCost().plus(perUnit), remaining);
+        return new AllocatedLot(lot, capitalised, share.minus(capitalised), perUnit);
     }
 
     /**
@@ -512,6 +533,14 @@ class FreightAllocationServiceImpl implements FreightAllocationService {
                 lines.add(NewJournalLine.debit(varianceAccount.id(), lot.variance())
                         .forSubLedger(lotRef)
                         .describedAs("Landed cost on stock already sold — "
+                                + lot.lot().productSku() + " (lot " + lot.lot().id() + ")"));
+            } else if (lot.variance().isNegative()) {
+                // The cent a six-decimal per-unit cost cannot express, arriving from the other
+                // direction — see V24. The lot's carrying value rose by one more than its share, so
+                // the difference is credited back rather than debited out.
+                lines.add(NewJournalLine.credit(varianceAccount.id(), lot.variance().abs())
+                        .forSubLedger(lotRef)
+                        .describedAs("Landed cost not expressible per unit — "
                                 + lot.lot().productSku() + " (lot " + lot.lot().id() + ")"));
             }
         }

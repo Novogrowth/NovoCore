@@ -3,7 +3,6 @@ package gr.novotrade.novocore.core.api.inventory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
@@ -153,14 +152,22 @@ public record InventoryLotView(
     }
 
     /**
-     * The remaining stock's cost, rounded once.
+     * The remaining stock's cost, rounded once — and <strong>exactly what the Inventory control
+     * account says this lot is worth</strong>, at every moment, by construction (ADR 0015).
      *
-     * <p>{@link RoundingMode#HALF_UP} because this is a valuation being read, not a posting being
-     * made. When step 7 posts a lot's cost it states its own mode at the call site, where the
-     * accounting consequence lives.
+     * <p>It was not always both. Until step 13's fix this was a valuation read one way while
+     * postings computed the movement another way, and the two drifted apart by a cent per movement
+     * on any lot whose unit cost is not a whole number of cents — which is every lot a landed cost
+     * has been allocated onto. {@link LotValuation} is now the single definition and every posting
+     * that moves this lot's stock puts the change in <em>this figure</em> on the Inventory line, so
+     * the two cannot diverge and a fully consumed lot leaves nothing behind.
+     *
+     * <p>Consequently the rounding is {@link LotValuation#ROUNDING} rather than a mode chosen at the
+     * call site: see there for why a lot's own valuation deliberately does not follow
+     * {@code ledger.rounding.mode}.
      */
     public Money remainingValue() {
-        return unitCost().extend(quantityRemaining, RoundingMode.HALF_UP);
+        return LotValuation.carryingValue(unitCost(), quantityRemaining);
     }
 
     /** The units still on hand. Empty for pooled stock, which has no units to name. */

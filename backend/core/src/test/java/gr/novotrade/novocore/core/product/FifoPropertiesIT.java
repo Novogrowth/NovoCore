@@ -8,6 +8,7 @@ import gr.novotrade.novocore.core.api.account.BalanceSide;
 import gr.novotrade.novocore.core.api.account.ChartOfAccountsService;
 import gr.novotrade.novocore.core.api.inventory.InventoryLotView;
 import gr.novotrade.novocore.core.api.inventory.InventoryService;
+import gr.novotrade.novocore.core.api.inventory.LotValuation;
 import gr.novotrade.novocore.core.api.inventory.NewStockConsumption;
 import gr.novotrade.novocore.core.api.inventory.StockConsumptionLineView;
 import gr.novotrade.novocore.core.api.inventory.StockConsumptionView;
@@ -25,7 +26,6 @@ import gr.novotrade.novocore.core.api.purchasing.GoodsReceiptService;
 import gr.novotrade.novocore.core.api.purchasing.GoodsReceiptView;
 import gr.novotrade.novocore.core.api.purchasing.NewGoodsReceipt;
 import gr.novotrade.novocore.core.api.purchasing.NewGoodsReceiptLine;
-import gr.novotrade.novocore.core.api.settings.SettingsService;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.SubLedgerRef;
@@ -36,7 +36,6 @@ import gr.novotrade.novocore.core.api.tax.VatClassService;
 import gr.novotrade.novocore.core.api.testsupport.Gen;
 import gr.novotrade.novocore.core.api.testsupport.Property;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -98,9 +97,6 @@ class FifoPropertiesIT extends AbstractCoreIntegrationTest {
     private UnitOfMeasureService unitsOfMeasure;
 
     @Autowired
-    private SettingsService settings;
-
-    @Autowired
     private GoodsReceiptService goodsReceipts;
 
     @Autowired
@@ -140,24 +136,6 @@ class FifoPropertiesIT extends AbstractCoreIntegrationTest {
                 new BigDecimal("0.000000"), new BigDecimal("1.000000"), new BigDecimal("0.333333"),
                 new BigDecimal("12.505000"), new BigDecimal("10.666667"),
                 new BigDecimal("0.000001"), new BigDecimal("99.999999"));
-    }
-
-    /**
-     * Costs that are a whole number of cents.
-     *
-     * <p><strong>Why this restriction exists, and it is not a convenience.</strong> Below the cent,
-     * the Inventory control account and {@code InventoryLotView.remainingValue()} genuinely
-     * disagree today, and a fully consumed lot leaves a residue behind in Inventory — see
-     * {@code docs/PROGRESS.md}, open question Q45, which carries the measured reproducer. That is a
-     * defect in the posting rule, not in this test, and it is recorded rather than papered over.
-     * Until it is decided and fixed, the exact-agreement property is asserted over the costs where
-     * it does hold, so the suite states something true. <strong>Widening this generator is the
-     * right way to check the fix — do not widen it before there is one.</strong>
-     */
-    private static Gen<BigDecimal> wholeCentCosts() {
-        return Gen.oneOf(
-                new BigDecimal("0.000000"), new BigDecimal("1.000000"), new BigDecimal("12.500000"),
-                new BigDecimal("0.010000"), new BigDecimal("99.990000"));
     }
 
     private static Gen<Delivery> deliveries(Gen<BigDecimal> costs) {
@@ -200,11 +178,6 @@ class FifoPropertiesIT extends AbstractCoreIntegrationTest {
     /** Histories over every cost shape, including ones finer than a cent. */
     private static Gen<History> histories() {
         return histories(anyCosts());
-    }
-
-    /** Histories restricted to whole-cent costs — see {@link #wholeCentCosts()} for why. */
-    private static Gen<History> wholeCentHistories() {
-        return histories(wholeCentCosts());
     }
 
     private static Gen<History> histories(Gen<BigDecimal> costs) {
@@ -396,10 +369,6 @@ class FifoPropertiesIT extends AbstractCoreIntegrationTest {
         return position;
     }
 
-    private RoundingMode ledgerRounding() {
-        return settings.requireRoundingMode("ledger.rounding.mode");
-    }
-
     // ---------------------------------------------------------------------------------------
 
     @Nested
@@ -557,19 +526,29 @@ class FifoPropertiesIT extends AbstractCoreIntegrationTest {
     class Posting {
 
         @Test
-        @DisplayName("the cost is each lot's own cost extended once, never an average")
-        void costIsPerLotAndRoundedOncePerLine() {
-            Property.forAllScenarios("totalCost == sum over lines of round(qty x lot cost)",
+        @DisplayName("each line costs the drop in its own lot's carrying value, never an average")
+        void costIsTheDropInEachLotsCarryingValue() {
+            // ADR 0015's rule, checked against an independent computation of it from the lot's state
+            // before the sale. Two things at once: that FIFO still costs per lot rather than at some
+            // blended figure — three from March and two from June cost what March and June cost —
+            // and that what each line posts is the change in that lot's value rather than the
+            // quantity extended and rounded on its own, which is what Q45 was.
+            Property.forAllScenarios("line cost == carryingValue(before) - carryingValue(after)",
                     histories(), history -> {
-                        RoundingMode mode = ledgerRounding();
                         for (Sale scenarioSale : replay(history).sales()) {
                             StockConsumptionView sale = scenarioSale.view();
-                            Money expected = Money.zero(Money.EUR);
+                            Money expectedTotal = Money.zero(Money.EUR);
                             for (StockConsumptionLineView line : sale.lines()) {
-                                expected = expected.plus(
-                                        line.unitCost().extend(line.quantity(), mode));
+                                Quantity before = scenarioSale.remainingBefore().get(line.lotId());
+                                Money expected = LotValuation.valueReleased(
+                                        line.unitCost(), before, before.minus(line.quantity()));
+                                assertThat(line.cost())
+                                        .as("lot %d giving up %s of %s",
+                                                line.lotId(), line.quantity(), before)
+                                        .isEqualTo(expected);
+                                expectedTotal = expectedTotal.plus(expected);
                             }
-                            assertThat(sale.totalCost()).isEqualTo(expected);
+                            assertThat(sale.totalCost()).isEqualTo(expectedTotal);
                         }
                     });
         }
@@ -615,7 +594,6 @@ class FifoPropertiesIT extends AbstractCoreIntegrationTest {
             // shortfall at the newest lot's price, which would look reasonable and be wrong.
             Property.forAllScenarios("cost covers only the filled quantity",
                     histories(), history -> {
-                        RoundingMode mode = ledgerRounding();
                         for (Sale scenarioSale : replay(history).sales()) {
                             StockConsumptionView sale = scenarioSale.view();
                             if (!sale.droveStockNegative()) {
@@ -623,8 +601,10 @@ class FifoPropertiesIT extends AbstractCoreIntegrationTest {
                             }
                             Money costOfWhatWasThere = Money.zero(Money.EUR);
                             for (StockConsumptionLineView line : sale.lines()) {
+                                Quantity was = scenarioSale.remainingBefore().get(line.lotId());
                                 costOfWhatWasThere = costOfWhatWasThere.plus(
-                                        line.unitCost().extend(line.quantity(), mode));
+                                        LotValuation.valueReleased(line.unitCost(), was,
+                                                was.minus(line.quantity())));
                             }
                             assertThat(sale.totalCost()).isEqualTo(costOfWhatWasThere);
                             assertThat(inventory.consumptionsWithShortfall())
@@ -647,10 +627,12 @@ class FifoPropertiesIT extends AbstractCoreIntegrationTest {
             // heals is still broken. It is the invariant that found ADR 0011's defect; generating
             // the histories is what makes it hold for shapes nobody enumerated.
             //
-            // Whole-cent costs only, and that restriction is itself a finding — see
-            // wholeCentCosts() and Q45. Below the cent this property is false today.
+            // Over EVERY cost shape, including the ones finer than a cent. This property was
+            // restricted to whole-cent costs when it first found Q45, because below the cent it was
+            // false — a 22-unit lot at 12.505 ended at -0.11 EUR with the lot empty. ADR 0015 made
+            // it true, and widening the generator back is what checks that.
             Property.forAllScenarios("Inventory sub-ledger position == lot.remainingValue()",
-                    wholeCentHistories(),
+                    histories(),
                     history -> assertLedgerAgreesWithLots(replay(history, true).lotIds()));
         }
 
@@ -658,11 +640,11 @@ class FifoPropertiesIT extends AbstractCoreIntegrationTest {
         @DisplayName("a lot that has been entirely consumed leaves nothing behind in Inventory")
         void anExhaustedLotSelfLiquidates() {
             // The plainest statement of what a control account is for: when the thing it controls
-            // is gone, its balance is zero. Restricted to whole-cent costs for Q45's reason, and it
-            // is the assertion that fails first when Q45 is exercised — a 22-unit lot at 12.505
-            // ends at -0.11 EUR with nothing left to explain it.
+            // is gone, its balance is zero. This is the assertion Q45 broke, and the one that
+            // matters most — a residue here has no document behind it and nothing to reconcile it
+            // against, and under HALF_UP it drifts one way rather than cancelling out.
             Property.forAllScenarios("an emptied lot's Inventory position is exactly zero",
-                    wholeCentHistories(), history -> {
+                    histories(), history -> {
                         Replay replayed = replay(history);
                         for (Long lotId : replayed.lotIds()) {
                             if (inventory.requireLot(lotId).quantityRemaining().isPositive()) {
