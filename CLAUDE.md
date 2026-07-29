@@ -65,18 +65,26 @@ Ask before implementing. Several entity field lists and mechanisms in the brief 
 
 ## Session close-out
 
-When the user says "close the session" (or clearly equivalent phrasing like "let's stop here" or "end session"), perform these four actions **in this order**, regardless of what step or task is in progress:
+When the user says "close the session" (or clearly equivalent phrasing like "let's stop here" or "end session"), perform these five actions **in this order**, regardless of what step or task is in progress:
 
 1. **Update `docs/PROGRESS.md`.** Record: which step(s) were worked on, what's now done and verified, what's still open or blocked (including any question numbers from the product brief), and the concrete next action for the following session. Overwrite stale status, don't just append.
 2. **Update `docs/novocore-context-primer.md`.** Reflect any changes to build status, resolved decisions, or open items so the primer stays accurate for a fresh chat session. Don't let it drift out of sync with what actually happened.
-3. **Commit, once, covering everything.** Stage and commit all outstanding changes — the session's work *and* the two documents above — in a single commit whose message summarizes what was done this session. If the work is incomplete or known-broken, say so explicitly in the message rather than implying it's finished.
-4. **Push to `origin`.** Always, without being asked. Then verify it landed (`git log --oneline origin/main -1` after a fetch) and confirm local and remote agree.
+3. **Update `docs/novocore-roadmap.md`.** Move any step that finished to 🟢 Done, mark the next one **Current**, and fill in the `Actual` hours and token columns for the work this session covered. **Measure, never estimate** — see below.
+4. **Commit, once, covering everything.** Stage and commit all outstanding changes — the session's work *and* the three documents above — in a single commit whose message summarizes what was done this session. If the work is incomplete or known-broken, say so explicitly in the message rather than implying it's finished.
+5. **Push to `origin`.** Always, without being asked. Then verify it landed (`git log --oneline origin/main -1` after a fetch) and confirm local and remote agree.
 
 Committing before pushing, and documenting before committing, is deliberate: the documentation updates are themselves changes, so committing first would leave them uncommitted and immediately stale — the exact drift step 2 exists to prevent.
 
-Do all four before ending the session — don't ask for confirmation on whether to do them, only flag anything unusual you find while doing so (e.g., uncommitted changes you didn't expect, tests that were failing when you started).
+Do all five before ending the session — don't ask for confirmation on whether to do them, only flag anything unusual you find while doing so (e.g., uncommitted changes you didn't expect, tests that were failing when you started).
 
-**On pushing (step 4).** This is a standing instruction, not a per-session decision. Three consecutive sessions ended with unpushed commits because pushing waited on an explicit request, and the repo has no other cross-machine sync mechanism — unpushed work is work that exists on exactly one laptop. So:
+**On the roadmap (step 3).** That file's `Actual` columns are worth something only because every figure in them was measured. The method is documented at the bottom of the file itself and must be followed rather than reinvented: session transcripts in `~/.claude/projects/`, windows bounded by each step's last commit, active time summed from inter-event gaps each capped at 5 minutes, tokens read from the `usage` field on assistant messages.
+
+- **A figure that cannot be measured is left blank with a note saying why.** Never write a plausible number into a column whose entire value is that it contains no plausible numbers.
+- **Never overwrite the `Est.` column.** The estimate-versus-actual comparison is the only calibration data this project has, and it is destroyed the first time an estimate is replaced rather than kept alongside.
+- **Expect the current session's figures to be short**, because the close-out itself is not yet in the transcript when they are computed. Record them anyway and say so, rather than waiting for a completeness that never arrives.
+- **Do not rescale the not-started estimates** to match the observed ratio. That is a decision for the user, made on evidence, not an automatic correction — the measured ratio comes from core-domain build work and does not transfer to adapters, a frontend, or a real data migration.
+
+**On pushing (step 5).** This is a standing instruction, not a per-session decision. Three consecutive sessions ended with unpushed commits because pushing waited on an explicit request, and the repo has no other cross-machine sync mechanism — unpushed work is work that exists on exactly one laptop. So:
 
 - Push at every close-out. Never wait to be asked.
 - Because of this, **`PROGRESS.md` must not maintain a list of "unpushed commits."** That list was itself a source of drift; it went out of date and was wrong. State instead that close-out always pushes, so local and `origin/main` agree at the end of every session, and record the commit each step landed in.

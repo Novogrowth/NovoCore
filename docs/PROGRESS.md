@@ -31,17 +31,22 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 11 | Email service | **Done, committed** `b542cf7` + `0790c74` — SMTP credentials supplied and stored in Settings, see below |
 | 12 | Automated backups | **Done, and operationally verified 2026-07-29** — V23, ADR 0013. Real encrypted dump uploaded to both Drives; all three owner action items closed |
 | 13 | Test suite consolidation sweep | **Done** — property tests on the money types and on FIFO, one whole-scenario invariant sweep, **ADR 0014**, and **one real defect found and then fixed (Q45 / ADR 0015)**, see below |
+| 14 | **The REST surface** — 133 routes, and Q44 answered in full | **Done, committed** `423bf34` + `e6354d6` + `b8aa9e2` + `f2e8e06` — three sub-steps as agreed, plus the BundleService follow-up. **Migration V25.** See below |
 
-**Tests: 960 passing, `mvn clean verify` exit 0.** 263 unit (core-api), 44 core unit, 615 core
-integration, 8 app unit, 12 app integration, 18 architecture. **Counted from a local run on this
+**Tests: 1039 passing, `mvn clean verify` exit 0.** 263 unit (core-api), 66 core unit, 629 core
+integration, 8 app unit, 51 app integration, 22 architecture. **Counted from a local run on this
 machine**, where 17 of the core integration tests skip because `pg_dump` is not installed — 16 in
 `BackupIT` and the backup leg of `WholeScenarioIT`. On CI, which puts PostgreSQL 17's client tools
-on the PATH deliberately (`5a6dfa5`), all 960 run and none skip.
+on the PATH deliberately (`5a6dfa5`), all 1039 run and none skip.
 
 Step 13 added 94: 53 in `core-api` (the property harness, its own self-test, and properties over
 `Money`, `Quantity`, `UnitCost` and `ProportionalAllocation`) and 41 in `core` (12 FIFO properties
 against a real database, 21 whole-scenario invariants, and 8 worked examples for the defect the
 properties found).
+
+Step 14 added 79: 22 core unit (the money serialisers and the endpoint-declaration check, neither
+needing Docker), 14 core integration (Q44's access path, bundle redaction, the section-list
+agreement), 39 app integration (four endpoint suites over the real filter chain) and 4 architecture.
 
 **Step 11 introduced the first non-container tests in `core`** (`RetryPolicyTest`,
 `SmtpConfigurationTest`). Until now everything in that module needed Docker; these do not, which is
@@ -221,6 +226,10 @@ were already on `origin`.
 | `e907a9e` | Step 12 commissioned — backups running for real, off-site and proven |
 | `9c7ed41` | Step 13 — property-based tests, the whole-scenario invariant sweep, **ADR 0014**, and **Q45** raised |
 | `951929f` | Q45 fixed — a lot's movements post the change in its carrying value, migration V24 (**ADR 0015**) |
+| `423bf34` | Step 14a — REST foundations (`@Requires`, money as strings, the full error mapping, three architecture rules) and the master-data surface |
+| `e6354d6` | Step 14b — purchasing and inventory endpoints |
+| `b8aa9e2` | Step 14c — sales, settlements, the outbox, **Q44 in full**, migration V25 |
+| `f2e8e06` | Step 14c (cont.) — `BundleService`'s `For` variants, closing the last redaction asymmetry |
 
 Interleaved with these are small docs-only commits (`e25fcee`, `a09428e`, `920044c`, `de16e58`,
 `b065901`, `8c27cb4`, `2c3fa8a`, `21b2231`, `d1111d0`, `610f785`, `836a4eb`) and this session's
@@ -345,7 +354,11 @@ Convention going forward is **one commit per build step**, so history stays chec
   independently exercised is the **weekly restore check running against a downloaded off-site
   artefact** — the check has only ever restored from the local copy, which is the same file, so this
   is a thin residual rather than a gap.
-- **The REST surface is one read-only endpoint.** `GET /api/chart-of-accounts` and nothing else, so
+- ~~**The REST surface is one read-only endpoint.**~~ **Closed — step 14 built 133 routes.** What
+  is *still* unverified is different and worth stating precisely: **no human has used a browser**,
+  and the frontend has no login screen and calls none of this. Every route is exercised by an
+  integration test over the real filter chain, and none has been driven by a person. What follows
+  is the original note, kept for the record: `GET /api/chart-of-accounts` and nothing else, so
   the frontend still has essentially nothing to call. Everything else — products, customers,
   settings, users, **and now the email outbox** — has a service and no HTTP route.
 - ~~**Nobody has logged in.**~~ **Done, against the running Compose stack over HTTPS**: 401
@@ -2813,6 +2826,138 @@ That placement decides the rest:
   **is gone**: the ledger-agreement and self-liquidation properties now run over every cost shape,
   which is what verifies the fix against the class of input that found the bug.
 
+---
+
+## Step 14 — done (the REST surface, and Q44 in full)
+
+Four commits: `423bf34` (14a), `e6354d6` (14b), `b8aa9e2` (14c), `f2e8e06` (14c cont.). **133
+routes** across 11 controller packages, one migration (**V25**), and 79 new tests.
+
+Split into three sub-steps deliberately — one commit of that size would have been unreviewable, and
+each of the three is green on its own. The full proposal, with the endpoint tables and the reasoning
+behind every decision, is `docs/step-14-rest-surface-proposal.md`.
+
+### The foundations, which are the part that will outlive the endpoints
+
+- **`@Requires(section, level)` plus an interceptor** replaces step 4b's inline `requireView` call.
+  4b's own javadoc said this should happen "with many controllers"; the risk it introduces is the
+  opposite of the one 4b avoided — an annotation that is *forgotten* fails open, silently, and looks
+  exactly like working code. **Three layers say otherwise**: an ArchUnit rule fails the build, a
+  `ContextRefreshedEvent` check refuses to let the application start, and the interceptor refuses the
+  request. All three were proven to fire.
+- **Money crosses the wire as a string** — `{"amount": "12.50", "currency": "EUR"}`, quantities as
+  bare strings. JSON has no decimal type and a number literal becomes an IEEE-754 double in a
+  browser, which is `CLAUDE.md` rule 5 broken at the one layer facing outward. **A JSON number is
+  refused, not accepted and rounded**: a client that sent one has already lost the value. Held to
+  **12.505** specifically — the unit cost behind Q45 — including an assertion of exactly what a
+  double does to it.
+- **The error mapping went from two cases to the full set**: 404 absent, 422 refused, 409 immutable,
+  410 pruned, 413, 503, 400. **Permission refusals stay generic** (they would describe the permission
+  model); **validation refusals carry the core's own message**, because an operator who cannot see
+  why a document was refused cannot fix it. `WebExceptionMappingTest` enumerates `core-api`'s
+  exceptions and fails if one is unmapped, so the explicit list cannot fall behind.
+- **Lists are wrapped** in `{"items": [...]}`. Step 14 ships **unpaged**, deliberately — no service
+  method takes a limit — and the envelope is what makes adding paging later something other than a
+  breaking change. **`GET /api/products` returns every product**, which is fine at hundreds and not
+  at tens of thousands.
+- **Commands, not CRUD.** One route per named service operation, because a whole-object `PUT` would
+  have to diff and dispatch inside a controller and would turn an absent field into a null. 201 for
+  creations, 204 for void commands.
+
+### Three architecture rules, each closing something that fails silently
+
+Every route declares a section; nothing in `..core.web..` calls an unredacted product read; nothing
+in `..core.web..` calls the lower inventory layer. **Each was proven to fail against a probe, and the
+probes deleted.**
+
+The third is the one worth restating. **`receive`, `unreceive`, `consume`, `reverseConsumption`,
+`applyLandedCost` and `removeLandedCost` have no HTTP route and cannot be called from one.** Each
+moves stock and posts nothing on its own, because the document service that calls them posts the
+entry in the same transaction. A route to `receive` would create a lot with no document; a route to
+`consume` would take stock out with no sale. Either leaves the Inventory control account disagreeing
+with what the lots carry — the invariant ADR 0015 restored. **Stock moves through documents.**
+
+### Two placements that are decisions, not details
+
+- **`GET /api/products/{id}/stock` is under `PRODUCTS`, not `INVENTORY`.** `StockLevels` carries
+  quantities and no cost. An order picker with VIEW on Products needs to know there are three left; a
+  *lot* is what says what those three cost. Putting it behind INVENTORY would either stop
+  Remote/Order Staff doing its job or force a grant that hands over cost data with it.
+- **An asset's carrying value gets no route at all.** It is `subLedgerBalanceOf`, which is
+  `Section.JOURNAL` — every posting against the asset. Exposing it on the asset route would be a
+  second, weaker path to ledger data, which is the exact failure Q44 exists to prevent elsewhere.
+
+### ✅ Q44 — both halves, answered and built
+
+**The section half.** `Section.EMAIL_OUTBOX` is new and deliberately **not** folded into `SETTINGS`:
+changing the SMTP password and reading who was emailed about what are different grants — the
+argument that separates `JOURNAL` from `CHART_OF_ACCOUNTS` and `INVENTORY` from `PRODUCTS`. Bodies
+are already absent from `QueuedEmailView`, so what it governs is recipients, subjects, delivery state
+and attachments.
+
+**The access-path half.** `EmailSender.downloadAttachment` now takes the viewer as a **required
+parameter with no unchecked overload beside it** — an unchecked path left available is the path that
+eventually gets called — and re-checks a *referenced* attachment against the section governing the
+record it belongs to.
+
+**⚠️ Implementing it turned up what the decision could not have known: there was nothing to check
+against.** `AttachmentService.entityType` is free text, so no mapping from a document to a section
+existed. **`AttachmentOwnerType`** is that missing piece: one typed registry, **fail-closed on an
+unrecognised type, denying even the Owner**. The consequence is deliberate — attaching documents to a
+new kind of record means adding it there, or nobody can download them out of a sent email. That fails
+visibly; the alternative fails silently. Denying the Owner too is the strict reading, chosen because
+if only restricted roles were refused the missing registration would be invisible to whoever could
+fix it.
+
+**Proven behaviourally, not structurally.** `EmailAttachmentAccessIT` (8 tests) and
+`OutboxEndpointIT` (6) assert outcomes — a clerk holding `EMAIL_OUTBOX` and not `PURCHASING` sees the
+attachment's *name* and gets **403** for its bytes, while the Owner gets the file — and **both denial
+tests were confirmed to fail against the check removed**, then it was restored. That is the step-12
+audit-log lesson applied on purpose: a structurally spotless change can reintroduce the defect in
+full, and only a behavioural test holds the guarantee.
+
+### 🐛 "No migrations expected" was wrong, and how it was found matters
+
+The plan said step 14 would need no migration, reasoning that a `Section` is a Java enum and grants
+are default-deny. **`role_section_grant` carries a CHECK listing every known section by name**, so
+`EMAIL_OUTBOX` existing only in Java **could not be granted at all** — every insert refused by the
+database. Three tests failed; the reasoning had not.
+
+The constraint is doing exactly what it was built for — the same pattern as
+`journal_entry_source_known`: the database states the value list independently, so neither side can
+drift unnoticed, and the price is that adding a section is a migration. **V25 pays it.**
+
+**The durable fix is the guard, not the migration.** `SecurityIT` now holds the CHECK to the enum in
+**both** directions and adds a third test that a grant can really be *stored* for every section,
+reserved ones included — structural agreement not being the same as it working. The next person
+adding a section finds out from a named test rather than from three unrelated failures.
+
+### Three more defects and gaps the work turned up
+
+1. **`ProductService.allFor(viewer)` returned `active()`** — contradicting its own name and leaving
+   `all()` with no redacted counterpart at all. Corrected, and `activeFor`, `findBySkuFor`,
+   `findByEanFor` and `bySupplierFor` added, so **every plain read now has a `...For` variant**.
+   Without them a controller wanting active products or a SKU lookup would have had to filter a
+   redacted list itself — domain logic in the web layer, filtering on a field that may have just been
+   blanked.
+2. **`EndpointDeclarationCheck` died at startup on `NoUniqueBeanDefinitionException`.** A real
+   context has **two** `RequestMappingHandlerMapping` beans, Spring MVC's and the actuator's. It now
+   checks every mapping, which is also the stricter answer — choosing one by name would leave the
+   others unexamined without saying so. Covered by a test that fails against the old shape.
+3. **`BundleService.allBundles()` and `bundlesWithUnpricedComponents()` returned unredacted
+   `ProductView`s.** The behaviour was correct (the controller redacted by hand) and the *guarantee*
+   was conventional, because the architecture rule was written against `ProductService` alone. Closed
+   in `f2e8e06` with `allBundlesFor` / `bundlesWithUnpricedComponentsFor` and the rule extended,
+   proven to fail against a probe.
+
+### Deliberately not built in step 14
+
+Users and roles, settings, the audit log, backup administration, **journal writing** (manual entries)
+and VAT-class/exemption-reason *administration*. Each has a service and can get a route later; none
+is needed to drive a trading workflow, and adding them would have tripled the review surface. The
+journal has **read** routes nowhere either — `Section.JOURNAL` is close to granting everything, and
+nothing in step 14's workflows needs it.
+
 ### Not blocking anything, but unanswered
 - **Q40** **Does a journal entry need a human-facing entry number?** The id is the handle today. An
   accountant asking "what is entry 412" is a real request, and it carries a format decision nobody
@@ -2963,17 +3108,19 @@ verify` is green at 960 tests.**
 step 13's property tests found — was approved and fixed the same day as **ADR 0015** plus migration
 **V24**, and the property tests that found it now run unrestricted over the costs that broke it.
 
-**Step 14 is not defined**, and choosing it is the next session's first job. The Phase 1 build order
-ran to step 13. Three candidates, none chosen:
+**Step 14 is done** — see its section above. The three candidates that were open at the last
+close-out are now resolved as follows: the REST surface is built (133 routes), Q44's access-path
+check is built and proven, and **PLB-1 (2FA) is the one that remains**, unchanged and still
+blocking any external or remote access.
 
-1. **The REST surface.** Still one read-only endpoint. Everything built in steps 5 to 13 has a
-   service and no HTTP route, and the frontend has had nothing to call since it was scaffolded.
-   This is the largest gap between what exists and what anybody can use.
-2. **Q44's access-path check** — decided in step 11's revision, still unbuilt, and the one thing
-   that must exist before an outbox screen does. Small, and it blocks something specific.
-3. **PLB-1 (2FA)**, which blocks any external access and is likely to be needed sooner than a
-   public launch, since Remote/Order Staff logging in from outside the network is that role's
-   entire purpose.
+**Step 15 is not defined, and choosing it is the next session's first job.** The obvious candidates,
+none chosen:
+
+1. **The frontend.** It has had nothing to call since it was scaffolded, and now it has 133 routes.
+   This is the largest remaining gap between what exists and what anybody can use — and the roadmap
+   estimates it at 8 hours, by far the largest single item left.
+2. **PLB-1 (2FA)**, which blocks external access and is likely needed sooner than a public launch.
+3. **Dummy data validation** (roadmap step 15), which the REST surface now makes possible to drive.
 
 ⚠️ **One thing to carry into whatever comes next.** Q45 survived twelve build steps because every
 example test in the suite used whole-cent costs. The generated tests found it in their first run.
@@ -3016,13 +3163,13 @@ What remains is operational, not a decision: the two destinations' folder ids an
 - **Q12 leftover — is the periodic depreciation posting run Phase 1 scope**, or only the register and
   the calculation? Still waiting on the statutory rates either way.
 - ~~**Q43**~~ — **answered and built (V22).** See the section below.
-- **Q44** *(step 11)* — **who may see the email outbox, and does it need a `Section`?** The *section*
-  half is still open. **The access-path half is decided — see below — and must not be rediscovered as a
-  live gap when the outbox screen is wired.** Bodies are deliberately absent from `QueuedEmailView`
-  already; the failure list still carries recipients and subjects, which is a customer-correspondence
-  trail, and that is the part a `Section` has to answer for.
+- ~~**Q44**~~ — **both halves answered and built in step 14c** (`b8aa9e2`). The section half is
+  `Section.EMAIL_OUTBOX`, its own grant rather than part of `SETTINGS`; the access-path half is built
+  in `EmailSenderImpl` and proven behaviourally, and it needed a piece the decision could not have
+  anticipated — `AttachmentOwnerType`, because `entityType` is free text and there was nothing to
+  check against. **See the step 14 section above.** The original decision record follows, unchanged.
 
-#### ✅ Q44's access-path half — decided 2026-07-29, to be built with the outbox screen
+#### ✅ Q44's access-path half — decided 2026-07-29, **built in step 14c**
 
 **`EmailSender.downloadAttachment` must re-check the caller's permission against the underlying core
 record before returning bytes for a *referenced* (stored) attachment**, using the authorization
