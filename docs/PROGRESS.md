@@ -30,17 +30,18 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 10 | Freight / landed cost allocation | **Done, committed** `cf6f1e4` + `6f06cf8` — Q18 answered as **ADR 0010**, and a defect it introduced closed as **ADR 0011**, see below |
 | 11 | Email service | **Done, committed** `b542cf7` + `0790c74` — SMTP credentials supplied and stored in Settings, see below |
 | 12 | Automated backups | **Done, and operationally verified 2026-07-29** — V23, ADR 0013. Real encrypted dump uploaded to both Drives; all three owner action items closed |
-| 13 | Test suite consolidation sweep | **Done** — property tests on the money types and on FIFO, one whole-scenario invariant sweep, **ADR 0014**, and **one real defect found (Q45)**, see below |
+| 13 | Test suite consolidation sweep | **Done** — property tests on the money types and on FIFO, one whole-scenario invariant sweep, **ADR 0014**, and **one real defect found and then fixed (Q45 / ADR 0015)**, see below |
 
-**Tests: 952 passing, `mvn clean verify` exit 0.** 263 unit (core-api), 44 core unit, 607 core
+**Tests: 960 passing, `mvn clean verify` exit 0.** 263 unit (core-api), 44 core unit, 615 core
 integration, 8 app unit, 12 app integration, 18 architecture. **Counted from a local run on this
 machine**, where 17 of the core integration tests skip because `pg_dump` is not installed — 16 in
 `BackupIT` and the backup leg of `WholeScenarioIT`. On CI, which puts PostgreSQL 17's client tools
-on the PATH deliberately (`5a6dfa5`), all 952 run and none skip.
+on the PATH deliberately (`5a6dfa5`), all 960 run and none skip.
 
-Step 13 added 86: 53 in `core-api` (the property harness, its own self-test, and properties over
-`Money`, `Quantity`, `UnitCost` and `ProportionalAllocation`) and 33 in `core` (12 FIFO properties
-against a real database, 21 whole-scenario invariants).
+Step 13 added 94: 53 in `core-api` (the property harness, its own self-test, and properties over
+`Money`, `Quantity`, `UnitCost` and `ProportionalAllocation`) and 41 in `core` (12 FIFO properties
+against a real database, 21 whole-scenario invariants, and 8 worked examples for the defect the
+properties found).
 
 **Step 11 introduced the first non-container tests in `core`** (`RetryPolicyTest`,
 `SmtpConfigurationTest`). Until now everything in that module needed Docker; these do not, which is
@@ -219,6 +220,7 @@ were already on `origin`.
 | `5a6dfa5` | CI — `pg_dump` made to actually mean 17 on the runner (workflow only, no application code) |
 | `e907a9e` | Step 12 commissioned — backups running for real, off-site and proven |
 | `9c7ed41` | Step 13 — property-based tests, the whole-scenario invariant sweep, **ADR 0014**, and **Q45** raised |
+| `951929f` | Q45 fixed — a lot's movements post the change in its carrying value, migration V24 (**ADR 0015**) |
 
 Interleaved with these are small docs-only commits (`e25fcee`, `a09428e`, `920044c`, `de16e58`,
 `b065901`, `8c27cb4`, `2c3fa8a`, `21b2231`, `d1111d0`, `610f785`, `836a4eb`) and this session's
@@ -327,12 +329,13 @@ Convention going forward is **one commit per build step**, so history stays chec
 - **The property runner itself is proven to fail** (`PropertyTest`), the same way the ArchUnit rules
   and `SchemaConventionsIT` are — a checker that is silently broken is worse than no checker.
 
-## Not yet verified
+- **A lot's carrying value and the Inventory control account agree by construction** (ADR 0015),
+  at every point in a lot's life and for every unit cost, not only the whole-cent ones — and a fully
+  consumed lot leaves exactly zero behind. Asserted both as worked examples with the measured
+  numbers (`LotCarryingValueIT`, **proven to fail against the old formula**) and as properties over
+  twenty generated histories per run (`FifoPropertiesIT`).
 
-- **⚠️ Q45 — the Inventory rounding residue is a known, measured, unfixed defect.** See the open
-  questions. The FIFO ledger-agreement properties are restricted to whole-cent unit costs because
-  below the cent they are false. This is the one place in the suite where a restriction exists to
-  accommodate a defect rather than to scope a test, and it is labelled as such in the code.
+## Not yet verified
 
 - ~~**Backup restore.**~~ **Closed, in code and in operation.** Proven in the suite and on CI
   (`5a6dfa5`) — a real `pg_dump`, a real `pg_restore` into a real scratch database, and an assertion
@@ -2376,7 +2379,7 @@ Three things, in the order they were built: a property-based testing harness and
 exists for, property tests over FIFO against a real database, and one whole-scenario test that plays
 a trading year and then sweeps every invariant the system has over the resulting database.
 
-**952 tests, `mvn clean verify` exit 0.**
+**952 tests at this point, `mvn clean verify` exit 0** — 960 once Q45 was fixed, below.
 
 ### jqwik could not be used, for the third time in a row, and for the same reason (ADR 0014)
 
@@ -2497,6 +2500,68 @@ now reads both contributions off the ledger by source and asserts they add up.
 context and therefore its own container. That is a feature: the sweeps cover exactly the scenario
 this class built and nothing else, so "Inventory equals the sum of what the lots carry" is an
 equality rather than a delta against whatever the rest of the suite left behind.
+
+---
+
+## Step 13, part two — Q45 fixed (ADR 0015, migration V24)
+
+Approved as recommended and built the same day. **960 tests, `mvn clean verify` exit 0.**
+
+### What the rule now is
+
+A lot's **carrying value** is its remaining quantity extended at its unit cost, rounded exactly once
+— one definition, `LotValuation`, one rounding mode. **Every posting that moves a lot's stock puts
+the change in that figure on the Inventory line.** Not the quantity moved extended at the cost and
+rounded, which is a different number and was the whole of Q45.
+
+So `InventoryLotView.remainingValue()` and the Inventory account's position for that lot are equal
+at every moment by construction, and a fully consumed lot leaves exactly nothing behind.
+
+### Four things worth knowing beyond the ADR
+
+1. **The freight allocation had to change too**, and it was not in the approved list. It is what
+   creates six-decimal unit costs in the first place (ADR 0010: €2.00 over three units is 0.666667)
+   and it debits Inventory, so leaving it alone would have left the invariant false at the one place
+   it matters most. Its capitalised half is no longer a proportional estimate of what the stock on
+   hand should absorb — it is exactly how much the allocation raises the lot's carrying value.
+   ADR 0010's decision is untouched; only its arithmetic is stated exactly rather than approximately.
+2. **Migration V24**, which drops exactly one CHECK. With the capitalised half stated exactly, the
+   variance half is the remainder — and the remainder can be one cent **negative**, because a
+   six-decimal per-unit cost cannot always express a total. `Landed cost variance` is credited in
+   that case, which needs nothing new: ADR 0011's return catch-up already credits it.
+3. **The rounding mode is fixed at `HALF_UP` and deliberately does not follow
+   `ledger.rounding.mode`.** A lot's value at two moments must be measured the same way, and a
+   setting somebody can change cannot promise that — a change mid-life would leave exactly the cent
+   this fix removes. `ledger.rounding.mode` still governs document rounding, which is what brief §6
+   asks it for. Nothing about today's numbers changes; what changes is that nothing can change them
+   tomorrow. Consequence: **`InventoryServiceImpl` no longer reads settings at all.**
+4. **Reversal is the one place the two rules pull apart, and it is guarded rather than fudged.** A
+   reversal must post the exact mirror (Q13, ADR 0006), and the mirror is only the right amount if
+   the lot has not moved since. `reverseConsumption` and `reverseWriteOff` compare the two and
+   **refuse if and only if they differ**, naming the remedy. It cannot fire for a whole-cent cost, it
+   does not fire when reversing the most recent movement, and it fires only when reversing *behind* a
+   later movement on a sub-cent-cost lot.
+
+### Two consequences a reader should not be surprised by
+
+- **Two identical units out of one lot can post different costs** — 12.50 then 12.51. They must, if
+  the lot is to end at zero: 22 × 12.505 is 275.11 and no repeated cent figure divides it.
+- **Cost is now path-independent.** Twenty-two single sales and one sale of twenty-two both cost
+  €275.11. Before, they cost €275.22 and €275.11 and both claimed to be the cost of the same lot.
+
+### Verification, and it is the point
+
+- **`LotCarryingValueIT` is proven to actually fail.** The old formula was reinstated and five of
+  its eight tests went red, one at €275.22 against €275.11 — the reported drift, to the cent. The
+  three that stayed green are supposed to, and the file says which and why.
+- **`FifoPropertiesIT`'s whole-cent restriction is removed.** The ledger-agreement and
+  self-liquidation properties now run over 0.333333, 10.666667, 12.505 and 99.999999 across twenty
+  generated histories each. That is the fix being checked against the class of input that found the
+  bug, which is what was asked for.
+- **`WholeScenarioIT` is unchanged and still green**, which is what says the fix moved nothing it
+  should not have. No other test in the suite needed changing either — a fact worth recording,
+  because it means every existing example test used whole-cent costs, which is why the defect
+  survived twelve build steps.
 
 ---
 
@@ -2691,12 +2756,15 @@ That placement decides the rest:
   ten-unit lot. Recorded here because the asymmetry is the kind of thing a later reader would otherwise
   try to "make consistent".
 
-### 🐛 Blocking nothing yet, and the most serious thing on this page
+### ✅ Q45 — answered and fixed (ADR 0015)
 
-- **Q45** *(new, step 13)* — **a lot whose unit cost is not a whole number of cents leaves a
-  permanent residue in the Inventory control account when it is fully consumed.** Found by the FIFO
-  property tests, reproduced by a throwaway probe, then deleted; the numbers below are measured, not
-  reasoned about.
+- **Q45** *(raised and closed on 2026-07-29)* — **a lot whose unit cost was not a whole number of
+  cents left a permanent residue in the Inventory control account when it was fully consumed.**
+  Found by the FIFO property tests, reproduced by a throwaway probe, then **fixed as ADR 0015**:
+  every posting that moves a lot now puts *the change in the lot's carrying value* on the Inventory
+  line, so `remainingValue()` and the account agree by construction and an emptied lot leaves
+  nothing behind. The description below is kept as it was written, because the measurements are the
+  reason the fix looks the way it does — see "Step 13, part two" above for what was actually built.
 
   **What happens.** A Goods Receipt debits Inventory with the whole delivery rounded once
   (`quantity × unitCost`, one rounding). Each consumption credits Inventory with *its own* line
@@ -2734,15 +2802,16 @@ That placement decides the rest:
   `ProportionalAllocation` takes) and accepting it with a tolerance (which is how a wrong number
   becomes permanent).
 
-  **Not fixed in step 13, deliberately.** It changes how COGS is posted, which is the most
-  consequential kind of change in this system, and step 13 was a test sweep. It touches `consume`,
-  `writeOff`, `returnConsumed`, `reverseConsumption` and `reverseWriteOff` together — they must
-  agree or the asymmetry ADR 0011 documents stops holding.
+  ~~**Not fixed in step 13, deliberately.**~~ **Approved and fixed the same day.** The
+  recommendation above was accepted as written, and ADR 0015 is it: `consume`, `writeOff`,
+  `returnConsumed`, both reversals **and the freight allocation** now post the change in the lot's
+  carrying value. The freight allocation was not in the original list and had to be: it is what
+  creates sub-cent unit costs in the first place, and it posts to Inventory, so leaving it would
+  have left the invariant false at the one place it matters most.
 
-  **What the suite says in the meantime.** `FifoPropertiesIT.wholeCentCosts()` restricts the
-  ledger-agreement and self-liquidation properties to costs where they do hold, and says so at
-  length in place. **Widening that generator is the way to check the fix, and must not be done
-  before there is one.**
+  ~~**What the suite says in the meantime.**~~ `FifoPropertiesIT`'s restriction to whole-cent costs
+  **is gone**: the ledger-agreement and self-liquidation properties now run over every cost shape,
+  which is what verifies the fix against the class of input that found the bug.
 
 ### Not blocking anything, but unanswered
 - **Q40** **Does a journal entry need a human-facing entry number?** The id is the handle today. An
@@ -2887,29 +2956,29 @@ copied anywhere it was not meant to go.**
 ---
 ## Next action — read this first
 
-**Step 13 is done. Steps 0–13 are complete, committed and pushed, and `mvn clean verify` is green
-at 952 tests.**
+**Step 13 is done, Q45 is fixed, and steps 0–13 are complete, committed and pushed. `mvn clean
+verify` is green at 960 tests.**
 
-**⚠️ The one thing needing a decision before anything else is Q45** — see "Open questions" below.
-Step 13's FIFO property tests found a real defect in how consumption is costed: a lot whose unit
-cost is not a whole number of cents **leaves a permanent residue in the Inventory control account
-after it has been entirely consumed**, and the residue is systematically negative. It is measured,
-reproduced and written up rather than fixed, because the fix is a change to how COGS is posted and
-that is an accounting decision, not a test-suite one. **The property tests are currently restricted
-to whole-cent costs so the suite states something true; widening that restriction is how the fix
-gets verified.**
+**There is no known correctness defect in the ledger.** Q45 — the Inventory rounding residue that
+step 13's property tests found — was approved and fixed the same day as **ADR 0015** plus migration
+**V24**, and the property tests that found it now run unrestricted over the costs that broke it.
 
-**Step 14 is not defined.** The Phase 1 build order ran to step 13, so the next session should
-start by agreeing what Phase 1's remaining work is. The obvious candidates, none of them chosen:
+**Step 14 is not defined**, and choosing it is the next session's first job. The Phase 1 build order
+ran to step 13. Three candidates, none chosen:
 
-1. **Fix Q45** — the only known correctness defect in the ledger.
-2. **Q44's access-path check** — decided in step 11's revision, still unbuilt, and the one thing
-   that must exist before an outbox screen does.
-3. **The REST surface.** Still one read-only endpoint. Everything built in steps 5 to 12 has a
+1. **The REST surface.** Still one read-only endpoint. Everything built in steps 5 to 13 has a
    service and no HTTP route, and the frontend has had nothing to call since it was scaffolded.
-4. **PLB-1 (2FA)**, which blocks any external access and is likely to be needed sooner than a
+   This is the largest gap between what exists and what anybody can use.
+2. **Q44's access-path check** — decided in step 11's revision, still unbuilt, and the one thing
+   that must exist before an outbox screen does. Small, and it blocks something specific.
+3. **PLB-1 (2FA)**, which blocks any external access and is likely to be needed sooner than a
    public launch, since Remote/Order Staff logging in from outside the network is that role's
    entire purpose.
+
+⚠️ **One thing to carry into whatever comes next.** Q45 survived twelve build steps because every
+example test in the suite used whole-cent costs. The generated tests found it in their first run.
+That is the argument for widening the property-based approach as new posting rules are built, rather
+than treating step 13 as a thing that was done once.
 
 ### Credential housekeeping — done, nothing outstanding
 
