@@ -385,6 +385,42 @@ class BackupIT extends AbstractCoreIntegrationTest {
     }
 
     @Test
+    @DisplayName("an expired backup is deleted from disk and from the destination that held it")
+    void expiredBackupsArePrunedEverywhere() {
+        // This path was previously untested, and that mattered: retention only reaches it once
+        // there are more than `daily-count` backups, which no other test produced. It was reading
+        // a lazy association outside any transaction and would have thrown on the first real
+        // prune — months after the code was written, on a machine nobody was watching.
+        settings.put("backup.retention.daily-count", "2");
+
+        BackupView oldest = backups.runNow();
+        backups.runNow();
+        backups.runNow();
+
+        BackupView pruned = backups.find(oldest.id()).orElseThrow();
+        assertThat(pruned.isPruned())
+                .as("outside the rolling 2, and this month's archive is a newer one")
+                .isTrue();
+        assertThat(backupDirectory.resolve(oldest.artefactName()))
+                .as("the artefact is gone from disk")
+                .doesNotExist();
+        assertThat(drive.deleted())
+                .as("and from the destination that held it")
+                .isNotEmpty();
+
+        // The row survives its artefact: the history is a list of attempts, not of files.
+        assertThat(backups.recent(10))
+                .extracting(BackupView::id)
+                .contains(oldest.id());
+        assertThat(pruned.status()).isEqualTo(BackupRunStatus.SUCCEEDED);
+
+        // And a pruned backup cannot be offered for verification.
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> backups.verifyRestore(oldest.id()))
+                .withMessageContaining("pruned");
+    }
+
+    @Test
     @DisplayName("recent() lists attempts newest first, with their destinations")
     void recentListsAttempts() {
         backups.runNow();

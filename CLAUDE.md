@@ -26,6 +26,25 @@ The architecture rules above prevent *cross-component* coupling (an adapter reac
 - Write automated tests for core logic, especially anything touching money, journal entries, or FIFO/lot consumption. Tests are what make later refactoring safe; without them, every future fix will be tempted toward "just patch it."
 - If asked to review or clean up a module, actually look for accumulated duplication/special-casing, not just the specific thing you were asked about.
 
+### Named anti-pattern: proxy self-invocation
+
+**A class must not call its own `@Transactional` method.** Spring applies it with a proxy, and a call from one method of an object to another method of the *same* object never goes through that proxy — so the annotation silently does nothing. Nothing fails, nothing warns, and the code reads exactly like code that works.
+
+This has now bitten this codebase three times: `EmailOutbox` (step 11, caught while designing), `RestoreVerifier` (step 12, caught in review), and `AuditLogServiceImpl` (pre-existing, caught by the rule below — audit entries were joining the caller's transaction and **rolling back with the very operation they recorded**, which is exactly what its `REQUIRES_NEW` existed to prevent).
+
+**Two ArchUnit rules now enforce it** (`SelfInvocationRulesTest`), and they are deliberately narrow so they stay believable:
+
+1. a **non-transactional** method may not call its own class's `@Transactional` method — the proxy is bypassed and there is no transaction at all;
+2. **nothing** may self-invoke a method declaring non-default propagation — a self-called `REQUIRES_NEW` silently joins the caller instead of starting its own.
+
+A `@Transactional` method calling another on the same class with default propagation is **allowed**: the inner call joins the outer transaction, which is what the code means. Forbidding it produced 44 findings, nearly all harmless — and a rule that cries wolf is one someone deletes.
+
+**The remedy is always the same:** move the transactional methods into their own bean. `EmailOutbox`/`EmailDispatcher`, `RestoreCheckJournal`/`RestoreVerifier` and `BackupJournal`/`BackupRetentionService` are the worked examples.
+
+**What the rules cannot see, so watch for it in review:** `@Async`, `@Cacheable`, `@PreAuthorize` and `@Retryable` fail identically and are not covered; nor is a call reached through a lambda or method reference captured elsewhere. The general principle is the thing to hold on to — **an annotation that Spring applies with a proxy does nothing when the call originates inside the same object.**
+
+A related trap with the same shape: a method that is *not* transactional returning JPA entities with lazy associations, which then blow up on first access at the caller. Materialise plain data inside the transaction instead — `EmailOutbox.claimDue` and `BackupJournal.artefactToRemove` both state this requirement rather than leaving it to be discovered.
+
 ## Stack
 
 **Backend:** Java + Spring Boot, PostgreSQL, Docker, self-hosted with an HTTPS reverse proxy from the start. No SQLite, no Python/PHP backend — these were deliberately ruled out, don't reintroduce them for "quick" tooling either.

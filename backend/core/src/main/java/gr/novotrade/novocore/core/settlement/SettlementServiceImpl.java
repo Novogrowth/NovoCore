@@ -313,14 +313,14 @@ class SettlementServiceImpl implements SettlementService {
                             + "allocation, not adding a negative one.");
         }
         if (sourceRef != null) {
-            Money sourceOpen = openAmountOf(sourceRef);
+            Money sourceOpen = openAmount(sourceRef);
             if (amount.compareTo(sourceOpen) > 0) {
                 throw new InvalidSettlementException(
                         sourceRef + " has " + sourceOpen + " left to apply and cannot supply "
                                 + amount + ".");
             }
         }
-        Money targetOpen = openAmountOf(target);
+        Money targetOpen = openAmount(target);
         if (amount.compareTo(targetOpen) > 0) {
             throw new InvalidSettlementException(
                     target + " has " + targetOpen + " outstanding and cannot take an allocation of "
@@ -444,7 +444,7 @@ class SettlementServiceImpl implements SettlementService {
                             + "balance is the whole point of a control account.");
         }
 
-        Money open = openAmountOf(target);
+        Money open = openAmount(target);
         if (amount.compareTo(open) > 0) {
             throw new InvalidSettlementException(
                     target + " has " + open + " outstanding and cannot take an allocation of "
@@ -496,12 +496,32 @@ class SettlementServiceImpl implements SettlementService {
     @Override
     @Transactional(readOnly = true)
     public Money openAmountOf(OpenItemRef ref) {
-        return openItem(ref).map(OpenItem::openAmount).orElse(Money.zero(Money.EUR));
+        return openAmount(ref);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<OpenItem> openItem(OpenItemRef ref) {
+        return findOpenItem(ref);
+    }
+
+    /**
+     * The open amount, without going through the proxy.
+     *
+     * <p>The public {@link #openAmountOf} is the transactional entry point for callers outside
+     * this class; this is what the allocation checks inside it use. Separated because those checks
+     * run from private helpers, and a private helper calling {@code openAmountOf} would be a
+     * self-invocation — harmless here, since the public methods that reach those helpers are all
+     * transactional and the read simply joins that transaction, but indistinguishable in the
+     * bytecode from the shape that is <em>not</em> harmless. Splitting the two says which is the
+     * entry point and which is the computation, and keeps the ArchUnit rule sharp enough to be
+     * worth having.
+     */
+    private Money openAmount(OpenItemRef ref) {
+        return findOpenItem(ref).map(OpenItem::openAmount).orElse(Money.zero(Money.EUR));
+    }
+
+    private Optional<OpenItem> findOpenItem(OpenItemRef ref) {
         Objects.requireNonNull(ref, "ref");
         return switch (ref.type()) {
             case SALES_INVOICE -> salesInvoices.find(ref.id()).map(this::toOpenItem);

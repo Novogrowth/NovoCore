@@ -2183,6 +2183,75 @@ it. Weekly by default; the nightly backup is separate.
 
 ---
 
+## Proxy self-invocation — now a build failure, and it found two real defects
+
+Raised at step 12's close: the `RestoreVerifier` self-invocation was the **second** time that exact
+pattern had bitten the codebase, after step 11's `EmailOutbox`. Rather than rely on it being
+rediscovered a third time, it is now enforced.
+
+**`SelfInvocationRulesTest`** — two ArchUnit rules over the production class graph:
+
+1. **A non-transactional method may not call its own class's `@Transactional` method.** The proxy is
+   bypassed, so there is no transaction at all. This is the shape that bit us twice.
+2. **Nothing may self-invoke a method declaring non-default propagation.** A self-called
+   `REQUIRES_NEW` silently joins the caller's transaction instead of starting its own — wrong even
+   when the caller *is* transactional, which is the case rule 1 has to permit.
+
+Each rule has a **probe fixture proving it fails**, plus a fixture proving the recommended remedy
+does not trip it. Rules nobody has watched reject something are indistinguishable from rules that
+match nothing — the lesson from step 4b's vacuous `..core.web..` rule.
+
+**Deliberately allowed:** a `@Transactional` method calling another on the same class with default
+propagation. The inner call joins the outer transaction, which is what the code means. The first
+draft forbade it and reported **44 violations**, essentially all harmless; a rule that cries wolf 44
+times is one somebody deletes. Narrowing to the two shapes above turned that into 6 findings across
+3 classes — and **two of them were real defects.**
+
+### 🐛 `AuditLogServiceImpl` — pre-existing, and the serious one
+
+`record(action, entityType, entityId)` and `recordSystemAction(...)` were **unannotated** and
+self-invoked the four-argument `record(...)`, which is `@Transactional(propagation = REQUIRES_NEW)`.
+That `REQUIRES_NEW` exists — and is documented in that class — so that *an audit entry survives the
+rollback of the operation it describes*. Through a self-call it was never applied, so every entry
+written via those two overloads **joined the caller's transaction and was rolled back with the very
+operation it was recording.** A rejected journal entry or a refused permission is exactly what you
+most want recorded, and exactly what was being lost. In the audit log, which is the record of last
+resort.
+
+**Fixed:** all three public overloads now carry the annotation and delegate to a private, unannotated
+`write(...)`. No self-invocation of an annotated method remains.
+
+### 🐛 `BackupRetentionService` — step 12, plus a latent lazy-loading failure
+
+`apply()` is deliberately not transactional (it deletes files and calls Drive) and self-invoked a
+`@Transactional` read. Moved to `BackupJournal.retentionCandidates()`.
+
+Fixing it surfaced a second, worse defect on the same path: `removeArtefact` loaded a `BackupRun`
+and read its **lazy `uploads` association outside any transaction**. It would have thrown on the
+first real prune — which only happens once there are more than `daily-count` backups, a state no
+test had ever produced. Now `BackupJournal.artefactToRemove` materialises plain data inside the
+transaction, the way `EmailOutbox.claimDue` already documents, and **a new test drives a real prune
+end to end** (artefact deleted from disk *and* from the destination, row surviving its artefact).
+
+### `SettlementServiceImpl` — not a defect, restructured anyway
+
+Three findings where private helpers called the public `@Transactional openAmountOf`. Harmless in
+effect — every public entry point reaching those helpers is transactional, so the read joins that
+transaction — but indistinguishable in bytecode from the shape that is *not* harmless. Split into a
+private `openAmount(...)` computation with the public method as the thin transactional wrapper,
+which says which is the entry point and keeps the rule sharp enough to be worth having.
+
+### Recorded in `CLAUDE.md` as well
+
+The rules cannot cover `@Async`, `@Cacheable`, `@PreAuthorize` or `@Retryable`, which fail
+identically, nor a call reached through a captured lambda. `CLAUDE.md` names the general
+anti-pattern, the remedy, and the related trap of returning lazily-associated entities from a
+non-transactional method.
+
+**864 tests passing, `mvn clean verify` exit 0** (up from 858; ArchUnit 13 → 18).
+
+---
+
 ## Open questions, by the step they block
 
 Numbering follows the original Phase 1 question list so references stay stable.
@@ -2411,6 +2480,19 @@ That placement decides the rest:
   and OAuth credentials**. Nothing in the repo has ever recorded them. Until the consent flow is
   completed per Google account, both destinations record `NOT_CONFIGURED` on every run and backups
   stay **local only** — which is visible rather than assumed, but is not a backup regime.
+
+### Step 12 is code-complete, not operationally verified — owner's three action items
+
+Stated as of 2026-07-29, and **step 12 should not be described as fully verified until all three are
+done**:
+
+1. **Move `NOVOCORE_BACKUP_ENCRYPTION_KEY` into a password manager.** In progress. Until then the
+   only copy is `docker/.env` on one machine, and losing that machine loses the database and every
+   backup of it together.
+2. **Complete the OAuth consent flow for both Drive accounts**, then supply the folder ids and the
+   two secrets per destination. Real Drive upload has never been exercised — only `StubDriveServer`.
+3. **Run `docker compose up --build`** to prove the `postgresql-client-17` image change. That
+   Dockerfile edit is written and has never been executed.
 
 ---
 ## Next action — read this first

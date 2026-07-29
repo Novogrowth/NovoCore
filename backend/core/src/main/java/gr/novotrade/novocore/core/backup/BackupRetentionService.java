@@ -1,7 +1,5 @@
 package gr.novotrade.novocore.core.backup;
 
-import gr.novotrade.novocore.core.api.backup.BackupRunStatus;
-import gr.novotrade.novocore.core.api.backup.BackupUploadStatus;
 import gr.novotrade.novocore.core.api.settings.SettingKeys;
 import gr.novotrade.novocore.core.api.settings.SettingsService;
 import java.io.IOException;
@@ -17,7 +15,6 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Deletes the backups the retention rule no longer keeps — from local disk and from every
@@ -41,15 +38,13 @@ class BackupRetentionService {
 
     private static final ZoneId DEFAULT_ZONE = ZoneId.of("Europe/Athens");
 
-    private final BackupRunRepository runs;
     private final BackupJournal journal;
     private final GoogleDriveClient drive;
     private final SettingsService settings;
     private final Clock clock;
 
-    BackupRetentionService(BackupRunRepository runs, BackupJournal journal, GoogleDriveClient drive,
+    BackupRetentionService(BackupJournal journal, GoogleDriveClient drive,
             SettingsService settings, Clock clock) {
-        this.runs = runs;
         this.journal = journal;
         this.drive = drive;
         this.settings = settings;
@@ -63,7 +58,11 @@ class BackupRetentionService {
      */
     int apply() {
         BackupRetentionRule rule = rule();
-        List<BackupRetentionRule.Candidate> candidates = candidates();
+        // Read through BackupJournal, not from a @Transactional method on this class. This method
+        // deletes files and calls Drive, so it is deliberately not transactional itself — which
+        // means a self-invoked @Transactional read here would have had its proxy bypassed and its
+        // annotation silently ignored. Caught by the ArchUnit self-invocation rule.
+        List<BackupRetentionRule.Candidate> candidates = journal.retentionCandidates();
         if (candidates.isEmpty()) {
             return 0;
         }
@@ -110,57 +109,49 @@ class BackupRetentionService {
     }
 
     private boolean removeArtefact(BackupRetentionRule.Decision decision, Path directory) {
-        Optional<BackupRun> found = runs.findById(decision.backupRunId());
+        // Plain data, materialised inside a transaction. The uploads are a lazy association and
+        // everything below runs outside one, so holding the entity here would fail on first access
+        // — the same requirement EmailOutbox.claimDue states for the same reason.
+        Optional<BackupJournal.ExpiredArtefact> found =
+                journal.artefactToRemove(decision.backupRunId());
         if (found.isEmpty()) {
             return false;
         }
-        BackupRun run = found.get();
+        BackupJournal.ExpiredArtefact expired = found.get();
 
         // Remote first. If this fails the local file stays too, so the next pass retries the whole
         // removal — whereas deleting locally first and failing here would leave a copy on Drive
         // that nothing knows how to find again.
-        for (BackupUpload upload : run.getUploads()) {
-            if (upload.getStatus() != BackupUploadStatus.UPLOADED
-                    || upload.getRemoteFileId() == null) {
-                continue;
-            }
+        for (BackupJournal.RemoteCopy copy : expired.copies()) {
             DriveDestination.Configured configured =
-                    DriveDestination.from(settings, upload.getDestinationKey());
+                    DriveDestination.from(settings, copy.destinationKey());
             if (!configured.isConfigured()) {
                 log.warn("Cannot remove the expired backup {} from '{}': {}",
-                        run.getArtefactName(), upload.getDestinationKey(), configured.problem());
+                        expired.artefactName(), copy.destinationKey(), configured.problem());
                 return false;
             }
             DriveDestination destination = configured.destination().orElseThrow();
             try {
-                drive.delete(destination, drive.accessToken(destination),
-                        upload.getRemoteFileId());
+                drive.delete(destination, drive.accessToken(destination), copy.remoteFileId());
             } catch (RuntimeException e) {
                 log.error("Could not remove the expired backup {} from {}: {}",
-                        run.getArtefactName(), destination.label(),
+                        expired.artefactName(), destination.label(),
                         BackupServiceImpl.describe(e));
                 return false;
             }
         }
 
         try {
-            Files.deleteIfExists(directory.resolve(run.getArtefactName()));
+            Files.deleteIfExists(directory.resolve(expired.artefactName()));
         } catch (IOException e) {
             log.error("Could not delete the expired artefact {}: {}",
-                    run.getArtefactName(), e.getMessage());
+                    expired.artefactName(), e.getMessage());
             return false;
         }
 
         journal.pruned(decision.backupRunId(), Instant.now(clock), decision.monthlyArchive());
-        log.info("Pruned backup {} — {}.", run.getArtefactName(), decision.reason());
+        log.info("Pruned backup {} — {}.", expired.artefactName(), decision.reason());
         return true;
-    }
-
-    @Transactional(readOnly = true)
-    List<BackupRetentionRule.Candidate> candidates() {
-        return runs.findByStatusAndPrunedAtIsNull(BackupRunStatus.SUCCEEDED).stream()
-                .map(run -> new BackupRetentionRule.Candidate(run.getId(), run.getStartedAt()))
-                .toList();
     }
 
     private BackupRetentionRule rule() {

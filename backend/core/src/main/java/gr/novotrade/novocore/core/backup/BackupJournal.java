@@ -2,6 +2,7 @@ package gr.novotrade.novocore.core.backup;
 
 import gr.novotrade.novocore.core.api.audit.AuditLogService;
 import gr.novotrade.novocore.core.api.backup.BackupRunStatus;
+import gr.novotrade.novocore.core.api.backup.BackupUploadStatus;
 import gr.novotrade.novocore.core.api.backup.BackupView;
 import java.time.Instant;
 import java.util.List;
@@ -120,6 +121,49 @@ class BackupJournal {
     @Transactional(readOnly = true)
     boolean artefactNameTaken(String artefactName) {
         return runs.findByArtefactName(artefactName).isPresent();
+    }
+
+    /**
+     * Every successful backup whose artefact still exists — the retention rule's input.
+     *
+     * <p>Lives here rather than on {@code BackupRetentionService} because that class's
+     * {@code apply()} is deliberately <em>not</em> transactional (it deletes files and calls
+     * Drive), and a transactional method called from it would be a self-invocation: the proxy
+     * bypassed, the annotation doing nothing.
+     */
+    @Transactional(readOnly = true)
+    List<BackupRetentionRule.Candidate> retentionCandidates() {
+        return runs.findByStatusAndPrunedAtIsNull(BackupRunStatus.SUCCEEDED).stream()
+                .map(run -> new BackupRetentionRule.Candidate(run.getId(), run.getStartedAt()))
+                .toList();
+    }
+
+    /**
+     * Everything needed to delete one backup's copies, materialised as plain data.
+     *
+     * <p>Detached values rather than the entity, for the reason {@code EmailOutbox.claimDue} gives:
+     * {@code uploads} is a lazy association, and the retention pass reads it <em>after</em> any
+     * transaction has closed — so returning the entity would throw on first access. This was a
+     * real defect on an untested path: retention only reaches it once there are more than seven
+     * backups, which no test had produced.
+     */
+    @Transactional(readOnly = true)
+    Optional<ExpiredArtefact> artefactToRemove(long runId) {
+        return runs.findById(runId).map(run -> new ExpiredArtefact(
+                run.getArtefactName(),
+                run.getUploads().stream()
+                        .filter(upload -> upload.getStatus() == BackupUploadStatus.UPLOADED)
+                        .filter(upload -> upload.getRemoteFileId() != null)
+                        .map(upload -> new RemoteCopy(
+                                upload.getDestinationKey(), upload.getRemoteFileId()))
+                        .toList()));
+    }
+
+    /** One expired backup's artefact name and the remote copies still holding it. */
+    record ExpiredArtefact(String artefactName, List<RemoteCopy> copies) {
+    }
+
+    record RemoteCopy(String destinationKey, String remoteFileId) {
     }
 
     @Transactional(readOnly = true)

@@ -38,10 +38,43 @@ class AuditLogServiceImpl implements AuditLogService {
      * operation it describes. A rejected journal entry or a refused permission is exactly what
      * you want recorded, and joining the caller's transaction would discard the evidence along
      * with the attempt.
+     *
+     * <p><strong>Every public overload carries the annotation, and none of them calls another.</strong>
+     * They delegate to the private {@link #write} instead, and that is a correctness fix rather
+     * than tidiness. The two convenience overloads below used to be unannotated and to call this
+     * method directly — a self-invocation, which never goes through the proxy, so their
+     * {@code REQUIRES_NEW} was silently not applied and entries written through them joined the
+     * caller's transaction and <em>were rolled back with the very operation they were recording</em>.
+     * Exactly the failure this annotation exists to prevent, in the one place that is supposed to
+     * be the record of last resort. Found by the ArchUnit self-invocation rule.
      */
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void record(String action, String entityType, String entityId,
+            Map<String, String> detail) {
+        write(action, entityType, entityId, detail);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void record(String action, String entityType, String entityId) {
+        write(action, entityType, entityId, null);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordSystemAction(String action, Map<String, String> detail) {
+        write(action, "System", null, detail);
+    }
+
+    /**
+     * The one place an entry is actually written.
+     *
+     * <p>Private and unannotated on purpose: the transaction is opened by whichever public method
+     * the caller came through, and a helper that carried its own annotation would be back to
+     * promising something a direct call cannot deliver.
+     */
+    private void write(String action, String entityType, String entityId,
             Map<String, String> detail) {
         Objects.requireNonNull(action, "action");
         Objects.requireNonNull(entityType, "entityType");
@@ -52,16 +85,6 @@ class AuditLogServiceImpl implements AuditLogService {
                 entityType,
                 entityId,
                 detail == null || detail.isEmpty() ? null : Map.copyOf(detail)));
-    }
-
-    @Override
-    public void record(String action, String entityType, String entityId) {
-        record(action, entityType, entityId, null);
-    }
-
-    @Override
-    public void recordSystemAction(String action, Map<String, String> detail) {
-        record(action, "System", null, detail);
     }
 
     @Override
