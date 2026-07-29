@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * that silently sent the wrong file, or an empty one, would otherwise look identical to a correct
  * one from the outside.
  */
-final class StubDriveServer implements AutoCloseable {
+public final class StubDriveServer implements AutoCloseable {
 
     private static final String FOLDER_MIME = "application/vnd.google-apps.folder";
 
@@ -45,7 +45,7 @@ final class StubDriveServer implements AutoCloseable {
     /** Set to make uploads fail after the session starts, as a quota error does. */
     volatile boolean uploadRejected;
 
-    StubDriveServer() throws IOException {
+    public StubDriveServer() throws IOException {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/token", this::handleToken);
         server.createContext("/drive/v3/files", this::handleFiles);
@@ -55,27 +55,27 @@ final class StubDriveServer implements AutoCloseable {
         server.start();
     }
 
-    String baseUrl() {
+    public String baseUrl() {
         return "http://127.0.0.1:" + server.getAddress().getPort();
     }
 
-    String tokenEndpoint() {
+    public String tokenEndpoint() {
         return baseUrl() + "/token";
     }
 
-    String apiBase() {
+    public String apiBase() {
         return baseUrl() + "/drive/v3";
     }
 
-    String uploadBase() {
+    public String uploadBase() {
         return baseUrl() + "/upload/drive/v3";
     }
 
-    Map<String, byte[]> uploaded() {
+    public Map<String, byte[]> uploaded() {
         return uploaded;
     }
 
-    List<String> deleted() {
+    public List<String> deleted() {
         return deleted;
     }
 

@@ -23,6 +23,18 @@
       <groupId>gr.novotrade.novocore</groupId>
       <artifactId>novocore-core-api</artifactId>
     </dependency>
+    <!--
+      The property-based testing harness (gr.novotrade.novocore.core.api.testsupport), so FIFO's
+      properties are written with the same generators and the same shrinking as Money's. Test scope
+      only — this is a test-jar, and nothing in main sources may reach it.
+    -->
+    <dependency>
+      <groupId>gr.novotrade.novocore</groupId>
+      <artifactId>novocore-core-api</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>

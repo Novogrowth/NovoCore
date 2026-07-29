@@ -38,4 +38,30 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <!--
+        Publish this module's test classes as a test-jar, for the same reason `core` already does:
+        the property-based testing harness in ..core.api.testsupport.. is defined exactly once and
+        reused by the core module's own tests, which is where FIFO consumption lives.
+
+        It sits in core-api rather than core because the properties it was written for — Money,
+        Quantity, UnitCost, ProportionalAllocation — are core-api's own types, and because this
+        module deliberately has no Spring on its test classpath, which keeps the harness free of it.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>test-jar</id>
+            <goals>
+              <goal>test-jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>
