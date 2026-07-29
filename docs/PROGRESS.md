@@ -29,7 +29,7 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 9 | Sales Invoice, Credit Note, Receipt, Payment, Bank Transfer, open items, rounding | **Done, committed** `29e9dcd` — Q10, Q15's remainder, Q16, Q26 answered as **ADR 0009**; Q31 confirmed; all seven obligations discharged, see below |
 | 10 | Freight / landed cost allocation | **Done, committed** `cf6f1e4` + `6f06cf8` — Q18 answered as **ADR 0010**, and a defect it introduced closed as **ADR 0011**, see below |
 | 11 | Email service | **Done, committed** `b542cf7` + `0790c74` — SMTP credentials supplied and stored in Settings, see below |
-| 12 | Automated backups | **Done, committed** — V23, ADR 0013. Awaiting only the OAuth consent flow per Drive account |
+| 12 | Automated backups | **Done, and operationally verified 2026-07-29** — V23, ADR 0013. Real encrypted dump uploaded to both Drives; all three owner action items closed |
 | 13 | Test suite consolidation sweep | Not started |
 
 **Tests: 866 passing, `mvn clean verify` exit 0.** 210 unit (core-api), 44 core unit, 574 core
@@ -121,11 +121,24 @@ no recovery path locks the owner out of their own financial system.
 
 ## ⚠️ To be aware of immediately
 
-1. **`docker/.env` is gitignored and machine-local, and now holds exactly two variables again**:
-   `NOVOCORE_DB_PASSWORD` and `NOVOCORE_SITE_ADDRESS`. The three one-time bootstrap variables were
-   removed once consumed — see item 3. A fresh clone must run `cp docker/.env.example docker/.env`
-   and set `NOVOCORE_DB_PASSWORD`, or nothing starts. This is deliberate — there is no fallback
-   password anywhere.
+1. **`docker/.env` is gitignored and machine-local, and holds exactly three variables**:
+   `NOVOCORE_DB_PASSWORD`, `NOVOCORE_SITE_ADDRESS` and `NOVOCORE_BACKUP_ENCRYPTION_KEY`. Every
+   one-time bootstrap variable has been removed once consumed — the three from step 11 (see item 3)
+   and the four Drive OAuth secrets, which now live in Settings. A fresh clone must run
+   `cp docker/.env.example docker/.env` and set `NOVOCORE_DB_PASSWORD`, or nothing starts. This is
+   deliberate — there is no fallback password anywhere.
+
+   **The encryption key is the one variable that is not a hand-off and never goes away.** It is read
+   on every backup and every restore, and it cannot move into Settings because the `setting` table is
+   inside the dump. It **is** recorded in a password manager as of 2026-07-29, which is what makes
+   the backups meaningful rather than decorative.
+
+   ⚠️ **The `.env` copy is 43 characters, not the 44 it was generated as** — the trailing `=` base64
+   padding was dropped in transit. This is harmless and was checked rather than assumed: both forms
+   decode to **byte-identical** 32-byte key material, and Java's `Base64.getDecoder()` accepts
+   unpadded input. So a restore works with either copy. Recorded because a future reader comparing
+   the password-manager entry against `.env` will notice the difference and should not conclude the
+   key was corrupted.
 2. **A fresh machine also needs the toolchain**: JDK 25 and a Docker daemon. Maven is not
    required — `backend/mvnw` is committed. `mvn verify` needs Docker for the `*IT` tests;
    `mvn test` does not.
@@ -296,12 +309,14 @@ Convention going forward is **one commit per build step**, so history stays chec
 
 ## Not yet verified
 
-- ~~**Backup restore.**~~ **Built and proven (step 12), and since `5a6dfa5` proven on CI too** — a
-  real `pg_dump`, a real `pg_restore` into a real scratch database, and an assertion that the
-  restored ledger balances, against a PostgreSQL 17 client/server pair on `ubuntu-latest`. Brief
-  §13's long-standing risk is closed **for the dump-and-restore mechanism**. What is still not
-  verified is the *operational* regime: no upload to real Google Drive has ever run, and the runtime
-  image has never been rebuilt with `postgresql-client-17`.
+- ~~**Backup restore.**~~ **Closed, in code and in operation.** Proven in the suite and on CI
+  (`5a6dfa5`) — a real `pg_dump`, a real `pg_restore` into a real scratch database, and an assertion
+  that the restored ledger *balances* — and since 2026-07-29 the **whole regime runs for real**: an
+  encrypted artefact produced by the deployed container and uploaded to both Google Drive accounts.
+  Brief §13's long-standing "restore untested" risk is **closed**. The one part still not
+  independently exercised is the **weekly restore check running against a downloaded off-site
+  artefact** — the check has only ever restored from the local copy, which is the same file, so this
+  is a thin residual rather than a gap.
 - **The REST surface is one read-only endpoint.** `GET /api/chart-of-accounts` and nothing else, so
   the frontend still has essentially nothing to call. Everything else — products, customers,
   settings, users, **and now the email outbox** — has a service and no HTTP route.
@@ -2227,13 +2242,11 @@ it. Weekly by default; the nightly backup is separate.
   `pg_dump`, really encrypts, really restores into a real scratch database and really asserts the
   ledger balances. **(Now 866 after the self-invocation work; see the CI section at the top —
   `BackupIT`'s 16 tests run on CI too, 0 skipped, on a real 17 client/server pair.)**
-- **⚠️ Never run against real Google Drive.** Uploads are proven against `StubDriveServer` only.
-  Nothing can verify further until the OAuth consent flow is completed for each account.
-- **⚠️ The container image has not been rebuilt** with `postgresql-client-17`. The Dockerfile change
-  is written and unexercised; the first `docker compose up --build` will prove it. **CI does not
-  substitute for this** — the workflow installs the client on the runner, which is a different
-  artefact from the runtime image. It lowers the risk (a 17 client is now proven to dump and restore
-  a 17 server) without discharging the item.
+- ~~**⚠️ Never run against real Google Drive.**~~ **Run for real on 2026-07-29** — both destinations
+  `UPLOADED`. See "Step 12, commissioned" below.
+- ~~**⚠️ The container image has not been rebuilt**~~ **Rebuilt 2026-07-29**, installing
+  `postgresql-client-17 (17.10-1.pgdg26.04+1)`, applying V21–V23 to the live database and taking a
+  real dump through it.
 - **PostgreSQL 17 client tools were installed on this machine** at
   `C:\Users\kosta\tools\pg17\pgsql\bin` and added to the user PATH. Without them `BackupIT` **skips**
   rather than fails — deliberately, so a missing tool does not teach people to ignore red suites,
@@ -2556,30 +2569,112 @@ That placement decides the rest:
   need Workspace, which `novotrade.gr` is not). Dumps **are encrypted at rest**, AES-256-GCM, before
   anything leaves the host. Retention: **7 rolling + every calendar month's last, forever.** See the
   step 12 section below and ADR 0013.
-- **⚠️ Still outstanding, and it is the only thing left:** the **two Drive destinations' folder ids
-  and OAuth credentials**. Nothing in the repo has ever recorded them. Until the consent flow is
-  completed per Google account, both destinations record `NOT_CONFIGURED` on every run and backups
-  stay **local only** — which is visible rather than assumed, but is not a backup regime.
+- ~~**⚠️ Still outstanding:** the two Drive destinations' folder ids and OAuth credentials.~~
+  **Supplied and verified 2026-07-29.** Both destinations are fully configured and both have
+  uploaded a real artefact. The OAuth consent screen is published **In production** — deliberately,
+  because a consent screen left in *Testing* expires refresh tokens after **7 days**, which would
+  have produced a backup regime that worked for a week and then failed quietly. `drive.file` is a
+  non-sensitive scope, so publishing needed no Google verification review. **Nothing about the
+  credentials is in the repo**: the client id and folder ids are Settings rows, the client secret and
+  refresh tokens are `secret` Settings rows, and the environment variables that carried them have
+  been removed from `.env`.
 
-### Step 12 is code-complete, not operationally verified — owner's three action items
+### ✅ Step 12, commissioned — all three owner action items closed (2026-07-29)
 
-Stated as of 2026-07-29, and **step 12 should not be described as fully verified until all three are
-done**:
+**Step 12 is no longer "code-complete but unverified". It runs.** The caveat that stood in this file
+since the step was built is removed rather than softened, because the thing it warned about has
+happened for real.
 
-1. **Move `NOVOCORE_BACKUP_ENCRYPTION_KEY` into a password manager.** In progress. Until then the
-   only copy is `docker/.env` on one machine, and losing that machine loses the database and every
-   backup of it together.
-2. **Complete the OAuth consent flow for both Drive accounts**, then supply the folder ids and the
-   two secrets per destination. Real Drive upload has never been exercised — only `StubDriveServer`.
-3. **Run `docker compose up --build`** to prove the `postgresql-client-17` image change. That
-   Dockerfile edit is written and has never been executed. **Still outstanding as of `5a6dfa5`** —
-   CI now runs `pg_dump`/`pg_restore`/`psql` 17 against a real 17 server and `BackupIT` passes there
-   with nothing skipped, which **lowers this risk but does not discharge it**: the runner's client
-   is installed by the workflow, not by `docker/Dockerfile`, so the image change itself is still
-   unexercised.
+| Item | State |
+|---|---|
+| 1. Encryption key into a password manager | **Done.** Generated with `openssl rand -base64 32`, in `docker/.env`, and recorded in a password manager. |
+| 2. OAuth consent for both Drive accounts | **Done.** Both consented, both destinations `UPLOADED`. |
+| 3. `docker compose up --build` proving the image | **Done.** `postgresql-client-17 (17.10-1.pgdg26.04+1)` installed, V21–V23 applied, real dump taken through it. |
 
-**All three remain open.** Items 1 and 2 are unchanged by this session's CI work and nothing about
-them has been verified further.
+**The evidence, from the database rather than from the logs:** `backup_run` id 8,
+`novocore-20260729T160100-novocore.dump.enc`, 309,820 bytes, `SUCCEEDED`, with **both**
+`backup_upload` rows reading `UPLOADED` and no error. Retention pruned run 1 under its own stated
+policy ("outside the most recent 7, and a later backup exists in 2026-07").
+
+**The key was never generated until this session.** Worth stating plainly because this file
+previously claimed otherwise: item 1 used to read *"In progress. Until then the only copy is
+`docker/.env`."* That was wrong — there was no copy anywhere, the variable was absent from `.env`
+entirely, and therefore **no backup had ever been attempted, let alone failed.** The running stack
+was still at schema V20 on an image built before step 12 existed: no `backup_run` table, no
+`pg_dump` in the container, and not one log line mentioning backups. A doc that describes a
+half-finished state is more dangerous than one that says nothing, because it stops anyone looking.
+
+### 🐛 The commissioning bug: four secrets stored wrapped in literal angle brackets
+
+Both Drive uploads failed identically with `HTTP 401: The provided client secret is invalid`, on a
+run whose dump and encryption had both succeeded.
+
+**Cause: two inconsistent placeholder styles in the instructions.** The `.env` block used
+`<client secret>` and the SQL block used `PASTE_CLIENT_ID`. The angle-bracketed placeholders were
+pasted *over* and the brackets came with them; the bare-word ones were replaced cleanly. So all four
+secret values — both client secrets and both refresh tokens — were stored as `<GOCSPX-…>` and
+`<1//0…>`, while the four non-secret values (client ids, folder ids) were clean.
+
+**Diagnosed by structure, not by guessing.** The stored secret was 37 characters where a `GOCSPX-`
+secret is 35. Rather than speculate about corruption or a regenerated secret in the Google console,
+the stored values were inspected at their byte boundaries — `ascii(left(value,1)) = 60` and
+`ascii(right(value,1)) = 62`, i.e. `<` and `>` — which named the exact defect in one query and
+proved it applied to all four values and only those four. **No trip to the Google console was needed
+and no re-consent was required**: the secret material inside the brackets was correct all along.
+
+The fix strips exactly one character from each end, guarded by those same two `ascii` conditions so
+it is safe to run twice:
+
+```sql
+UPDATE setting SET value = substring(value from 2 for length(value) - 2), ...
+WHERE setting_key ~ '^backup\.drive\.(primary|secondary)\.(client-secret|refresh-token)$'
+  AND ascii(left(value,1)) = 60 AND ascii(right(value,1)) = 62;
+```
+
+**⚠️ The lesson is about the verification step, not the paste.** A check *was* run over `.env`
+before the rebuild, and it printed the length of every value — including the wrong one. It did not
+catch the bug **because it never stated the expected length to compare against**. A 37-character
+`GOCSPX-` secret was visibly wrong at that moment and nothing said so. Generalising: **a verification
+that prints a value's shape without asserting what the shape should be is not a verification, it is
+a display.** Every check written from here should carry its expectation — which is what the final
+form of the settings query does (`value ~ '^GOCSPX-[A-Za-z0-9_-]{28}$'`, and 8-of-8 non-blank,
+and *client ids identical / folder ids different / refresh tokens different*).
+
+That last triple is worth keeping for its own sake: **two consents against the same Google account
+produce two valid tokens, two working uploads, and two copies in one Drive** — an off-site regime
+that looks correct and has a single point of failure. Nothing downstream would ever notice, so the
+check has to exist at configuration time.
+
+### ✅ Closed incident: a refresh token was pasted into a chat session
+
+During commissioning the **secondary** account's refresh token was pasted into the assistant chat.
+It was **revoked at `myaccount.google.com/permissions` and re-consented**, and — the part that is
+easy to miss — **a fresh destination folder was created under the new grant.** That second step is
+not optional: `drive.file` grants access per file to the app under a specific authorisation, so
+revoking drops those grants and re-consenting does not reliably restore access to a folder created
+under the old one. Reusing the original folder id would have produced a permissions failure at 02:00
+rather than at configuration time. The current `backup.drive.secondary.folder-id` is the new folder;
+the original is unused and may be deleted from Drive. **Closed, with no residual.**
+
+The general rule this leaves: **an authorisation code is short-lived and single-use and barely worth
+worrying about; a refresh token is durable and must be treated as compromised the moment it is
+copied anywhere it was not meant to go.**
+
+### Residuals — small, and stated rather than tidied away
+
+- **Seven local-only artefacts from the failed runs** (`backup_run` 2–7 plus their successors) still
+  sit in the backup volume with `FAILED` uploads. Harmless: retention's rolling window will age them
+  out, and it already pruned run 1 correctly.
+- **The throwaway commissioning container** ran with `NOVOCORE_BACKUP_CRON='0 * * * * *'`, which is
+  why there are eight runs one minute apart. It was stopped; nothing persists it, and the scheduled
+  cron remains the default 02:00.
+- **Artefact names are stamped in `backup.calendar-zone` (Europe/Athens) while `started_at` is
+  stored UTC**, so `…T160100…` corresponds to `13:01:00` in the table. Not a defect — worth knowing
+  before someone reads it as a three-hour discrepancy.
+- **The four settings were written by raw SQL**, because there is still no HTTP route to Settings.
+  So **no audit-log entry exists for them**, and `updated_by` reads `system`, which is the honest
+  option available rather than claiming a session that did not happen. Worth revisiting when the
+  Settings screen lands.
 
 ---
 ## Next action — read this first
@@ -2589,11 +2684,12 @@ them has been verified further.
 answered and step 12 is built, so this section's previous claim that step 12 was next and blocked on
 Q24 was two sessions stale.
 
-**But the session is deliberately paused, not moving on.** Work is held until the owner's three step
-12 action items are done (encryption key to a password manager, the Drive OAuth consent flow, and
-`docker compose up --build`) **or** until it is explicitly decided to start step 13 without them.
-None of the three is a code task, and none is discharged by the CI fix — see "Step 12 is
-code-complete, not operationally verified" above.
+**The hold is lifted.** Work was paused mid-session pending the owner's three step 12 action items;
+**all three were completed on 2026-07-29** and step 12 is commissioned — see "Step 12, commissioned"
+above. Nothing now blocks step 13.
+
+**The one genuinely open item from this stretch is Q44's access-path check**, which is decided and
+unbuilt, and is unaffected by any of the backup commissioning work.
 
 ### Credential housekeeping — done, nothing outstanding
 
