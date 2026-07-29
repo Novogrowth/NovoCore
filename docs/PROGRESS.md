@@ -1,6 +1,6 @@
 # NovoCore — Build Progress
 
-*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-07-28.*
+*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-07-29.*
 
 *Close-out now also pushes to `origin` automatically (`CLAUDE.md`), so this file no longer tracks
 unpushed commits.*
@@ -32,10 +32,11 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 12 | Automated backups | **Done, committed** — V23, ADR 0013. Awaiting only the OAuth consent flow per Drive account |
 | 13 | Test suite consolidation sweep | Not started |
 
-**Tests: 802 passing, `mvn clean verify` exit 0.** 205 unit (core-api), 24 core unit, 541 core
-integration, 8 app unit, 12 app integration, 12 architecture. Nothing was failing at the start of
-this session, and nothing is failing now. (Commit `0790c74`'s message says 804; it was written
-before the final count and is wrong by two. This line is the counted one.)
+**Tests: 866 passing, `mvn clean verify` exit 0.** 210 unit (core-api), 44 core unit, 574 core
+integration, 8 app unit, 12 app integration, 18 architecture. **Counted from CI run
+[30446419236](https://github.com/Novogrowth/NovoCore/actions/runs/30446419236) on `5a6dfa5`**, not
+from a local run, so this is the number a clean checkout produces. This line previously said 802,
+which was two sessions stale — the audit-log and self-invocation work took it to 866.
 
 **Step 11 introduced the first non-container tests in `core`** (`RetryPolicyTest`,
 `SmtpConfigurationTest`). Until now everything in that module needed Docker; these do not, which is
@@ -43,6 +44,49 @@ why the `core` row in the count above gained a "unit" half.
 
 `mvn test` runs the non-container tests in ~6 seconds and needs no Docker. `mvn verify`
 additionally runs the `*IT` tests under Failsafe against a real PostgreSQL 17 container.
+
+### CI — green, and `BackupIT` now runs for real on it (`5a6dfa5`, 2026-07-29)
+
+The backend workflow was **failing on `mvn verify`** at the start of this session, on
+`BackupIT.verifyConfigurationIsHonest`: `pg_dump` reported `16.14` where the test requires 17.
+
+**The cause was a config assumption, not a broken install.** `.github/workflows/backend.yml`
+installed `postgresql-client-17` from PGDG and then trusted the bare name `pg_dump` to mean it. It
+does not: `ubuntu-latest` already carries PostgreSQL 16, and `/usr/bin/pg_dump` is
+`postgresql-common`'s `pg_wrapper`, which selects a version from the local cluster rather than the
+newest one installed. So a green install step was followed by a 16 binary.
+
+The fix is to **name the versioned directory** — `/usr/lib/postgresql/17/bin` appended to
+`$GITHUB_PATH` — rather than rely on any resolution rule, plus a **separate step that asserts all
+three binaries report 17** and fails naming the offender. Separate because `$GITHUB_PATH` only
+applies from the next step, and because a recurrence should fail at the install with the cause named
+rather than in an integration test two minutes later. **No application code changed**, and the
+runner's own PostgreSQL 16 packages were left installed — removing them would fix this build by
+breaking anything else on the runner that expects them.
+
+**Verified against the actual environment, not by reasoning.** Run
+[30446419236](https://github.com/Novogrowth/NovoCore/actions/runs/30446419236) is `BUILD SUCCESS`,
+866 tests, 0 failures, 0 errors, **0 skipped**, and its log reads:
+
+    pg_dump resolves to: /usr/lib/postgresql/17/bin/pg_dump
+    which -a pg_dump  →  /usr/lib/postgresql/17/bin/pg_dump
+                         /usr/bin/pg_dump          ← the 16 wrapper, still there, now behind
+    pg_dump    (PostgreSQL) 17.10 (Ubuntu 17.10-1.pgdg24.04+1)
+    pg_restore (PostgreSQL) 17.10 (Ubuntu 17.10-1.pgdg24.04+1)
+    psql       (PostgreSQL) 17.10 (Ubuntu 17.10-1.pgdg24.04+1)
+
+**What this buys beyond a green tick: `BackupIT` ran, 16 tests, 0 skipped.** Step 12's restore check
+genuinely dumped, created a database, restored into it and asserted the restored ledger balances —
+**on CI, with a real PostgreSQL 17 client against a real PostgreSQL 17 server.** The outcome the
+workflow's own comment names as the worst available (a green build that silently stopped covering
+brief §13's outstanding risk) did not happen, and is now guarded against by the version assertion
+rather than by the test alone.
+
+**⚠️ This does not discharge the `docker compose up --build` action item.** What CI proves is that a
+17 client dumps and restores a 17 server correctly. The **runtime** image is a different artefact:
+`docker/Dockerfile`'s `postgresql-client-17` line is still written and never executed. The risk is
+lower — the client/server pairing is no longer an untested assumption — but the Dockerfile edit
+itself remains unexercised, and only a real build proves it.
 
 ---
 
@@ -151,6 +195,11 @@ were already on `origin`.
 | `6f06cf8` | Step 10 (cont.) — stock returning into a re-costed lot, migration V19 (**ADR 0011**) |
 | `b542cf7` | Step 11 — the shared email service, outbox, dispatcher, retry, migration V20 |
 | `0790c74` | Step 11 (cont.) — the second route into the batch-wide stall, and the credential cleanup |
+| `8af7078` | Step 11 (rev.) — an emailed document is referenced, not copied; Q43 answered, Q44's access path decided, migrations V21–V22 (**ADR 0012**) |
+| `855643b` | Step 12 — automated backups, encrypted, off-site and proven restorable, migration V23 (**ADR 0013**) |
+| `24a3cd7` | Proxy self-invocation made a build failure — `SelfInvocationRulesTest`, and the two real defects it found |
+| `a4ec7db` | The audit-log fix proven behaviourally rather than structurally |
+| `5a6dfa5` | CI — `pg_dump` made to actually mean 17 on the runner (workflow only, no application code) |
 
 Interleaved with these are small docs-only commits (`e25fcee`, `a09428e`, `920044c`, `de16e58`,
 `b065901`, `8c27cb4`, `2c3fa8a`, `21b2231`, `d1111d0`, `610f785`, `836a4eb`) and this session's
@@ -247,7 +296,12 @@ Convention going forward is **one commit per build step**, so history stays chec
 
 ## Not yet verified
 
-- **Backup restore.** Brief §13 already flags this. Nothing exists yet (step 12).
+- ~~**Backup restore.**~~ **Built and proven (step 12), and since `5a6dfa5` proven on CI too** — a
+  real `pg_dump`, a real `pg_restore` into a real scratch database, and an assertion that the
+  restored ledger balances, against a PostgreSQL 17 client/server pair on `ubuntu-latest`. Brief
+  §13's long-standing risk is closed **for the dump-and-restore mechanism**. What is still not
+  verified is the *operational* regime: no upload to real Google Drive has ever run, and the runtime
+  image has never been rebuilt with `postgresql-client-17`.
 - **The REST surface is one read-only endpoint.** `GET /api/chart-of-accounts` and nothing else, so
   the frontend still has essentially nothing to call. Everything else — products, customers,
   settings, users, **and now the email outbox** — has a service and no HTTP route.
@@ -2171,11 +2225,15 @@ it. Weekly by default; the nightly backup is separate.
 
 - **858 tests passing, `mvn clean verify` exit 0** (up from 822). `BackupIT` runs the real
   `pg_dump`, really encrypts, really restores into a real scratch database and really asserts the
-  ledger balances.
+  ledger balances. **(Now 866 after the self-invocation work; see the CI section at the top —
+  `BackupIT`'s 16 tests run on CI too, 0 skipped, on a real 17 client/server pair.)**
 - **⚠️ Never run against real Google Drive.** Uploads are proven against `StubDriveServer` only.
   Nothing can verify further until the OAuth consent flow is completed for each account.
 - **⚠️ The container image has not been rebuilt** with `postgresql-client-17`. The Dockerfile change
-  is written and unexercised; the first `docker compose up --build` will prove it.
+  is written and unexercised; the first `docker compose up --build` will prove it. **CI does not
+  substitute for this** — the workflow installs the client on the runner, which is a different
+  artefact from the runtime image. It lowers the risk (a 17 client is now proven to dump and restore
+  a 17 server) without discharging the item.
 - **PostgreSQL 17 client tools were installed on this machine** at
   `C:\Users\kosta\tools\pg17\pgsql\bin` and added to the user PATH. Without them `BackupIT` **skips**
   rather than fails — deliberately, so a missing tool does not teach people to ignore red suites,
@@ -2514,13 +2572,28 @@ done**:
 2. **Complete the OAuth consent flow for both Drive accounts**, then supply the folder ids and the
    two secrets per destination. Real Drive upload has never been exercised — only `StubDriveServer`.
 3. **Run `docker compose up --build`** to prove the `postgresql-client-17` image change. That
-   Dockerfile edit is written and has never been executed.
+   Dockerfile edit is written and has never been executed. **Still outstanding as of `5a6dfa5`** —
+   CI now runs `pg_dump`/`pg_restore`/`psql` 17 against a real 17 server and `BackupIT` passes there
+   with nothing skipped, which **lowers this risk but does not discharge it**: the runner's client
+   is installed by the workflow, not by `docker/Dockerfile`, so the image change itself is still
+   unexercised.
+
+**All three remain open.** Items 1 and 2 are unchanged by this session's CI work and nothing about
+them has been verified further.
 
 ---
 ## Next action — read this first
 
-**Step 12 (automated backups) is the next numbered step.** Steps 0–11 are done, committed and
-pushed. **Step 12 is blocked on Q24** — the first numbered step to be blocked since step 10 closed.
+**Step 13 (test suite consolidation sweep) is the next numbered step, and nothing blocks it.** Steps
+0–12 are done, committed and pushed; **CI is green on `5a6dfa5`** and the suite is 866 tests. Q24 is
+answered and step 12 is built, so this section's previous claim that step 12 was next and blocked on
+Q24 was two sessions stale.
+
+**But the session is deliberately paused, not moving on.** Work is held until the owner's three step
+12 action items are done (encryption key to a password manager, the Drive OAuth consent flow, and
+`docker compose up --build`) **or** until it is explicitly decided to start step 13 without them.
+None of the three is a code task, and none is discharged by the CI fix — see "Step 12 is
+code-complete, not operationally verified" above.
 
 ### Credential housekeeping — done, nothing outstanding
 
@@ -2530,11 +2603,10 @@ old password now returns 401), and all three consumed bootstrap variables were r
 `docker/.env`, after which the app was recreated and starts clean. See "To be aware of immediately"
 above for the current state.
 
-### Step 12 needs Q24
+### ~~Step 12 needs Q24~~ — answered and built
 
-Google Drive API with credentials held by NovoCore, or `rclone` on the host (no Python, per
-`CLAUDE.md`), plus retention policy, whether dumps are encrypted at rest, and the two actual Drive
-destinations.
+Q24 was answered 2026-07-29 (Google Drive API, OAuth, encrypted at rest) and step 12 is built on it.
+What remains is operational, not a decision: the two destinations' folder ids and OAuth credentials.
 
 ### Waiting on the accountant, and blocking real data rather than code
 
