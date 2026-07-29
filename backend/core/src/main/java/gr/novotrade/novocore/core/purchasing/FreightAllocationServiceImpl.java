@@ -592,9 +592,6 @@ class FreightAllocationServiceImpl implements FreightAllocationService {
                     lot.quantityReceived(),
                     line.getQuantityRemainingAtAllocation(),
                     lot.receivedUnitCost(),
-                    // Recomputed rather than stored: both of its inputs are frozen for the life of
-                    // the lot, which is one of the reasons they are frozen.
-                    lot.landedCostBasis(),
                     line.getCapitalisedAmount(),
                     line.getVarianceAmount(),
                     line.getLandedUnitCost()));

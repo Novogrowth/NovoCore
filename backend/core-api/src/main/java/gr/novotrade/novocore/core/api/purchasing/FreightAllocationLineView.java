@@ -11,9 +11,6 @@ import java.util.Objects;
  * the half that could not — <strong>Q18's whole answer, per lot</strong> (ADR 0010).
  *
  * @param lotId the lot this share went to
- * @param basis what the share was computed in proportion to: everything the lot received, extended
- *     at the cost it was <em>received</em> at. Recomputable rather than stored, because both of its
- *     inputs are frozen for the life of the lot — which is precisely why they are frozen.
  * @param quantityReceived what the lot took in
  * @param quantityRemainingAtAllocation what was still in the lot when this posted. Stored, because
  *     it is the one figure here that a later read cannot reconstruct — and it is what a reversal is
@@ -38,7 +35,6 @@ public record FreightAllocationLineView(
         Quantity quantityReceived,
         Quantity quantityRemainingAtAllocation,
         UnitCost receivedUnitCost,
-        BigDecimal basis,
         Money capitalised,
         Money variance,
         UnitCost unitCostIncrease) {
@@ -48,10 +44,37 @@ public record FreightAllocationLineView(
         Objects.requireNonNull(quantityReceived, "quantityReceived");
         Objects.requireNonNull(quantityRemainingAtAllocation, "quantityRemainingAtAllocation");
         Objects.requireNonNull(receivedUnitCost, "receivedUnitCost");
-        Objects.requireNonNull(basis, "basis");
         Objects.requireNonNull(capitalised, "capitalised");
         Objects.requireNonNull(variance, "variance");
         Objects.requireNonNull(unitCostIncrease, "unitCostIncrease");
+    }
+
+    /**
+     * What this lot's share was computed in proportion to: everything the lot received, extended at
+     * the cost it was <em>received</em> at, exactly and unrounded.
+     *
+     * <p><strong>A derived accessor since step 15b, and it used to be a record component.</strong>
+     * Step 15's narrative was the first thing ever to drive a freight allocation over HTTP, and the
+     * JSON sweep refused the response: an exact product of two six-decimal figures is up to twelve
+     * decimals, and it was crossing the wire as the JSON number {@code 540.0} — a double in any
+     * browser, which is {@code CLAUDE.md} rule 5 broken at the boundary.
+     *
+     * <p>Making it a method rather than a component takes it off the wire while keeping it for every
+     * Java caller, because Jackson serialises a record's components and not its other accessors —
+     * the same reason {@code InventoryLotView.landedCostBasis()} never appeared in a response. That
+     * is the right answer here specifically because <strong>this figure is derived and nothing
+     * needs it transmitted</strong>: both of its inputs are on this very line, and both are frozen
+     * for the life of the lot, which is one of the reasons they are frozen.
+     *
+     * <p>The alternatives were worse. A targeted Jackson annotation cannot go on this record —
+     * {@code core-api} is deliberately free of framework types (ADR 0003) — and a global
+     * {@code BigDecimal}-as-string serialiser was considered and rejected when {@link
+     * gr.novotrade.novocore.core.api.shared.Rate} was introduced, in favour of naming what a value
+     * actually is. Nothing in production read this field; one test did, and it now recomputes it,
+     * which is itself the proof that it was never carrying information.
+     */
+    public BigDecimal basis() {
+        return receivedUnitCost.extendExactly(quantityReceived);
     }
 
     /** This lot's whole share of the freight. Never stored: it is the sum of the two halves. */
