@@ -138,18 +138,21 @@ class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public List<ProductView> allFor(RoleView viewer) {
-        Objects.requireNonNull(viewer, "viewer");
-        // Refused rather than returned empty. "You may not see products" and "there are no
-        // products" are different answers, and an empty list cannot express the difference.
-        viewer.requireView(Section.PRODUCTS);
-        return active().stream().map(product -> product.redactedFor(viewer)).toList();
+        // Mirrors all(), including inactive products. It called active() until step 14, which
+        // contradicted the name and left all() with no redacted counterpart at all.
+        return redact(all(), viewer);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductView> activeFor(RoleView viewer) {
+        return redact(active(), viewer);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<ProductView> findFor(long id, RoleView viewer) {
-        Objects.requireNonNull(viewer, "viewer");
-        viewer.requireView(Section.PRODUCTS);
+        requireProductAccess(viewer);
         return find(id).map(product -> product.redactedFor(viewer));
     }
 
@@ -157,6 +160,40 @@ class ProductServiceImpl implements ProductService {
     @Transactional(readOnly = true)
     public ProductView requireFor(long id, RoleView viewer) {
         return findFor(id, viewer).orElseThrow(() -> new ProductNotFoundException(id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<ProductView> findBySkuFor(String sku, RoleView viewer) {
+        requireProductAccess(viewer);
+        return findBySku(sku).map(product -> product.redactedFor(viewer));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<ProductView> findByEanFor(String ean, RoleView viewer) {
+        requireProductAccess(viewer);
+        return findByEan(ean).map(product -> product.redactedFor(viewer));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductView> bySupplierFor(long supplierId, RoleView viewer) {
+        return redact(bySupplier(supplierId), viewer);
+    }
+
+    private List<ProductView> redact(List<ProductView> products, RoleView viewer) {
+        requireProductAccess(viewer);
+        return products.stream().map(product -> product.redactedFor(viewer)).toList();
+    }
+
+    /**
+     * Refused rather than returned empty. "You may not see products" and "there are no products"
+     * are different answers, and an empty list cannot express the difference.
+     */
+    private static void requireProductAccess(RoleView viewer) {
+        Objects.requireNonNull(viewer, "viewer");
+        viewer.requireView(Section.PRODUCTS);
     }
 
     // ---------------------------------------------------------------------------------------

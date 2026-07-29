@@ -12,8 +12,10 @@ import java.util.Optional;
  * <p><strong>Read methods come in two forms, and the difference matters.</strong> The plain ones
  * ({@link #all()}, {@link #require(long)}) return everything, which is what NovoCore's own posting
  * and costing rules need — a FIFO calculation cannot work from a redacted cost. The {@code ...For}
- * variants ({@link #allFor}, {@link #findFor}, {@link #requireFor}) take the viewing role and apply
- * {@link ProductView#redactedFor}.
+ * variants take the viewing role and apply {@link ProductView#redactedFor}. <strong>Every plain read
+ * has a {@code ...For} counterpart</strong>, which is what makes the rule below followable; until
+ * step 14 four of them were missing, so a controller wanting active products or a SKU lookup had no
+ * redacted method to call at all.
  *
  * <p><strong>Anything answering a request from a person must use the {@code ...For} variants.</strong>
  * That is a rule this interface states rather than enforces, and the honest reason is that both
@@ -21,6 +23,11 @@ import java.util.Optional;
  * pretend-role for the posting rules to pass, which is a worse failure mode than a named
  * convention — a "system role" that sees everything is exactly the thing that later gets reused by
  * a controller. The {@code For} suffix is in the name so its absence is visible at the call site.
+ *
+ * <p><strong>Since step 14 it is enforced for the web layer specifically.</strong> An architecture
+ * rule forbids anything in {@code ..core.web..} from calling the unredacted reads, so a controller
+ * cannot reach them even by accident. The convention still governs everywhere else, because
+ * everywhere else has legitimate unredacted callers.
  *
  * <p>Three fields are restricted for Remote/Order Staff:
  * {@link ProtectedField#PRODUCT_LAST_PURCHASE_PRICE}, {@link ProtectedField#PRODUCT_SUPPLIER} and
@@ -76,7 +83,12 @@ public interface ProductService {
     // ---------------------------------------------------------------------------------------
 
     /**
-     * Active products as this role may see them.
+     * As {@link #all()} — every product, active and inactive — redacted for the viewer.
+     *
+     * <p><strong>This used to return only the active ones</strong>, contradicting its own name and
+     * leaving {@link #all()} with no redacted counterpart. Corrected in step 14, when the first
+     * controller needed both answers and could get only one. If you want active products only, that
+     * is {@link #activeFor} and always should have been.
      *
      * @throws gr.novotrade.novocore.core.api.security.SectionAccessDeniedException if the role
      *     cannot view products at all. Refused rather than returned empty: "you may not see this"
@@ -85,11 +97,35 @@ public interface ProductService {
      */
     List<ProductView> allFor(RoleView viewer);
 
+    /** As {@link #active()}, redacted for the viewer. */
+    List<ProductView> activeFor(RoleView viewer);
+
     /** As {@link #find}, redacted for the viewer. */
     Optional<ProductView> findFor(long id, RoleView viewer);
 
     /** As {@link #require}, redacted for the viewer. */
     ProductView requireFor(long id, RoleView viewer);
+
+    /** As {@link #findBySku}, redacted for the viewer. */
+    Optional<ProductView> findBySkuFor(String sku, RoleView viewer);
+
+    /**
+     * As {@link #findByEan}, redacted for the viewer.
+     *
+     * <p>The one a barcode scanner behind a screen must call. Remote/Order Staff is exactly the role
+     * that scans, and exactly the role the three restricted fields exist for.
+     */
+    Optional<ProductView> findByEanFor(String ean, RoleView viewer);
+
+    /**
+     * As {@link #bySupplier}, redacted for the viewer.
+     *
+     * <p>Note what redaction does <em>not</em> do here: it hides each product's supplier field, but
+     * the caller supplied the supplier id, so the association is not concealed by this call. A role
+     * that must not learn who supplies what should not be able to view {@code SUPPLIERS} either —
+     * which is a section grant, not a field restriction, and is how that is actually enforced.
+     */
+    List<ProductView> bySupplierFor(long supplierId, RoleView viewer);
 
     // ---------------------------------------------------------------------------------------
     // Changing
