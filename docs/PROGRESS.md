@@ -1,6 +1,6 @@
 # NovoCore — Build Progress
 
-*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-07-29.*
+*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-07-29 (second session that day).*
 
 *Close-out now also pushes to `origin` automatically (`CLAUDE.md`), so this file no longer tracks
 unpushed commits.*
@@ -32,12 +32,16 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 12 | Automated backups | **Done, and operationally verified 2026-07-29** — V23, ADR 0013. Real encrypted dump uploaded to both Drives; all three owner action items closed |
 | 13 | Test suite consolidation sweep | **Done** — property tests on the money types and on FIFO, one whole-scenario invariant sweep, **ADR 0014**, and **one real defect found and then fixed (Q45 / ADR 0015)**, see below |
 | 14 | **The REST surface** — 133 routes, and Q44 answered in full | **Done, committed** `423bf34` + `e6354d6` + `b8aa9e2` + `f2e8e06` — three sub-steps as agreed, plus the BundleService follow-up. **Migration V25.** See below |
+| 15 | **Dummy data validation** — the API driven end to end over HTTP | **In progress.** 15a done; 15b partly done. **Six real defects found and fixed**, migration **V26**. Route coverage **90/133**. See the step 15 section for what remains |
 
-**Tests: 1039 passing, `mvn clean verify` exit 0.** 263 unit (core-api), 66 core unit, 629 core
-integration, 8 app unit, 51 app integration, 22 architecture. **Counted from a local run on this
-machine**, where 17 of the core integration tests skip because `pg_dump` is not installed — 16 in
-`BackupIT` and the backup leg of `WholeScenarioIT`. On CI, which puts PostgreSQL 17's client tools
-on the PATH deliberately (`5a6dfa5`), all 1039 run and none skip.
+**Tests: 1093 passing, `mvn clean verify` exit 0.** **Counted from a local run on this machine**,
+where 17 of the core integration tests skip because `pg_dump` is not installed — 16 in `BackupIT`
+and the backup leg of `WholeScenarioIT`. On CI, which puts PostgreSQL 17's client tools on the PATH
+deliberately (`5a6dfa5`), all of them run and none skip.
+
+Step 15 has added 54 so far (1039 → 1093), and the count understates the change: `WholeScenarioIT`'s
+21 invariant tests were **replaced** by 12 shared ones fed to a `@TestFactory`, so some of the growth
+is consolidation rather than addition. See the step 15 section.
 
 Step 13 added 94: 53 in `core-api` (the property harness, its own self-test, and properties over
 `Money`, `Quantity`, `UnitCost` and `ProportionalAllocation`) and 41 in `core` (12 FIFO properties
@@ -230,6 +234,14 @@ were already on `origin`.
 | `e6354d6` | Step 14b — purchasing and inventory endpoints |
 | `b8aa9e2` | Step 14c — sales, settlements, the outbox, **Q44 in full**, migration V25 |
 | `f2e8e06` | Step 14c (cont.) — `BundleService`'s `For` variants, closing the last redaction asymmetry |
+| `7c4c2c4` | **`Rate`** — a percentage is a type, not a bare `BigDecimal` (found by step 15a's JSON sweep) |
+| `908b226` | **Step 15a** — the validation harness: `LedgerInvariants`, `HttpTransport`, `JsonNumberSweep`, `RouteCoverage` |
+| `5bf069c` | Freight `basis` off the wire — a derived accessor, not a record component (found by 15b) |
+| `fc217ea` | AR and the open items agree again — three separate causes (found by 15b) |
+| `d8c9e77` | **Step 15b (part)** — the trading-quarter narrative, driven entirely over HTTP |
+| `6d85c89` | Open items include customer credits, and the invariant now sums signed by type |
+| `1421dfb` | Step 15b — the quarter-end review, and the two error-reporting defects it found |
+| `b65f7b2` | **Q21 revised** — no field restricted from any role, migration **V26** |
 
 Interleaved with these are small docs-only commits (`e25fcee`, `a09428e`, `920044c`, `de16e58`,
 `b065901`, `8c27cb4`, `2c3fa8a`, `21b2231`, `d1111d0`, `610f785`, `836a4eb`) and this session's
@@ -354,13 +366,15 @@ Convention going forward is **one commit per build step**, so history stays chec
   independently exercised is the **weekly restore check running against a downloaded off-site
   artefact** — the check has only ever restored from the local copy, which is the same file, so this
   is a thin residual rather than a gap.
-- ~~**The REST surface is one read-only endpoint.**~~ **Closed — step 14 built 133 routes.** What
-  is *still* unverified is different and worth stating precisely: **no human has used a browser**,
-  and the frontend has no login screen and calls none of this. Every route is exercised by an
-  integration test over the real filter chain, and none has been driven by a person. What follows
-  is the original note, kept for the record: `GET /api/chart-of-accounts` and nothing else, so
-  the frontend still has essentially nothing to call. Everything else — products, customers,
-  settings, users, **and now the email outbox** — has a service and no HTTP route.
+- ~~**The REST surface is one read-only endpoint.**~~ **Closed — step 14 built 133 routes.**
+  ~~**And nothing has driven them as a sequence.**~~ **Closed by step 15**: a trading quarter now runs
+  entirely over HTTP and the ledger it produces satisfies every universal invariant. **90 of the 133
+  routes are driven**; the rest are reported as uncovered by `RouteCoverage` and will be either
+  exercised or explicitly excused when `assertEveryRouteCoveredExcept` lands.
+
+  What is *still* unverified is narrower than it was, and worth stating precisely: **no human has used
+  a browser.** The frontend has no login screen and calls none of this. Every route that runs, runs
+  because a test asked it to.
 - ~~**Nobody has logged in.**~~ **Done, against the running Compose stack over HTTPS**: 401
   unauthenticated, 204 on login as the new `kostas` owner with a CSRF token, 200 returning the
   full chart of accounts. So the whole path — Caddy, TLS, session cookie, CSRF, the core's own
@@ -3099,6 +3113,127 @@ copied anywhere it was not meant to go.**
   Settings screen lands.
 
 ---
+
+## Step 15 — in progress (dummy data validation, over HTTP)
+
+The full proposal, with the six classes of check and the exit criterion, is
+`docs/step-15-validation-proposal.md`. Agreed at **full scope**, not the reduced version.
+
+**What it is for, restated because it is easy to mistake for a second domain test suite.**
+`WholeScenarioIT` proves the domain is right when driven through its *services*. Step 15 proves the
+**REST surface is a faithful and usable route to it** — a different question, and one nothing had
+asked: when this started, roughly **half of the 133 routes had never received an HTTP request**, and
+the untested half was the half that moves money.
+
+### Done
+
+- **15a — the harness** (`908b226`). `LedgerInvariants`, extracted from `WholeScenarioIT` so the same
+  invariants can be asked of an HTTP-built database; `HttpTransport`, the seam that lets one scenario
+  run under Failsafe *or* against live Compose; `JsonNumberSweep` over every response; and
+  `RouteCoverage`, whose denominator comes from Spring's own handler mapping. **All four proven to
+  fail, not merely to pass.** One new invariant: `everySubLedgerReferenceIsLive` — the old check asked
+  whether a reference was *present*, this asks whether it points at anything, which no trigger can
+  guarantee after a row is deleted.
+- **15b, part** (`d8c9e77`, `1421dfb`). A trading quarter driven entirely over HTTP: GR/IR both ways,
+  a purchase price variance, freight split across a partly-sold lot, serial-tracked machines under
+  reverse charge, a bundle, all three sales channels, an intra-EU exempt sale, a customer credit, a
+  stock-restoring credit note into a re-costed lot, a write-off, an oversell, a reversal, a settlement
+  amendment that cascades, then a quarter-end review and corrections. **All twelve universal
+  invariants pass on a database that only ever received HTTP requests.**
+- **Route coverage: 90/133 (68%)**, reported by the ledger rather than asserted, because
+  `assertEveryRouteCoveredExcept` is still to come.
+
+### ⚠️ Still to do, in this order — the next session's task list
+
+1. **The refusal matrix.** ~12 deliberate bad requests, each asserting the status **and** that the
+   body names the reason. Two entries are already proven and can be lifted straight in: the €500 cash
+   limit refusal and one customer's credit refusing to settle another's invoice.
+2. **The permission sweep** across all 133 routes as Remote/Order Staff — 403 where the role has no
+   grant, redacted-or-not asserted against the raw bytes where it does. **Deliberately sequenced after
+   V26**, so it verifies the *current* Product rule rather than locking in the one that was removed.
+3. **Read-back and date-boundary checks.** Every document re-fetched and compared against what was
+   sent; list membership under each filter; and `?from=`/`?to=` asserted **at the boundaries** —
+   inclusive/exclusive is asserted nowhere today, and off-by-one on a date range is the classic silent
+   defect.
+4. **Restore.** Dump the HTTP-built database, restore it, and re-run the whole invariant sweep there.
+   The mechanism exists (step 12), so this is cheap.
+5. **`assertEveryRouteCoveredExcept`.** Turn the coverage report into an assertion, with a written
+   reason for every route the narrative deliberately does not drive. At 68% the excuse list is now a
+   plausible size rather than most of the surface.
+
+### 🐛 Six defects found and fixed, each with its own commit
+
+The point of the step, and none of them was reachable from the service layer.
+
+| | What | Commit |
+|---|---|---|
+| 1 | **Every VAT rate crossed the wire as a JSON number.** Step 14 applied the money-as-strings rule to `Money`/`UnitCost`/`Quantity` and not to the raw `BigDecimal` rates beside them. Found in a route four tests already called. Fixed by a **`Rate` value type**, which also gave the factor-of-100 bound one home instead of two. **No migration** — and that is tested per value, not assumed | `7c4c2c4` |
+| 2 | **`FreightAllocationLineView.basis`** — an exact 12-decimal product crossing as `540.0`. Now a derived accessor rather than a record component, so it is off the wire and unchanged for Java callers. Zero production consumers; the one test that reads it passes **unmodified**, which is the evidence it carried nothing | `5bf069c` |
+| 3 | **AR and the open items disagreed** — impossible by construction per ADR 0009. **Three separate causes**, isolated by measurement: a credit note against a born-settled invoice moved AR when its invoice never had; reducing a settlement stranded the customer credit it left; and the invariant itself was not counting unallocated credits | `fc217ea` |
+| 4 | **`GET /api/open-items` omitted customer credits**, under-reporting a customer's position. Fixed before step 16 builds screens against it. It also exposed the invariant summing open amounts **unsigned** — right until now only because every credit note in every scenario happened to be fully allocated | `6d85c89` |
+| 5 | **Seventeen parameter messages across nine controllers were discarded.** The controllers signalled a *client* mistake with `IllegalArgumentException`, which step 14 had already decided means a *programming* error: logged, caller gets `"Bad request."` `InvalidRequestException` now carries them | `1421dfb` |
+| 6 | **Spring's own refusals returned a different body shape entirely** — Boot's legacy `{"timestamp","status","error","path"}`, no `detail`, so a client cannot read errors uniformly. Fixed with `spring.mvc.problemdetails.enabled` | `1421dfb` |
+
+**⚠️ Defect 6's fix had a cost, and finding it is the argument for the whole step.** Turning
+problemdetails on registers a second advice over the same framework exceptions, and Boot's won:
+`HttpMessageNotReadableException` started answering `"Failed to read request"`, **replacing step 14's
+most load-bearing message** — the one telling a client that an amount must be a JSON string and not a
+number. The test asserting that rule went red immediately. `WebExceptionHandler` is now
+`@Order(HIGHEST_PRECEDENCE)`. A fix that quietly broke the money contract is exactly what a
+validation step exists to catch.
+
+### The API corrected the scenario four times, which counts as much as the defects
+
+Each of these was the system being right and the narrative being wrong:
+
+- **The €500 legal cash limit** (brief §6, N. 5301/2026) is a **hard block with no override**,
+  enforced in three services. A 700.00 cash receipt was refused; a real operator banks it.
+- **One customer's credit cannot settle another's invoice.**
+- **A product's unit of measure cannot be changed once it has lots** — "reinterpreting a recorded
+  quantity in a different unit is not a correction, it is a different quantity."
+- **The consumption and write-off listings require a date range or an id**, and now say so.
+
+### ✅ Q21 revised — no field is restricted from any role (V26)
+
+**Decision, not an omission.** V6 hid a product's cost, supplier and supplier SKU from Remote/Order
+Staff; **V26 removes all three.** The business has no confidentiality need behind them — a bank
+balance might reasonably stay hidden from a home-based worker, what a bag of beans cost does not.
+
+**The consequence is wider than three rows.** `ProtectedField`'s three values are the only fields the
+mechanism knows about and that role held the only restrictions, so **no role has any field restriction
+and the inner layer of brief §7's two-layer model is now unused.**
+
+**Expressed as deleting data, not code.** `ProtectedField` keeps all three values, the CHECK keeps
+listing them, and `RoleView.canSee`, `ProductView.redactedFor`, the supplier-implies-supplier-SKU
+narrowing and the three ArchUnit rules are untouched. Restricting one again is an `INSERT`. A future
+case was named when this was decided: **a bank or partner-clearing balance.**
+
+**⚠️ The trap this creates, and what closes it.** With no restriction in real data, a change that
+stopped `ProductService`'s `...For` reads consulting the role would pass every test while removing the
+guarantee — the shape of the audit-log defect step 12 found. So **every test that proved redaction via
+the seeded role now creates a role and restricts a field at runtime** (`RoleService.restrictField`;
+roles are data, which is what makes it possible without a migration): `ProductIT`,
+`BundleIT` (both `allBundlesFor` cases, which is what step 14c's `f2e8e06` existed to guarantee),
+`SecurityIT`, and `MasterDataEndpointIT`, which asserts against the bytes that staff and owner now
+receive the **same** product on both the single read and the list — separate code paths, so "both show
+everything" is as much a claim as "both hide it" was.
+
+One thing learned in the doing: the first version of `SecurityIT`'s sweep asserted that *no role
+anywhere* restricts anything and **failed on execution order** — the throwaway restricted roles the
+other tests create share this database. The claim is about what V6 seeds, so it is scoped to that. A
+test that passes or fails on ordering is worse than a narrower one.
+
+### Two things worth carrying forward
+
+- **`mvn compile` without `clean` reported `BUILD SUCCESS` against stale classes** after a type change
+  in an upstream module, three separate times — once producing a class file that threw
+  `"Unresolved compilation problems"` at runtime because the IDE had written it. **After changing a
+  signature in `core-api`, build with `clean`** or the result means nothing.
+- **`post(String, String)` and `post(String, Object)` overload silently.** A misplaced bracket sent ten
+  request descriptions as request *bodies* and compiled cleanly. The narrative uses a single-shape
+  helper now; the overload stays because raw-JSON requests are what the refusal matrix needs.
+
+---
 ## Next action — read this first
 
 **Step 13 is done, Q45 is fixed, and steps 0–13 are complete, committed and pushed. `mvn clean
@@ -3113,34 +3248,43 @@ close-out are now resolved as follows: the REST surface is built (133 routes), Q
 check is built and proven, and **PLB-1 (2FA) is the one that remains** — deferred, unchanged, and
 still blocking any external or remote access.
 
-### ➡️ Next: step 15 — dummy data validation. **Decided, not a choice to be made.**
+### ➡️ Next: finish step 15b. **The task list is in the step 15 section above — five items, in order.**
 
-The order was settled when the roadmap was agreed and does not need revisiting:
-**15 dummy data validation → 16 frontend.**
+**Step 15 is in progress, not open.** 15a is done and 15b is partly done: the narrative runs a full
+trading quarter over HTTP and all twelve universal invariants pass on the database it builds. What
+remains is the refusal matrix, the permission sweep, the read-back and date-boundary checks, restore,
+and `assertEveryRouteCoveredExcept` — enumerated with their reasoning under **"Still to do, in this
+order"** above. Start there; the approach is already agreed in
+`docs/step-15-validation-proposal.md` at full scope.
 
-**Why validation comes first, stated so it is not re-argued.** Nothing has exercised these 133
-routes except integration tests calling the filter chain directly. Those tests assert what they were
-written to assert; they cannot tell us the API is *usable* — that a real sequence of operations, in
-the order somebody would actually perform them, produces a coherent system with a balanced ledger at
-the end. Building a frontend against an API that has never been driven end to end means discovering
-its shape problems through a second layer, with two candidate causes for every symptom.
+**Two of those five are the highest-value work left in the step**, and it is worth knowing why before
+deciding how much care to give them. The invariant sweep largely re-proves at HTTP level what
+`WholeScenarioIT` proves at service level — valuable, but the marginal find rate is lower. **The
+refusal matrix and the permission sweep test ground nothing else in the repo tests**, and they are the
+two things a frontend collides with first.
 
-**Step 16 (frontend) follows once validation confirms the API behaves correctly under real use.**
-It is the largest single item left on the roadmap at 8 hours, and it is worth starting on an API
-whose behaviour is known rather than assumed.
+**Then step 16 (frontend).** The order was settled when the roadmap was agreed and does not need
+revisiting. Step 15 has already earned its place ahead of it six times over: every one of the six
+defects it found is one step 16 would otherwise have hit through a second layer, with two candidate
+causes for every symptom.
 
 **PLB-1 (2FA) stays deferred**, because its trigger condition has not arrived: it must be resolved
 before *any* external or remote access, and there is none. That is a condition, not a date — see
 the pre-launch blockers section above.
 
-**⚠️ Do not begin step 15's approach here.** Deciding *what* it does — which scenarios, how much
-data, what is asserted at the end — is the next session's first task, and it is a design decision
-worth arriving at deliberately rather than inheriting from a close-out note.
+⚠️ **Two things to carry into whatever comes next.**
 
-⚠️ **One thing to carry into whatever comes next.** Q45 survived twelve build steps because every
-example test in the suite used whole-cent costs. The generated tests found it in their first run.
-That is the argument for widening the property-based approach as new posting rules are built, rather
-than treating step 13 as a thing that was done once.
+- Q45 survived twelve build steps because every example test in the suite used whole-cent costs. The
+  generated tests found it in their first run. **Step 15 is the same lesson from a different
+  direction**: the `Rate` defect, the `basis` defect and the AR discrepancy all survived because no
+  test had ever driven those routes over HTTP, or driven that combination of documents at all. The
+  argument is not "write more property tests" specifically — it is that **a checker only covers what
+  it is actually pointed at**, and both steps found their defects by pointing an existing kind of
+  check somewhere new.
+- **A decision recorded with its reasoning can be reversed on evidence; one recorded as a bare rule
+  cannot.** Two deliberate decisions were overturned this step — the credit note always crediting AR,
+  and Q21's product redaction — and in both cases the *stated reason* was what made it possible to
+  tell whether the reversal was sound. Both old reasons are kept in the javadoc rather than deleted.
 
 ### Credential housekeeping — done, nothing outstanding
 

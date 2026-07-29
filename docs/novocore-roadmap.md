@@ -9,7 +9,7 @@ and cache-read, which dominate it — read the note before drawing conclusions f
 
 ---
 
-## Phase 1 — the core (complete through step 14)
+## Phase 1 — the core (complete through step 14; step 15 in progress)
 
 | Step | What                                                          |  Est. | Actual |   Out |      In | Status  |
 |-----:|---------------------------------------------------------------|------:|-------:|------:|--------:|---------|
@@ -29,7 +29,8 @@ and cache-read, which dominate it — read the note before drawing conclusions f
 |   12 | Auto backups (incl. commissioning, CI, self-invocation fixes)ᶠ|   2.7 |    2.6 |  606k |  151.5M | 🟢 Done |
 |   13 | Test suite consolidation sweep (incl. Q45 fix) ᵍ              |   2.6 |    1.8 |  490k |  151.9M | 🟢 Done |
 |   14 | REST surface — 133 routes, Q44, migration V25 ʲ               |   2.5 |    2.0 |  646k |  151.5M | 🟢 Done |
-|      | **Subtotal, steps 0–14**                                      |**31.5**|**20.6**|**6.85M**|**1,391M**| |
+|   15 | Dummy data validation — **in progress**, see ˡ                |   0.7 |    3.1 | 1,355k|  559.5M | **Current** |
+|      | **Subtotal, steps 0–15**                                      |**32.2**|**23.7**|**8.21M**|**1,951M**| |
 
 ## Not started
 
@@ -37,7 +38,6 @@ Estimates below are unchanged. Nothing in this section has been measured.
 
 | Step | What                                                          |  Est. | Status        |
 |-----:|---------------------------------------------------------------|------:|---------------|
-|   15 | Dummy data validation                                         |   0.7 | 🔴 Not started |
 |   16 | Frontend ⁱ                                                    |   8.0 | 🔴 Not started |
 |   17 | Operational monitoring                                        |   1.0 | 🔴 Not started |
 |   18 | Prosvasis Go adapter                                          |   4.5 | 🔴 Not started |
@@ -107,6 +107,29 @@ Worth recording next to the number: **the estimate was 2.5 h and the actual was 
 estimate this project has come close to on a pure-build step. It also produced the one migration
 the plan said would not be needed (V25), which is the sort of thing the estimate could not have
 priced either way.
+
+**ˡ Step 15 is NOT finished, and its row is measured anyway.** 15a (the harness) is complete and
+15b (the narrative) is partly complete; the refusal matrix, the permission sweep, the read-back and
+date-boundary checks, restore and `assertEveryRouteCoveredExcept` are still to come. The figures
+cover one session, measured the same way as every other row and by the same method at the bottom of
+this file — 1,171 timestamped events, 3.25 h wall clock, 3.14 h active under the 5-minute cap, seven
+gaps capped. They exclude the close-out that follows them, as every row does.
+
+Recorded mid-step rather than left blank because a partial measurement is a fact and a blank is not,
+and the calibration point is worth having early: **the estimate was 0.7 h and the step is at 3.1 h
+with work remaining.** That is the largest overrun in this table by a wide margin — every other step
+came in at or under estimate. Two things account for it, and neither is the narrative itself:
+
+1. **0.7 h priced the wrong thing.** It reads like an estimate for "write a script that inserts some
+   rows". What was agreed and built is six classes of check over 133 routes, a shared invariant
+   component, a route-coverage ledger and a permission sweep. The proposal said so before any code
+   was written and put the full version at 2.0–2.5 h.
+2. **The step's whole purpose is finding defects, and it found six** — each needing a decision, a
+   fix, tests and a commit, which is work an estimate for a validation harness cannot contain by
+   construction. A validation step that finds nothing is cheap; one that earns its keep is not.
+
+**The other estimates are deliberately not rescaled**, for the reason already stated below: this
+figure comes from validating an existing API and does not transfer to a frontend or an adapter.
 
 **ⁱ Step 16's estimate is untouched, but the frontend is not at zero.** A verified Vite + React 19 +
 Tailwind v4 + shadcn/ui foundation with an app shell was built on 2026-07-27 (`492ce24`, `531f12a`)
