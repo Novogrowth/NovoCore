@@ -31,6 +31,10 @@ public record OpenItemRef(OpenItemType type, long id) {
         return new OpenItemRef(OpenItemType.CREDIT_NOTE, creditNoteId);
     }
 
+    public static OpenItemRef customerCredit(long customerCreditId) {
+        return new OpenItemRef(OpenItemType.CUSTOMER_CREDIT, customerCreditId);
+    }
+
     public boolean isCustomerSide() {
         return type.isCustomerSide();
     }

@@ -313,20 +313,27 @@ public final class LedgerInvariants {
      * ledger but a gap in how this invariant was reading it, and {@code WholeScenarioIT} never
      * noticed because its scenario has no customer credits.
      *
-     * <p>⚠️ <strong>{@code SettlementService.allOpenItems} still omits them</strong>, so
-     * {@code GET /api/open-items} under-reports what a customer's account actually stands at. That
-     * is a live question for the API rather than for the ledger — a credit note is an open item and
-     * a customer credit is the same kind of thing, so the two are arguably asymmetric in the same
-     * way born-settled invoices and their credit notes were. Recorded here rather than changed
-     * unilaterally, because it alters a response step 16 will build against.
+     * <p>{@code allOpenItems} now returns them, so this simply reads the layer rather than patching
+     * it from the side — the endpoint and this invariant see one list.
+     *
+     * <p><strong>The sum is signed by type, and that matters more than it looks.</strong> An
+     * {@code OpenItem}'s open amount is a magnitude; which way it faces is the type's business. A
+     * sales invoice is money owed to us, a credit note and a customer credit are money owed back.
+     * Summing them all positively happened to be right until now only because every credit note in
+     * every scenario was fully allocated, and a fully settled item is filtered out before it can be
+     * counted. That is a coincidence rather than a property, and the moment a partly-unapplied
+     * credit note exists it would have made this invariant wrong in the direction that hides a
+     * defect — which is the worst direction available.
      */
     public void openItemsEqualTheControlAccounts(LocalDate asOf) {
         Money openReceivables = Money.zero(Money.EUR);
         for (var item : settlements.allOpenItems(PartyType.CUSTOMER)) {
-            openReceivables = openReceivables.plus(item.openAmount());
-        }
-        for (var credit : settlements.openCustomerCredits()) {
-            openReceivables = openReceivables.minus(credit.openAmount());
+            openReceivables = switch (item.ref().type()) {
+                case SALES_INVOICE -> openReceivables.plus(item.openAmount());
+                case CREDIT_NOTE, CUSTOMER_CREDIT -> openReceivables.minus(item.openAmount());
+                case PURCHASE_INVOICE -> throw new AssertionError(
+                        "a purchase invoice is not a customer open item: " + item.ref());
+            };
         }
         Money openPayables = Money.zero(Money.EUR);
         for (var item : settlements.allOpenItems(PartyType.SUPPLIER)) {

@@ -573,6 +573,8 @@ class SettlementServiceImpl implements SettlementService {
             case SALES_INVOICE -> salesInvoices.find(ref.id()).map(this::toOpenItem);
             case CREDIT_NOTE -> creditNotes.find(ref.id()).map(this::toOpenItem);
             case PURCHASE_INVOICE -> purchaseInvoices.find(ref.id()).map(this::toOpenItem);
+            case CUSTOMER_CREDIT ->
+                    customerCredits.findById(ref.id()).map(this::toView).map(this::toOpenItem);
         };
     }
 
@@ -584,6 +586,7 @@ class SettlementServiceImpl implements SettlementService {
         if (partyType == PartyType.CUSTOMER) {
             salesInvoices.ofCustomer(partyId).forEach(invoice -> items.add(toOpenItem(invoice)));
             creditNotes.ofCustomer(partyId).forEach(note -> items.add(toOpenItem(note)));
+            customerCreditsOf(partyId).forEach(credit -> items.add(toOpenItem(credit)));
         } else {
             purchaseInvoices.ofSupplier(partyId).forEach(invoice -> items.add(toOpenItem(invoice)));
         }
@@ -599,6 +602,8 @@ class SettlementServiceImpl implements SettlementService {
             salesInvoices.between(BEGINNING, FOREVER)
                     .forEach(invoice -> items.add(toOpenItem(invoice)));
             creditNotes.between(BEGINNING, FOREVER).forEach(note -> items.add(toOpenItem(note)));
+            customerCredits.findAllByOrderByCreditDateAscIdAsc().stream().map(this::toView)
+                    .forEach(credit -> items.add(toOpenItem(credit)));
         } else {
             purchaseInvoices.between(BEGINNING, FOREVER)
                     .forEach(invoice -> items.add(toOpenItem(invoice)));
@@ -647,6 +652,22 @@ class SettlementServiceImpl implements SettlementService {
                 spentAgainstInvoices);
     }
 
+    /**
+     * An unallocated customer credit, listed alongside the invoices and credit notes it can settle.
+     *
+     * <p>Its gross is what the credit was worth and what has been "allocated" is what has been spent
+     * out of it, so a fully spent credit falls out of the listing exactly as a fully settled invoice
+     * does. Nothing ever allocates <em>against</em> a credit, which is why the source half of
+     * {@code openItemOf} carries the whole figure.
+     */
+    private OpenItem toOpenItem(CustomerCreditView credit) {
+        Money spent = allocatedFrom(
+                AllocationSourceType.CUSTOMER_CREDIT, credit.id(), credit.amount().currency());
+        return openItemOf(OpenItemRef.customerCredit(credit.id()),
+                "Credit from settlement " + credit.settlementId(), credit.creditDate(),
+                credit.customerId(), credit.customerName(), credit.amount(), spent);
+    }
+
     private OpenItem toOpenItem(PurchaseInvoiceView invoice) {
         Money gross = invoice.isInForce()
                 ? invoice.grossTotal() : Money.zero(invoice.grossTotal().currency());
@@ -668,6 +689,10 @@ class SettlementServiceImpl implements SettlementService {
         return switch (ref.type()) {
             case SALES_INVOICE -> salesInvoices.require(ref.id()).customerId();
             case CREDIT_NOTE -> creditNotes.require(ref.id()).customerId();
+            case CUSTOMER_CREDIT -> customerCredits.findById(ref.id())
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "No customer credit " + ref.id()))
+                    .getCustomerId();
             case PURCHASE_INVOICE -> purchaseInvoices.require(ref.id()).supplierId();
         };
     }

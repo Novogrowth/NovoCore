@@ -394,6 +394,52 @@ class SettlementIT extends AbstractCoreIntegrationTest {
         }
 
         @Test
+        @DisplayName("an unspent credit is an open item, and drops out once it is spent")
+        void creditsAreOpenItems() {
+            // Added in step 15b. A receipt credits Accounts receivable with everything received;
+            // the part not allocated is a real credit balance in that account. Listing only
+            // invoices and credit notes made this layer under-report the customer's position by
+            // exactly that, which is the same asymmetry born-settled invoices and their credit
+            // notes had. A customer credit is the same kind of thing as an unapplied credit note,
+            // so it is listed the same way.
+            CustomerView buyer = customer("Credit as open item");
+            SalesInvoiceView invoice = openSale(buyer, "SETIT-13D", 1L);
+
+            settlements.record(NewSettlement.receiptFrom(
+                            buyer.id(), bank().id(), AUGUST, Money.ofEur("200.00"),
+                            List.of(NewAllocation.againstSalesInvoice(
+                                    invoice.id(), Money.ofEur("124.00"))))
+                    .leavingCredit());
+            CustomerCreditView credit = settlements.customerCreditsOf(buyer.id()).getFirst();
+            assertThat(credit.amount()).isEqualTo(Money.ofEur("76.00"));
+
+            assertThat(settlements.openItemsFor(PartyType.CUSTOMER, buyer.id()))
+                    .as("the credit the customer is holding must be visible next to their invoices")
+                    .anySatisfy(item -> {
+                        assertThat(item.ref()).isEqualTo(OpenItemRef.customerCredit(credit.id()));
+                        assertThat(item.ref().type().isCustomerSide()).isTrue();
+                        assertThat(item.openAmount()).isEqualTo(Money.ofEur("76.00"));
+                    });
+
+            // Spending part of it reduces the open amount rather than removing the row.
+            SalesInvoiceView second = openSale(buyer, "SETIT-13E", 1L);
+            settlements.allocateCustomerCredit(credit.id(), second.id(), Money.ofEur("26.00"));
+            assertThat(settlements.openItemsFor(PartyType.CUSTOMER, buyer.id()))
+                    .anySatisfy(item -> {
+                        assertThat(item.ref()).isEqualTo(OpenItemRef.customerCredit(credit.id()));
+                        assertThat(item.openAmount()).isEqualTo(Money.ofEur("50.00"));
+                    });
+
+            // And spending the rest takes it out of the listing, exactly as a settled invoice goes.
+            SalesInvoiceView third = openSale(buyer, "SETIT-13F", 1L);
+            settlements.allocateCustomerCredit(credit.id(), third.id(), Money.ofEur("50.00"));
+            assertThat(settlements.openItemsFor(PartyType.CUSTOMER, buyer.id()))
+                    .as("a fully spent credit is finished with, like a fully settled invoice")
+                    .noneSatisfy(item -> assertThat(item.ref())
+                            .isEqualTo(OpenItemRef.customerCredit(credit.id())));
+        }
+
+        @Test
         @DisplayName("reducing a settlement that left a credit is refused, and names the remedy")
         void amendingASettlementWithALiveCreditIsRefused() {
             // Found by step 15's HTTP narrative. A settlement reduced after it left a customer

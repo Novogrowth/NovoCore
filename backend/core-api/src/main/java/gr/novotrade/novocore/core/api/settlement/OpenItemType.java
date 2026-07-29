@@ -24,7 +24,26 @@ public enum OpenItemType {
      * the customer, settled either by allocating it against one of their invoices — which posts
      * nothing, both sides being Accounts receivable — or by refunding it with an outgoing settlement.
      */
-    CREDIT_NOTE(true);
+    CREDIT_NOTE(true),
+
+    /**
+     * <strong>An unallocated customer credit</strong> — the remainder of a receipt the customer
+     * overpaid, held as a standalone document (Q16). Like a credit note, its open amount faces the
+     * other way: it is money we hold on the customer's behalf, settled by allocating it against one
+     * of their invoices or by refunding it.
+     *
+     * <p>Added in step 15b, because omitting it made this layer under-report a customer's position.
+     * A receipt credits Accounts receivable with everything received; the part not allocated to an
+     * invoice is a real credit balance in that account, and a view over AR that leaves it out is not
+     * a view over AR. It is the same asymmetry that born-settled invoices and their credit notes
+     * had, in a different place: <em>a customer credit is the same kind of thing as an unapplied
+     * credit note, so the two are listed the same way.</em>
+     *
+     * <p><strong>Never an allocation target</strong>, only a source — you cannot pay a credit, you
+     * spend it. {@code open_item_allocation}'s {@code target_type} CHECK therefore does not list it
+     * and deliberately should not, which is why this value needed no migration.
+     */
+    CUSTOMER_CREDIT(true);
 
     private final boolean customerSide;
 
