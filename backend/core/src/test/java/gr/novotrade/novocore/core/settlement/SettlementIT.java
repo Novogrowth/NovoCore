@@ -394,6 +394,55 @@ class SettlementIT extends AbstractCoreIntegrationTest {
         }
 
         @Test
+        @DisplayName("reducing a settlement that left a credit is refused, and names the remedy")
+        void amendingASettlementWithALiveCreditIsRefused() {
+            // Found by step 15's HTTP narrative. A settlement reduced after it left a customer
+            // credit re-posts the ledger for the smaller amount while the credit document carries
+            // on claiming the original remainder — so the credit has nothing behind it, and if any
+            // of it has been allocated, that allocation reduces an invoice's open amount with no
+            // ledger movement at all. Accounts receivable and the sum of the open items then
+            // disagree, which ADR 0009 says is impossible by construction. It was measured at
+            // exactly the allocated amount.
+            //
+            // Refused rather than auto-corrected (CLAUDE.md rule 7): silently shrinking the credit
+            // would undo, as a side effect of editing this document, an allocation somebody
+            // deliberately made against another one. Same stance as ADR 0011's refusal to reverse
+            // a freight allocation whose lot has since moved.
+            CustomerView buyer = customer("Amend with credit");
+            SalesInvoiceView invoice = openSale(buyer, "SETIT-13B", 1L);
+
+            SettlementView receipt = settlements.record(NewSettlement.receiptFrom(
+                            buyer.id(), bank().id(), AUGUST, Money.ofEur("200.00"),
+                            List.of(NewAllocation.againstSalesInvoice(
+                                    invoice.id(), Money.ofEur("124.00"))))
+                    .leavingCredit());
+            CustomerCreditView credit = settlements.customerCreditsOf(buyer.id()).getFirst();
+
+            // Untouched credit: still refused, because the reduction would strand it either way.
+            assertThatExceptionOfType(InvalidSettlementException.class)
+                    .isThrownBy(() -> settlements.amend(receipt.id(), bank().id(), AUGUST,
+                            Money.ofEur("150.00"), null, null))
+                    .withMessageContaining("left a customer credit")
+                    .withMessageContaining("released outright");
+
+            // Once part of it is spent, the message names the harder remedy instead.
+            SalesInvoiceView second = openSale(buyer, "SETIT-13C", 1L);
+            settlements.allocateCustomerCredit(credit.id(), second.id(), Money.ofEur("20.00"));
+
+            assertThatExceptionOfType(InvalidSettlementException.class)
+                    .isThrownBy(() -> settlements.amend(receipt.id(), bank().id(), AUGUST,
+                            Money.ofEur("150.00"), null, null))
+                    .withMessageContaining("20.00 EUR of the credit has already been allocated")
+                    .withMessageContaining("release that allocation first");
+
+            // And an amendment that does NOT reduce the settlement is unaffected: the credit is
+            // still covered, so there is nothing to protect against.
+            assertThat(settlements.amend(receipt.id(), bank().id(), AUGUST,
+                    Money.ofEur("250.00"), "SETIT-UP", null).amount())
+                    .isEqualTo(Money.ofEur("250.00"));
+        }
+
+        @Test
         @DisplayName("credit is spent against a later invoice, and posts nothing")
         void creditIsSpentLater() {
             CustomerView buyer = customer("Spend credit");

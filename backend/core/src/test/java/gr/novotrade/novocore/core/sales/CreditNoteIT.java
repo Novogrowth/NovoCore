@@ -182,8 +182,18 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
         }
 
         @Test
-        @DisplayName("a cash sale still credits Accounts receivable, not the till")
-        void creditAlwaysGoesToReceivable() {
+        @DisplayName("a cash sale's credit note credits the till, not Accounts receivable")
+        void aBornSettledCreditNoteMirrorsItsInvoice() {
+            // REVERSED IN STEP 15, and this test used to assert the opposite. The old rule — always
+            // credit AR, "the money is owed back until it is actually refunded" — made the two
+            // halves of a born-settled transaction asymmetric: a CASH sale debits Cash and never
+            // touches AR, while its credit note moved AR. Since bornSettled() also keeps such an
+            // invoice out of the open-item layer, the AR control account and the sum of the open
+            // items disagreed by exactly the credit note. ADR 0009 says that cannot happen.
+            //
+            // Step 15's HTTP narrative measured it; nothing before it had credited a cash, POS or
+            // Skroutz sale. Mirroring the invoice closes the class structurally: neither half ever
+            // touches AR, so there is nothing left for them to disagree about.
             CustomerView buyer = customer("Cash return");
             ProductView beans = goods("CNIT-02", "20.00");
             stock(beans.id(), 10L, "8.000000");
@@ -193,17 +203,60 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
                     number("CNIT-SI"), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("20.000000")))));
+            assertThat(invoice.bornSettled()).isTrue();
 
             CreditNoteView note = creditNotes.issue(NewCreditNote.of(
                     invoice.id(), number("CNIT-CN"), AUGUST,
                     List.of(NewCreditNoteLine.priceOnly(invoice.lines().getFirst().id(),
                             Quantity.of(1L), UnitCost.ofEur("20.000000")))));
 
-            // The money is owed back until it is actually refunded; posting the credit straight
-            // against the cash box would take money out of the till nobody handed over.
+            assertThat(note.bornSettled())
+                    .as("the credit note carries its invoice's settlement method, so the open-item "
+                            + "layer can exclude it exactly as it excludes the invoice")
+                    .isTrue();
             assertThat(journal.requireEntry(note.journalEntryId()).lines())
-                    .anySatisfy(line -> assertThat(line.accountId())
-                            .isEqualTo(accountId(AccountSystemKey.ACCOUNTS_RECEIVABLE)))
+                    .anySatisfy(line -> {
+                        assertThat(line.accountId()).isEqualTo(accountId(AccountSystemKey.CASH));
+                        assertThat(line.side()).isEqualTo(BalanceSide.CREDIT);
+                        // Cash is not a Control account, so no sub-ledger reference — the same
+                        // asymmetry the invoice already has on its debit side.
+                        assertThat(line.subLedgerRef()).isNull();
+                    })
+                    .noneSatisfy(line -> assertThat(line.accountId())
+                            .isEqualTo(accountId(AccountSystemKey.ACCOUNTS_RECEIVABLE)));
+        }
+
+        @Test
+        @DisplayName("an on-account sale's credit note still credits Accounts receivable")
+        void anOnAccountCreditNoteStillUsesReceivable() {
+            // The other half of the same rule, and the reason it is a mirror rather than a blanket
+            // change: an ON_ACCOUNT sale really does debit AR and really is an open item, so its
+            // credit note has to credit AR or the invoice would never be settleable against it.
+            CustomerView buyer = customer("On account return");
+            ProductView beans = goods("CNIT-02B", "20.00");
+            stock(beans.id(), 10L, "8.000000");
+
+            SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
+                    buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                    number("CNIT-SI"), JULY,
+                    List.of(NewSalesInvoiceLine.product(
+                            beans.id(), Quantity.of(1L), UnitCost.ofEur("20.000000")))));
+            assertThat(invoice.bornSettled()).isFalse();
+
+            CreditNoteView note = creditNotes.issue(NewCreditNote.of(
+                    invoice.id(), number("CNIT-CN"), AUGUST,
+                    List.of(NewCreditNoteLine.priceOnly(invoice.lines().getFirst().id(),
+                            Quantity.of(1L), UnitCost.ofEur("20.000000")))));
+
+            assertThat(note.bornSettled()).isFalse();
+            assertThat(journal.requireEntry(note.journalEntryId()).lines())
+                    .anySatisfy(line -> {
+                        assertThat(line.accountId())
+                                .isEqualTo(accountId(AccountSystemKey.ACCOUNTS_RECEIVABLE));
+                        assertThat(line.side()).isEqualTo(BalanceSide.CREDIT);
+                        assertThat(line.subLedgerRef())
+                                .isEqualTo(SubLedgerRef.customer(buyer.id()));
+                    })
                     .noneSatisfy(line -> assertThat(line.accountId())
                             .isEqualTo(accountId(AccountSystemKey.CASH)));
         }

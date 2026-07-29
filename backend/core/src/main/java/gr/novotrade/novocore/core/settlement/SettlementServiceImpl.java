@@ -174,6 +174,7 @@ class SettlementServiceImpl implements SettlementService {
                 "newDate", settlementDate.toString(),
                 "newAmount", amount.toString()));
 
+        refuseIfADerivedCreditHasBeenSpent(settlement, amount);
         releaseAllocationsDownTo(settlement, amount);
 
         settlement.amend(accountId, settlementDate,
@@ -185,6 +186,51 @@ class SettlementServiceImpl implements SettlementService {
                         settlement.getPartyId(), account, amount, partyName));
 
         return toView(settlement);
+    }
+
+    /**
+     * <strong>An amendment is refused outright when a customer credit derived from this settlement
+     * has already been spent.</strong>
+     *
+     * <p>A settlement recorded with {@code remainderBecomesCustomerCredit} leaves the unallocated
+     * part as a standalone credit document (Q16). Reducing the settlement afterwards re-posts the
+     * ledger for the smaller amount, but the credit is a separate record that the amendment has no
+     * business rewriting — and if some of it has already been allocated to an invoice, that
+     * allocation is now reducing an invoice's open amount with nothing behind it in the ledger.
+     * Step 15 measured exactly that: Accounts receivable and the sum of the open items disagreed by
+     * the spent amount.
+     *
+     * <p><strong>Refused rather than silently corrected</strong>, and the remedy is named. Reducing
+     * the credit automatically would undo an allocation somebody deliberately made, in a different
+     * document, as a side effect of editing this one — which is the same reason {@code
+     * FreightAllocationService} refuses to reverse an allocation whose lot has since moved rather
+     * than guessing at a correction (ADR 0011). This is {@code CLAUDE.md} rule 7: auto-resolve only
+     * what is certain, and this is not.
+     */
+    private void refuseIfADerivedCreditHasBeenSpent(Settlement settlement, Money newAmount) {
+        if (settlement.getAmount().compareTo(newAmount) <= 0) {
+            // Not a reduction, so whatever the credit is worth it is still covered.
+            return;
+        }
+        Optional<CustomerCredit> derived = customerCredits.findBySettlementId(settlement.getId());
+        if (derived.isPresent()) {
+            CustomerCredit credit = derived.get();
+            Money spent = allocatedFrom(
+                    AllocationSourceType.CUSTOMER_CREDIT, credit.getId(), newAmount.currency());
+            throw new InvalidSettlementException(
+                    "Settlement " + settlement.getId() + " left a customer credit of "
+                            + credit.getAmount() + " (credit " + credit.getId() + "), and reducing "
+                            + "the settlement to " + newAmount + " would leave that credit without "
+                            + "the money behind it — the receivable control account and the open "
+                            + "items would stop agreeing. "
+                            + (spent.isPositive()
+                                    ? spent + " of the credit has already been allocated to an "
+                                            + "invoice: release that allocation first, then amend "
+                                            + "this settlement, then re-allocate whatever the "
+                                            + "credit is still worth."
+                                    : "Nothing has been allocated from it yet, so the credit can be "
+                                            + "released outright; do that first, then amend."));
+        }
     }
 
     /**
@@ -588,7 +634,11 @@ class SettlementServiceImpl implements SettlementService {
      * invoice — the customer paid twice, with each half looking correct on its own.
      */
     private OpenItem toOpenItem(CreditNoteView note) {
-        Money gross = note.isInForce()
+        // Born settled means there never was an open amount, exactly as for the invoice it
+        // corrects: since step 15 such a credit note credits the settlement account the sale
+        // debited, so nothing sits against Accounts receivable to be settled. Counting it here
+        // while it no longer moves AR would recreate the discrepancy in the opposite direction.
+        Money gross = note.isInForce() && !note.bornSettled()
                 ? note.grossTotal() : Money.zero(note.grossTotal().currency());
         Money spentAgainstInvoices = allocatedFrom(
                 AllocationSourceType.CREDIT_NOTE, note.id(), gross.currency());

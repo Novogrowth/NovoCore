@@ -23,6 +23,7 @@ public record CreditNoteView(
         long customerId,
         String customerName,
         SalesChannel channel,
+        SettlementMethod settlementMethod,
         String documentNumber,
         LocalDate creditNoteDate,
         String description,
@@ -55,6 +56,19 @@ public record CreditNoteView(
 
     public boolean isReversal() {
         return reversalOfCreditNoteId != null;
+    }
+
+    /**
+     * True when the invoice this corrects settled immediately — a cash, POS or partner-channel
+     * sale that never touched Accounts receivable.
+     *
+     * <p>Carried here so the open-item layer can exclude such a credit note exactly as it excludes
+     * the invoice. Since step 15 a born-settled credit note credits the settlement account rather
+     * than AR, so counting it as an open item would recreate, in the opposite direction, the very
+     * AR-versus-open-items discrepancy that change removed.
+     */
+    public boolean bornSettled() {
+        return settlementMethod.settlesImmediately();
     }
 
     public boolean isReversed() {

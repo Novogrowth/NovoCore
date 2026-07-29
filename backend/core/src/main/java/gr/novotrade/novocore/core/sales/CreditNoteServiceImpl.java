@@ -52,9 +52,29 @@ import org.springframework.transaction.annotation.Transactional;
  * after the customer's VAT override changed must still return the VAT that was actually charged, or a
  * return at 13% nets against an output at 24% and the VAT return stops reconciling.
  *
- * <p>The credit always goes to <strong>Accounts receivable</strong>, even when the original invoice was
- * born settled in cash. The money is owed back to the customer until it is refunded, and posting the
- * credit straight against the cash box would take money out of the till that nobody handed over.
+ * <h2>Where the credit goes — reversed in step 15, deliberately</h2>
+ *
+ * <p><strong>The credit now mirrors what the invoice debited:</strong> the settlement account for a
+ * born-settled sale, {@code Accounts receivable} otherwise. Until step 15 it always went to AR, and
+ * the reason given was a real one, so it is kept here rather than deleted: <em>"the money is owed
+ * back to the customer until it is refunded, and posting the credit straight against the cash box
+ * would take money out of the till that nobody handed over."</em>
+ *
+ * <p>That argument was overruled on evidence rather than on taste. A born-settled invoice never
+ * debits AR, and {@code bornSettled} keeps it out of the open-item layer entirely — so a credit note
+ * that <em>did</em> move AR made the Accounts Receivable control account disagree with the sum of
+ * its open items, which ADR 0009 states is impossible by construction. Step 15's HTTP narrative
+ * measured the disagreement; nothing before it had credited a cash, POS or Skroutz sale.
+ *
+ * <p>Mirroring closes the class of defect structurally instead of correcting a figure: <strong>
+ * neither half of a born-settled transaction ever touches AR or the open-item layer</strong>, so
+ * there is nothing left for them to disagree about. It is also what happens in the world — a
+ * refunded card sale is refunded to the card, not booked as a receivable somebody must chase.
+ *
+ * <p>The till objection survives as a real operational point and is answered elsewhere: a credit
+ * note is a document, and the cash actually leaving the drawer is a Refund settlement
+ * ({@code NewSettlement.refundTo}). What changed is only which account the <em>document</em>
+ * credits, not whether a refund has to be recorded.
  */
 @Service
 class CreditNoteServiceImpl implements CreditNoteService {
@@ -370,15 +390,39 @@ class CreditNoteServiceImpl implements CreditNoteService {
 
     /**
      * Debit the channel's {@code Sales returns} account with the net, debit Output VAT per class, and
-     * credit Accounts receivable with what is owed back.
+     * credit back <strong>whatever the invoice debited</strong> — the settlement account for a
+     * born-settled sale, Accounts receivable otherwise.
+     *
+     * <p><strong>Step 15 changed this half, and it was a real defect.</strong> A credit note used to
+     * credit Accounts receivable unconditionally, including against a cash, POS or Skroutz sale that
+     * had never debited AR in the first place — those methods settle immediately and debit their own
+     * account (see {@code SalesInvoiceServiceImpl.post}). The two sides of one born-settled
+     * transaction were therefore asymmetric: the sale bypassed AR and its correction did not.
+     *
+     * <p>The consequence was not cosmetic. Such an invoice is {@code bornSettled}, so the open-item
+     * layer excludes it entirely, while the credit note against it still moved AR — which made the
+     * Accounts Receivable control account and the sum of the open items disagree, an outcome ADR
+     * 0009 says is impossible by construction. It was found by step 15's HTTP narrative, the first
+     * thing to credit a Skroutz sale; nothing before it had put a credit note against a born-settled
+     * invoice.
+     *
+     * <p>Mirroring the invoice closes the whole class structurally rather than correcting one
+     * figure: <strong>neither a born-settled invoice nor its credit note ever touches AR or the
+     * open-item layer</strong>, so there is nothing left to reconcile between them. The money going
+     * back to the customer comes out of the account it went into, which is also what actually
+     * happens — a refunded card sale is refunded to the card.
+     *
+     * <p>A sub-ledger reference goes on the AR line only. AR is a Control account and requires one;
+     * the settlement accounts are Bank-Cash or Partner Clearing and take none, which is the same
+     * asymmetry {@code SalesInvoiceServiceImpl} already has on the debit side.
      */
     private JournalEntryView post(NewCreditNote request, SalesInvoice invoice, CustomerView customer,
             List<CreditedLine> credited, Rounding rounding, Money payable, Currency currency) {
         AccountView returns =
                 chartOfAccounts.requireAccount(invoice.getChannel().returnsAccount());
         AccountView outputVat = chartOfAccounts.requireAccount(AccountSystemKey.OUTPUT_VAT);
-        AccountView receivable =
-                chartOfAccounts.requireAccount(AccountSystemKey.ACCOUNTS_RECEIVABLE);
+        Optional<AccountSystemKey> settlementAccount =
+                invoice.getSettlementMethod().settlementAccount();
 
         List<NewJournalLine> lines = new ArrayList<>();
         Money netTotal = Money.zero(currency);
@@ -413,8 +457,16 @@ class CreditNoteServiceImpl implements CreditNoteService {
                             .describedAs("Rounding against document total"));
         }
 
-        lines.add(NewJournalLine.credit(receivable.id(), payable)
-                .forSubLedger(SubLedgerRef.customer(customer.id())));
+        if (settlementAccount.isPresent()) {
+            lines.add(NewJournalLine
+                    .credit(chartOfAccounts.requireAccount(settlementAccount.get()).id(), payable)
+                    .describedAs(invoice.getSettlementMethod() + " refund — " + customer.name()));
+        } else {
+            lines.add(NewJournalLine
+                    .credit(chartOfAccounts.requireAccount(
+                            AccountSystemKey.ACCOUNTS_RECEIVABLE).id(), payable)
+                    .forSubLedger(SubLedgerRef.customer(customer.id())));
+        }
 
         String description = request.description() != null
                 ? request.description()
@@ -515,6 +567,7 @@ class CreditNoteServiceImpl implements CreditNoteService {
                 customer.id(),
                 customer.name(),
                 invoice.getChannel(),
+                invoice.getSettlementMethod(),
                 note.getDocumentNumber(),
                 note.getCreditNoteDate(),
                 note.getDescription(),

@@ -303,11 +303,30 @@ public final class LedgerInvariants {
     /**
      * ADR 0009: open item matching is a layer over AR/AP and posts nothing, so the two must agree by
      * construction. If they ever diverge, an allocation has posted something.
+     *
+     * <p><strong>Unallocated customer credits count towards the receivable position</strong>, and
+     * step 15 is what established that they have to. A settlement recorded with
+     * {@code remainderBecomesCustomerCredit} credits Accounts receivable with the whole amount
+     * received; the part not allocated to an invoice is a real credit balance for that customer,
+     * held as a standalone credit document (Q16). Summing only invoices and credit notes therefore
+     * understates the customer side by exactly the unallocated credit — which is not a defect in the
+     * ledger but a gap in how this invariant was reading it, and {@code WholeScenarioIT} never
+     * noticed because its scenario has no customer credits.
+     *
+     * <p>⚠️ <strong>{@code SettlementService.allOpenItems} still omits them</strong>, so
+     * {@code GET /api/open-items} under-reports what a customer's account actually stands at. That
+     * is a live question for the API rather than for the ledger — a credit note is an open item and
+     * a customer credit is the same kind of thing, so the two are arguably asymmetric in the same
+     * way born-settled invoices and their credit notes were. Recorded here rather than changed
+     * unilaterally, because it alters a response step 16 will build against.
      */
     public void openItemsEqualTheControlAccounts(LocalDate asOf) {
         Money openReceivables = Money.zero(Money.EUR);
         for (var item : settlements.allOpenItems(PartyType.CUSTOMER)) {
             openReceivables = openReceivables.plus(item.openAmount());
+        }
+        for (var credit : settlements.openCustomerCredits()) {
+            openReceivables = openReceivables.minus(credit.openAmount());
         }
         Money openPayables = Money.zero(Money.EUR);
         for (var item : settlements.allOpenItems(PartyType.SUPPLIER)) {
