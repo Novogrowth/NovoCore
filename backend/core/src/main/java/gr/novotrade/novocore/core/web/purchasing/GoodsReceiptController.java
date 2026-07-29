@@ -11,7 +11,7 @@ import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.web.Requires;
-import gr.novotrade.novocore.core.web.purchasing.PurchaseInvoiceController.ReversalRequest;
+import gr.novotrade.novocore.core.web.ReversalCommand;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -114,7 +114,7 @@ class GoodsReceiptController {
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.PURCHASING, level = AccessLevel.FULL)
     @ResponseStatus(HttpStatus.CREATED)
-    GoodsReceiptView reverse(@PathVariable long id, @RequestBody ReversalRequest request) {
+    GoodsReceiptView reverse(@PathVariable long id, @RequestBody ReversalCommand request) {
         return goodsReceipts.reverse(id, request.reversalDate(), request.reason());
     }
 }

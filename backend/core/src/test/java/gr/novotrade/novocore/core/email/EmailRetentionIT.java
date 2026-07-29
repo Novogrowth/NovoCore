@@ -14,6 +14,8 @@ import gr.novotrade.novocore.core.api.email.EmailStatus;
 import gr.novotrade.novocore.core.api.email.SentEmailAttachmentView;
 import gr.novotrade.novocore.core.api.settings.SettingKeys;
 import gr.novotrade.novocore.core.api.settings.SettingsService;
+import gr.novotrade.novocore.core.api.security.RoleService;
+import gr.novotrade.novocore.core.api.security.RoleView;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
@@ -45,6 +47,9 @@ class EmailRetentionIT extends AbstractCoreIntegrationTest {
 
     @Autowired
     private EmailSender emailSender;
+
+    @Autowired
+    private RoleService roles;
 
     @Autowired
     private EmailRetention retention;
@@ -107,7 +112,7 @@ class EmailRetentionIT extends AbstractCoreIntegrationTest {
         assertThat(emailSender.find(id).orElseThrow().attachmentCount()).isEqualTo(1);
 
         assertThatExceptionOfType(EmailAttachmentUnavailableException.class)
-                .isThrownBy(() -> emailSender.downloadAttachment(view.id()));
+                .isThrownBy(() -> emailSender.downloadAttachment(view.id(), owner()));
     }
 
     @Test
@@ -133,7 +138,7 @@ class EmailRetentionIT extends AbstractCoreIntegrationTest {
         assertThat(views.getFirst().available())
                 .as("the referenced document is still there and still readable")
                 .isTrue();
-        assertThat(emailSender.downloadAttachment(views.getFirst().id()).content()).isEqualTo(pdf);
+        assertThat(emailSender.downloadAttachment(views.getFirst().id(), owner()).content()).isEqualTo(pdf);
         assertThat(views.getLast().available()).isFalse();
 
         // And the document itself is untouched in the table that owns it.
@@ -250,4 +255,17 @@ class EmailRetentionIT extends AbstractCoreIntegrationTest {
         jdbc.update("UPDATE email_outbox SET sent_at = now() - make_interval(days => ?) WHERE id = ?",
                 days, id);
     }
+
+    /**
+     * The viewer every download here passes.
+     *
+     * <p>Q44's access-path check re-reads the section governing the source record before
+     * returning bytes, so downloading now needs a role. OWNER has full access, which keeps
+     * these tests about the outbox rather than about permissions —
+     * {@code EmailAttachmentAccessIT} is where the check itself is proven.
+     */
+    private RoleView owner() {
+        return roles.requireByName("OWNER");
+    }
+
 }

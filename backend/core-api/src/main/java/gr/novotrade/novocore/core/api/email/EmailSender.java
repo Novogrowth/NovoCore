@@ -92,33 +92,38 @@ public interface EmailSender {
      * therefore a single action from the sent-email record, and stays one if a file that is
      * inline today becomes a stored document tomorrow.
      *
-     * <h2>⚠️ Whoever wires this to HTTP must add the permission check first</h2>
+     * <h2>Q44's access-path check — decided in step 11, built in step 14c</h2>
      *
-     * <p><strong>Decided, not yet built</strong> (Q44, ADR 0012), because there is no route to the
-     * outbox at all today and a permission guarding nothing is a half-built feature. It is written
-     * here so it is a requirement being implemented rather than a gap being discovered:
+     * <p>For a <em>referenced</em> attachment this re-checks {@code viewer} against the core record
+     * the document belongs to, through {@code AttachmentOwnerType.requireAccess}. <strong>An email
+     * having been sent to someone does not change who may see the source document
+     * afterwards</strong>, and the outbox must not become a second, weaker access path to restricted
+     * data: without the check, a role that cannot open a purchase invoice could read its PDF out of
+     * the email that sent it.
      *
-     * <p>For a <em>referenced</em> attachment this must re-check the caller's permission against
-     * the core record the document belongs to — {@code RoleView.requireView(Section...)} and
-     * {@code RoleView.canSee(ProtectedField)}, the primitives
-     * {@code ProductView.redactedFor(RoleView)} already composes. <strong>An email having been
-     * sent to someone does not change who may see the source document afterward</strong>, and the
-     * outbox must not become a second, weaker access path to restricted data: without the check, a
-     * role that cannot open a purchase invoice could read its PDF out of the email that sent it.
+     * <p>The obligation is a direct consequence of referencing (ADR 0012). While the outbox held its
+     * own copy of the bytes, the attachment was arguably the message's own business; now it is a
+     * pointer into a document with its own visibility rules. An <em>inline</em> attachment has no
+     * core record behind it and so no record-level permission to consult — it is governed by
+     * {@code Section.EMAIL_OUTBOX} alone, which the caller must already hold to have reached here.
      *
-     * <p>The obligation is a direct consequence of referencing. While the outbox held its own copy
-     * of the bytes, the attachment was arguably the message's own business; now it is a pointer
-     * into a document with its own visibility rules. An <em>inline</em> attachment has no core
-     * record behind it and so no record-level permission to consult — it is governed by whatever
-     * {@code Section} the outbox itself is eventually given.
+     * <p><strong>The viewer is a required parameter, not an optional overload.</strong> There is
+     * deliberately no single-argument form: an unchecked path left alongside a checked one is the
+     * path that eventually gets called. Callers with no human behind them do not exist for this
+     * method — nothing in the core downloads a sent attachment.
      *
+     * @param viewer the role making the request, never null
      * @throws IllegalArgumentException if no such attachment exists
+     * @throws gr.novotrade.novocore.core.api.security.SectionAccessDeniedException if the viewer
+     *     may not see the record the document belongs to, or if its owner type is unrecognised —
+     *     the same answer for both, since an unknown type is one whose rules cannot be evaluated
      * @throws EmailAttachmentUnavailableException if it exists but its bytes are gone — the
      *     referenced document was deleted, or an inline copy was pruned. Deliberately not the
      *     same exception as an unknown id, and deliberately not an empty {@link Optional}: those
      *     would make a mistyped id and a deleted document indistinguishable.
      */
-    EmailAttachmentContent downloadAttachment(long emailAttachmentId);
+    EmailAttachmentContent downloadAttachment(
+            long emailAttachmentId, gr.novotrade.novocore.core.api.security.RoleView viewer);
 
     /**
      * Messages that have given up, newest first — the list somebody actually has to look at.

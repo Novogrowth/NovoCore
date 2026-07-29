@@ -21,6 +21,8 @@ import gr.novotrade.novocore.core.api.email.QueuedEmailView;
 import gr.novotrade.novocore.core.api.email.SentEmailAttachmentView;
 import gr.novotrade.novocore.core.api.settings.SettingKeys;
 import gr.novotrade.novocore.core.api.settings.SettingsService;
+import gr.novotrade.novocore.core.api.security.RoleService;
+import gr.novotrade.novocore.core.api.security.RoleView;
 import jakarta.mail.Multipart;
 import jakarta.mail.internet.MimeMessage;
 import java.io.ByteArrayOutputStream;
@@ -60,6 +62,9 @@ class EmailOutboxIT extends AbstractCoreIntegrationTest {
 
     @Autowired
     private EmailSender emailSender;
+
+    @Autowired
+    private RoleService roles;
 
     @Autowired
     private EmailDispatcher dispatcher;
@@ -403,20 +408,20 @@ class EmailOutboxIT extends AbstractCoreIntegrationTest {
             assertThat(view.available()).isTrue();
             assertThat(view.unavailableReasonIfAny()).isEmpty();
             assertThat(view.sizeBytes()).isPositive();
-            assertThat(emailSender.downloadAttachment(view.id()).content()).isNotEmpty();
+            assertThat(emailSender.downloadAttachment(view.id(), owner()).content()).isNotEmpty();
         });
 
         SentEmailAttachmentView referenced = views.getFirst();
         assertThat(referenced.source()).isEqualTo(EmailAttachmentSource.ATTACHMENT);
         assertThat(referenced.filename()).isEqualTo("sales-77.pdf");
         assertThat(referenced.storedAttachmentIdIfAny()).contains(document.id());
-        assertThat(emailSender.downloadAttachment(referenced.id()).content()).isEqualTo(stored);
+        assertThat(emailSender.downloadAttachment(referenced.id(), owner()).content()).isEqualTo(stored);
 
         SentEmailAttachmentView inline = views.getLast();
         assertThat(inline.source()).isEqualTo(EmailAttachmentSource.INLINE);
         assertThat(inline.filename()).isEqualTo("summary.pdf");
         assertThat(inline.storedAttachmentIdIfAny()).isEmpty();
-        assertThat(emailSender.downloadAttachment(inline.id()).content()).isEqualTo(generated);
+        assertThat(emailSender.downloadAttachment(inline.id(), owner()).content()).isEqualTo(generated);
     }
 
     @Test
@@ -452,10 +457,10 @@ class EmailOutboxIT extends AbstractCoreIntegrationTest {
 
         // Asking for the bytes anyway is distinguishable from asking for an id that never existed.
         assertThatExceptionOfType(EmailAttachmentUnavailableException.class)
-                .isThrownBy(() -> emailSender.downloadAttachment(view.id()))
+                .isThrownBy(() -> emailSender.downloadAttachment(view.id(), owner()))
                 .withMessageContaining("po-1002.pdf");
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> emailSender.downloadAttachment(-1L));
+                .isThrownBy(() -> emailSender.downloadAttachment(-1L, owner()));
     }
 
     @Test
@@ -982,4 +987,17 @@ class EmailOutboxIT extends AbstractCoreIntegrationTest {
                 """.formatted(nextAttemptAtExpression == null ? "NULL" : nextAttemptAtExpression),
                 recipient, subject, status, lastError);
     }
+
+    /**
+     * The viewer every download here passes.
+     *
+     * <p>Q44's access-path check re-reads the section governing the source record before
+     * returning bytes, so downloading now needs a role. OWNER has full access, which keeps
+     * these tests about the outbox rather than about permissions —
+     * {@code EmailAttachmentAccessIT} is where the check itself is proven.
+     */
+    private RoleView owner() {
+        return roles.requireByName("OWNER");
+    }
+
 }

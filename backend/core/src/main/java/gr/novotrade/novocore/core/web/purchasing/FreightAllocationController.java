@@ -9,7 +9,7 @@ import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.web.Requires;
-import gr.novotrade.novocore.core.web.purchasing.PurchaseInvoiceController.ReversalRequest;
+import gr.novotrade.novocore.core.web.ReversalCommand;
 import java.time.LocalDate;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -132,7 +132,7 @@ class FreightAllocationController {
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.PURCHASING, level = AccessLevel.FULL)
     @ResponseStatus(HttpStatus.CREATED)
-    FreightAllocationView reverse(@PathVariable long id, @RequestBody ReversalRequest request) {
+    FreightAllocationView reverse(@PathVariable long id, @RequestBody ReversalCommand request) {
         return freightAllocations.reverse(id, request.reversalDate(), request.reason());
     }
 

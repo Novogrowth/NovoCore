@@ -10,6 +10,7 @@ import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.web.Requires;
+import gr.novotrade.novocore.core.web.ReversalCommand;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -137,7 +138,7 @@ class PurchaseInvoiceController {
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.PURCHASING, level = AccessLevel.FULL)
     @ResponseStatus(HttpStatus.CREATED)
-    PurchaseInvoiceView reverse(@PathVariable long id, @RequestBody ReversalRequest request) {
+    PurchaseInvoiceView reverse(@PathVariable long id, @RequestBody ReversalCommand request) {
         return purchaseInvoices.reverse(id, request.reversalDate(), request.reason());
     }
 
@@ -157,9 +158,6 @@ class PurchaseInvoiceController {
                     "a date range needs 'from' and 'to', or name a supplierId instead");
         }
         return to;
-    }
-
-    record ReversalRequest(LocalDate reversalDate, String reason) {
     }
 
     /**

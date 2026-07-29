@@ -114,6 +114,27 @@ public enum Section {
      */
     SETTLEMENTS(true),
 
+    /**
+     * The email outbox: what was sent, to whom, what failed, and the attachments that went with it.
+     * Built in step 11; given its own section in step 14c, which answers the open half of Q44.
+     *
+     * <p><strong>Not folded into {@link #SETTINGS}, deliberately.</strong> SMTP configuration is a
+     * settings concern; who was emailed, about what, and what bounced is operational history about
+     * customers and suppliers. Granting someone the ability to change the SMTP password should not
+     * hand them the correspondence log, and granting someone the correspondence log should not let
+     * them change where mail comes from. The same argument that separates {@link #JOURNAL} from
+     * {@link #CHART_OF_ACCOUNTS} and {@link #INVENTORY} from {@link #PRODUCTS}.
+     *
+     * <p>Message <em>bodies</em> are already absent from {@code QueuedEmailView} by design, so what
+     * this governs is recipients, subjects, delivery state and attachments.
+     *
+     * <p><strong>This section is not sufficient for a referenced attachment.</strong> Q44's other
+     * half: downloading a document that also lives on a core record re-checks that record's own
+     * section as well, so the outbox cannot become a second, weaker path to it. See
+     * {@code AttachmentOwnerType}.
+     */
+    EMAIL_OUTBOX(true),
+
     /** Reserved for the Sales Order Fulfillment module (roadmap phase 4). */
     SALES_ORDER_FULFILLMENT(false),
 

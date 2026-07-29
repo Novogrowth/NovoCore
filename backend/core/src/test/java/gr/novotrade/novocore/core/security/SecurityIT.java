@@ -598,4 +598,60 @@ class SecurityIT extends AbstractCoreIntegrationTest {
     private static String uniqueRoleName() {
         return "TEST_ROLE_" + COUNTER.incrementAndGet();
     }
+
+    @Nested
+    @DisplayName("the section list, in Java and in the database")
+    class SectionListsAgree {
+
+        @Test
+        @DisplayName("every Section is listed in the role_section_grant CHECK")
+        void everySectionIsGrantable() {
+            // Added after a real miss. Step 14c introduced Section.EMAIL_OUTBOX and the plan said
+            // "no migrations expected", on the reasoning that a Section is a Java enum and grants
+            // are default-deny. The database disagreed: role_section_grant carries a CHECK listing
+            // every section by name, so a value that exists only in Java cannot be granted at all
+            // - every insert is refused. It surfaced as three failing tests rather than as a
+            // deduction, which is exactly the case for having this one.
+            for (Section section : Section.values()) {
+                assertThat(jdbc.queryForObject("""
+                        SELECT count(*) FROM pg_constraint
+                        WHERE conname = 'role_section_grant_section_known'
+                          AND pg_get_constraintdef(oid) LIKE ?
+                        """, Integer.class, "%'" + section.name() + "'%"))
+                        .as("%s is listed in role_section_grant_section_known - without it, "
+                                + "granting this section is refused by the database", section)
+                        .isEqualTo(1);
+            }
+        }
+
+        @Test
+        @DisplayName("the CHECK lists no section the enum does not have")
+        void theCheckListsNothingExtra() {
+            // The other direction: a value in the CHECK that Java lacks is a grant nothing can
+            // read back. Counted by quote characters, the same way JournalIT holds
+            // journal_entry_source_known to JournalSource.
+            assertThat(jdbc.queryForObject("""
+                    SELECT length(pg_get_constraintdef(oid))
+                        - length(replace(pg_get_constraintdef(oid), '''', ''))
+                    FROM pg_constraint WHERE conname = 'role_section_grant_section_known'
+                    """, Integer.class))
+                    .isEqualTo(Section.values().length * 2);
+        }
+
+        @Test
+        @DisplayName("a grant really can be stored for every section, reserved ones included")
+        void everySectionCanActuallyBeGranted() {
+            // Structural agreement is not the same as it working. Reserved sections are granted
+            // too - the permission model is complete before the features are, which is the whole
+            // reason Section.isAvailable() exists rather than the value being absent.
+            RoleView role = roles.create(new NewRole("SECIT_ALL_SECTIONS", "Every section"));
+            for (Section section : Section.values()) {
+                roles.grant(role.id(), section, AccessLevel.VIEW);
+            }
+
+            assertThat(roles.require(role.id()).visibleSections())
+                    .containsExactlyInAnyOrder(Section.values());
+        }
+    }
+
 }

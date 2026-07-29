@@ -1,6 +1,7 @@
 package gr.novotrade.novocore.core.email;
 
 import gr.novotrade.novocore.core.api.attachment.AttachmentMetadata;
+import gr.novotrade.novocore.core.api.attachment.AttachmentOwnerType;
 import gr.novotrade.novocore.core.api.attachment.AttachmentService;
 import gr.novotrade.novocore.core.api.audit.AuditLogService;
 import gr.novotrade.novocore.core.api.email.EmailAttachment;
@@ -12,6 +13,7 @@ import gr.novotrade.novocore.core.api.email.EmailSender;
 import gr.novotrade.novocore.core.api.email.EmailStatus;
 import gr.novotrade.novocore.core.api.email.QueuedEmailView;
 import gr.novotrade.novocore.core.api.email.SentEmailAttachmentView;
+import gr.novotrade.novocore.core.api.security.RoleView;
 import gr.novotrade.novocore.core.api.settings.SettingKeys;
 import gr.novotrade.novocore.core.api.settings.SettingsService;
 import java.time.Clock;
@@ -130,15 +132,43 @@ class EmailSenderImpl implements EmailSender {
 
     @Override
     @Transactional(readOnly = true)
-    public EmailAttachmentContent downloadAttachment(long emailAttachmentId) {
+    public EmailAttachmentContent downloadAttachment(long emailAttachmentId, RoleView viewer) {
+        Objects.requireNonNull(viewer, "viewer");
+
+        QueuedEmailAttachment attachment = attachmentRepository.findById(emailAttachmentId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No email attachment with id " + emailAttachmentId));
+
+        requireAccessToTheSourceRecord(attachment, viewer);
+
         // One call, one id, either shape. The reference is followed here rather than by the
         // caller, which is what keeps "view what was sent" a single action from the sent-email
         // record — and what stops a file that moves from inline to stored later from changing
         // how anything reads it.
-        return attachmentRepository.findById(emailAttachmentId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "No email attachment with id " + emailAttachmentId))
-                .resolveContent(documents);
+        return attachment.resolveContent(documents);
+    }
+
+    /**
+     * Q44's access-path check, applied before any bytes are produced.
+     *
+     * <p>An email having been sent to someone does not change who may see the source document
+     * afterwards. So a <em>referenced</em> attachment is re-checked against the section governing
+     * the record it belongs to — the outbox's own section, which the caller already holds, is not
+     * enough on its own, or the outbox would be a second and weaker way in.
+     *
+     * <p>Two cases pass through without a record check, both correctly. An <em>inline</em>
+     * attachment has no core record behind it; the outbox section is all there is to check. And a
+     * referenced document that has since been <em>deleted</em> has no record either — there is
+     * nothing to check against and no bytes to leak, so {@code resolveContent} reports it
+     * unavailable, which is what the history should say.
+     */
+    private void requireAccessToTheSourceRecord(QueuedEmailAttachment attachment, RoleView viewer) {
+        Long documentId = attachment.storedAttachmentId();
+        if (documentId == null) {
+            return;
+        }
+        documents.findMetadata(documentId).ifPresent(metadata ->
+                AttachmentOwnerType.requireAccess(metadata.entityType(), viewer));
     }
 
     @Override

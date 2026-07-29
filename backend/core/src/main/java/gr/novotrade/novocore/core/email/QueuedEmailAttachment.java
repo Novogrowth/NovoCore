@@ -149,6 +149,18 @@ class QueuedEmailAttachment extends AuditableEntity {
                                 .formatted(attachmentId) + "still points at it"));
     }
 
+    /**
+     * The {@code AttachmentService} document this references, or null.
+     *
+     * <p>Null for an inline attachment, and also null once a referenced document has been deleted
+     * ({@code ON DELETE SET NULL}). Exists for Q44's access-path check, which has to know
+     * <em>which</em> core record to re-check the caller against before any bytes are produced —
+     * a question {@link #resolveContent} answers too late, because by then it has the bytes.
+     */
+    Long storedAttachmentId() {
+        return attachmentId;
+    }
+
     /** What the sent-email history shows — the same shape whether the bytes are here or not. */
     SentEmailAttachmentView toView() {
         return new SentEmailAttachmentView(
