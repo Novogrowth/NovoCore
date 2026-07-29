@@ -154,6 +154,19 @@ final class ApiClient {
             return send(path, HttpMethod.POST, jsonBody);
         }
 
+        /** Posts a {@code New*} record, serialised the way the server will read it. See {@link Json}. */
+        ResponseEntity<String> post(String path, Object body) {
+            return send(path, HttpMethod.POST, Json.write(body));
+        }
+
+        ResponseEntity<String> patchBody(String path, Object body) {
+            return send(path, HttpMethod.PATCH, Json.write(body));
+        }
+
+        ResponseEntity<String> putBody(String path, Object body) {
+            return send(path, HttpMethod.PUT, Json.write(body));
+        }
+
         ResponseEntity<String> patch(String path, String jsonBody) {
             return send(path, HttpMethod.PATCH, jsonBody);
         }
