@@ -67,7 +67,33 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends postgresql-client-17
-          pg_dump --version
+          # Installing 17 is NOT enough to make `pg_dump` mean 17, and assuming it was is what
+          # broke this build: the runner already ships PostgreSQL 16, and `/usr/bin/pg_dump` is
+          # postgresql-common's `pg_wrapper`, which picks a version from the local cluster rather
+          # than the newest one installed. So a green install step was followed by
+          # `pg_dump (PostgreSQL) 16.14`, and BackupIT — correctly — refused it.
+          #
+          # Name the versioned directory instead of relying on any resolution rule. PostgresTools
+          # invokes the bare names `pg_dump`/`pg_restore`/`psql`, so PATH is the thing that has to
+          # be right; $GITHUB_PATH prepends for every later step, this one included via the check
+          # below.
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      # A separate step because $GITHUB_PATH only takes effect on the *next* one — and separate is
+      # the right shape anyway: this is the assertion that the step above achieved what it claims.
+      # Failing here names the problem; failing in BackupIT names a symptom two minutes later.
+      - name: Confirm pg_dump, pg_restore and psql really are 17
+        run: |
+          echo "pg_dump resolves to: $(command -v pg_dump)"
+          which -a pg_dump pg_restore psql || true
+          for tool in pg_dump pg_restore psql; do
+            version="$("$tool" --version)"
+            echo "$version"
+            case "$version" in
+              *"(PostgreSQL) 17."*) ;;
+              *) echo "::error::$tool is not version 17 — got: $version"; exit 1 ;;
+            esac
+          done
 
       # GitHub-hosted runners provide a Docker daemon, so the Testcontainers tests run for
       # real here. That matters: the ledger invariants are PostgreSQL constraints, and a run
