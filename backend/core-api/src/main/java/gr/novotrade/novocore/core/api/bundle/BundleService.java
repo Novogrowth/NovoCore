@@ -94,7 +94,7 @@ public interface BundleService {
      */
     List<BundleComponentView> bundlesContaining(long componentProductId);
 
-    /** Every bundle, by SKU. */
+    /** Every bundle, by SKU. <strong>Unredacted</strong> — see the note below. */
     List<ProductView> allBundles();
 
     /**
@@ -102,8 +102,42 @@ public interface BundleService {
      *
      * <p>The same shape as {@code AssetService.withoutDepreciationRate()}: the failure is real, it is
      * knowable in advance, and the alternative to asking is discovering it at the till.
+     *
+     * <p><strong>Unredacted</strong> — see the note below.
      */
     List<ProductView> bundlesWithUnpricedComponents();
+
+    // ---------------------------------------------------------------------------------------
+    // Reading — redacted for a viewer
+    // ---------------------------------------------------------------------------------------
+
+    /**
+     * The two reads above return {@link ProductView}s, so they carry the three fields
+     * {@link gr.novotrade.novocore.core.api.security.ProtectedField} exists to withhold — the
+     * supplier, the supplier's SKU and the last purchase price. That makes them exactly as
+     * dangerous as {@code ProductService}'s plain reads, and they need the same treatment.
+     *
+     * <p><strong>Added in step 14c, closing an asymmetry rather than fixing a leak.</strong> The
+     * behaviour was already correct: the bundle controller called
+     * {@code ProductView.redactedFor(viewer)} itself. But that was a convention held in one place
+     * by hand, and this codebase has settled every comparable gap the same way — the architecture
+     * rule forbidding the web layer from reaching an unredacted product read was written against
+     * {@code ProductService} alone, so these two were outside it. Now they are inside it, and the
+     * guarantee is structural instead of remembered.
+     *
+     * <p>Same contract as {@code ProductService.allFor}: refused rather than returned empty when
+     * the role cannot view products at all, because "you may not see this" and "there are none" are
+     * different answers that an empty list cannot tell apart.
+     *
+     * @throws gr.novotrade.novocore.core.api.security.SectionAccessDeniedException if the role
+     *     cannot view products
+     */
+    List<ProductView> allBundlesFor(
+            gr.novotrade.novocore.core.api.security.RoleView viewer);
+
+    /** As {@link #bundlesWithUnpricedComponents()}, redacted for the viewer. */
+    List<ProductView> bundlesWithUnpricedComponentsFor(
+            gr.novotrade.novocore.core.api.security.RoleView viewer);
 
     // ---------------------------------------------------------------------------------------
     // Decomposing

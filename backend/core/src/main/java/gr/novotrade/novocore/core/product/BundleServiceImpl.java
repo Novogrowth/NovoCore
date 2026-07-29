@@ -10,6 +10,8 @@ import gr.novotrade.novocore.core.api.bundle.InvalidBundleException;
 import gr.novotrade.novocore.core.api.bundle.NewBundleComponent;
 import gr.novotrade.novocore.core.api.product.ProductNotFoundException;
 import gr.novotrade.novocore.core.api.product.ProductView;
+import gr.novotrade.novocore.core.api.security.RoleView;
+import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.ProportionalAllocation;
 import gr.novotrade.novocore.core.api.shared.Quantity;
@@ -203,6 +205,38 @@ class BundleServiceImpl implements BundleService {
                         .anyMatch(component -> component.getComponent().getSellingPrice() == null))
                 .map(BundleServiceImpl::toProductView)
                 .toList();
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Reading — redacted for a viewer
+    // ---------------------------------------------------------------------------------------
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductView> allBundlesFor(RoleView viewer) {
+        return redact(allBundles(), viewer);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductView> bundlesWithUnpricedComponentsFor(RoleView viewer) {
+        return redact(bundlesWithUnpricedComponents(), viewer);
+    }
+
+    /**
+     * The same two lines as {@code ProductServiceImpl.redact}, deliberately not shared with it.
+     *
+     * <p>Sharing would mean one of these slices reaching into the other's implementation, or a
+     * helper in {@code core-api} whose only job is to call a method that is already there.
+     * {@code ProductView.redactedFor} <em>is</em> the single implementation of the rule — this is
+     * two calls to it, not a second copy of it.
+     */
+    private static List<ProductView> redact(List<ProductView> bundles, RoleView viewer) {
+        Objects.requireNonNull(viewer, "viewer");
+        // Refused rather than returned empty. "You may not see products" and "there are no
+        // bundles" are different answers, and an empty list cannot express the difference.
+        viewer.requireView(Section.PRODUCTS);
+        return bundles.stream().map(bundle -> bundle.redactedFor(viewer)).toList();
     }
 
     // ---------------------------------------------------------------------------------------

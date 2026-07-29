@@ -28,14 +28,17 @@ import org.springframework.web.bind.annotation.RestController;
  * tag, its own invoice line — and the component list is an attribute of it rather than a separate
  * kind of record.
  *
- * <p>⚠️ <strong>{@code BundleService.allBundles()} and {@code bundlesWithUnpricedComponents()}
- * return unredacted {@code ProductView}s</strong>, unlike {@code ProductService}, which has a
- * {@code ...For} variant for every read. They are redacted here by calling
- * {@code ProductView.redactedFor} directly — the same single implementation the service variants
- * use, so the answer is identical — but the asymmetry is worth knowing about: the architecture rule
- * that stops a controller reaching an unredacted product read is written against
- * {@code ProductService} and does not cover these two. Giving {@code BundleService} its own
- * {@code For} variants would close that, and is a decision rather than an oversight to fix quietly.
+ * <p>Both list reads use {@code BundleService}'s {@code ...For(viewer)} variants, for the same
+ * reason the product routes use {@code ProductService}'s: a bundle <em>is</em> a
+ * {@code ProductView}, so these lists carry the supplier, the supplier's SKU and the last purchase
+ * price like any other.
+ *
+ * <p>Those variants were added in step 14c to close an asymmetry rather than a leak — this
+ * controller previously called {@code ProductView.redactedFor} itself, which was correct and was a
+ * convention held by hand in one place. The architecture rule forbidding the web layer from
+ * reaching an unredacted product read was written against {@code ProductService} alone, so these
+ * two sat outside it; now they are inside it, and the guarantee is structural rather than
+ * remembered.
  */
 @RestController
 @Requires(section = Section.PRODUCTS)
@@ -63,7 +66,7 @@ class BundleController {
 
     @GetMapping(path = "/api/bundles", produces = MediaType.APPLICATION_JSON_VALUE)
     ListResponse<ProductView> allBundles() {
-        return ListResponse.of(redacted(bundles.allBundles()));
+        return ListResponse.of(bundles.allBundlesFor(viewer()));
     }
 
     /**
@@ -76,7 +79,7 @@ class BundleController {
     @GetMapping(path = "/api/bundles/unpriced-components",
             produces = MediaType.APPLICATION_JSON_VALUE)
     ListResponse<ProductView> unpricedComponents() {
-        return ListResponse.of(redacted(bundles.bundlesWithUnpricedComponents()));
+        return ListResponse.of(bundles.bundlesWithUnpricedComponentsFor(viewer()));
     }
 
     /**
@@ -110,9 +113,8 @@ class BundleController {
         bundles.dissolve(id);
     }
 
-    private List<ProductView> redacted(List<ProductView> products) {
-        RoleView viewer = currentUser.require().role();
-        return products.stream().map(product -> product.redactedFor(viewer)).toList();
+    private RoleView viewer() {
+        return currentUser.require().role();
     }
 
     /** The complete component list. A partial list would be a merge, which {@code define} is not. */

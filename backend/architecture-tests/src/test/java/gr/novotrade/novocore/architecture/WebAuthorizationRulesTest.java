@@ -102,23 +102,48 @@ class WebAuthorizationRulesTest {
             "all", "active", "find", "require", "findBySku", "requireBySku", "findByEan",
             "bySupplier");
 
+    /**
+     * {@code BundleService}'s two reads that also return {@code ProductView}.
+     *
+     * <p>Covered by the same rule since step 14c. A bundle <em>is</em> a product, so these lists
+     * carry the same three restricted fields as any other product list — but the rule below was
+     * originally written against {@code ProductService} alone, which left them outside it. The
+     * behaviour was never wrong (the controller redacted them by hand); the guarantee was
+     * conventional rather than structural, which is the state this project has closed everywhere
+     * else it has appeared.
+     */
+    private static final Set<String> UNREDACTED_BUNDLE_READS = Set.of(
+            "allBundles", "bundlesWithUnpricedComponents");
+
     @Test
     @DisplayName("controllers read products through the redacting variants, never the plain ones")
     void controllersUseTheRedactingProductReads() {
-        ArchRule rule = noClasses()
-                .that().resideInAPackage(CORE_WEB)
-                .should(callAnyOf(
-                        "gr.novotrade.novocore.core.api.product.ProductService",
-                        UNREDACTED_PRODUCT_READS))
-                .because("step 5 recorded this as a named convention and said the first Products "
+        String because =
+                "step 5 recorded this as a named convention and said the first Products "
                         + "controller must be reviewed for it; step 14 is that controller, so the "
                         + "convention becomes a rule. Three fields are at stake — last purchase "
                         + "price, supplier and supplier SKU — and the role they are kept from, "
                         + "Remote/Order Staff, is the one most likely to be holding a scanner in "
                         + "front of these endpoints. Call the ...For(viewer) variant instead; "
-                        + "every plain read has one.");
+                        + "every plain read has one.";
 
-        rule.check(ImportedClasses.production());
+        ArchRule products = noClasses()
+                .that().resideInAPackage(CORE_WEB)
+                .should(callAnyOf(
+                        "gr.novotrade.novocore.core.api.product.ProductService",
+                        UNREDACTED_PRODUCT_READS))
+                .because(because);
+
+        ArchRule bundles = noClasses()
+                .that().resideInAPackage(CORE_WEB)
+                .should(callAnyOf(
+                        "gr.novotrade.novocore.core.api.bundle.BundleService",
+                        UNREDACTED_BUNDLE_READS))
+                .because(because + " A bundle is a product, so its lists carry the same fields — "
+                        + "allBundlesFor and bundlesWithUnpricedComponentsFor exist for this.");
+
+        products.check(ImportedClasses.production());
+        bundles.check(ImportedClasses.production());
     }
 
     // -------------------------------------------------------------------------------------------

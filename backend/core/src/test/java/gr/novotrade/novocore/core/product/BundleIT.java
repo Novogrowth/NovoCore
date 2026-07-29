@@ -22,6 +22,16 @@ import gr.novotrade.novocore.core.api.product.InvalidProductException;
 import gr.novotrade.novocore.core.api.product.NewProduct;
 import gr.novotrade.novocore.core.api.product.ProductService;
 import gr.novotrade.novocore.core.api.product.ProductView;
+import gr.novotrade.novocore.core.api.product.ProductType;
+import gr.novotrade.novocore.core.api.security.AccessLevel;
+import gr.novotrade.novocore.core.api.security.NewRole;
+import gr.novotrade.novocore.core.api.security.RoleService;
+import gr.novotrade.novocore.core.api.security.RoleView;
+import gr.novotrade.novocore.core.api.security.Section;
+import gr.novotrade.novocore.core.api.security.SectionAccessDeniedException;
+import gr.novotrade.novocore.core.api.supplier.NewSupplier;
+import gr.novotrade.novocore.core.api.supplier.SupplierService;
+import gr.novotrade.novocore.core.api.supplier.SupplierView;
 import gr.novotrade.novocore.core.api.product.UnitOfMeasureService;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
@@ -46,6 +56,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class BundleIT extends AbstractCoreIntegrationTest {
 
     private static final LocalDate MARCH = LocalDate.of(2026, 3, 10);
+
+    @Autowired
+    private RoleService roles;
+
+    @Autowired
+    private SupplierService suppliers;
 
     @Autowired
     private BundleService bundles;
@@ -596,4 +612,88 @@ class BundleIT extends AbstractCoreIntegrationTest {
                     .isEqualTo(Money.ofEur("90.00"));
         }
     }
+
+    @Nested
+    @DisplayName("redaction — a bundle is a product, so its lists carry the same restricted fields")
+    class Redaction {
+
+        @Test
+        @DisplayName("Remote/Order Staff sees no supplier on a bundle in allBundlesFor")
+        void allBundlesForRedacts() {
+            RoleView remoteStaff = roles.requireByName("REMOTE_ORDER_STAFF");
+            SupplierView supplier = suppliers.create(NewSupplier.domestic(
+                    "BundleIT — redaction supplier", "EL066777001"));
+            ProductView component = products.create(NewProduct.goods(
+                    "BUNDLEIT-REDACT-COMP", "Component", pieceId(), standardRateId(),
+                    Money.ofEur("10.00")));
+            ProductView bundle = products.create(new NewProduct(
+                    "BUNDLEIT-REDACT-01", null, "Redacted bundle", ProductType.GOODS,
+                    pieceId(), standardRateId(), Money.ofEur("18.00"),
+                    supplier.id(), "SUPPLIER-BUNDLE-CODE", false));
+            bundles.define(bundle.id(), List.of(NewBundleComponent.one(component.id())));
+
+            ProductView asStaffSees = bundles.allBundlesFor(remoteStaff).stream()
+                    .filter(view -> view.sku().equals("BUNDLEIT-REDACT-01"))
+                    .findFirst()
+                    .orElseThrow();
+
+            // The behaviour was already right when the controller redacted by hand. What changed in
+            // step 14c is where it lives: in the service, so the architecture rule can forbid the
+            // unredacted read from the web layer at all.
+            assertThat(asStaffSees.supplier()).isEmpty();
+            assertThat(asStaffSees.supplierSkuIfAny()).isEmpty();
+            assertThat(asStaffSees.isRedacted()).isTrue();
+            // What an order picker needs is untouched.
+            assertThat(asStaffSees.sellingPriceIfAny()).contains(Money.ofEur("18.00"));
+
+            // Unredacted for the core's own rules.
+            assertThat(bundles.allBundles().stream()
+                    .filter(view -> view.sku().equals("BUNDLEIT-REDACT-01"))
+                    .findFirst()
+                    .orElseThrow()
+                    .supplier())
+                    .contains(supplier.id());
+        }
+
+        @Test
+        @DisplayName("bundlesWithUnpricedComponentsFor redacts too")
+        void unpricedListRedacts() {
+            RoleView remoteStaff = roles.requireByName("REMOTE_ORDER_STAFF");
+            SupplierView supplier = suppliers.create(NewSupplier.domestic(
+                    "BundleIT — unpriced supplier", "EL066777002"));
+            ProductView unpriced = products.create(NewProduct.goods(
+                    "BUNDLEIT-REDACT-UNPRICED-COMP", "Unpriced component", pieceId(),
+                    standardRateId(), null));
+            ProductView bundle = products.create(new NewProduct(
+                    "BUNDLEIT-REDACT-02", null, "Bundle with unpriced part", ProductType.GOODS,
+                    pieceId(), standardRateId(), Money.ofEur("30.00"),
+                    supplier.id(), "SUPPLIER-UNPRICED-CODE", false));
+            bundles.define(bundle.id(), List.of(NewBundleComponent.one(unpriced.id())));
+
+            assertThat(bundles.bundlesWithUnpricedComponentsFor(remoteStaff))
+                    .filteredOn(view -> view.sku().equals("BUNDLEIT-REDACT-02"))
+                    .singleElement()
+                    .satisfies(view -> {
+                        assertThat(view.supplier()).isEmpty();
+                        assertThat(view.supplierSkuIfAny()).isEmpty();
+                    });
+        }
+
+        @Test
+        @DisplayName("a role that cannot view Products is refused, not given an empty list")
+        void aRoleWithoutProductsIsRefused() {
+            RoleView noProducts = roles.create(
+                    new NewRole("BUNDLEIT_NO_PRODUCTS", "Cannot see products"));
+            roles.grant(noProducts.id(), Section.CUSTOMERS, AccessLevel.FULL);
+            RoleView withoutProducts = roles.require(noProducts.id());
+
+            // "You may not see this" and "there are none" are different answers, and an empty list
+            // cannot express the difference — the same contract ProductService.allFor states.
+            assertThatExceptionOfType(SectionAccessDeniedException.class)
+                    .isThrownBy(() -> bundles.allBundlesFor(withoutProducts));
+            assertThatExceptionOfType(SectionAccessDeniedException.class)
+                    .isThrownBy(() -> bundles.bundlesWithUnpricedComponentsFor(withoutProducts));
+        }
+    }
+
 }
