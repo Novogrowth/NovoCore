@@ -2,6 +2,7 @@ package gr.novotrade.novocore.app;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import gr.novotrade.novocore.core.api.asset.NewAsset;
 import gr.novotrade.novocore.core.api.banking.NewBankTransfer;
 import gr.novotrade.novocore.core.api.bundle.NewBundleComponent;
 import gr.novotrade.novocore.core.api.customer.NewCustomer;
@@ -620,6 +621,134 @@ final class TradingQuarter {
     }
 
     // ===================================================================================
+    // Quarter end — the reads and corrections an operator actually makes
+    // ===================================================================================
+
+    /**
+     * Everything somebody looks at when the quarter closes. Reads only, and worth driving for two
+     * reasons: these are the screens step 16 has to build, and a listing that cannot answer is a
+     * defect whether or not any document depended on it.
+     */
+    void quarterEndReview() {
+        // What is still outstanding, both ways round.
+        Json.items(api.get("/api/open-items?partyType=CUSTOMER"), "all customer open items");
+        Json.items(api.get("/api/open-items?partyType=SUPPLIER"), "all supplier open items");
+        Json.items(api.get("/api/settlements/unallocated"), "settlements not fully applied");
+        Json.items(api.get("/api/customer-credits?open=true"), "open customer credits");
+
+        // The expected-to-clear accounts, which is what phase 8's Clearing Checks will read.
+        Json.items(api.get("/api/purchase-invoice-lines/awaiting-delivery"), "invoiced, undelivered");
+        Json.items(api.get("/api/goods-receipt-lines/awaiting-invoice"), "delivered, uninvoiced");
+        Json.items(api.get("/api/purchase-invoice-lines/awaiting-allocation"), "freight to allocate");
+        Json.ok(api.get("/api/purchase-invoice-lines/" + id("purchase-line:freight")
+                + "/unallocated-amount"), "what is left on the freight line");
+
+        // Variances and rounding — the two figures that mean somebody should look.
+        Json.ok(api.get("/api/purchase-invoices/variances?from=" + JANUARY_FIRST
+                + "&to=" + MARCH_LAST), "the purchase price variances");
+        Json.ok(api.get("/api/sales-invoices/rounding-differences?from=" + JANUARY_FIRST
+                + "&to=" + MARCH_LAST), "the accepted rounding differences");
+
+        // Stock, from both ends: the product-level figure an order picker needs, and the lots that
+        // say what it cost.
+        Json.ok(api.get("/api/products/" + id("product:beans") + "/stock"), "bean stock");
+        Json.items(api.get("/api/inventory/lots?productId=" + id("product:beans")), "the bean lots");
+        Json.ok(api.get("/api/inventory/lots/" + beanLotIds.getFirst()), "one bean lot");
+        Json.items(api.get("/api/inventory/lots/with-landed-cost"), "lots carrying landed cost");
+        Json.items(api.get("/api/inventory/units?productId=" + id("product:machine")), "the machines");
+        Json.items(api.get("/api/inventory/consumptions?from=" + JANUARY_FIRST + "&to=" + MARCH_LAST),
+                "every consumption in the quarter");
+        Json.items(api.get("/api/inventory/consumptions/with-shortfall"), "the oversold ones");
+        Json.items(api.get("/api/inventory/write-offs?from=" + JANUARY_FIRST + "&to=" + MARCH_LAST),
+                "the quarter's write-offs");
+        Json.ok(api.get("/api/inventory/write-offs/" + id("write-off:damage")), "one write-off");
+
+        // The documents themselves, by id and by filter.
+        Json.ok(api.get("/api/purchase-invoices/" + id("purchase:goods-first")), "one purchase");
+        Json.ok(api.get("/api/goods-receipts/" + id("receipt:goods-first")), "one receipt");
+        Json.items(api.get("/api/goods-receipts/by-lot/" + beanLotIds.getFirst()), "the lot's receipt");
+        Json.ok(api.get("/api/freight-allocations/" + id("freight:january")), "the allocation");
+        Json.items(api.get("/api/freight-allocations?from=" + JANUARY_FIRST + "&to=" + MARCH_LAST),
+                "the quarter's allocations");
+        Json.ok(api.get("/api/sales-invoices/" + id("sale:bundle")), "the bundle sale");
+        Json.ok(api.get("/api/credit-notes/" + id("credit-note:stock")), "one credit note");
+        Json.items(api.get("/api/credit-notes?salesInvoiceId=" + id("sale:wholesale-january")),
+                "credit notes against one invoice");
+        Json.ok(api.get("/api/settlements/" + id("settlement:roaster-part")), "one settlement");
+        Json.items(api.get("/api/settlements?partyType=SUPPLIER&partyId=" + id("supplier:roaster")),
+                "the roaster's settlements");
+        Json.ok(api.get("/api/bank-transfers/" + id("transfer:float")), "the transfer");
+        Json.items(api.get("/api/bank-transfers?from=" + JANUARY_FIRST + "&to=" + MARCH_LAST),
+                "the quarter's transfers");
+
+        // Master data, including the bundle views and the matching that is split by certainty.
+        Json.items(api.get("/api/products"), "every product");
+        Json.ok(api.get("/api/products/" + id("product:beans")), "one product");
+        Json.items(api.get("/api/bundles"), "the bundles");
+        Json.items(api.get("/api/bundles/unpriced-components"), "bundles that cannot be priced");
+        Json.items(api.get("/api/products/" + id("product:kit") + "/components"), "the kit's parts");
+        Json.items(api.get("/api/products/" + id("product:grinder") + "/in-bundles"),
+                "what the grinder is part of");
+        Json.items(api.get("/api/customers"), "every customer");
+        Json.ok(api.get("/api/customers/" + id("customer:cafe")), "one customer");
+        Json.ok(api.get("/api/customers/by-vat-number/EL999100002"), "a customer by VAT number");
+        Json.items(api.get("/api/customers/match-suggestions?name=TEST-CUSTOMER"),
+                "the near-duplicate customers");
+        Json.items(api.get("/api/suppliers"), "every supplier");
+        Json.ok(api.get("/api/suppliers/" + id("supplier:roaster")), "one supplier");
+        Json.ok(api.get("/api/suppliers/by-vat-number/EL999000001"), "a supplier by VAT number");
+        Json.items(api.get("/api/suppliers/match-suggestions?name=TEST-SUPPLIER"),
+                "the near-duplicate suppliers");
+        Json.items(api.get("/api/accounts"), "the accounts");
+        Json.items(api.get("/api/account-groups"), "the account groups");
+        Json.ok(api.get("/api/accounts/" + id("account:CASH")), "one account");
+        Json.ok(api.get("/api/vat-classes/" + id("vat:1410")), "one VAT class");
+    }
+
+    /**
+     * The corrections a quarter accumulates: a product renamed, a price changed, a customer's
+     * details put right, an asset recorded. All {@code PATCH} routes, which nothing else drives.
+     */
+    void quarterEndCorrections() {
+        long beans = id("product:beans");
+        Json.ok(api.patchBody("/api/products/" + beans + "/name",
+                new NameBody("House blend beans (250g)")), "renaming the beans");
+        Json.ok(api.patchBody("/api/products/" + beans + "/selling-price",
+                new SellingPriceBody(Money.ofEur("19.50"))), "repricing the beans");
+        Json.ok(api.patchBody("/api/products/" + beans + "/ean",
+                new EanBody("5201234567890")), "giving the beans an EAN");
+        Json.ok(api.patchBody("/api/products/" + beans + "/vat-class",
+                new VatClassBody(id("vat:1131"))), "restating the beans' VAT class");
+        // On the installation service, not the beans: a product with lots refuses this, and rightly
+        // — reinterpreting a recorded quantity in a different unit is a different quantity, not a
+        // correction. The narrative learned that from the API.
+        Json.ok(api.patchBody("/api/products/" + id("product:install") + "/unit-of-measure",
+                new UnitOfMeasureBody(id("uom:PIECE"))), "restating the unit of measure");
+        Json.ok(api.patchBody("/api/products/" + beans + "/supplier",
+                new SupplierBody(id("supplier:roaster"), "ROAST-BEANS-01")), "the supplier's code");
+
+        Json.ok(api.patchBody("/api/customers/" + id("customer:cafe") + "/name",
+                new NameBody("TEST-CUSTOMER-02 Cafe (renamed)")), "renaming the cafe");
+        Json.ok(api.patchBody("/api/customers/" + id("customer:cafe") + "/contact-details",
+                new ContactDetailsBody("cafe.new@test.invalid", "2100000009")), "new contact details");
+        Json.ok(api.patchBody("/api/suppliers/" + id("supplier:carrier") + "/contact-details",
+                new ContactDetailsBody("carrier@test.invalid", null)), "the carrier's details");
+
+        // An asset, which the quarter otherwise never touches. Its depreciation rate is deliberately
+        // left unset: the statutory rates are still pending from the accountant, and a guessed rate
+        // produces a charge in the accounts nobody chose.
+        long asset = Json.createdId(api.post("/api/assets", new NewAsset(
+                "TEST-ASSET-01", "TEST-ASSET-01 Roaster", JANUARY_FIRST, null, null)),
+                "the roaster asset");
+        handles.put("asset:roaster", asset);
+        Json.items(api.get("/api/assets"), "every asset");
+        Json.ok(api.get("/api/assets/" + asset), "one asset");
+        Json.ok(api.get("/api/assets/by-code/TEST-ASSET-01"), "an asset by code");
+        Json.items(api.get("/api/assets/without-depreciation-rate"), "assets awaiting a rate");
+        Json.items(api.get("/api/assets/depreciable"), "assets that can be depreciated");
+    }
+
+    // ===================================================================================
     // Helpers
     // ===================================================================================
 
@@ -668,5 +797,27 @@ final class TradingQuarter {
 
     /** Mirrors the reversal request the document controllers share. */
     record ReversalBody(LocalDate reversalDate, String reason) {
+    }
+
+    /** Mirrors the {@code NameRequest} several controllers declare. */
+    record NameBody(String name) {
+    }
+
+    record SellingPriceBody(Money sellingPrice) {
+    }
+
+    record EanBody(String ean) {
+    }
+
+    record VatClassBody(long vatClassId) {
+    }
+
+    record UnitOfMeasureBody(long unitOfMeasureId) {
+    }
+
+    record SupplierBody(Long supplierId, String supplierSku) {
+    }
+
+    record ContactDetailsBody(String email, String phone) {
     }
 }

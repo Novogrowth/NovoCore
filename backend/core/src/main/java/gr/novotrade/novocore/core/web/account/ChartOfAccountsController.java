@@ -9,6 +9,7 @@ import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.SubLedgerType;
+import gr.novotrade.novocore.core.web.InvalidRequestException;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.web.Requires;
 import java.util.List;
@@ -84,7 +85,7 @@ class ChartOfAccountsController {
                 + (subLedgerType == null ? 0 : 1)
                 + (Boolean.TRUE.equals(expectedToClear) ? 1 : 0);
         if (filters > 1) {
-            throw new IllegalArgumentException(
+            throw new InvalidRequestException(
                     "kind, subLedgerType and expectedToClear are alternative filters; name one.");
         }
 

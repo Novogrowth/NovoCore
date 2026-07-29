@@ -10,6 +10,7 @@ import gr.novotrade.novocore.core.api.security.CurrentUser;
 import gr.novotrade.novocore.core.api.security.RoleView;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.shared.Money;
+import gr.novotrade.novocore.core.web.InvalidRequestException;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.web.Requires;
 import java.util.List;
@@ -80,7 +81,7 @@ class ProductController {
         RoleView viewer = viewer();
         int lookups = (sku == null ? 0 : 1) + (ean == null ? 0 : 1) + (supplierId == null ? 0 : 1);
         if (lookups > 1) {
-            throw new IllegalArgumentException(
+            throw new InvalidRequestException(
                     "sku, ean and supplierId are alternative lookups; name one.");
         }
 

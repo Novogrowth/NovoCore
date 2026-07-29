@@ -11,6 +11,7 @@ import gr.novotrade.novocore.core.api.settlement.PartyType;
 import gr.novotrade.novocore.core.api.settlement.SettlementService;
 import gr.novotrade.novocore.core.api.settlement.SettlementView;
 import gr.novotrade.novocore.core.api.shared.Money;
+import gr.novotrade.novocore.core.web.InvalidRequestException;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.web.Requires;
 import java.time.LocalDate;
@@ -84,10 +85,10 @@ class SettlementController {
             return ListResponse.of(settlements.ofParty(partyType, partyId));
         }
         if (partyType != null || partyId != null) {
-            throw new IllegalArgumentException("partyType and partyId go together; name both.");
+            throw new InvalidRequestException("partyType and partyId go together; name both.");
         }
         if (from == null || to == null) {
-            throw new IllegalArgumentException(
+            throw new InvalidRequestException(
                     "a date range needs 'from' and 'to', or name a party instead");
         }
         return ListResponse.of(settlements.between(from, to));
@@ -215,7 +216,7 @@ class SettlementController {
         if (Boolean.TRUE.equals(open)) {
             return ListResponse.of(settlements.openCustomerCredits());
         }
-        throw new IllegalArgumentException("name a customerId, or ask for open=true");
+        throw new InvalidRequestException("name a customerId, or ask for open=true");
     }
 
     // -------------------------------------------------------------------------------------------

@@ -7,6 +7,7 @@ import gr.novotrade.novocore.core.api.purchasing.PurchaseInvoiceLineView;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.shared.Money;
+import gr.novotrade.novocore.core.web.InvalidRequestException;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.web.Requires;
 import gr.novotrade.novocore.core.web.ReversalCommand;
@@ -69,7 +70,7 @@ class FreightAllocationController {
             LocalDate to) {
 
         if (purchaseInvoiceLineId != null && lotId != null) {
-            throw new IllegalArgumentException(
+            throw new InvalidRequestException(
                     "purchaseInvoiceLineId and lotId are alternative lookups; name one.");
         }
         if (purchaseInvoiceLineId != null) {

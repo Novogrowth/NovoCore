@@ -9,6 +9,7 @@ import gr.novotrade.novocore.core.api.inventory.StockLocation;
 import gr.novotrade.novocore.core.api.inventory.StockWriteOffView;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
+import gr.novotrade.novocore.core.web.InvalidRequestException;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.web.Requires;
 import java.time.LocalDate;
@@ -87,7 +88,7 @@ class InventoryController {
             @RequestParam(required = false) Boolean open) {
 
         if (productId != null && location != null) {
-            throw new IllegalArgumentException(
+            throw new InvalidRequestException(
                     "productId and location are alternative lookups; name one.");
         }
         if (location != null) {
@@ -98,7 +99,7 @@ class InventoryController {
                     ? inventory.openLotsOf(productId)
                     : inventory.lotsOf(productId));
         }
-        throw new IllegalArgumentException("name a productId or a location");
+        throw new InvalidRequestException("name a productId or a location");
     }
 
     @GetMapping(path = "/api/inventory/lots/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -149,7 +150,7 @@ class InventoryController {
         int lookups = (productId == null ? 0 : 1) + (location == null ? 0 : 1)
                 + (serialNumber == null ? 0 : 1);
         if (lookups != 1) {
-            throw new IllegalArgumentException(
+            throw new InvalidRequestException(
                     "name exactly one of productId, location or serialNumber");
         }
         if (serialNumber != null) {
@@ -189,7 +190,7 @@ class InventoryController {
             return ListResponse.of(inventory.consumptionsOf(productId));
         }
         if (from == null || to == null) {
-            throw new IllegalArgumentException(
+            throw new InvalidRequestException(
                     "a date range needs 'from' and 'to', or name a productId instead");
         }
         return ListResponse.of(inventory.consumptionsBetween(from, to));
@@ -231,7 +232,7 @@ class InventoryController {
             return ListResponse.of(inventory.writeOffsOf(lotId));
         }
         if (from == null || to == null) {
-            throw new IllegalArgumentException(
+            throw new InvalidRequestException(
                     "a date range needs 'from' and 'to', or name a lotId instead");
         }
         return ListResponse.of(inventory.writeOffsBetween(from, to));

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import gr.novotrade.novocore.core.testsupport.LedgerInvariants;
 import gr.novotrade.novocore.core.testsupport.PostgresTestContainerConfiguration;
+import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
@@ -19,6 +20,8 @@ import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRe
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 /**
  * <strong>Step 15: a trading quarter driven only through HTTP, then every invariant swept.</strong>
@@ -91,6 +94,9 @@ class TradingQuarterOverHttpIT {
         quarter.marchTheReturnsComeBack();
         quarter.marchLosesSomeStock();
         quarter.marchClosesTheQuarter();
+
+        quarter.quarterEndReview();
+        quarter.quarterEndCorrections();
     }
 
     // ===================================================================================
@@ -123,6 +129,44 @@ class TradingQuarterOverHttpIT {
         assertThat(invariants.sourcesPosted())
                 .as("the narrative must exercise breadth, not produce many entries through one path")
                 .contains("PURCHASE_INVOICE", "GOODS_RECEIPT", "SALES_INVOICE", "FREIGHT_ALLOCATION");
+    }
+
+    @Test
+    @Order(20)
+    @DisplayName("a listing asked for the wrong way says how to ask, rather than \"Bad request.\"")
+    void parameterGuidanceReachesTheCaller() {
+        // Found by the quarter-end review, which was the first thing to call these listings the way
+        // a client would. Seventeen controller messages across nine controllers were being thrown
+        // away, because the controllers signalled a client mistake with the exception the handler
+        // treats as a programming error. A route whose only correct usage cannot be discovered from
+        // its own error is one a frontend gets written against by guesswork.
+        ApiClient.Session owner = new ApiClient(rest).logIn(OWNER_USERNAME, OWNER_PASSWORD);
+
+        record Case(String path, String mustSay) {
+        }
+        List<Case> cases = List.of(
+                new Case("/api/inventory/consumptions", "productId"),
+                new Case("/api/inventory/lots", "productId"),
+                new Case("/api/open-items", "partyType"),
+                new Case("/api/customer-credits", "customerId"),
+                new Case("/api/settlements", "name a party instead"),
+                new Case("/api/sales-invoices", "customerId"),
+                new Case("/api/credit-notes", "customerId"),
+                new Case("/api/purchase-invoices", "supplierId"),
+                new Case("/api/bank-transfers", "accountId"),
+                new Case("/api/goods-receipts", "supplierId"),
+                new Case("/api/freight-allocations", "from"));
+
+        for (Case listing : cases) {
+            ResponseEntity<String> response = owner.get(listing.path());
+            assertThat(response.getStatusCode())
+                    .as("%s with no parameters", listing.path())
+                    .isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(response.getBody())
+                    .as("%s must say how to ask, not just refuse", listing.path())
+                    .contains(listing.mustSay())
+                    .doesNotContain("\"detail\":\"Bad request.\"");
+        }
     }
 
     // ===================================================================================

@@ -2,6 +2,19 @@ spring:
   application:
     name: novocore
 
+  mvc:
+    problemdetails:
+      # Every error this API returns is an RFC 7807 ProblemDetail, including the ones Spring
+      # raises before a controller is reached. Without this, a missing required query parameter
+      # produced Boot's legacy body — {"timestamp","status","error","path"} — which names nothing
+      # at all and is a DIFFERENT SHAPE from every error WebExceptionHandler produces. A client
+      # cannot read errors uniformly if some of them have no `detail` field to read.
+      #
+      # Found by step 15: GET /api/open-items with no partyType answered 400 with a body
+      # containing no indication of what was missing. Turned on rather than hand-writing a
+      # handler per framework exception, because Spring already knows what it refused and why.
+      enabled: true
+
   datasource:
     # No default password. If NOVOCORE_DB_PASSWORD is unset the application refuses to
     # start, which is the intended behaviour — a default or empty credential would quietly

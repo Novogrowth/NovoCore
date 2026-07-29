@@ -8,6 +8,7 @@ import gr.novotrade.novocore.core.api.email.SentEmailAttachmentView;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.CurrentUser;
 import gr.novotrade.novocore.core.api.security.Section;
+import gr.novotrade.novocore.core.web.InvalidRequestException;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.web.Requires;
 import org.springframework.core.io.ByteArrayResource;
@@ -88,7 +89,7 @@ class EmailOutboxController {
             case PENDING -> email.pending(bounded);
             // SENT is not a filter the service offers, and inventing one here by listing everything
             // and discarding rows would be a query pretending to be a query.
-            default -> throw new IllegalArgumentException(
+            default -> throw new InvalidRequestException(
                     "status must be FAILED or PENDING; " + status + " is not a supported filter");
         });
     }

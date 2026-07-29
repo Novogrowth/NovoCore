@@ -62,6 +62,8 @@ import gr.novotrade.novocore.core.api.tax.VatClassNotFoundException;
 import gr.novotrade.novocore.core.api.tax.VatExemptionReasonNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -100,6 +102,19 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * to a 500 unnoticed, so {@code WebExceptionMappingTest} enumerates the exceptions in
  * {@code core-api} and fails the build if one is not handled here.
  */
+/*
+ * Ordered ahead of Boot's own ProblemDetailsExceptionHandler, which spring.mvc.problemdetails
+ * registers as a second advice over the same framework exceptions. Without this, Spring answers
+ * HttpMessageNotReadableException itself with a generic "Failed to read request", and step 14's most
+ * load-bearing message — the one telling a client that an amount must be a JSON string and not a
+ * number — is replaced by nothing useful. Step 15 caught it the moment problemdetails was turned on:
+ * the test asserting that the money rule reaches the caller went red immediately.
+ *
+ * Both advices are wanted, in this order: this one for the exceptions it names, Boot's for the rest
+ * of what Spring raises. Every error stays an RFC 7807 body either way, which is the point of having
+ * turned the property on.
+ */
+@Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice
 class WebExceptionHandler {
 
@@ -312,6 +327,21 @@ class WebExceptionHandler {
                 ? "Malformed request body."
                 : "Malformed request body: " + firstLine(cause.getMessage());
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
+    }
+
+    /**
+     * 400, <strong>carrying its message</strong>. The caller named a combination of query
+     * parameters the route cannot answer, and the message says which combinations it can.
+     *
+     * <p>The counterpart to the generic 400 below, and the distinction is the whole point of the
+     * two existing: this describes the <em>request</em>, which the caller already has, so echoing it
+     * discloses nothing while making the route usable. See {@link InvalidRequestException} for how
+     * seventeen such messages came to be discarded.
+     */
+    @ExceptionHandler(InvalidRequestException.class)
+    ProblemDetail invalidRequest(InvalidRequestException exception) {
+        log.info("Invalid request: {}", exception.getMessage());
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, message(exception));
     }
 
     /**
