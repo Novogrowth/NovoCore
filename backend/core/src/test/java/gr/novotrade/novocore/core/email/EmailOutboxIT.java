@@ -7,13 +7,18 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import com.icegreen.greenmail.util.GreenMail;
 import com.icegreen.greenmail.util.ServerSetup;
 import gr.novotrade.novocore.core.AbstractCoreIntegrationTest;
+import gr.novotrade.novocore.core.api.attachment.AttachmentMetadata;
+import gr.novotrade.novocore.core.api.attachment.AttachmentService;
 import gr.novotrade.novocore.core.api.audit.AuditEntry;
 import gr.novotrade.novocore.core.api.audit.AuditLogService;
 import gr.novotrade.novocore.core.api.email.EmailAttachment;
+import gr.novotrade.novocore.core.api.email.EmailAttachmentSource;
+import gr.novotrade.novocore.core.api.email.EmailAttachmentUnavailableException;
 import gr.novotrade.novocore.core.api.email.EmailMessage;
 import gr.novotrade.novocore.core.api.email.EmailSender;
 import gr.novotrade.novocore.core.api.email.EmailStatus;
 import gr.novotrade.novocore.core.api.email.QueuedEmailView;
+import gr.novotrade.novocore.core.api.email.SentEmailAttachmentView;
 import gr.novotrade.novocore.core.api.settings.SettingKeys;
 import gr.novotrade.novocore.core.api.settings.SettingsService;
 import jakarta.mail.Multipart;
@@ -64,6 +69,9 @@ class EmailOutboxIT extends AbstractCoreIntegrationTest {
 
     @Autowired
     private AuditLogService auditLog;
+
+    @Autowired
+    private AttachmentService attachments;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -331,6 +339,264 @@ class EmailOutboxIT extends AbstractCoreIntegrationTest {
         assertThat(auditLog.findForEntity("Email", String.valueOf(id), 10))
                 .extracting(AuditEntry::action)
                 .contains("email.sent");
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // Referenced attachments: stored once, read transparently, degraded gracefully
+    // -----------------------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("a referenced document is not copied into the outbox, and still arrives intact")
+    void referencedDocumentIsStoredOnce() throws Exception {
+        byte[] pdf = "%PDF-1.7 the invoice itself".getBytes(StandardCharsets.UTF_8);
+        AttachmentMetadata document = attachments.attach(
+                "PurchaseInvoice", "1001", "invoice-1001.pdf", "application/pdf", pdf);
+
+        long id = emailSender.send(EmailMessage.to(
+                "accountant@example.com", "Invoice 1001", "See attached.",
+                EmailAttachment.stored(document.id())));
+
+        // The point of the whole change. The bytes exist once, in the table that owns them.
+        assertThat(outboxAttachmentBytes(id))
+                .as("a referenced document must not be copied into the outbox")
+                .isNull();
+        assertThat(outboxAttachmentColumn(id, "attachment_id", Long.class))
+                .isEqualTo(document.id());
+        assertThat(outboxAttachmentColumn(id, "content_source", String.class))
+                .isEqualTo("ATTACHMENT");
+
+        // And SMTP transmits real bytes regardless of how we chose to store our own copy.
+        assertThat(dispatcher.dispatchDue()).isEqualTo(1);
+        assertThat(greenMail.waitForIncomingEmail(5000, 1)).isTrue();
+
+        Multipart multipart = (Multipart) greenMail.getReceivedMessages()[0].getContent();
+        var attachmentPart = multipart.getBodyPart(1);
+        assertThat(attachmentPart.getFileName()).isEqualTo("invoice-1001.pdf");
+
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        attachmentPart.getInputStream().transferTo(bytes);
+        assertThat(bytes.toByteArray())
+                .as("the recipient's mail is unaffected by how NovoCore stores its own copy")
+                .isEqualTo(pdf);
+    }
+
+    @Test
+    @DisplayName("viewing a sent attachment is one call, and looks the same for both shapes")
+    void readingAnAttachmentIsOneCallForEitherShape() {
+        byte[] stored = "%PDF-1.7 stored".getBytes(StandardCharsets.UTF_8);
+        byte[] generated = "%PDF-1.7 generated".getBytes(StandardCharsets.UTF_8);
+        AttachmentMetadata document = attachments.attach(
+                "SalesInvoice", "77", "sales-77.pdf", "application/pdf", stored);
+
+        long id = emailSender.send(EmailMessage.builder(
+                        "customer@example.com", "Your invoice", "Both attached.")
+                .attach(EmailAttachment.stored(document.id()),
+                        EmailAttachment.pdf("summary.pdf", generated))
+                .build());
+
+        List<SentEmailAttachmentView> views = emailSender.attachmentsOf(id);
+        assertThat(views).hasSize(2);
+
+        // Requirement: no separate lookup, and nothing the reader has to know about where the
+        // file lives. Both entries answer the same questions and take the same id.
+        assertThat(views).allSatisfy(view -> {
+            assertThat(view.available()).isTrue();
+            assertThat(view.unavailableReasonIfAny()).isEmpty();
+            assertThat(view.sizeBytes()).isPositive();
+            assertThat(emailSender.downloadAttachment(view.id()).content()).isNotEmpty();
+        });
+
+        SentEmailAttachmentView referenced = views.getFirst();
+        assertThat(referenced.source()).isEqualTo(EmailAttachmentSource.ATTACHMENT);
+        assertThat(referenced.filename()).isEqualTo("sales-77.pdf");
+        assertThat(referenced.storedAttachmentIdIfAny()).contains(document.id());
+        assertThat(emailSender.downloadAttachment(referenced.id()).content()).isEqualTo(stored);
+
+        SentEmailAttachmentView inline = views.getLast();
+        assertThat(inline.source()).isEqualTo(EmailAttachmentSource.INLINE);
+        assertThat(inline.filename()).isEqualTo("summary.pdf");
+        assertThat(inline.storedAttachmentIdIfAny()).isEmpty();
+        assertThat(emailSender.downloadAttachment(inline.id()).content()).isEqualTo(generated);
+    }
+
+    @Test
+    @DisplayName("deleting the document leaves the history naming the file, not broken")
+    void deletedDocumentDegradesGracefully() {
+        AttachmentMetadata document = attachments.attach("PurchaseInvoice", "1002", "po-1002.pdf",
+                "application/pdf", "%PDF-1.7 order".getBytes(StandardCharsets.UTF_8));
+
+        long id = emailSender.send(EmailMessage.to(
+                "supplier@example.com", "Purchase Order 1002", "See attached.",
+                EmailAttachment.stored(document.id())));
+        assertThat(dispatcher.dispatchDue()).isEqualTo(1);
+
+        // Deleting a document an old email mentions must be allowed. The alternative is that
+        // every message ever sent pins its attachments forever.
+        assertThat(attachments.delete(document.id())).isTrue();
+
+        SentEmailAttachmentView view = emailSender.attachmentsOf(id).getFirst();
+        assertThat(view.available()).isFalse();
+        assertThat(view.unavailableReasonIfAny())
+                .hasValueSatisfying(reason -> assertThat(reason).contains("deleted"));
+        // Still a complete record of what went out, which is what the history is for.
+        assertThat(view.filename()).isEqualTo("po-1002.pdf");
+        assertThat(view.sizeBytes()).isPositive();
+        assertThat(view.source()).isEqualTo(EmailAttachmentSource.ATTACHMENT);
+        assertThat(view.storedAttachmentIdIfAny())
+                .as("the foreign key nulls the reference, so availability needs no extra query")
+                .isEmpty();
+
+        // The message itself is untouched — it really was sent, with that file on it.
+        assertThat(emailSender.find(id).orElseThrow().status()).isEqualTo(EmailStatus.SENT);
+        assertThat(emailSender.find(id).orElseThrow().attachmentCount()).isEqualTo(1);
+
+        // Asking for the bytes anyway is distinguishable from asking for an id that never existed.
+        assertThatExceptionOfType(EmailAttachmentUnavailableException.class)
+                .isThrownBy(() -> emailSender.downloadAttachment(view.id()))
+                .withMessageContaining("po-1002.pdf");
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> emailSender.downloadAttachment(-1L));
+    }
+
+    @Test
+    @DisplayName("a pruned inline copy reaches the same state, and says so differently")
+    void prunedInlineCopyDegradesGracefully() {
+        // Nothing prunes anything today — the retention policy is Q43's number to set. What is
+        // asserted here is that the state a prune would leave behind is already a state the
+        // history renders gracefully, so enabling it later is an UPDATE and not a schema change.
+        long id = emailSender.send(EmailMessage.to("customer@example.com", "Report", "Attached.",
+                EmailAttachment.pdf("report.pdf", "%PDF-1.7 report".getBytes(StandardCharsets.UTF_8))));
+        assertThat(dispatcher.dispatchDue()).isEqualTo(1);
+
+        jdbc.update("""
+                UPDATE email_outbox_attachment SET content = NULL
+                 WHERE email_outbox_id = ? AND content_source = 'INLINE'
+                """, id);
+
+        SentEmailAttachmentView view = emailSender.attachmentsOf(id).getFirst();
+        assertThat(view.available()).isFalse();
+        assertThat(view.filename()).isEqualTo("report.pdf");
+        assertThat(view.sizeBytes()).isPositive();
+        assertThat(view.unavailableReasonIfAny())
+                .as("the same outcome as a deleted document, reached another way — and the "
+                        + "history must be able to say which")
+                .hasValueSatisfying(reason -> assertThat(reason).contains("retention"));
+    }
+
+    @Test
+    @DisplayName("an attachment id that names nothing is refused when the message is queued")
+    void unknownDocumentIsRefusedAtQueueTime() {
+        // In the caller's own transaction, so the operation that made the mistake fails, rather
+        // than a stuck outbox row surfacing hours later.
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> emailSender.send(EmailMessage.to(
+                        "customer@example.com", "Invoice", "See attached.",
+                        EmailAttachment.stored(999_999L))))
+                .withMessageContaining("999999");
+    }
+
+    @Test
+    @DisplayName("a document deleted before the message goes out fails it visibly, alone")
+    void documentDeletedBeforeSendingFailsTheMessage() {
+        AttachmentMetadata document = attachments.attach("PurchaseInvoice", "1003", "po-1003.pdf",
+                "application/pdf", "%PDF-1.7 order".getBytes(StandardCharsets.UTF_8));
+
+        long doomed = emailSender.send(EmailMessage.to(
+                "supplier@example.com", "Purchase Order 1003", "See attached.",
+                EmailAttachment.stored(document.id())));
+        attachments.delete(document.id());
+
+        long healthy = emailSender.send(
+                EmailMessage.to("customer@example.com", "Perfectly fine", "body"));
+
+        assertThat(dispatcher.dispatchDue())
+                .as("the healthy message in the same batch must still go out")
+                .isEqualTo(1);
+        assertThat(emailSender.find(healthy).orElseThrow().status()).isEqualTo(EmailStatus.SENT);
+
+        // Never sent with the attachment quietly missing: that is the one failure a recipient
+        // could not possibly detect, so it fails loudly instead (CLAUDE.md rule 8).
+        QueuedEmailView failed = emailSender.find(doomed).orElseThrow();
+        assertThat(failed.status()).isEqualTo(EmailStatus.FAILED);
+        assertThat(failed.lastErrorIfAny())
+                .hasValueSatisfying(error -> assertThat(error).contains("po-1003.pdf"));
+    }
+
+    @Test
+    @DisplayName("the attachment-source CHECK lists exactly the values EmailAttachmentSource has")
+    void attachmentSourceCheckMatchesTheEnum() {
+        String definition = jdbc.queryForObject("""
+                SELECT pg_get_constraintdef(oid)
+                  FROM pg_constraint
+                 WHERE conname = 'email_attachment_source_known'
+                """, String.class);
+
+        assertThat(definition).isNotNull();
+        for (EmailAttachmentSource source : EmailAttachmentSource.values()) {
+            assertThat(definition).contains("'" + source.name() + "'");
+        }
+        assertThat(definition.split("'::character varying").length - 1)
+                .as("the CHECK must not permit a source Java does not have")
+                .isEqualTo(EmailAttachmentSource.values().length);
+    }
+
+    @Test
+    @DisplayName("the database refuses an attachment that is both shapes at once")
+    void databaseRefusesMixedShapes() {
+        long emailId = emailSender.send(EmailMessage.to("customer@example.com", "Subject", "body"));
+        AttachmentMetadata document = attachments.attach("PurchaseInvoice", "1004", "raw.pdf",
+                "application/pdf", "%PDF-1.7".getBytes(StandardCharsets.UTF_8));
+
+        // Each of these violates exactly ONE constraint. Written the obvious way, several of them
+        // break two at once — and PostgreSQL does not promise which it reports, so a test
+        // asserting on the name would pass or fail depending on constraint evaluation order.
+
+        // A reference that also carries a copy: the shape that defeats the point of referencing.
+        assertThatExceptionOfType(DataIntegrityViolationException.class)
+                .isThrownBy(() -> insertRawAttachment(emailId, "ATTACHMENT", document.id(),
+                        document.checksumSha256(), true, 91))
+                .withMessageContaining("email_attachment_bytes_only_when_inline");
+
+        // An inline row pointing at a document, which would leave one file with two owners.
+        assertThatExceptionOfType(DataIntegrityViolationException.class)
+                .isThrownBy(() -> insertRawAttachment(emailId, "INLINE", document.id(),
+                        null, true, 92))
+                .withMessageContaining("email_attachment_reference_only_when_referenced");
+
+        // A reference that cannot say which file it was, so the deleted case becomes unanswerable.
+        assertThatExceptionOfType(DataIntegrityViolationException.class)
+                .isThrownBy(() -> insertRawAttachment(emailId, "ATTACHMENT", document.id(),
+                        null, false, 93))
+                .withMessageContaining("email_attachment_reference_states_its_checksum");
+
+        // And the well-formed reference goes in, so the three above fail for the stated reason
+        // rather than because the whole shape of the statement is wrong.
+        insertRawAttachment(emailId, "ATTACHMENT", document.id(), document.checksumSha256(),
+                false, 94);
+    }
+
+    /** A row written straight to the table, to prove the CHECKs and not only the Java. */
+    private void insertRawAttachment(long emailId, String source, Long attachmentId,
+            String checksum, boolean withContent, int order) {
+        jdbc.update("""
+                INSERT INTO email_outbox_attachment
+                    (email_outbox_id, content_source, attachment_id, filename, content_type,
+                     size_bytes, checksum_sha256, content, attachment_order)
+                VALUES (?, ?, ?, 'raw.pdf', 'application/pdf', 10, ?, %s, ?)
+                """.formatted(withContent ? "'\\x0102'::bytea" : "NULL"),
+                emailId, source, attachmentId, checksum, order);
+    }
+
+    private byte[] outboxAttachmentBytes(long emailId) {
+        return jdbc.queryForObject(
+                "SELECT content FROM email_outbox_attachment WHERE email_outbox_id = ?",
+                byte[].class, emailId);
+    }
+
+    private <T> T outboxAttachmentColumn(long emailId, String column, Class<T> type) {
+        return jdbc.queryForObject(
+                "SELECT " + column + " FROM email_outbox_attachment WHERE email_outbox_id = ?",
+                type, emailId);
     }
 
     // -----------------------------------------------------------------------------------------

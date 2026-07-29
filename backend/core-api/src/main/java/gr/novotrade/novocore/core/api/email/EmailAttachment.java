@@ -3,43 +3,149 @@ package gr.novotrade.novocore.core.api.email;
 import java.util.Objects;
 
 /**
- * A file to attach to an outgoing message.
+ * A file to attach to an outgoing message, in one of two shapes.
  *
- * <p>Deliberately not {@code AttachmentMetadata} plus an id. A module sending a Purchase Order
- * PDF has just generated the bytes and has no reason to store them against a core record first,
- * and a report emailed monthly is not a document anyone wants a permanent copy of on the
- * invoice. Where a caller <em>does</em> want to send something already stored, it reads it back
- * through {@code AttachmentService.download} and wraps it here — one line, and it keeps the two
- * shared services independent of each other.
+ * <h2>Referenced, when the file is already a stored document</h2>
  *
- * <p>The array is not copied, matching {@code AttachmentContent}. Treat {@link #content} as
- * read-only.
+ * <p>{@link #stored(long)} names an {@code AttachmentService} record and carries no bytes. The
+ * outbox keeps the reference plus enough of the document's identity — filename, content type,
+ * size and checksum, snapshotted at queue time — to describe what was sent; the bytes stay in the
+ * one place that owns them. Emailing an invoice PDF that is also attached to the invoice
+ * therefore stores that file once, not twice, and a year of sent-email history costs rows rather
+ * than megabytes.
+ *
+ * <p>This is the same principle as {@link EmailSender} itself: one door, no duplicate
+ * implementations. A stored document has an owner already, and the outbox is not it.
+ *
+ * <h2>Inline, when the file exists nowhere else</h2>
+ *
+ * <p>{@link #pdf} and {@link #of} carry bytes. A Purchase Order PDF generated at approval time,
+ * or a monthly report, is not a document anyone wants a permanent copy of on a core record —
+ * there is nothing to reference, and forcing one into the attachment table would move those bytes
+ * rather than save them, while filling a table of "documents on core records" with things that
+ * are neither.
+ *
+ * <p>Stored inline rather than regenerated at send time, deliberately: a Purchase Order PDF is
+ * generated from data that can change between the order being approved and the mail going out,
+ * and a retry three minutes later must send the document that was approved, not a fresh rendering
+ * of whatever the order looks like now.
+ *
+ * <p>Inline bytes are consequently the only part of the outbox that grows without bound, which is
+ * what makes a retention policy for them a separate question from how long outbox <em>rows</em>
+ * are kept. See {@code SentEmailAttachmentView} for the state a pruned copy leaves behind.
+ *
+ * <h2>Exactly one shape</h2>
+ *
+ * <p>Enforced in the constructor and, for anything writing to the table directly, by CHECK
+ * constraints — the same arrangement as a journal line carrying a VAT class or an exemption
+ * reason but never both and never neither.
+ *
+ * <p>The array is not copied, matching {@code AttachmentContent}. Treat the content as read-only.
  */
-public record EmailAttachment(String filename, String contentType, byte[] content) {
+public record EmailAttachment(Long attachmentId, String filename, String contentType,
+        byte[] content) {
 
     /** What an attachment with no stated type is sent as. */
     public static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
     public EmailAttachment {
-        Objects.requireNonNull(content, "content");
-        filename = sanitiseFilename(filename);
-        contentType = contentType == null || contentType.isBlank()
-                ? DEFAULT_CONTENT_TYPE
-                : contentType.trim();
+        if (attachmentId != null) {
+            if (attachmentId <= 0) {
+                throw new IllegalArgumentException(
+                        "An attachment id must be positive, not " + attachmentId);
+            }
+            if (filename != null || contentType != null || content != null) {
+                // The shape that would defeat the point: a reference that also carries a copy.
+                throw new IllegalArgumentException(
+                        "A stored attachment references document %d and must not also carry its "
+                                .formatted(attachmentId)
+                                + "own filename, content type or bytes — those are read from the "
+                                + "document itself, so a second copy here could disagree with it.");
+            }
+        } else {
+            Objects.requireNonNull(content,
+                    "An attachment must either reference a stored document or carry its content");
+            filename = sanitiseFilename(filename);
+            contentType = contentType == null || contentType.isBlank()
+                    ? DEFAULT_CONTENT_TYPE
+                    : contentType.trim();
 
-        if (content.length == 0) {
-            // Same stance as AttachmentService: an empty file is a failed generation, not an
-            // intent. Attaching it produces a mail whose recipient opens nothing and has no way
-            // to tell that anything went wrong.
-            throw new IllegalArgumentException(
-                    "Attachment '%s' is empty. An empty attachment is a failed generation, not a "
-                            .formatted(filename) + "document.");
+            if (content.length == 0) {
+                // Same stance as AttachmentService: an empty file is a failed generation, not an
+                // intent. Attaching it produces a mail whose recipient opens nothing and has no
+                // way to tell that anything went wrong.
+                throw new IllegalArgumentException(
+                        "Attachment '%s' is empty. An empty attachment is a failed generation, not a "
+                                .formatted(filename) + "document.");
+            }
         }
     }
 
-    /** An attachment named and typed as a PDF, which is what most callers here are sending. */
+    /**
+     * Attaches a document already held by {@code AttachmentService}, by its id.
+     *
+     * <p>The reference is checked when the message is queued, not when it is sent: an id that
+     * names nothing is a mistake in the calling code, and refusing it there fails the operation
+     * that made it rather than surfacing hours later as an outbox row nobody is watching.
+     *
+     * <p>If the document is deleted <em>after</em> queueing but before the message goes out, the
+     * message fails visibly and says so — a mail is never sent with an attachment silently
+     * missing. Once it has been sent, deleting the document leaves the history entry naming the
+     * file and reporting it as no longer available.
+     */
+    public static EmailAttachment stored(long attachmentId) {
+        return new EmailAttachment(attachmentId, null, null, null);
+    }
+
+    /** A file that exists only for this message, with its bytes. */
+    public static EmailAttachment of(String filename, String contentType, byte[] content) {
+        return new EmailAttachment(null, filename, contentType, content);
+    }
+
+    /** An inline attachment named and typed as a PDF, which is what most callers here are sending. */
     public static EmailAttachment pdf(String filename, byte[] content) {
-        return new EmailAttachment(filename, "application/pdf", content);
+        return of(filename, "application/pdf", content);
+    }
+
+    /** True when this names a stored document rather than carrying its own bytes. */
+    public boolean isStored() {
+        return attachmentId != null;
+    }
+
+    /**
+     * The stored document's id.
+     *
+     * @throws IllegalStateException if this attachment carries its own bytes instead
+     */
+    public long storedAttachmentId() {
+        if (attachmentId == null) {
+            throw new IllegalStateException(
+                    "'%s' carries its own bytes and references no stored document"
+                            .formatted(filename));
+        }
+        return attachmentId;
+    }
+
+    /**
+     * The bytes to transmit.
+     *
+     * <p>Throws rather than returning null on a stored attachment, because the alternative is a
+     * {@code NullPointerException} several frames away from the mistake. Nothing outside this
+     * service needs to resolve a reference by hand: the dispatcher does it at send time and
+     * {@code EmailSender.downloadAttachment} does it for the sent-email history, so both shapes
+     * behave identically at the point of use.
+     *
+     * @throws IllegalStateException if this attachment references a stored document
+     */
+    @Override
+    public byte[] content() {
+        if (attachmentId != null) {
+            throw new IllegalStateException(
+                    ("This attachment references stored document %d and holds no bytes of its "
+                            + "own. Read it through EmailSender.downloadAttachment, which resolves "
+                            + "both shapes the same way.").formatted(attachmentId));
+        }
+        return content;
     }
 
     /**

@@ -26,6 +26,19 @@ import java.util.Optional;
  * sends no PDF, with no compensating logic anywhere — which is the whole reason the outbox is a
  * table rather than an in-memory queue.
  *
+ * <h2>An attachment that is already a stored document is referenced, not copied</h2>
+ *
+ * <p>{@link EmailAttachment#stored(long)} names an {@code AttachmentService} record; the outbox
+ * keeps the reference and the document's identity, never a second copy of its bytes. So emailing
+ * an invoice PDF that is also attached to the invoice stores that file once. Files that exist
+ * nowhere else — a generated Purchase Order, a report — are still carried inline, because there
+ * is nothing for them to reference.
+ *
+ * <p>The distinction is invisible at the point of use. {@link #attachmentsOf} and
+ * {@link #downloadAttachment} behave identically for both shapes, so reading a sent message's
+ * attachment is one call against the outbox attachment's own id, with no separate lookup and no
+ * need to know where the file is kept.
+ *
  * <h2>The sender identity is not the caller's to choose</h2>
  *
  * <p>{@link EmailMessage} has no From and no Reply-To. Both are configuration: every message
@@ -47,12 +60,65 @@ public interface EmailSender {
      *
      * @return the outbox id, so a caller that wants to can check on it later
      * @throws IllegalArgumentException if the message is malformed — validated by
-     *     {@link EmailMessage} itself, so this happens at construction rather than here
+     *     {@link EmailMessage} itself, so this happens at construction rather than here — or if a
+     *     {@link EmailAttachment#stored(long)} attachment names a document that does not exist.
+     *     Checked here, in the caller's own transaction, because an id naming nothing is a
+     *     mistake in the calling code and refusing it now fails the operation that made it.
      */
     long send(EmailMessage message);
 
     /** One outbox entry, whatever state it is in. */
     Optional<QueuedEmailView> find(long queuedEmailId);
+
+    /**
+     * The attachments on one message, in the order they were sent.
+     *
+     * <p>The same answer for a referenced document and an inline file: name, type, size, and
+     * whether the bytes can still be produced. An entry whose file has since been deleted or
+     * pruned reports {@code available() == false} with a reason, rather than disappearing from
+     * the list or failing the call — the message really did go out with that file on it, and the
+     * history should keep saying so.
+     *
+     * @throws IllegalArgumentException if no such message exists. An empty list means the message
+     *     had no attachments, which is a different fact.
+     */
+    List<SentEmailAttachmentView> attachmentsOf(long queuedEmailId);
+
+    /**
+     * Opens one attachment from a sent message, by the id {@link #attachmentsOf} gives.
+     *
+     * <p>One call, for either shape — a referenced document is resolved through
+     * {@code AttachmentService} here rather than by the caller. Viewing what was sent is
+     * therefore a single action from the sent-email record, and stays one if a file that is
+     * inline today becomes a stored document tomorrow.
+     *
+     * <h2>⚠️ Whoever wires this to HTTP must add the permission check first</h2>
+     *
+     * <p><strong>Decided, not yet built</strong> (Q44, ADR 0012), because there is no route to the
+     * outbox at all today and a permission guarding nothing is a half-built feature. It is written
+     * here so it is a requirement being implemented rather than a gap being discovered:
+     *
+     * <p>For a <em>referenced</em> attachment this must re-check the caller's permission against
+     * the core record the document belongs to — {@code RoleView.requireView(Section...)} and
+     * {@code RoleView.canSee(ProtectedField)}, the primitives
+     * {@code ProductView.redactedFor(RoleView)} already composes. <strong>An email having been
+     * sent to someone does not change who may see the source document afterward</strong>, and the
+     * outbox must not become a second, weaker access path to restricted data: without the check, a
+     * role that cannot open a purchase invoice could read its PDF out of the email that sent it.
+     *
+     * <p>The obligation is a direct consequence of referencing. While the outbox held its own copy
+     * of the bytes, the attachment was arguably the message's own business; now it is a pointer
+     * into a document with its own visibility rules. An <em>inline</em> attachment has no core
+     * record behind it and so no record-level permission to consult — it is governed by whatever
+     * {@code Section} the outbox itself is eventually given.
+     *
+     * @throws IllegalArgumentException if no such attachment exists
+     * @throws EmailAttachmentUnavailableException if it exists but its bytes are gone — the
+     *     referenced document was deleted, or an inline copy was pruned. Deliberately not the
+     *     same exception as an unknown id, and deliberately not an empty {@link Optional}: those
+     *     would make a mistyped id and a deleted document indistinguishable.
+     */
+    EmailAttachmentContent downloadAttachment(long emailAttachmentId);
 
     /**
      * Messages that have given up, newest first — the list somebody actually has to look at.

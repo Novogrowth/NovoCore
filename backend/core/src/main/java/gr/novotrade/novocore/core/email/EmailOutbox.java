@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.email;
 
+import gr.novotrade.novocore.core.api.attachment.AttachmentService;
 import gr.novotrade.novocore.core.api.audit.AuditLogService;
 import gr.novotrade.novocore.core.api.email.EmailAttachment;
 import gr.novotrade.novocore.core.api.email.EmailMessage;
@@ -37,10 +38,13 @@ class EmailOutbox {
 
     private final QueuedEmailRepository repository;
     private final AuditLogService auditLog;
+    private final AttachmentService documents;
 
-    EmailOutbox(QueuedEmailRepository repository, AuditLogService auditLog) {
+    EmailOutbox(QueuedEmailRepository repository, AuditLogService auditLog,
+            AttachmentService documents) {
         this.repository = repository;
         this.auditLog = auditLog;
+        this.documents = documents;
     }
 
     /**
@@ -77,6 +81,11 @@ class EmailOutbox {
             // version guarded only toMessage(), which covered the reproduction and a useful
             // family around it — every validation failure in rebuilding the message — but left
             // the claim's own bookkeeping outside, where a throw would still take the batch down.
+            //
+            // Since attachments may now be references, this guard also covers a document deleted
+            // between queueing and sending. That message is genuinely unsendable — the file it
+            // was meant to carry does not exist — so failing it permanently and naming the file
+            // is the right outcome, and it must not take the rest of the batch with it either.
             try {
                 claimed.add(claim(message, now, sentFrom, replyTo, retryPolicy));
             } catch (RuntimeException e) {
@@ -178,12 +187,27 @@ class EmailOutbox {
         return repository.countByStatus(EmailStatus.PENDING);
     }
 
-    private static EmailMessage toMessage(QueuedEmail queued) {
-        List<EmailAttachment> attachments = queued.getAttachments().stream()
-                .map(attachment -> new EmailAttachment(
-                        attachment.getFilename(),
-                        attachment.getContentType(),
-                        attachment.getContent()))
+    /**
+     * Rebuilds a stored row into the message to transmit, with every attachment resolved to real
+     * bytes — read from this row for an inline file, and from {@code AttachmentService} for a
+     * referenced document.
+     *
+     * <p>The dispatcher therefore never sees the distinction: what it composes is always a
+     * message carrying content, and how NovoCore chose to store its own copy is settled before
+     * SMTP is involved. That is also why referencing costs the recipient nothing — the file on
+     * the mail is the file, either way.
+     *
+     * <p>Resolving here rather than at queue time is deliberate. Following the reference as late
+     * as possible keeps a single copy of the bytes right up to the moment they are transmitted;
+     * a document deleted in between makes this throw, which the caller turns into a visibly
+     * failed message rather than a mail sent with a missing attachment.
+     */
+    private EmailMessage toMessage(QueuedEmail queued) {
+        List<EmailAttachment> attachments = queued.resolveAttachments(documents).stream()
+                .map(resolved -> EmailAttachment.of(
+                        resolved.filename(),
+                        resolved.contentType(),
+                        resolved.content()))
                 .toList();
 
         return new EmailMessage(

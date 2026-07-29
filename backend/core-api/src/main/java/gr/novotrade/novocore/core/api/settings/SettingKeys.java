@@ -82,6 +82,35 @@ public final class SettingKeys {
     /** How many messages one dispatch cycle claims. Keeps a backlog from monopolising the poller. */
     public static final String EMAIL_DISPATCH_BATCH_SIZE = "email.dispatch.batch-size";
 
+    /**
+     * How long a sent message's <em>row</em> is kept — recipients, subject, status, error, and the
+     * metadata of whatever it attached. Either {@value #RETENTION_FOREVER} or a number of days.
+     *
+     * <p>Answered as {@value #RETENTION_FOREVER} (Q43). These rows are cheap: since V21 an emailed
+     * document is referenced rather than copied, so a year of sent-email history is rows, not
+     * megabytes. The mechanism honours a number if one is ever set, because a setting that only
+     * accepts one value is not a setting.
+     */
+    public static final String EMAIL_RETENTION_MESSAGE_DAYS = "email.retention.message-days";
+
+    /**
+     * How long the <em>inline</em> copy of a generated attachment is kept, in days, before its
+     * bytes are dropped and the history entry reports the file as no longer available.
+     *
+     * <p>Answered as 90 (Q43). This is the only unbounded growth the outbox has: a Purchase Order
+     * PDF or a report exists nowhere else, and was never meant to be permanent.
+     *
+     * <p><strong>Referenced attachments are never touched by this.</strong> Their bytes live in
+     * {@code AttachmentService} under its own lifecycle, and the outbox holds a reference, not a
+     * copy — deleting them here would delete somebody else's document. The pruning statement is
+     * restricted to {@code content_source = 'INLINE'} for exactly that reason.
+     */
+    public static final String EMAIL_RETENTION_INLINE_ATTACHMENT_DAYS =
+            "email.retention.inline-attachment-days";
+
+    /** The value that means "never prune" — spelled out rather than encoded as blank or zero. */
+    public static final String RETENTION_FOREVER = "FOREVER";
+
     private SettingKeys() {
     }
 }

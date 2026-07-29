@@ -37,6 +37,15 @@ public interface AttachmentService {
      * Removes a document. Recorded in the audit log, including its filename and checksum, so
      * that a deletion remains traceable after the bytes are gone.
      *
+     * <p><strong>A document that has been emailed is still deletable, and deleting it does not
+     * disturb the mail's history.</strong> {@code EmailSender} references stored documents rather
+     * than copying them, so a sent message points at this row; the reference is nulled here and
+     * the history entry goes on naming the file, its size and its checksum, reporting it as no
+     * longer available. Refusing the deletion instead would let an email sent years ago pin a
+     * document forever, and cascading it would delete the record that the message ever carried an
+     * attachment. The checksum recorded in the audit log is the same one the outbox snapshotted,
+     * so the two can still be tied together afterwards.
+     *
      * @return true if something was removed
      */
     boolean delete(long attachmentId);

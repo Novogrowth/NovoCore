@@ -1971,10 +1971,106 @@ not safe.**
 - **No templates, no HTML layout, no localisation.** `EmailMessage` carries a subject and a body,
   and whichever module sends something composes it. The first module with a real template is where
   that decision belongs.
-- **No retention policy on sent messages.** Rows accumulate. Worth revisiting alongside step 12,
-  since attachment bytes live in the database and therefore in every backup.
+- **No retention policy on sent messages.** Rows accumulate. Worth revisiting alongside step 12.
+  **Narrowed by V21** — see below: the growth is now only the inline attachment bytes, and pruning
+  them needs no schema change.
 - **No `Section` for the outbox.** Nothing reads it over HTTP yet, and a permission guarding
   nothing is a half-built feature.
+
+---
+
+## Step 11, revisited — an emailed document is referenced, not copied (V21, ADR 0012)
+
+Raised as a design question after step 11 landed: does `EmailAttachment` store its own copy of the
+bytes, or reference an existing `AttachmentService` record?
+
+**It duplicated.** `email_outbox_attachment.content` was `bytea NOT NULL`, with no link to
+`attachment`. V20 said so deliberately and gave reasons that were half right — a generated Purchase
+Order PDF and a monthly report genuinely have nothing to reference. What that reasoning missed is the
+case that costs the most: a document that is **also** an `AttachmentService` record, where the same
+file then sat in two tables and in every `pg_dump`, permanently. **Full reasoning in ADR 0012.**
+
+- **Two shapes, exactly one per row.** `EmailAttachment.stored(id)` references a document and carries
+  no bytes; `.pdf(...)` / `.of(...)` carry bytes for a file that exists nowhere else. Enforced by the
+  record's constructor **and** by CHECK constraints, so raw SQL cannot write a row that is both or
+  neither. Reference-only was considered and rejected: it would move report bytes rather than save
+  them, and fill a "documents on core records" table with things that are neither.
+- **The recipient is unaffected.** SMTP transmits real bytes either way; the dispatcher resolves a
+  reference at send time and `compose` never sees the distinction.
+- **Viewing is one action, identical for both shapes.** `attachmentsOf(emailId)` then
+  `downloadAttachment(attachmentId)` — same id, same return type, no join for the caller and nothing
+  to know about where the file lives. It stays one action if a file that is inline today becomes a
+  stored document tomorrow.
+- **A deleted document degrades, it does not break.** `ON DELETE SET NULL` — not CASCADE (which would
+  delete the record that the message ever had an attachment) and not RESTRICT (which would let a mail
+  from 2026 pin a document forever). The history entry still names the file, its size and its
+  checksum, and reports it unavailable **with the reason**. Availability needs no extra query: a
+  non-null `attachment_id` is itself the proof. Asking for the bytes anyway throws
+  `EmailAttachmentUnavailableException`, deliberately distinct from the `IllegalArgumentException` for
+  an id that never existed.
+- **A document deleted *before* the message goes out fails it visibly and alone**, through the same
+  per-message guard that isolates a poison row. A mail is never sent with an attachment silently
+  missing — the one failure a recipient could not detect.
+- **Validated at queue time, in the caller's transaction.** An attachment id naming nothing is a
+  mistake in the calling code, so it fails the operation that made it. Deliberately unlike the SMTP
+  configuration, which is *not* checked at queue time.
+- **`content_source` is stored, not inferred.** Once the bytes are gone both shapes are a row with
+  nothing in it; without the column the history could not say whether a document was deleted or an
+  inline copy pruned. Same reasoning as step 9 storing `vat_class_source`.
+- **One defect found by reviewing the tests rather than the code:** two of the raw-SQL CHECK probes
+  violated *two* constraints at once, and PostgreSQL does not promise which it reports — the
+  assertions would have passed or failed on constraint evaluation order. Each probe now breaks
+  exactly one, with a well-formed row inserted afterwards to prove the statement shape itself is good.
+
+Docker Desktop was not running at the start of this session — every IT failed with "Could not find a
+valid Docker environment", which is worth recognising quickly since it looks like a mass failure of
+the code under test.
+
+---
+
+## Q43 — answered and built (V22): rows forever, generated attachments 90 days
+
+One question until V21, two afterwards. While the outbox copied every attachment, "how long do we keep
+sent emails?" covered cheap metadata and expensive duplicated bytes together and could not have one
+right answer. Referencing separated them, and the two halves took different numbers.
+
+| | Setting | Answer |
+|---|---|---|
+| Message rows (recipients, subject, status, error, attachment metadata) | `email.retention.message-days` | `FOREVER` |
+| Inline copies of **generated** attachments (PO PDFs, reports) | `email.retention.inline-attachment-days` | `90` |
+
+Both live in **Settings**, changeable without a redeploy — the same argument that put SMTP there.
+
+- **`EmailRetention` runs daily** (`@Scheduled` cron, default 03:30). Scheduling is enabled in `app`,
+  not the core, so the core's tests drive it by calling `pruneNow()` and nothing sleeps — the same
+  arrangement as `EmailDispatcher`.
+- **The `UPDATE` is one statement; the guards are the substance.** A prune that removes too much is the
+  failure that matters, and there are three ways to get it wrong. Each is a restriction with a test:
+  - **`content_source = 'INLINE'`** — a referenced document's bytes belong to `AttachmentService` and
+    are **never** pruned here. Widening this would make one service delete another's documents, with
+    the symptom being a purchase invoice's PDF vanishing off the invoice because an email mentioned it
+    91 days ago. Tested directly: a referenced attachment survives a prune that drops an inline one
+    beside it, and the document is still readable afterwards.
+  - **`status = 'SENT'`** — a **PENDING** message still needs its bytes (a system waiting months on a
+    broken SMTP password must not have its attachments removed from under it), and a **FAILED** one
+    keeps them because retrying it is the entire reason it was kept. A retry that cannot re-send the
+    attachment is not a retry.
+  - **`content IS NOT NULL`** — keeps it idempotent, so the daily run reports zero instead of
+    rewriting rows it already cleared and filling the audit log with noise.
+- **The state it produces was already built in V21** and needed no schema change, exactly as predicted:
+  the history entry keeps the filename and size and reports the file unavailable, distinguished from a
+  deleted document by `content_source`.
+- **An unreadable setting stops the prune and deletes nothing**, loudly. The only setting in this
+  service with no safe default — guessing "0 days" would delete everything and no logging would undo
+  it. `FOREVER` is spelled out rather than encoded as blank or `0`, because a blank setting is
+  indistinguishable from one deleted by accident.
+- **Row deletion is built although it never runs** under `FOREVER`, so the setting is real rather than
+  decorative. Attachment rows follow by `ON DELETE CASCADE`. This is a legitimate deletion:
+  `CLAUDE.md`'s no-delete stance governs records people rely on, and a retention policy set
+  deliberately is the opposite of an accidental loss.
+
+**822 tests passing, `mvn clean verify` exit 0** (up from 802 at step 11's close: +13 for V21, +7 for
+V22 retention).
 
 ---
 
@@ -2243,15 +2339,45 @@ destinations.
   the list: a freight allocation has no number either, only an id.
 - **Q12 leftover — is the periodic depreciation posting run Phase 1 scope**, or only the register and
   the calculation? Still waiting on the statutory rates either way.
-- **Q43** *(new, step 11)* — **how long are sent emails kept?** Nothing prunes `email_outbox`, so rows
-  accumulate forever and their attachment bytes live in the database and therefore in every backup.
-  Not urgent at this volume, and it deliberately shares a decision with step 12's retention policy —
-  worth answering once, for both, rather than twice.
-- **Q44** *(new, step 11)* — **who may see the email outbox, and does it need a `Section`?** Nothing
-  reads it over HTTP yet, so no permission was invented for it (a permission guarding nothing is a
-  half-built feature). The question is real when the Settings screen arrives: the failure list carries
-  recipients and subjects, which is a customer-correspondence trail. Bodies are deliberately absent
-  from `QueuedEmailView` already.
+- ~~**Q43**~~ — **answered and built (V22).** See the section below.
+- **Q44** *(step 11)* — **who may see the email outbox, and does it need a `Section`?** The *section*
+  half is still open. **The access-path half is decided — see below — and must not be rediscovered as a
+  live gap when the outbox screen is wired.** Bodies are deliberately absent from `QueuedEmailView`
+  already; the failure list still carries recipients and subjects, which is a customer-correspondence
+  trail, and that is the part a `Section` has to answer for.
+
+#### ✅ Q44's access-path half — decided 2026-07-29, to be built with the outbox screen
+
+**`EmailSender.downloadAttachment` must re-check the caller's permission against the underlying core
+record before returning bytes for a *referenced* (stored) attachment**, using the authorization
+already in place — `RoleView.requireView(Section…)` for the section and `RoleView.canSee(ProtectedField)`
+for field-level restrictions, the same primitives `ProductView.redactedFor(RoleView)` composes.
+
+**The principle:** *an email having been sent to someone does not change who is allowed to see the
+source document afterward.* The outbox must not become a second, weaker access path to restricted
+data. Without this check, a role that cannot open a purchase invoice could read that invoice's PDF out
+of the email that sent it — the permission model intact on one route and bypassed on the other.
+
+This is a **direct consequence of V21** and did not exist before it. While the outbox held its own copy
+of the bytes, the mail's attachment was arguably the mail's own business; now it is a pointer into
+`attachment`, which belongs to a core record with its own visibility rules. Referencing removed the
+duplicated storage and, with it, the excuse for a duplicated access rule.
+
+**Scope of the check, so it is not over- or under-applied when built:**
+
+- **Referenced attachments only.** An inline generated PDF has no core record behind it, therefore no
+  record-level permission to consult; it is governed by whatever `Section` the outbox itself gets.
+- **The check is on the referenced document's `entity_type` / `entity_id`**, which
+  `email_outbox_attachment.attachment_id` reaches via `AttachmentService.findMetadata`.
+- **A deleted reference needs no check** — there is nothing left to authorise, and the entry already
+  reports itself unavailable.
+- **`attachmentsOf` returns metadata only** (filename, size, availability), no bytes. Whether a
+  *filename* is itself restricted is a `Section` question, not this one.
+
+**Nothing is built yet, and nothing is exposed**: there is still no HTTP route to the outbox at all, so
+this is not a live vulnerability today. It is recorded here, in `EmailSender.downloadAttachment`'s
+javadoc, and in ADR 0012 precisely so it is a requirement being implemented rather than a gap being
+discovered.
 
 ### Standing note
 

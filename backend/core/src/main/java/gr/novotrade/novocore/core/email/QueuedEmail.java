@@ -1,10 +1,14 @@
 package gr.novotrade.novocore.core.email;
 
+import gr.novotrade.novocore.core.api.attachment.AttachmentMetadata;
+import gr.novotrade.novocore.core.api.attachment.AttachmentService;
 import gr.novotrade.novocore.core.api.email.EmailAttachment;
+import gr.novotrade.novocore.core.api.email.EmailAttachmentContent;
 import gr.novotrade.novocore.core.api.email.EmailBodyFormat;
 import gr.novotrade.novocore.core.api.email.EmailMessage;
 import gr.novotrade.novocore.core.api.email.EmailStatus;
 import gr.novotrade.novocore.core.api.email.QueuedEmailView;
+import gr.novotrade.novocore.core.api.email.SentEmailAttachmentView;
 import gr.novotrade.novocore.core.support.AuditableEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -21,6 +25,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * One message in the outbox.
@@ -92,7 +97,14 @@ class QueuedEmail extends AuditableEntity {
     protected QueuedEmail() {
     }
 
-    QueuedEmail(EmailMessage message, int maxAttempts, Instant dueAt) {
+    /**
+     * @param storedDocuments metadata for every {@code EmailAttachment.stored} attachment in the
+     *     message, keyed by document id, read by the caller before this is constructed. Passed in
+     *     rather than looked up here so the entity calls no service: resolving the references is
+     *     part of validating the caller's request, and it belongs where that request is refused.
+     */
+    QueuedEmail(EmailMessage message, int maxAttempts, Instant dueAt,
+            Map<Long, AttachmentMetadata> storedDocuments) {
         this.toAddresses = message.to().toArray(String[]::new);
         this.ccAddresses = message.cc().toArray(String[]::new);
         this.bccAddresses = message.bcc().toArray(String[]::new);
@@ -107,7 +119,11 @@ class QueuedEmail extends AuditableEntity {
 
         int order = 0;
         for (EmailAttachment attachment : message.attachments()) {
-            this.attachments.add(new QueuedEmailAttachment(this, attachment, order++));
+            AttachmentMetadata document = attachment.isStored()
+                    ? storedDocuments.get(attachment.storedAttachmentId())
+                    : null;
+            this.attachments.add(
+                    new QueuedEmailAttachment(this, attachment, document, order++));
         }
     }
 
@@ -229,6 +245,29 @@ class QueuedEmail extends AuditableEntity {
 
     List<QueuedEmailAttachment> getAttachments() {
         return attachments;
+    }
+
+    /**
+     * What the sent-email history shows for this message's attachments — referenced and inline
+     * alike, in the order they were sent, including any whose file is no longer available.
+     */
+    List<SentEmailAttachmentView> attachmentViews() {
+        return attachments.stream().map(QueuedEmailAttachment::toView).toList();
+    }
+
+    /**
+     * Every attachment's bytes, resolved from wherever they live, for the message going out.
+     *
+     * <p>Throws if any of them cannot be produced, and that is the intended behaviour: a message
+     * whose attachment has vanished between queueing and sending fails visibly rather than
+     * arriving with the file quietly missing, which is the one failure a recipient could not
+     * detect. The dispatcher's claim loop turns it into a permanently failed message naming the
+     * file.
+     */
+    List<EmailAttachmentContent> resolveAttachments(AttachmentService documents) {
+        return attachments.stream()
+                .map(attachment -> attachment.resolveContent(documents))
+                .toList();
     }
 
     QueuedEmailView toView() {

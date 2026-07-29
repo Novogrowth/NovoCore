@@ -1,16 +1,22 @@
 package gr.novotrade.novocore.core.email;
 
+import gr.novotrade.novocore.core.api.attachment.AttachmentMetadata;
+import gr.novotrade.novocore.core.api.attachment.AttachmentService;
 import gr.novotrade.novocore.core.api.audit.AuditLogService;
+import gr.novotrade.novocore.core.api.email.EmailAttachment;
+import gr.novotrade.novocore.core.api.email.EmailAttachmentContent;
 import gr.novotrade.novocore.core.api.email.EmailConfigurationStatus;
 import gr.novotrade.novocore.core.api.email.EmailMessage;
 import gr.novotrade.novocore.core.api.email.EmailNotConfiguredException;
 import gr.novotrade.novocore.core.api.email.EmailSender;
 import gr.novotrade.novocore.core.api.email.EmailStatus;
 import gr.novotrade.novocore.core.api.email.QueuedEmailView;
+import gr.novotrade.novocore.core.api.email.SentEmailAttachmentView;
 import gr.novotrade.novocore.core.api.settings.SettingKeys;
 import gr.novotrade.novocore.core.api.settings.SettingsService;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -40,15 +46,20 @@ class EmailSenderImpl implements EmailSender {
     private static final int DEFAULT_MAX_ATTEMPTS = 5;
 
     private final QueuedEmailRepository repository;
+    private final QueuedEmailAttachmentRepository attachmentRepository;
     private final SettingsService settings;
     private final AuditLogService auditLog;
+    private final AttachmentService documents;
     private final Clock clock;
 
-    EmailSenderImpl(QueuedEmailRepository repository, SettingsService settings,
-            AuditLogService auditLog, Clock clock) {
+    EmailSenderImpl(QueuedEmailRepository repository,
+            QueuedEmailAttachmentRepository attachmentRepository, SettingsService settings,
+            AuditLogService auditLog, AttachmentService documents, Clock clock) {
         this.repository = repository;
+        this.attachmentRepository = attachmentRepository;
         this.settings = settings;
         this.auditLog = auditLog;
+        this.documents = documents;
         this.clock = clock;
     }
 
@@ -61,8 +72,13 @@ class EmailSenderImpl implements EmailSender {
         // notification must not fail because a mail setting is wrong — the message waits and
         // goes out when the configuration is fixed, which is strictly better than the operation
         // being rolled back and the notification never existing at all.
-        QueuedEmail queued = repository.save(
-                new QueuedEmail(message, maxAttempts(), Instant.now(clock)));
+        //
+        // A referenced document IS checked here, and the difference is worth stating: an SMTP
+        // setting being wrong is an infrastructure state that somebody will fix, while an
+        // attachment id naming nothing is a mistake in the code that just called this. Refusing
+        // it now fails the operation that made the mistake, at the point it was made.
+        QueuedEmail queued = repository.save(new QueuedEmail(
+                message, maxAttempts(), Instant.now(clock), storedDocumentsIn(message)));
 
         // Recipients and subject, never the body. An audit log holding the text of every
         // customer email is a second copy of that correspondence in a place chosen for
@@ -99,6 +115,30 @@ class EmailSenderImpl implements EmailSender {
                 .stream()
                 .map(QueuedEmail::toView)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SentEmailAttachmentView> attachmentsOf(long queuedEmailId) {
+        return repository.findById(queuedEmailId)
+                .map(QueuedEmail::attachmentViews)
+                // Not an empty list: that would say "this message had no attachments", which is a
+                // different and perfectly ordinary fact.
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No queued email with id " + queuedEmailId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public EmailAttachmentContent downloadAttachment(long emailAttachmentId) {
+        // One call, one id, either shape. The reference is followed here rather than by the
+        // caller, which is what keeps "view what was sent" a single action from the sent-email
+        // record — and what stops a file that moves from inline to stored later from changing
+        // how anything reads it.
+        return attachmentRepository.findById(emailAttachmentId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No email attachment with id " + emailAttachmentId))
+                .resolveContent(documents);
     }
 
     @Override
@@ -149,6 +189,31 @@ class EmailSenderImpl implements EmailSender {
                 configuration.fromAddress(),
                 configuration.replyTo(),
                 problem);
+    }
+
+    /**
+     * Reads the metadata for every referenced document in the message, once, before anything is
+     * written — so a message naming a document that does not exist is refused whole rather than
+     * queued with one bad attachment.
+     *
+     * <p>Metadata, never content: this must not pull a 20 MB PDF out of the database to establish
+     * that it is there. The bytes are read once, by the dispatcher, at send time.
+     */
+    private Map<Long, AttachmentMetadata> storedDocumentsIn(EmailMessage message) {
+        Map<Long, AttachmentMetadata> found = new HashMap<>();
+        for (EmailAttachment attachment : message.attachments()) {
+            if (!attachment.isStored()) {
+                continue;
+            }
+            long documentId = attachment.storedAttachmentId();
+            found.computeIfAbsent(documentId, id -> documents.findMetadata(id)
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            ("Cannot attach document %d to this message: no such attachment. An "
+                                    + "attachment id is resolved when the message is queued, so a "
+                                    + "reference that names nothing fails here rather than hours "
+                                    + "later in the outbox.").formatted(id))));
+        }
+        return found;
     }
 
     private int maxAttempts() {
