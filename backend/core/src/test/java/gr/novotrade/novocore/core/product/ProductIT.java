@@ -270,38 +270,80 @@ class ProductIT extends AbstractCoreIntegrationTest {
     // ---------------------------------------------------------------------------------------
 
     @Test
-    @DisplayName("Remote/Order Staff cannot see cost or supplier on a real product")
-    void remoteOrderStaffRedaction() {
-        // The role is loaded from the database rather than constructed, so this exercises the
-        // seeded V6 grants and restrictions rather than a test's idea of them. That is what makes
-        // it the check that step 4's answer actually took effect.
+    @DisplayName("Remote/Order Staff sees cost and supplier — nothing on Product is restricted")
+    void remoteOrderStaffSeesEverythingOnAProduct() {
+        // POLICY CHANGED IN V26, and this test used to assert the opposite. V6 hid a product's cost
+        // and supplier from this role; the business has no confidentiality need behind that — a bank
+        // balance might reasonably stay hidden from a home-based worker, what a bag of beans cost
+        // does not. Nothing on Product is restricted from any role now, which is a stated decision
+        // and not an absence of one.
+        //
+        // The role is loaded from the database rather than constructed, so this exercises the real
+        // seeded configuration rather than a test's idea of it.
         RoleView remoteStaff = roles.requireByName("REMOTE_ORDER_STAFF");
         assertThat(remoteStaff.canView(Section.PRODUCTS)).isTrue();
-        assertThat(remoteStaff.canSee(ProtectedField.PRODUCT_SUPPLIER)).isFalse();
+        assertThat(remoteStaff.canSee(ProtectedField.PRODUCT_SUPPLIER)).isTrue();
+        assertThat(remoteStaff.canSee(ProtectedField.PRODUCT_SUPPLIER_SKU)).isTrue();
+        assertThat(remoteStaff.canSee(ProtectedField.PRODUCT_LAST_PURCHASE_PRICE)).isTrue();
 
         SupplierView supplier = suppliers.create(NewSupplier.domestic(
-                "ProdIT — Hidden supplier", "EL066666004"));
+                "ProdIT — Visible to staff", "EL066666004"));
         ProductView product = products.create(new NewProduct(
-                "ProdIT-REDACT-01", "5209999900001", "ProdIT redacted item", ProductType.GOODS,
+                "ProdIT-REDACT-01", "5209999900001", "ProdIT unrestricted item", ProductType.GOODS,
                 pieceId(), standardRateId(), Money.ofEur("129.00"),
                 supplier.id(), "HID-99", false));
 
         ProductView asStaffSees = products.requireFor(product.id(), remoteStaff);
 
-        assertThat(asStaffSees.supplier()).isEmpty();
-        assertThat(asStaffSees.supplierSkuIfAny()).isEmpty();
-        assertThat(asStaffSees.isRedacted()).isTrue();
-        // What an order picker needs is untouched — the selling price above all.
+        assertThat(asStaffSees.supplier()).contains(supplier.id());
+        assertThat(asStaffSees.supplierSkuIfAny()).contains("HID-99");
+        assertThat(asStaffSees.isRedacted()).isFalse();
         assertThat(asStaffSees.sellingPriceIfAny()).contains(Money.ofEur("129.00"));
         assertThat(asStaffSees.eanIfAny()).contains("5209999900001");
-
-        // Unredacted for the core's own rules, which cannot cost a sale from a blanked field.
-        assertThat(products.require(product.id()).supplier()).contains(supplier.id());
 
         assertThat(products.allFor(remoteStaff))
                 .filteredOn(view -> view.sku().equals("ProdIT-REDACT-01"))
                 .singleElement()
-                .satisfies(view -> assertThat(view.supplier()).isEmpty());
+                .satisfies(view -> assertThat(view.supplier()).contains(supplier.id()));
+    }
+
+    @Test
+    @DisplayName("the redaction mechanism still works when a role really does restrict a field")
+    void redactionStillAppliesToARestrictedRole() {
+        // THE LOAD-BEARING TEST NOW THAT NOTHING IS SEEDED AS RESTRICTED. With no restriction
+        // anywhere in real data, a change that stopped ProductService's ...For reads consulting the
+        // role at all would pass every other test in this suite while silently removing the
+        // guarantee — the exact shape of the audit-log defect step 12 found, where the structure was
+        // spotless and the behaviour was gone.
+        //
+        // So the restriction is created at runtime instead of relied on from the seed. Roles are
+        // data (Q21), which is what makes this possible without a migration.
+        RoleView restricted = roles.create(new NewRole(
+                "PRODIT_RESTRICTED_" + System.nanoTime(), "Cost hidden, for the mechanism test"));
+        roles.grant(restricted.id(), Section.PRODUCTS, AccessLevel.VIEW);
+        roles.restrictField(restricted.id(), ProtectedField.PRODUCT_SUPPLIER, true);
+        roles.restrictField(restricted.id(), ProtectedField.PRODUCT_LAST_PURCHASE_PRICE, true);
+        RoleView withRestrictions = roles.require(restricted.id());
+
+        SupplierView supplier = suppliers.create(NewSupplier.domestic(
+                "ProdIT — Restricted supplier", "EL066666009"));
+        ProductView product = products.create(new NewProduct(
+                "ProdIT-MECHANISM-01", null, "ProdIT mechanism item", ProductType.GOODS,
+                pieceId(), standardRateId(), Money.ofEur("77.00"),
+                supplier.id(), "MECH-1", false));
+
+        ProductView asRestrictedSees = products.requireFor(product.id(), withRestrictions);
+
+        assertThat(asRestrictedSees.supplier()).isEmpty();
+        // Hiding the supplier hides its code too, since a supplier code identifies the supplier
+        // indirectly. That narrowing rule is unchanged by V26.
+        assertThat(asRestrictedSees.supplierSkuIfAny()).isEmpty();
+        assertThat(asRestrictedSees.isRedacted()).isTrue();
+        // And what the restriction does not cover is untouched.
+        assertThat(asRestrictedSees.sellingPriceIfAny()).contains(Money.ofEur("77.00"));
+
+        // Unredacted for the core's own rules, which cannot cost a sale from a blanked field.
+        assertThat(products.require(product.id()).supplier()).contains(supplier.id());
     }
 
     @Test

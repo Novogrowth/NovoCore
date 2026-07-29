@@ -103,10 +103,47 @@ class SecurityIT extends AbstractCoreIntegrationTest {
             assertThat(role.canView(Section.TAX_AND_CHARGES)).isFalse();
             assertThat(role.canView(Section.USERS_AND_ROLES)).isFalse();
 
-            assertThat(role.restrictedFields()).containsExactlyInAnyOrder(
-                    ProtectedField.PRODUCT_LAST_PURCHASE_PRICE,
-                    ProtectedField.PRODUCT_SUPPLIER,
-                    ProtectedField.PRODUCT_SUPPLIER_SKU);
+            // V26 removed all three of the field restrictions V6 seeded here: the business has no
+            // confidentiality need around a product's purchase price or supplier. Asserted as empty
+            // rather than deleted, so "nothing is hidden" is a claim this suite makes out loud
+            // instead of a gap where an assertion used to be.
+            assertThat(role.restrictedFields())
+                    .as("Remote/Order Staff sees every field on a product it can view (V26)")
+                    .isEmpty();
+        }
+
+        @Test
+        @DisplayName("no role has any field restriction, and the mechanism still works if one does")
+        void nothingIsFieldRestrictedAnywhere() {
+            // The system-wide statement of the same decision. ProtectedField's three values are the
+            // only fields the mechanism knows about and Remote/Order Staff held the only
+            // restrictions, so after V26 the inner layer of brief §7's two-layer model is unused.
+            //
+            // Unused is not the same as broken, and the difference has to be provable: a change that
+            // stopped the redacting reads consulting a role would otherwise pass everything, since
+            // no real role would notice. So this also creates a role that DOES restrict a field and
+            // asserts the mechanism reports it.
+            // The SEEDED roles specifically. Other tests create throwaway roles that DO restrict a
+            // field in this shared database — that is how the mechanism is exercised now that no
+            // real role restricts anything — so a sweep over every role would be asserting something
+            // about their fixtures rather than about the seed, and would pass or fail on execution
+            // order. Which is itself worth knowing: it is why the claim is scoped to what V6 seeds.
+            for (String seeded : List.of("OWNER", "ADMIN", "REMOTE_ORDER_STAFF")) {
+                assertThat(roles.requireByName(seeded).restrictedFields())
+                        .as("seeded role '%s' must restrict no field since V26", seeded)
+                        .isEmpty();
+            }
+
+            RoleView probe = roles.create(new NewRole(
+                    "SECIT_RESTRICTED_" + System.nanoTime(), "Field restriction still works"));
+            roles.grant(probe.id(), Section.PRODUCTS, AccessLevel.VIEW);
+            roles.restrictField(probe.id(), ProtectedField.PRODUCT_LAST_PURCHASE_PRICE, true);
+
+            RoleView restricted = roles.require(probe.id());
+            assertThat(restricted.restrictedFields())
+                    .containsExactly(ProtectedField.PRODUCT_LAST_PURCHASE_PRICE);
+            assertThat(restricted.canSee(ProtectedField.PRODUCT_LAST_PURCHASE_PRICE)).isFalse();
+            assertThat(restricted.canSee(ProtectedField.PRODUCT_SUPPLIER)).isTrue();
         }
 
         @Test
@@ -413,7 +450,10 @@ class SecurityIT extends AbstractCoreIntegrationTest {
             assertThat(moved.role().name()).isEqualTo("REMOTE_ORDER_STAFF");
             assertThat(moved.canView(Section.CHART_OF_ACCOUNTS)).isFalse();
             assertThat(moved.canView(Section.CUSTOMERS)).isTrue();
-            assertThat(moved.canSee(ProtectedField.PRODUCT_SUPPLIER)).isFalse();
+            // Visible since V26 — Remote/Order Staff restricts no field. The assertion is kept
+            // rather than dropped so the role change is still shown to carry field visibility with
+            // it, which is the property this test is about.
+            assertThat(moved.canSee(ProtectedField.PRODUCT_SUPPLIER)).isTrue();
         }
 
         @Test

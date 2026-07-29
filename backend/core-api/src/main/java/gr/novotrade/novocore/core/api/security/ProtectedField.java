@@ -9,22 +9,27 @@ package gr.novotrade.novocore.core.api.security;
  * field was renamed, and nothing would fail — the field would simply become visible. As an enum,
  * a rename is a compile error.
  *
- * <p><strong>The current entries are the concrete case, not placeholders.</strong> Remote/Order
- * Staff has view-only access to Products with the cost and supplier fields hidden, and these are
- * those fields. The three exist because a home-based worker fulfilling orders needs to see what a
- * product is and what it sells for, but has no need to know what it cost us or who supplies it.
+ * <p><strong>⚠️ Nothing is restricted today, and that is a decision.</strong> V6 seeded all three of
+ * these against Remote/Order Staff, on the reasoning that an order picker has no need to know what a
+ * product cost or who supplies it. <strong>V26 removed those rows:</strong> the business has no
+ * confidentiality need around purchase price — a bank balance might reasonably stay hidden from a
+ * home-based worker, what a bag of beans cost does not.
  *
- * <p>Products themselves arrive in step 5. When {@code ProductView} is built it must apply these
- * — see {@link RoleView#canSee}. The mechanism is finished; the entity it will guard is not.
+ * <p>These were the only restrictions in the system and these values are the only fields the
+ * mechanism knows about, so <strong>no role has any field restriction at present</strong>. The
+ * values are kept rather than deleted because the change was to the policy and not to the model:
+ * restricting one again is an {@code INSERT}, not a rebuild, and a plausible future case was named
+ * when this was decided — a bank or partner-clearing balance.
+ *
+ * <p>{@link RoleView#canSee} and {@code ProductView.redactedFor} are unchanged and still correct.
+ * They have nothing to hide today, which is a different thing from being wrong. The tests that prove
+ * they work therefore create a role and restrict a field at runtime rather than relying on the seed
+ * — with no restriction anywhere, a change that stopped the redacting reads consulting the role
+ * would otherwise pass everything while removing the guarantee.
  */
 public enum ProtectedField {
 
-    /**
-     * What the product last cost us to buy. Cost data, hidden from Remote/Order Staff.
-     *
-     * <p>Distinct from the product's regular selling price, which is <em>not</em> protected: an
-     * order picker plainly needs it.
-     */
+    /** What the product last cost us to buy. Restrictable, and not restricted (see above). */
     PRODUCT_LAST_PURCHASE_PRICE(Section.PRODUCTS),
 
     /** Which supplier a product comes from. */

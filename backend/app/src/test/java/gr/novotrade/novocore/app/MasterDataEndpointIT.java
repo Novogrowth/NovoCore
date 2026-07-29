@@ -37,8 +37,9 @@ import org.springframework.http.ResponseEntity;
  *       Customers, so the same role must be able to read a product and unable to create one. That is
  *       the whole claim of the {@code @Requires} level, and it is only true if the interceptor is
  *       actually wired into the chain.
- *   <li><strong>Redaction survives serialisation.</strong> A field can be blanked in a view and
- *       still appear in JSON if the wrong service method was called. This asserts against the bytes.
+ *   <li><strong>What a role receives is asserted against the bytes.</strong> A field can be blanked
+ *       in a view and still reach the wire if the wrong service method was called — and since V26
+ *       removed the last field restrictions, the claim being checked is that nothing IS blanked.
  *   <li><strong>Amounts are strings on the wire.</strong> Asserted against the raw body, because a
  *       deserialised assertion would pass either way.
  *   <li><strong>The error mapping is real.</strong> 404, 422 and 400 arrive as themselves rather
@@ -229,14 +230,17 @@ class MasterDataEndpointIT {
     }
 
     @Nested
-    @DisplayName("redaction, asserted against the bytes")
+    @DisplayName("what a restricted role receives, asserted against the bytes")
     class Redaction {
 
         @Test
-        @DisplayName("Remote/Order Staff receives no supplier and no supplier SKU")
-        void staffSeesNoSupplier() {
+        @DisplayName("Remote/Order Staff receives the supplier and its code — nothing is hidden")
+        void staffSeesTheSupplier() {
+            // POLICY CHANGED IN V26, and this test used to assert the opposite. There is no
+            // confidentiality need around a product's purchase price or supplier in this business,
+            // so Remote/Order Staff sees both. Nothing on Product is restricted from any role now.
             long supplierId = suppliers.create(
-                    NewSupplier.domestic("MDIT — Hidden supplier", "EL099000001")).id();
+                    NewSupplier.domestic("MDIT — Visible supplier", "EL099000001")).id();
             long productId = createProduct("MDIT-REDACT-01", "{\"amount\":\"49.00\","
                     + "\"currency\":\"EUR\"}", supplierId, "SUPPLIER-CODE-XYZ");
             ApiClient.Session staff = staffSession();
@@ -244,25 +248,29 @@ class MasterDataEndpointIT {
             String asStaff = staff.get("/api/products/" + productId).getBody();
             String asOwner = owner.get("/api/products/" + productId).getBody();
 
-            // Against the serialised bytes, not against a view object: a field can be blanked in a
-            // view and still reach the wire if the controller called the wrong service method.
-            assertThat(asStaff).doesNotContain("SUPPLIER-CODE-XYZ");
-            assertThat(asStaff).doesNotContain("\"supplierId\":" + supplierId);
-            // What an order picker needs is untouched.
+            // Against the serialised bytes, not a view object, for the reason this class exists:
+            // what reaches the wire is the only thing a client can act on.
+            assertThat(asStaff).contains("SUPPLIER-CODE-XYZ");
+            assertThat(asStaff).contains("\"supplierId\":" + supplierId);
             assertThat(asStaff).contains("\"amount\":\"49.00\"");
 
-            assertThat(asOwner).contains("SUPPLIER-CODE-XYZ");
+            // And the two roles now see the same product, which is the whole content of the change.
+            assertThat(asStaff).isEqualTo(asOwner);
         }
 
         @Test
-        @DisplayName("the product list is redacted too, not only the single read")
-        void theListIsRedactedAsWell() {
+        @DisplayName("the list agrees with the single read, for both roles")
+        void theListAgreesToo() {
             long supplierId = suppliers.create(
-                    NewSupplier.domestic("MDIT — Hidden in list", "EL099000002")).id();
+                    NewSupplier.domestic("MDIT — Visible in list", "EL099000002")).id();
             createProduct("MDIT-REDACT-02", null, supplierId, "LIST-CODE-XYZ");
             ApiClient.Session staff = staffSession();
 
-            assertThat(staff.get("/api/products").getBody()).doesNotContain("LIST-CODE-XYZ");
+            // The list mattered when it could disagree with the single read by calling a different
+            // service method. It still matters: allFor and requireFor are separate code paths, and
+            // "both show everything" is as much a claim as "both hide it" was.
+            assertThat(staff.get("/api/products").getBody()).contains("LIST-CODE-XYZ");
+            assertThat(owner.get("/api/products").getBody()).contains("LIST-CODE-XYZ");
         }
     }
 

@@ -25,6 +25,7 @@ import gr.novotrade.novocore.core.api.product.ProductView;
 import gr.novotrade.novocore.core.api.product.ProductType;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.NewRole;
+import gr.novotrade.novocore.core.api.security.ProtectedField;
 import gr.novotrade.novocore.core.api.security.RoleService;
 import gr.novotrade.novocore.core.api.security.RoleView;
 import gr.novotrade.novocore.core.api.security.Section;
@@ -617,10 +618,32 @@ class BundleIT extends AbstractCoreIntegrationTest {
     @DisplayName("redaction — a bundle is a product, so its lists carry the same restricted fields")
     class Redaction {
 
+        /**
+         * A role that hides a product's supplier, created here rather than taken from the seed.
+         *
+         * <p>These two tests used to use {@code REMOTE_ORDER_STAFF}, which V6 seeded with exactly
+         * these restrictions. <strong>V26 removed them</strong> — the business has no
+         * confidentiality need around a product's cost or supplier — and after that no role in real
+         * data restricts anything, so a seeded role can no longer demonstrate redaction.
+         *
+         * <p>The tests are kept rather than deleted, because what they prove is not the policy but
+         * the wiring: step 14c moved redaction out of the controller and into
+         * {@code allBundlesFor} / {@code bundlesWithUnpricedComponentsFor} precisely so an
+         * architecture rule could forbid the unredacted read from the web layer. If nothing
+         * exercised that, a change reverting it would pass in silence.
+         */
+        private RoleView roleRestrictingSupplier() {
+            RoleView role = roles.create(new NewRole(
+                    "BUNDLEIT_RESTRICTED_" + System.nanoTime(), "Supplier hidden"));
+            roles.grant(role.id(), Section.PRODUCTS, AccessLevel.VIEW);
+            roles.restrictField(role.id(), ProtectedField.PRODUCT_SUPPLIER, true);
+            return roles.require(role.id());
+        }
+
         @Test
         @DisplayName("Remote/Order Staff sees no supplier on a bundle in allBundlesFor")
         void allBundlesForRedacts() {
-            RoleView remoteStaff = roles.requireByName("REMOTE_ORDER_STAFF");
+            RoleView remoteStaff = roleRestrictingSupplier();
             SupplierView supplier = suppliers.create(NewSupplier.domestic(
                     "BundleIT — redaction supplier", "EL066777001"));
             ProductView component = products.create(NewProduct.goods(
@@ -658,7 +681,7 @@ class BundleIT extends AbstractCoreIntegrationTest {
         @Test
         @DisplayName("bundlesWithUnpricedComponentsFor redacts too")
         void unpricedListRedacts() {
-            RoleView remoteStaff = roles.requireByName("REMOTE_ORDER_STAFF");
+            RoleView remoteStaff = roleRestrictingSupplier();
             SupplierView supplier = suppliers.create(NewSupplier.domestic(
                     "BundleIT — unpriced supplier", "EL066777002"));
             ProductView unpriced = products.create(NewProduct.goods(
