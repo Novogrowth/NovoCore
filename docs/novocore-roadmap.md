@@ -28,7 +28,7 @@ and cache-read, which dominate it — read the note before drawing conclusions f
 |   11 | Email service (incl. the ADR 0012 revision) ᵉ                 |   2.0 |    2.1 |  697k |  127.7M | 🟢 Done |
 |   12 | Auto backups (incl. commissioning, CI, self-invocation fixes)ᶠ|   2.7 |    2.6 |  606k |  151.5M | 🟢 Done |
 |   13 | Test suite consolidation sweep (incl. Q45 fix) ᵍ              |   2.6 |    1.8 |  490k |  151.9M | 🟢 Done |
-|   14 | REST surface — 133 routes, Q44, migration V25 ʲ                |   2.5 |    2.0 |  646k |  151.5M | 🟢 Done |
+|   14 | REST surface — 133 routes, Q44, migration V25 ʲ               |   2.5 |    2.0 |  646k |  151.5M | 🟢 Done |
 |      | **Subtotal, steps 0–14**                                      |**31.5**|**20.6**|**6.85M**|**1,391M**| |
 
 ## Not started

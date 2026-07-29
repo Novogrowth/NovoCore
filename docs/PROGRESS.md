@@ -3110,17 +3110,32 @@ step 13's property tests found — was approved and fixed the same day as **ADR 
 
 **Step 14 is done** — see its section above. The three candidates that were open at the last
 close-out are now resolved as follows: the REST surface is built (133 routes), Q44's access-path
-check is built and proven, and **PLB-1 (2FA) is the one that remains**, unchanged and still
-blocking any external or remote access.
+check is built and proven, and **PLB-1 (2FA) is the one that remains** — deferred, unchanged, and
+still blocking any external or remote access.
 
-**Step 15 is not defined, and choosing it is the next session's first job.** The obvious candidates,
-none chosen:
+### ➡️ Next: step 15 — dummy data validation. **Decided, not a choice to be made.**
 
-1. **The frontend.** It has had nothing to call since it was scaffolded, and now it has 133 routes.
-   This is the largest remaining gap between what exists and what anybody can use — and the roadmap
-   estimates it at 8 hours, by far the largest single item left.
-2. **PLB-1 (2FA)**, which blocks external access and is likely needed sooner than a public launch.
-3. **Dummy data validation** (roadmap step 15), which the REST surface now makes possible to drive.
+The order was settled when the roadmap was agreed and does not need revisiting:
+**15 dummy data validation → 16 frontend.**
+
+**Why validation comes first, stated so it is not re-argued.** Nothing has exercised these 133
+routes except integration tests calling the filter chain directly. Those tests assert what they were
+written to assert; they cannot tell us the API is *usable* — that a real sequence of operations, in
+the order somebody would actually perform them, produces a coherent system with a balanced ledger at
+the end. Building a frontend against an API that has never been driven end to end means discovering
+its shape problems through a second layer, with two candidate causes for every symptom.
+
+**Step 16 (frontend) follows once validation confirms the API behaves correctly under real use.**
+It is the largest single item left on the roadmap at 8 hours, and it is worth starting on an API
+whose behaviour is known rather than assumed.
+
+**PLB-1 (2FA) stays deferred**, because its trigger condition has not arrived: it must be resolved
+before *any* external or remote access, and there is none. That is a condition, not a date — see
+the pre-launch blockers section above.
+
+**⚠️ Do not begin step 15's approach here.** Deciding *what* it does — which scenarios, how much
+data, what is asserted at the end — is the next session's first task, and it is a design decision
+worth arriving at deliberately rather than inheriting from a close-out note.
 
 ⚠️ **One thing to carry into whatever comes next.** Q45 survived twelve build steps because every
 example test in the suite used whole-cent costs. The generated tests found it in their first run.
