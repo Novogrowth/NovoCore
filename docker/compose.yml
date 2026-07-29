@@ -56,6 +56,31 @@ services:
       # git permanently. Unlike the owner password, leaving this empty does not stop the
       # application — email queues and does not send, and the outbox says so.
       NOVOCORE_SMTP_PASSWORD: ${NOVOCORE_SMTP_PASSWORD:-}
+      # Backups are encrypted with this before anything leaves the host, and it is deliberately
+      # NOT a setting: the settings table is inside the dump, so a key stored there would be
+      # encrypted inside the artefact it exists to decrypt.
+      #
+      # No default, and unlike the SMTP password it is not merely a first-start hand-off — it is
+      # read on every backup and every restore. If it is unset, no backup is taken and the log
+      # says so loudly on each attempt.
+      #
+      # ⚠️ RECORD IT IN A PASSWORD MANAGER. It lives in docker/.env, which is gitignored and
+      # machine-local. If that is the only copy, losing this machine loses the database and every
+      # backup of it at the same time — the one occasion both were supposed to help.
+      NOVOCORE_BACKUP_ENCRYPTION_KEY: ${NOVOCORE_BACKUP_ENCRYPTION_KEY:-}
+      # OAuth credentials for the two Drive destinations, supplied once and then stored in
+      # Settings — the same route the SMTP password takes. Blank until the consent flow has been
+      # completed for each Google account; a destination without them is recorded NOT_CONFIGURED
+      # on every run rather than silently skipped.
+      NOVOCORE_BACKUP_DRIVE_PRIMARY_CLIENT_SECRET: ${NOVOCORE_BACKUP_DRIVE_PRIMARY_CLIENT_SECRET:-}
+      NOVOCORE_BACKUP_DRIVE_PRIMARY_REFRESH_TOKEN: ${NOVOCORE_BACKUP_DRIVE_PRIMARY_REFRESH_TOKEN:-}
+      NOVOCORE_BACKUP_DRIVE_SECONDARY_CLIENT_SECRET: ${NOVOCORE_BACKUP_DRIVE_SECONDARY_CLIENT_SECRET:-}
+      NOVOCORE_BACKUP_DRIVE_SECONDARY_REFRESH_TOKEN: ${NOVOCORE_BACKUP_DRIVE_SECONDARY_REFRESH_TOKEN:-}
+    volumes:
+      # Backups survive container replacement. Without this the retained copies would live in the
+      # container's writable layer and vanish on the next `docker compose up --build` — which is
+      # to say the local half of the retention rule would be a fiction.
+      - backup-data:/var/lib/novocore/backups
     depends_on:
       postgres:
         # Waits for readiness, not just container start, so Flyway does not race the database.
@@ -93,3 +118,7 @@ volumes:
   postgres-data:
   caddy-data:
   caddy-config:
+  # Local backup staging and retention. A named volume rather than a bind mount so it works
+  # identically on Windows and Linux hosts; the off-site copies are what protect against losing
+  # the machine this volume is on.
+  backup-data:

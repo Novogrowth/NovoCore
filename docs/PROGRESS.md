@@ -29,7 +29,7 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 9 | Sales Invoice, Credit Note, Receipt, Payment, Bank Transfer, open items, rounding | **Done, committed** `29e9dcd` — Q10, Q15's remainder, Q16, Q26 answered as **ADR 0009**; Q31 confirmed; all seven obligations discharged, see below |
 | 10 | Freight / landed cost allocation | **Done, committed** `cf6f1e4` + `6f06cf8` — Q18 answered as **ADR 0010**, and a defect it introduced closed as **ADR 0011**, see below |
 | 11 | Email service | **Done, committed** `b542cf7` + `0790c74` — SMTP credentials supplied and stored in Settings, see below |
-| 12 | Automated backups | Not started. Needs Drive paths/credentials, Q24 |
+| 12 | Automated backups | **Done, committed** — V23, ADR 0013. Awaiting only the OAuth consent flow per Drive account |
 | 13 | Test suite consolidation sweep | Not started |
 
 **Tests: 802 passing, `mvn clean verify` exit 0.** 205 unit (core-api), 24 core unit, 541 core
@@ -2074,6 +2074,115 @@ V22 retention).
 
 ---
 
+## Step 12 — done (automated backups), V23, ADR 0013
+
+A scheduled encrypted `pg_dump`, copied to two Google Drive accounts, pruned on the stated retention
+rule, and **proved restorable** — which closes brief §13's "backup restore test" risk rather than
+deferring it again. **Full reasoning in ADR 0013.**
+
+### The encryption key is an environment variable, and cannot be anything else
+
+`NOVOCORE_BACKUP_ENCRYPTION_KEY`, AES-256-GCM, applied before a single byte leaves the host. This is
+the **opposite** of step 11's decision for the SMTP password and is not a reversal: **the `setting`
+table is inside the dump**, so a key kept there would be encrypted inside the artefact it exists to
+decrypt. There is no ordering of those steps that terminates.
+
+**⚠️ The obligation this creates:** that key must be recorded **outside this system** — a password
+manager. `docker/.env` is gitignored and machine-local, so if it exists only there, losing the host
+loses the database *and* every backup of it at once. The app logs this on every start.
+
+A 16-hex-character **fingerprint** is recorded per artefact, so restoring with a rotated key reports
+"this is a key rotation" instead of a GCM tag failure, which reads as "your backup is corrupt".
+
+### Off-site is reported separately from success — the headline that matters
+
+`SUCCEEDED` means the artefact was written and checksummed. Whether a copy reached Drive is
+per-destination (`backup_upload`), summarised by `BackupView.isOffsite()`. A dump that wrote to local
+disk and reached nowhere protects against a dropped table and against nothing else; the service logs
+an **error** for exactly that state.
+
+- **An upload failure does not fail the backup** — the artefact is already safe, and discarding a
+  good backup over a network error would also make "when did we last dump successfully?"
+  unanswerable.
+- **`NOT_CONFIGURED` is its own status.** Never set up needs a different response from tried and
+  rejected, and every run records a row per destination so a missing off-site copy is visible rather
+  than absent.
+- **One destination failing never stops the other.**
+
+### Retention, exactly as specified
+
+**7 most recent successful backups, rolling, plus the last successful backup of each calendar month,
+forever, uncapped.** Stated positively it needs no month-end logic: *a backup is its month's archive
+iff no later successful backup exists in the same calendar month.* A month whose 31st failed archives
+the 30th's; a month with no successful backup designates nothing.
+
+- **The calendar zone (`Europe/Athens`) is load-bearing** — 01:30 on the 1st in Athens is the
+  previous month in UTC, which would archive the wrong artefact twelve times a year, silently.
+- **Only successful runs are candidates** — letting failures fill the rolling seven would evict the
+  last good backups during the one week you would most want them.
+- **Applied identically to local disk and both destinations.**
+- **Pure logic in `BackupRetentionRule`**, unit-tested against explicit dates. Every other component
+  can be fixed and re-run; this one's mistakes are already made.
+- **`backup_run` rows outlive their artefacts**, so the history is a list of attempts rather than of
+  surviving files.
+
+### The restore check asserts the books, not the file
+
+Creates a scratch database, `pg_restore`s into it, then asserts: schema version matches live, row
+counts match live for `account` / `setting` / `journal_entry` / `journal_line`, and — the one that
+matters — **the restored ledger balances**. Findings are kept on a passing check too, because a green
+flag with nothing behind it is the unverified claim brief §13 already objected to. Scratch database
+name whitelisted and **refused if it equals the live database**, since the check begins by dropping
+it. Weekly by default; the nightly backup is separate.
+
+### Notable implementation decisions
+
+- **Plain `HttpClient`, not `google-api-services-drive`.** The failures that matter are protocol-level
+  (expired refresh token, deleted folder, 403 quota) and `StubDriveServer` produces all of them over
+  a real socket with no credentials — asserting the uploaded bytes equal the artefact on disk.
+- **The plaintext dump never touches disk** — `pg_dump`'s stdout is piped straight through the
+  cipher. The one exception is the restore check, owner-only and deleted in a `finally`, stated as a
+  trade-off.
+- **`CipherInputStream` is deliberately not used**: it swallows the GCM tag failure and would let a
+  truncated backup decrypt to a short plaintext with no error. Both tampering and truncation have
+  tests.
+- **`postgresql-client-17` is in the runtime image and in CI.** The major version **must** match the
+  server — `pg_dump` refuses to dump a newer one — so upgrading the postgres image means changing
+  the Dockerfile in the same commit.
+- **A new ArchUnit rule** confines `javax.crypto` and `ProcessBuilder` to `..core.backup..`.
+
+### Defects found by running it, not by reasoning about it
+
+1. **`RestoreVerifier` called its own `@Transactional` methods** — a self-invocation bypasses the
+   proxy, so they would have done nothing, silently. Split into `RestoreCheckJournal`. The same
+   lesson step 11 recorded for `EmailOutbox`, rediscovered by writing it the obvious way.
+2. **Artefact names collided within one second** — dismissed while designing as pathological, hit by
+   the test suite immediately, and reachable in production by a manual backup during the scheduled
+   one. Fixed in production code with a `-2`/`-3` suffix.
+3. **Avoided rather than fixed:** reading `spring.datasource.url` fails the whole context under
+   Testcontainers' `@ServiceConnection`, and is the general case of a dump driven by a property that
+   could drift from the pool — faithfully backing up the wrong database while looking healthy.
+   `DatabaseConnectionProvider` reads the pool.
+4. **The retention rule tests failed four ways at first and all four were the fixture**, which
+   restarted backup ids at 1 per month. Worth recording because every one of them looked like a bug
+   in the rule.
+
+### Verified, and not verified
+
+- **858 tests passing, `mvn clean verify` exit 0** (up from 822). `BackupIT` runs the real
+  `pg_dump`, really encrypts, really restores into a real scratch database and really asserts the
+  ledger balances.
+- **⚠️ Never run against real Google Drive.** Uploads are proven against `StubDriveServer` only.
+  Nothing can verify further until the OAuth consent flow is completed for each account.
+- **⚠️ The container image has not been rebuilt** with `postgresql-client-17`. The Dockerfile change
+  is written and unexercised; the first `docker compose up --build` will prove it.
+- **PostgreSQL 17 client tools were installed on this machine** at
+  `C:\Users\kosta\tools\pg17\pgsql\bin` and added to the user PATH. Without them `BackupIT` **skips**
+  rather than fails — deliberately, so a missing tool does not teach people to ignore red suites,
+  but it does mean a silent loss of coverage worth knowing about.
+
+---
+
 ## Open questions, by the step they block
 
 Numbering follows the original Phase 1 question list so references stay stable.
@@ -2292,10 +2401,16 @@ That placement decides the rest:
   it needs** — `InventoryService.lotsAt(DAMAGED_GOODS)` and `unitsAt(DAMAGED_GOODS)`, covering both
   shapes of lot and excluding exhausted ones. The *check* is still phase 8's to write.
 
-### Blocking step 12 — backups
-- **Q24** Delivery mechanism: Google Drive API with credentials held by NovoCore, or `rclone` on
-  the host? (No Python, per `CLAUDE.md`.) Plus retention policy and whether dumps are encrypted
-  at rest. Also need the two actual Drive destinations.
+### ~~Blocking step 12 — backups~~ — Q24 answered and built
+- ~~**Q24**~~ — **answered 2026-07-29 and built.** Google **Drive API** (not `rclone`), **OAuth
+  refresh token per account** (a service account has no Drive quota of its own, and Shared Drives
+  need Workspace, which `novotrade.gr` is not). Dumps **are encrypted at rest**, AES-256-GCM, before
+  anything leaves the host. Retention: **7 rolling + every calendar month's last, forever.** See the
+  step 12 section below and ADR 0013.
+- **⚠️ Still outstanding, and it is the only thing left:** the **two Drive destinations' folder ids
+  and OAuth credentials**. Nothing in the repo has ever recorded them. Until the consent flow is
+  completed per Google account, both destinations record `NOT_CONFIGURED` on every run and backups
+  stay **local only** — which is visible rather than assumed, but is not a backup regime.
 
 ---
 ## Next action — read this first

@@ -46,6 +46,29 @@ jobs:
         run: chmod +x mvnw
         working-directory: backend
 
+      # Step 12's backup tests run the real pg_dump, pg_restore and psql — the restore check
+      # genuinely creates a database, restores the artefact into it and asserts the restored
+      # ledger balances. Without these binaries BackupIT SKIPS rather than fails, which would be
+      # the worst outcome available: a green build that silently stopped covering the one thing
+      # brief §13 lists as an outstanding risk.
+      #
+      # THE MAJOR VERSION MUST MATCH the Testcontainers server and docker/Dockerfile (17).
+      # pg_dump refuses outright to dump a newer server, so a mismatch is a hard failure rather
+      # than a subtly wrong backup — but it is still a failure to avoid on purpose rather than
+      # discover. Ubuntu's own archive does not carry 17, so this comes from PGDG.
+      - name: Install PostgreSQL client 17
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error --location \
+            --output /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] \
+          https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends postgresql-client-17
+          pg_dump --version
+
       # GitHub-hosted runners provide a Docker daemon, so the Testcontainers tests run for
       # real here. That matters: the ledger invariants are PostgreSQL constraints, and a run
       # that skipped them would be reporting on far less than it appears to.

@@ -29,6 +29,7 @@ class CoreBoundaryRulesTest {
     private static final String CORE_ALL = "gr.novotrade.novocore.core..";
     private static final String CORE_WEB = "gr.novotrade.novocore.core.web..";
     private static final String CORE_EMAIL = "gr.novotrade.novocore.core.email..";
+    private static final String CORE_BACKUP = "gr.novotrade.novocore.core.backup..";
     private static final String ADAPTERS = "gr.novotrade.novocore.adapters..";
     private static final String MODULES = "gr.novotrade.novocore.modules..";
 
@@ -149,6 +150,47 @@ class CoreBoundaryRulesTest {
                         + "that interface rather than around it.");
 
         rule.check(ImportedClasses.production());
+    }
+
+    /**
+     * Starting a process, and the crypto that protects what one of them produces.
+     *
+     * <p>{@code ProcessBuilder} is the sharp one. Nothing else in a financial system has any
+     * business starting an operating-system process — it is how a dependency turns into a shell
+     * injection, and there is exactly one legitimate use of it here: running PostgreSQL's own
+     * client tools, which is the only way to produce a dump {@code pg_restore} is guaranteed to
+     * read back.
+     *
+     * <p>{@code javax.crypto} is named for the reason the mail rule names {@code jakarta.mail}: a
+     * module that grows its own encryption grows its own key handling, and a second place keys
+     * live is the problem this codebase already refused once for SMTP credentials.
+     */
+    private static final String[] BACKUP_ONLY_PACKAGES = {
+        "javax.crypto..",
+    };
+
+    @Test
+    @DisplayName("only the backup service runs processes and handles encryption keys")
+    void onlyTheBackupServiceForksProcessesAndEncrypts() {
+        ArchRule crypto = noClasses()
+                .that().resideOutsideOfPackage(CORE_BACKUP)
+                .should().dependOnClassesThat().resideInAnyPackage(BACKUP_ONLY_PACKAGES)
+                .because("backup artefacts are the only thing this system encrypts itself, and "
+                        + "the key they use deliberately lives outside the database. A second "
+                        + "place handling keys is the scattered-credentials problem the email "
+                        + "rule already exists to prevent, in a form where getting it wrong is "
+                        + "unrecoverable rather than merely embarrassing.");
+
+        ArchRule processes = noClasses()
+                .that().resideOutsideOfPackage(CORE_BACKUP)
+                .should().dependOnClassesThat().haveFullyQualifiedName("java.lang.ProcessBuilder")
+                .because("running an operating-system process is not something a financial "
+                        + "application should be able to do from an arbitrary class. The one "
+                        + "legitimate use is pg_dump/pg_restore/psql, which must be the real "
+                        + "PostgreSQL tools because only their output is guaranteed to restore.");
+
+        crypto.check(ImportedClasses.production());
+        processes.check(ImportedClasses.production());
     }
 
     @Test
