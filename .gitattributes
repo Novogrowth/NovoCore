@@ -13,6 +13,13 @@ Caddyfile text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
 
+# The generated API contract. Byte-compared against a freshly generated document on every build
+# (OpenApiSpecIT), so its working-copy endings must not depend on which machine checked it out —
+# a CRLF working copy on Windows against an LF one on the CI runner would report a contract change
+# that had not happened. The generator normalises its output to LF for the same reason; this makes
+# the checkout agree rather than relying on the reader to normalise.
+docs/api/openapi.json text eol=lf
+
 # Must be CRLF: interpreted by cmd.exe, which mishandles LF-only batch files.
 *.cmd text eol=crlf
 *.bat text eol=crlf
