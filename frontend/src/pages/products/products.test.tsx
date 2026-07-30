@@ -8,6 +8,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { AccessLevel, ProtectedField, Section, type Me, type ProductView } from '@/api/generated/model'
 import { AppQueryProvider } from '@/auth/query-client'
 import i18n from '@/i18n'
+import { trackRequests } from '@/test/requests'
 
 import { ProductDetail } from './product-detail'
 import { ProductsList } from './products-list'
@@ -58,51 +59,46 @@ const espresso: ProductView = {
 }
 
 let me: Me = owner
-/** Every request the app made, so a test can assert what was NOT sent. */
-let requests: string[] = []
 
 const server = setupServer(
   http.get('http://localhost/api/me', () => HttpResponse.json(me)),
-  http.get('http://localhost/api/products', ({ request }) => {
-    requests.push(`GET ${new URL(request.url).pathname}`)
-    return HttpResponse.json({ items: [espresso] })
-  }),
-  http.get('http://localhost/api/products/41', ({ request }) => {
-    requests.push(`GET ${new URL(request.url).pathname}`)
-    return HttpResponse.json(espresso)
-  }),
+  http.get('http://localhost/api/products', () => HttpResponse.json({ items: [espresso] })),
+  http.get('http://localhost/api/products/41', () => HttpResponse.json(espresso)),
   http.get('http://localhost/api/products/41/stock', () =>
     HttpResponse.json({ productId: 41, byLocation: { INVENTORY: '12.000000' } }),
   ),
   http.get('http://localhost/api/products/41/in-bundles', () => HttpResponse.json({ items: [] })),
-  http.get('http://localhost/api/units-of-measure', ({ request }) => {
-    requests.push(`GET ${new URL(request.url).pathname}`)
-    return HttpResponse.json({ items: [{ id: 1, code: 'kg', name: 'Kilogram' }] })
-  }),
-  http.get('http://localhost/api/vat-classes', ({ request }) => {
-    requests.push(`GET ${new URL(request.url).pathname}`)
-    return HttpResponse.json({ items: [{ id: 3, description: 'Standard 24%' }] })
-  }),
-  http.get('http://localhost/api/suppliers', ({ request }) => {
-    requests.push(`GET ${new URL(request.url).pathname}`)
-    return HttpResponse.json({ items: [{ id: 7, name: 'Coffee Importers SA' }] })
-  }),
+  http.get('http://localhost/api/units-of-measure', () =>
+    HttpResponse.json({ items: [{ id: 1, code: 'kg', name: 'Kilogram' }] }),
+  ),
+  http.get('http://localhost/api/vat-classes', () =>
+    HttpResponse.json({ items: [{ id: 3, description: 'Standard 24%' }] }),
+  ),
+  http.get('http://localhost/api/suppliers', () =>
+    HttpResponse.json({ items: [{ id: 7, name: 'Coffee Importers SA' }] }),
+  ),
   http.patch('http://localhost/api/products/41/name', async ({ request }) => {
-    requests.push('PATCH /api/products/41/name')
     const body = (await request.json()) as { name: string }
     return HttpResponse.json({ ...espresso, name: body.name })
   }),
-  http.patch('http://localhost/api/products/41/selling-price', () => {
-    requests.push('PATCH /api/products/41/selling-price')
-    return HttpResponse.json({ ...espresso, sellingPrice: { amount: '19.90', currency: 'EUR' } })
-  }),
+  http.patch('http://localhost/api/products/41/selling-price', () =>
+    HttpResponse.json({ ...espresso, sellingPrice: { amount: '19.90', currency: 'EUR' } }),
+  ),
 )
+
+/**
+ * Every request this screen made, recorded at the server rather than in each handler.
+ *
+ * That difference matters: a per-handler counter can only see requests the test thought to set up,
+ * so a screen firing something unexpected would be invisible to it. This sees everything.
+ */
+const requests = trackRequests(server)
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => {
   server.resetHandlers()
   me = owner
-  requests = []
+  requests.reset()
 })
 afterAll(() => server.close())
 
@@ -156,9 +152,9 @@ describe('the product list', () => {
      * class lookups would both be 403 — error toasts about something the operator never asked for.
      * The requests must not be made at all, and the id is shown instead of a name.
      */
-    await waitFor(() => expect(requests).toContain('GET /api/products'))
-    expect(requests).not.toContain('GET /api/suppliers')
-    expect(requests).not.toContain('GET /api/vat-classes')
+    await waitFor(() => expect(requests.called('GET', '/api/products')).toBe(true))
+    expect(requests.called('GET', '/api/suppliers')).toBe(false)
+    expect(requests.called('GET', '/api/vat-classes')).toBe(false)
     expect(screen.getByText('#7')).toBeInTheDocument()
   })
 })
@@ -173,7 +169,7 @@ describe('the product detail', () => {
     renderDetail()
     await screen.findByRole('heading', { name: 'Espresso blend 1kg' })
 
-    expect(requests.filter((request) => !request.startsWith('GET '))).toEqual([])
+    requests.expectNoWrites()
   })
 
   it('saves one field with one request and shows the server’s answer', async () => {
@@ -189,7 +185,7 @@ describe('the product detail', () => {
 
     expect(await screen.findByRole('heading', { name: 'Espresso blend 500g' })).toBeInTheDocument()
     // Exactly one write, and nothing else was touched.
-    expect(requests.filter((request) => request.startsWith('PATCH'))).toEqual([
+    expect(requests.writes().map((request) => `${request.method} ${request.path}`)).toEqual([
       'PATCH /api/products/41/name',
     ])
   })

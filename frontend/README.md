@@ -68,6 +68,38 @@ Two things the config does that are worth knowing:
   collisions changes — including when the backend fixes it, at which point the workaround should be
   deleted.
 
+### Reads are queries, writes are mutations — and every screen test proves it renders without writing
+
+Two layers, because they answer different questions.
+
+**The client is wired correctly** — `src/api/client-shape.test.ts` checks all 174 operations against
+the spec: every one of the 82 GETs is a query, every one of the 92 writes is a mutation and none of
+them is also a query. This exists because the opposite was once true of **all 92 writes at once**: a
+single `query: { useQuery: true }` in `orval.config.ts` made every POST, PATCH, PUT and DELETE a
+query hook, so rendering a component that used one would have sent the request on mount, and again
+on every refetch and window focus. The test was proven to fail against that exact config.
+
+**Each screen uses it correctly** — a screen can still fire a mutation from an effect or a
+render-time branch and produce the same outcome from correct machinery. So **every screen test
+includes a "rendering sends no write" assertion**, using `trackRequests` from `src/test/requests.ts`:
+
+```ts
+const requests = trackRequests(server)
+afterEach(() => requests.reset())
+
+it('sends no write merely by rendering', async () => {
+  renderScreen()
+  await screen.findByRole('heading', { name: '…' })
+  requests.expectNoWrites()
+})
+```
+
+It listens to the mock server rather than to individual handlers, so it sees requests to routes the
+test never set up — which is the case a per-handler counter structurally cannot catch.
+`src/test/requests.test.ts` proves the guard itself goes red on a POST, PATCH and DELETE.
+
+This is the standing pattern for **every** screen from Products on, not a Products-specific check.
+
 ### Money is a string, everywhere
 
 `Money`, `UnitCost`, `Quantity` and `Rate` are strings on the wire. `<input type="number">` is

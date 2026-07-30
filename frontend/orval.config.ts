@@ -109,8 +109,8 @@ export default defineConfig({
           /*
            * ⚠️ `useQuery: true` was set here and it is NOT a harmless default.
            *
-           * It forces EVERY operation to be generated as a query — including all 66 POST, PUT,
-           * PATCH and DELETE routes. A component that merely rendered `useProductControllerRename`
+           * It forces EVERY operation to be generated as a query — including all 92 writes (51 POST,
+           * 31 PATCH, 7 PUT, 3 DELETE). A component that merely rendered `useProductControllerRename`
            * would have sent the PATCH on mount, and again on every refetch, invalidation and window
            * focus: writes executed as reads, repeatedly, by rendering.
            *
@@ -118,8 +118,8 @@ export default defineConfig({
            * yet — the first screen to attempt one is what found it. Left to orval's own rule now:
            * GET becomes a query, everything else becomes a mutation.
            *
-           * `product-detail.test.tsx` asserts a render sends no write, so this cannot come back
-           * silently.
+           * `client-shape.test.ts` asserts the shape of all 174 operations and was proven to fail
+           * against this exact config, so it cannot come back silently.
            */
           signal: true,
         },
