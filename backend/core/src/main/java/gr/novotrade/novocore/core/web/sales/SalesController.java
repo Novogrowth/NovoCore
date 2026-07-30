@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.web.sales;
 
+import gr.novotrade.novocore.core.api.sales.CreditNotePreview;
 import gr.novotrade.novocore.core.api.sales.CreditNoteService;
 import gr.novotrade.novocore.core.api.sales.CreditNoteView;
 import gr.novotrade.novocore.core.api.sales.NewCreditNote;
@@ -199,6 +200,22 @@ class SalesController {
     @ResponseStatus(HttpStatus.CREATED)
     CreditNoteView issue(@RequestBody NewCreditNote request) {
         return creditNotes.issue(request);
+    }
+
+    /**
+     * Computes a credit note without issuing it.
+     *
+     * <p>Same body, 200, nothing written — see {@code preview} on the invoice above for the whole
+     * argument. The reason a credit note needs its own preview rather than sharing the invoice's:
+     * <strong>it credits back the VAT the sale actually charged</strong>, read off the invoice line,
+     * not what the precedence rule would resolve today. A client that recomputed it would return the
+     * wrong VAT to every customer whose override has changed since they bought.
+     */
+    @PostMapping(path = "/api/credit-notes/preview",
+            consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Requires(section = Section.SALES, level = AccessLevel.FULL)
+    CreditNotePreview previewNote(@RequestBody NewCreditNote request) {
+        return creditNotes.preview(request);
     }
 
     @PostMapping(path = "/api/credit-notes/{id}/reversal",

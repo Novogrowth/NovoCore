@@ -532,11 +532,26 @@ final class TradingQuarter {
                 "the January wholesale sale");
         List<Long> saleLines = Json.lineIds(januarySale);
 
-        handles.put("credit-note:stock", created("/api/credit-notes",
-                NewCreditNote.of(id("sale:wholesale-january"), "TEST-CN-2026-0001", MARCH_FIRST,
-                        List.of(NewCreditNoteLine.returning(
-                                saleLines.getFirst(), Quantity.of(4L), UnitCost.ofEur("18.000000")))),
+        NewCreditNote stockReturn = NewCreditNote.of(
+                id("sale:wholesale-january"), "TEST-CN-2026-0001", MARCH_FIRST,
+                List.of(NewCreditNoteLine.returning(
+                        saleLines.getFirst(), Quantity.of(4L), UnitCost.ofEur("18.000000"))));
+
+        // The credit screen asks what this comes to before issuing it. The line being credited was
+        // sold at 13% off a customer override, so this is also where a client recomputing the rate
+        // would go wrong — the credit gives back what the sale charged, not what the rule says now.
+        JsonNode notePreview = Json.ok(api.post("/api/credit-notes/preview", stockReturn),
+                "the preview of the stock-returning credit note");
+
+        handles.put("credit-note:stock", created("/api/credit-notes", stockReturn,
                 "the stock-returning credit note"));
+
+        JsonNode issuedNote = Json.ok(
+                api.get("/api/credit-notes/" + id("credit-note:stock")), "the credit note issued");
+        assertThat(Json.amount(notePreview, "gross"))
+                .as("the total the screen showed is the total that was credited")
+                .isEqualTo(Json.amount(issuedNote, "grossTotal"));
+        assertThat(Json.amount(notePreview, "vat")).isEqualTo(Json.amount(issuedNote, "vatTotal"));
 
         // A price-only credit note against a different invoice: no stock moves, so this one stays
         // reversible where the one above does not (ADR 0009).

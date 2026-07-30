@@ -22,6 +22,7 @@ import gr.novotrade.novocore.core.api.product.NewProduct;
 import gr.novotrade.novocore.core.api.product.ProductService;
 import gr.novotrade.novocore.core.api.product.ProductView;
 import gr.novotrade.novocore.core.api.product.UnitOfMeasureService;
+import gr.novotrade.novocore.core.api.sales.CreditNotePreview;
 import gr.novotrade.novocore.core.api.sales.CreditNoteService;
 import gr.novotrade.novocore.core.api.sales.CreditNoteView;
 import gr.novotrade.novocore.core.api.sales.InvalidCreditNoteException;
@@ -131,6 +132,166 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
     }
 
     // ---------------------------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("preview — the same arithmetic, without issuing it")
+    class Preview {
+
+        /**
+         * The guard the preview design rests on: <strong>it agrees with what gets issued.</strong>
+         *
+         * <p>Same argument as {@code SalesInvoiceIT.previewAgreesWithRecord}. The two share
+         * {@code compute()} so they cannot disagree, and this asserts it rather than trusting it.
+         */
+        @Test
+        @DisplayName("preview agrees with issue, figure for figure, on the same request")
+        void previewAgreesWithIssue() {
+            CustomerView buyer = customer("Preview agreement");
+            ProductView beans = goods("CNIT-PV1", "19.99");
+            stock(beans.id(), 50L, "4.000000");
+            SalesInvoiceView invoice = sale(buyer, beans, 10L, "19.990000", SalesChannel.ECOMMERCE);
+
+            NewCreditNote request = NewCreditNote.of(
+                    invoice.id(), number("CNIT-PV"), JULY,
+                    List.of(NewCreditNoteLine.returning(
+                            invoice.lines().getFirst().id(), Quantity.of(3L),
+                            UnitCost.ofEur("19.990000"))));
+
+            CreditNotePreview preview = creditNotes.preview(request);
+            CreditNoteView issued = creditNotes.issue(request);
+
+            assertThat(preview.gross()).isEqualTo(issued.grossTotal());
+            assertThat(preview.net()).isEqualTo(issued.netTotal());
+            assertThat(preview.vat()).isEqualTo(issued.vatTotal());
+            assertThat(preview.payable()).isEqualTo(issued.grossTotal());
+
+            assertThat(preview.lines()).hasSameSizeAs(issued.lines());
+            for (int i = 0; i < preview.lines().size(); i++) {
+                assertThat(preview.lines().get(i).net()).as("line %d net", i)
+                        .isEqualTo(issued.lines().get(i).netAmount());
+                assertThat(preview.lines().get(i).vat()).as("line %d VAT", i)
+                        .isEqualTo(issued.lines().get(i).vatAmount());
+            }
+        }
+
+        /**
+         * The rate comes off the invoice, not from resolving it again — and the preview shows that.
+         *
+         * <p>This is the reason a credit note needs a preview of its own rather than a client
+         * reusing the invoice's arithmetic: <strong>the customer's VAT override is changed between
+         * the sale and the credit</strong>, and the credit must still return what was charged. A
+         * frontend recomputing the rate would hand back the new one and under- or over-return VAT
+         * on a real document.
+         */
+        @Test
+        @DisplayName("preview credits the rate the sale charged, not the customer's rate today")
+        void previewUsesTheRateTheSaleCharged() {
+            CustomerView buyer = customer("Rate moved");
+            ProductView beans = goods("CNIT-PV2", "100.00");
+            stock(beans.id(), 20L, "40.000000");
+            SalesInvoiceView invoice = sale(buyer, beans, 2L, "100.000000", SalesChannel.ECOMMERCE);
+
+            Money vatCharged = invoice.lines().getFirst().vatAmount();
+            Long classCharged = invoice.lines().getFirst().vatClassId();
+
+            // The customer moves to the reduced class after buying.
+            customers.changeVatClassOverride(buyer.id(), vatClasses.requireByCode("1131").id());
+
+            CreditNotePreview preview = creditNotes.preview(NewCreditNote.of(
+                    invoice.id(), number("CNIT-PV"), JULY,
+                    List.of(NewCreditNoteLine.returning(
+                            invoice.lines().getFirst().id(), Quantity.of(2L),
+                            UnitCost.ofEur("100.000000")))));
+
+            assertThat(preview.vat())
+                    .as("a return gives back the VAT the sale actually took, whatever the customer's "
+                            + "override says now")
+                    .isEqualTo(vatCharged);
+            assertThat(preview.lines().getFirst().vatClassId()).isEqualTo(classCharged);
+        }
+
+        @Test
+        @DisplayName("preview issues nothing — no note, no entry, and the number stays free")
+        void previewWritesNothing() {
+            CustomerView buyer = customer("Preview writes nothing");
+            ProductView beans = goods("CNIT-PV3", "10.00");
+            stock(beans.id(), 20L, "4.000000");
+            SalesInvoiceView invoice = sale(buyer, beans, 5L, "10.000000", SalesChannel.ECOMMERCE);
+            String documentNumber = number("CNIT-PV");
+
+            NewCreditNote request = NewCreditNote.of(
+                    invoice.id(), documentNumber, JULY,
+                    List.of(NewCreditNoteLine.returning(
+                            invoice.lines().getFirst().id(), Quantity.of(1L),
+                            UnitCost.ofEur("10.000000"))));
+
+            creditNotes.preview(request);
+            creditNotes.preview(request);
+
+            assertThat(creditNotes.againstInvoice(invoice.id()))
+                    .as("previewing twice issued nothing")
+                    .isEmpty();
+
+            // The stock did not come back either — a preview that restored stock would be the worst
+            // of both, since nothing posted to carry it.
+            assertThat(inventory.stockOf(beans.id()).sellable()).isEqualTo(Quantity.of(15L));
+
+            // And the number is still free, which is the operative proof.
+            assertThat(creditNotes.issue(request).documentNumber()).isEqualTo(documentNumber);
+        }
+
+        @Test
+        @DisplayName("an unaccepted large difference is reported by preview and refused by issue")
+        void previewReportsWhatIssueRefuses() {
+            CustomerView buyer = customer("Preview disagreement");
+            ProductView beans = goods("CNIT-PV4", "10.00");
+            stock(beans.id(), 20L, "4.000000");
+            SalesInvoiceView invoice = sale(buyer, beans, 5L, "10.000000", SalesChannel.ECOMMERCE);
+
+            NewCreditNote request = NewCreditNote.of(
+                            invoice.id(), number("CNIT-PV"), JULY,
+                            List.of(NewCreditNoteLine.returning(
+                                    invoice.lines().getFirst().id(), Quantity.of(1L),
+                                    UnitCost.ofEur("10.000000"))))
+                    .statedAs(Money.ofEur("15.00"));
+
+            CreditNotePreview preview = creditNotes.preview(request);
+
+            assertThat(preview.roundingNeedsAcceptance())
+                    .as("the screen must be able to learn this without submitting")
+                    .isTrue();
+            assertThat(preview.gross()).isEqualTo(Money.ofEur("12.40"));
+            assertThat(preview.roundingDifference()).isEqualTo(Money.ofEur("2.60"));
+
+            assertThatExceptionOfType(InvalidCreditNoteException.class)
+                    .isThrownBy(() -> creditNotes.issue(request))
+                    .withMessageContaining("rounding threshold");
+
+            assertThat(creditNotes.preview(
+                    request.acceptingRoundingDifference("kostas", "Go rounded it"))
+                    .roundingNeedsAcceptance())
+                    .isFalse();
+        }
+
+        @Test
+        @DisplayName("preview refuses what issue refuses — including crediting more than was sold")
+        void previewRefusesWhatIssueRefuses() {
+            CustomerView buyer = customer("Preview refusals");
+            ProductView beans = goods("CNIT-PV5", "10.00");
+            stock(beans.id(), 20L, "4.000000");
+            SalesInvoiceView invoice = sale(buyer, beans, 2L, "10.000000", SalesChannel.ECOMMERCE);
+
+            // Crediting more than the line sold. This is the refusal most worth having before the
+            // operator submits, because what is left to credit depends on every earlier credit note
+            // and is not something the screen could work out for itself.
+            assertThatExceptionOfType(InvalidCreditNoteException.class)
+                    .isThrownBy(() -> creditNotes.preview(NewCreditNote.of(
+                            invoice.id(), number("CNIT-PV"), JULY,
+                            List.of(NewCreditNoteLine.returning(
+                                    invoice.lines().getFirst().id(), Quantity.of(5L),
+                                    UnitCost.ofEur("10.000000"))))));
+        }
+    }
 
     @Nested
     @DisplayName("what one credit note posts")

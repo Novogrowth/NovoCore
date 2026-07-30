@@ -57,6 +57,28 @@ public interface CreditNoteService {
     CreditNoteView issue(NewCreditNote request);
 
     /**
+     * What {@link #issue} would produce for this request, <strong>computed and not posted</strong>.
+     *
+     * <p>The counterpart of {@code SalesInvoiceService.preview}, with the same guarantees: produced
+     * by the code {@code issue} itself runs, so it cannot drift from what gets posted; it writes
+     * nothing, and not by rolling back; and it refuses what {@code issue} refuses, with the single
+     * exception of an unaccepted rounding difference, which it reports as
+     * {@link CreditNotePreview#roundingNeedsAcceptance} so a screen can offer the acceptance.
+     *
+     * <p>Worth previewing in its own right rather than treating as a variant of the invoice: a
+     * credit line credits back <strong>the VAT the sale actually charged</strong>, read off the
+     * invoice line, rather than what the precedence rule would decide today — the customer's
+     * override may have changed since. A client could not reproduce that, and would silently return
+     * the wrong VAT on any customer whose rate has moved.
+     *
+     * @throws InvalidCreditNoteException for every refusal listed on {@link #issue} except the
+     *     unaccepted rounding difference — including a line crediting more than its invoice line
+     *     has left to credit, which depends on every credit note already issued against it
+     * @throws SalesInvoiceNotFoundException if the invoice named does not exist
+     */
+    CreditNotePreview preview(NewCreditNote request);
+
+    /**
      * Reverses a credit note issued in error, posting the mirror and taking back out any stock it put
      * back.
      *

@@ -17,6 +17,8 @@ import gr.novotrade.novocore.core.api.ledger.VatDimension;
 import gr.novotrade.novocore.core.api.product.ProductService;
 import gr.novotrade.novocore.core.api.sales.CreditNoteLineView;
 import gr.novotrade.novocore.core.api.sales.CreditNoteNotFoundException;
+import gr.novotrade.novocore.core.api.sales.CreditNotePreview;
+import gr.novotrade.novocore.core.api.sales.CreditNotePreviewLine;
 import gr.novotrade.novocore.core.api.sales.CreditNoteService;
 import gr.novotrade.novocore.core.api.sales.CreditNoteView;
 import gr.novotrade.novocore.core.api.sales.InvalidCreditNoteException;
@@ -116,9 +118,17 @@ class CreditNoteServiceImpl implements CreditNoteService {
     // Issuing
     // ---------------------------------------------------------------------------------------
 
-    @Override
-    @Transactional
-    public CreditNoteView issue(NewCreditNote request) {
+    /**
+     * Everything {@link #issue} works out before it writes anything.
+     *
+     * <p>Extracted so {@link #preview} produces its figures <strong>from this code</strong> rather
+     * than from a second implementation. Same arrangement, and same reasoning, as
+     * {@code SalesInvoiceServiceImpl.compute}: every refusal about the request lives here, and the
+     * single decision left to the caller is what to do about a rounding difference above the
+     * threshold — {@code issue} refuses it, {@code preview} reports it so a screen can offer the
+     * acceptance before the operator submits.
+     */
+    private Computation compute(NewCreditNote request) {
         Objects.requireNonNull(request, "request");
         SalesInvoice invoice = invoices.findById(request.salesInvoiceId())
                 .orElseThrow(() -> new SalesInvoiceNotFoundException(request.salesInvoiceId()));
@@ -155,6 +165,56 @@ class CreditNoteServiceImpl implements CreditNoteService {
 
         Rounding rounding = compareAgainstDocument(request, computedGross, currency);
         Money payable = computedGross.plus(rounding.amount());
+
+        return new Computation(invoice, customer, credited, computedGross, rounding, payable,
+                currency);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CreditNotePreview preview(NewCreditNote request) {
+        Computation computation = compute(request);
+
+        List<CreditNotePreviewLine> lines = new ArrayList<>();
+        Money net = Money.zero(computation.currency());
+        Money vat = Money.zero(computation.currency());
+        for (CreditedLine line : computation.credited()) {
+            lines.add(line.toPreviewLine());
+            net = net.plus(line.net());
+            vat = vat.plus(line.vat());
+        }
+
+        return new CreditNotePreview(
+                lines, net, vat, computation.computedGross(),
+                request.statedTotal(),
+                computation.rounding().amount(),
+                computation.rounding().threshold(),
+                computation.rounding().needsAcceptance(),
+                computation.payable());
+    }
+
+    @Override
+    @Transactional
+    public CreditNoteView issue(NewCreditNote request) {
+        Computation computation = compute(request);
+        SalesInvoice invoice = computation.invoice();
+        CustomerView customer = computation.customer();
+        List<CreditedLine> credited = computation.credited();
+        Rounding rounding = computation.rounding();
+        Money payable = computation.payable();
+        Currency currency = computation.currency();
+
+        // The one refusal compute() reports rather than raises, so that preview can show the
+        // difference and offer the acceptance. Issuing is where it becomes a refusal.
+        if (rounding.needsAcceptance()) {
+            throw new InvalidCreditNoteException(
+                    "This credit note's lines come to " + computation.computedGross()
+                            + " and the document states " + request.statedTotal()
+                            + ", a difference of " + rounding.amount() + ". That is more than the "
+                            + "rounding threshold of " + rounding.threshold() + ", so somebody has "
+                            + "to look at it — fix the lines, or record who accepts the difference "
+                            + "and why.");
+        }
 
         long entryId = post(request, invoice, customer, credited, rounding, payable, currency).id();
 
@@ -354,9 +414,11 @@ class CreditNoteServiceImpl implements CreditNoteService {
 
     private Rounding compareAgainstDocument(
             NewCreditNote request, Money computedGross, Currency currency) {
+        Money threshold = settings.requireEurAmount(SettingKeys.LEDGER_ROUNDING_THRESHOLD);
+
         Money stated = request.statedTotal();
         if (stated == null) {
-            return Rounding.none(currency);
+            return Rounding.none(currency, threshold);
         }
         if (!stated.currency().equals(currency)) {
             throw new InvalidCreditNoteException(
@@ -367,21 +429,17 @@ class CreditNoteServiceImpl implements CreditNoteService {
 
         Money difference = stated.minus(computedGross);
         if (difference.isZero()) {
-            return Rounding.none(currency);
+            return Rounding.none(currency, threshold);
         }
 
-        Money threshold = settings.requireEurAmount(SettingKeys.LEDGER_ROUNDING_THRESHOLD);
         if (difference.abs().compareTo(threshold) <= 0) {
-            return Rounding.automatic(difference);
+            return Rounding.automatic(difference, threshold);
         }
         if (!request.roundingDifferenceIsAccepted()) {
-            throw new InvalidCreditNoteException(
-                    "This credit note's lines come to " + computedGross + " and the document states "
-                            + stated + ", a difference of " + difference + ". That is more than the "
-                            + "rounding threshold of " + threshold + ", so somebody has to look at it "
-                            + "— fix the lines, or record who accepts the difference and why.");
+            // Reported, not thrown — see compute(). issue() raises it.
+            return Rounding.unaccepted(difference, threshold);
         }
-        return Rounding.accepted(difference, request.roundingAcceptedBy());
+        return Rounding.accepted(difference, request.roundingAcceptedBy(), threshold);
     }
 
     // ---------------------------------------------------------------------------------------
@@ -611,20 +669,47 @@ class CreditNoteServiceImpl implements CreditNoteService {
     // Internals
     // ---------------------------------------------------------------------------------------
 
+    /**
+     * The outcome of comparing the lines against the document, and the threshold used.
+     *
+     * @param needsAcceptance the difference exceeds the threshold and nobody has accepted it. Not a
+     *     refusal in itself — see {@link #compute}.
+     */
     private record Rounding(
-            Money amount, boolean neededReview, String acceptedBy, Instant acceptedAt) {
+            Money amount, boolean neededReview, String acceptedBy, Instant acceptedAt,
+            Money threshold, boolean needsAcceptance) {
 
-        static Rounding none(Currency currency) {
-            return new Rounding(Money.zero(currency), false, null, null);
+        static Rounding none(Currency currency, Money threshold) {
+            return new Rounding(Money.zero(currency), false, null, null, threshold, false);
         }
 
-        static Rounding automatic(Money difference) {
-            return new Rounding(difference, false, null, null);
+        static Rounding automatic(Money difference, Money threshold) {
+            return new Rounding(difference, false, null, null, threshold, false);
         }
 
-        static Rounding accepted(Money difference, String acceptedBy) {
-            return new Rounding(difference, true, acceptedBy, Instant.now());
+        static Rounding accepted(Money difference, String acceptedBy, Money threshold) {
+            return new Rounding(difference, true, acceptedBy, Instant.now(), threshold, false);
         }
+
+        static Rounding unaccepted(Money difference, Money threshold) {
+            return new Rounding(difference, true, null, null, threshold, true);
+        }
+    }
+
+    /**
+     * Everything worked out from a request, before anything is written.
+     *
+     * <p>The single value {@link #issue} and {@link #preview} share, which is what makes "the
+     * preview cannot drift from the posting" a property of the code rather than a promise.
+     */
+    private record Computation(
+            SalesInvoice invoice,
+            CustomerView customer,
+            List<CreditedLine> credited,
+            Money computedGross,
+            Rounding rounding,
+            Money payable,
+            Currency currency) {
     }
 
     private record CreditedLine(
@@ -632,6 +717,26 @@ class CreditNoteServiceImpl implements CreditNoteService {
 
         Money gross() {
             return net.plus(vat);
+        }
+
+        /**
+         * The same figures the entity would carry, for a caller who is not posting.
+         *
+         * <p>The product or charge and the VAT class come from the <em>invoice</em> line, which is
+         * the point: a credit gives back what the sale took, at the rate it charged, and neither is
+         * re-derived from anything current.
+         */
+        CreditNotePreviewLine toPreviewLine() {
+            return new CreditNotePreviewLine(
+                    invoiceLine.getId(),
+                    invoiceLine.getProductId(),
+                    invoiceLine.getChargeTypeId(),
+                    request.description(),
+                    request.quantity(),
+                    request.unitPrice(),
+                    net, vat, gross(),
+                    invoiceLine.getVatClassId(),
+                    request.stockReturned());
         }
 
         CreditNoteLine toEntity() {
