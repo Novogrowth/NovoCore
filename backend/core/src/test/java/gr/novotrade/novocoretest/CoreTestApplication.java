@@ -1,8 +1,10 @@
 package gr.novotrade.novocoretest;
 
+import gr.novotrade.novocore.core.api.security.UserSessions;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
@@ -64,4 +66,28 @@ public class CoreTestApplication {
     static final String CORE_PACKAGE = "gr.novotrade.novocore.core";
 
     static final String WEB_PACKAGE_PATTERN = "gr\\.novotrade\\.novocore\\.core\\.web\\..*";
+
+    /**
+     * A {@link UserSessions} that ends nothing, because in this context there is nothing to end.
+     *
+     * <p><strong>Not the permissive fallback the class comment above rejects</strong>, and the
+     * difference is worth being precise about. That rejection was of a default supplied *inside the
+     * core*, which would have applied in production too and would have failed open there. This bean
+     * exists only in the core module's test context, where the claim it makes is simply true: there
+     * is no servlet container, no login has happened, and no session exists that could be ended.
+     *
+     * <p>{@code UserServiceImpl} takes {@code UserSessions} as a required constructor argument
+     * precisely so that the deployable application cannot start without a real one — an
+     * {@code ObjectProvider} with a no-op default would have let a production misconfiguration
+     * silently stop evicting anybody. So this has to be declared, and declaring it is the point:
+     * somebody removing {@code NovoCoreSessionRegistry} from {@code app} gets a context that refuses
+     * to start rather than a system where deactivation quietly stops logging people out.
+     *
+     * <p>The behaviour this bean cannot exercise is asserted in {@code app} instead, over real HTTP,
+     * by {@code SessionEvictionIT}.
+     */
+    @Bean
+    UserSessions noSessionsToEnd() {
+        return userId -> 0;
+    }
 }

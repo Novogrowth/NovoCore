@@ -5,6 +5,7 @@ import gr.novotrade.novocore.core.api.security.InvalidUserException;
 import gr.novotrade.novocore.core.api.security.NewUser;
 import gr.novotrade.novocore.core.api.security.UserNotFoundException;
 import gr.novotrade.novocore.core.api.security.UserService;
+import gr.novotrade.novocore.core.api.security.UserSessions;
 import gr.novotrade.novocore.core.api.security.UserView;
 import java.util.List;
 import java.util.Map;
@@ -24,12 +25,24 @@ class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLog;
 
+    /**
+     * Required, not optional, and deliberately so.
+     *
+     * <p>An {@code ObjectProvider} with a no-op fallback would let the application start with
+     * eviction silently doing nothing — a revoked user keeps working and nothing says why. This
+     * fails to start instead, which is the same stance as the initial-owner bootstrap and the
+     * database password. The core's own test context supplies a no-op implementation explicitly,
+     * where it is true that no sessions exist to end.
+     */
+    private final UserSessions sessions;
+
     UserServiceImpl(UserRepository users, RoleRepository roles, PasswordEncoder passwordEncoder,
-            AuditLogService auditLog) {
+            AuditLogService auditLog, UserSessions sessions) {
         this.users = users;
         this.roles = roles;
         this.passwordEncoder = passwordEncoder;
         this.auditLog = auditLog;
+        this.sessions = sessions;
     }
 
     @Override
@@ -204,10 +217,16 @@ class UserServiceImpl implements UserService {
 
         user.moveToRole(newRole);
 
+        // The session holds a snapshot of the user taken at login, including their whole resolved
+        // role, so somebody moved to a narrower role would keep the old permissions until their
+        // session ended. Ending it is the only thing that makes the change take effect now.
+        int ended = sessions.endAllFor(id);
+
         auditLog.record("user.role-changed", ENTITY_TYPE, String.valueOf(id), Map.of(
                 "username", user.getUsername(),
                 "from", previous.getName(),
-                "to", newRole.getName()));
+                "to", newRole.getName(),
+                "sessionsEnded", String.valueOf(ended)));
 
         return SecurityViews.toView(user);
     }
@@ -227,8 +246,17 @@ class UserServiceImpl implements UserService {
         }
 
         user.setActive(false);
-        auditLog.record("user.deactivated", ENTITY_TYPE, String.valueOf(id),
-                Map.of("username", user.getUsername()));
+
+        // The point of deactivating an account is that it stops working. Without this it does not:
+        // the session outlives the deactivation by up to its whole lifetime, which is the wrong
+        // answer for the two cases this exists for — a departing employee and a compromised
+        // account. Inside the transaction, so a rolled-back deactivation does not log somebody out
+        // of an account that is still active.
+        int ended = sessions.endAllFor(id);
+
+        auditLog.record("user.deactivated", ENTITY_TYPE, String.valueOf(id), Map.of(
+                "username", user.getUsername(),
+                "sessionsEnded", String.valueOf(ended)));
     }
 
     @Override

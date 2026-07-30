@@ -12,6 +12,7 @@ import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.session.HttpSessionEventPublisher;
 
 /**
  * Authentication and session handling.
@@ -36,9 +37,22 @@ import org.springframework.security.web.servlet.util.matcher.PathPatternRequestM
 @EnableWebSecurity
 class SecurityConfiguration {
 
+    /**
+     * Publishes {@code HttpSessionCreatedEvent} / {@code HttpSessionDestroyedEvent}.
+     *
+     * <p>Required by {@link NovoCoreSessionRegistry}, which cleans up on the destroyed event.
+     * Without this bean the container publishes nothing, the registry never learns that a session
+     * ended, and its map grows for the life of the process — holding invalidated sessions and, worse,
+     * reporting sessions to evict that are already gone. Not optional, despite looking like plumbing.
+     */
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http, CoreAuthenticationProvider provider)
-            throws Exception {
+    HttpSessionEventPublisher httpSessionEventPublisher() {
+        return new HttpSessionEventPublisher();
+    }
+
+    @Bean
+    SecurityFilterChain filterChain(HttpSecurity http, CoreAuthenticationProvider provider,
+            NovoCoreSessionRegistry sessions) throws Exception {
 
         // Opting out of deferred CSRF token loading, so the XSRF-TOKEN cookie is written on the
         // first response rather than only once something reads the token. Without this a client
@@ -83,8 +97,20 @@ class SecurityConfiguration {
                 // login answers 204 with the session cookie, or 401. Same reasoning as the
                 // authentication entry point below.
                 .formLogin(login -> login
-                        .successHandler((request, response, authentication) ->
-                                response.setStatus(HttpServletResponse.SC_NO_CONTENT))
+                        .successHandler((request, response, authentication) -> {
+                            // Registered here because this is the one place that has both the
+                            // authenticated user and the request it arrived on — and therefore the
+                            // session. getSession(false): session fixation protection has already
+                            // created the new session by this point, and creating one here instead
+                            // would register an identifier the client never receives.
+                            if (authentication.getPrincipal()
+                                    instanceof NovoCorePrincipal principal
+                                    && request.getSession(false) != null) {
+                                sessions.register(
+                                        principal.user().id(), request.getSession(false));
+                            }
+                            response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+                        })
                         .failureHandler((request, response, exception) ->
                                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED))
                         .permitAll())

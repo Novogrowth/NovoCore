@@ -135,11 +135,52 @@ Scope when resolved: TOTP is the obvious candidate, and the decision needs to co
 mandatory for full-access roles only or for everyone, plus recovery codes — a second factor with
 no recovery path locks the owner out of their own financial system.
 
-## 🐛 Open defect — a permission change does not take effect until the session ends
+## ✅ Closed — a permission change now takes effect immediately (2026-07-30)
 
-**Found while building `/api/me` (step 16 prerequisites, 2026-07-30). Pre-existing since step 4, not
-introduced by that work.** Recorded here rather than fixed, because the fix is a decision with real
-cost attached and it is not the identity endpoint's to make.
+**Found while building `/api/me`, fixed the same day by session eviction.** Kept in full below
+because the defect is more instructive than the fix, and because the reasoning decides what happens
+if NovoCore is ever run as more than one instance.
+
+**Decision: eviction, not a short-lived cache.** A time-boxed refresh of the principal shrinks the
+window without closing it, and a window is exactly what must not exist when an account is being cut
+off deliberately — "revoked but still working for another minute" is not meaningfully better than
+"for another hour" for a departing employee or a compromised account.
+
+**Built:** `UserSessions` in `core-api` (the same seam as `CurrentUser`), implemented by
+`NovoCoreSessionRegistry` in `app`. `UserService.deactivate` and `changeRole` both call
+`endAllFor(userId)` **inside their own transaction**, so a rolled-back revocation cannot log
+somebody out of an account that is still active, and a committed one cannot leave them logged in.
+The number of sessions ended is recorded on the audit entry.
+
+**Three design points worth keeping:**
+
+- **Our own registry, not Spring Security's `SessionRegistry`.** The framework's keys its map by the
+  *principal object*, so lookup depends on `NovoCorePrincipal` equality — and our principal wraps a
+  `UserView` carrying display name, language and the whole resolved role. Any of those changing
+  would change the key and orphan the sessions registered under the old one: **eviction would report
+  success while ending nothing.** Keying by user id, a long that never changes, removes the question.
+- **`UserSessions` is a required constructor argument, not an `ObjectProvider`.** A no-op fallback
+  would let the application start with eviction silently doing nothing. It fails to start instead —
+  the same stance as the initial-owner bootstrap. The core's *test* context declares a no-op
+  explicitly, where the claim that there are no sessions to end is simply true.
+- **`HttpSessionEventPublisher` is not optional plumbing.** Without it the registry never learns a
+  session ended and its map grows for the life of the process.
+
+**Proven by `SessionEvictionIT`, over real HTTP on sessions that really logged in** — the service
+layer and the session disagreeing *was* the defect, so a service-level test would have passed
+against the broken version. Five tests: deactivation ends the session on the next request; a role
+change ends it so the old grants cannot outlive the move; **every** session of that user ends, not
+just one; other users are unaffected; and deactivating somebody who was never logged in is
+uneventful. **Four of the five were confirmed to fail** with the eviction call removed.
+
+**⚠️ Residual, stated rather than discovered later: the registry is per-process and in memory.** One
+JVM, one self-hosted instance — the assumption the rest of the deployment already makes. Running
+NovoCore as more than one instance makes this insufficient and the sessions have to move somewhere
+shared.
+
+### The defect as it was
+
+**Pre-existing since step 4, not introduced by the `/api/me` work.**
 
 `CoreAuthenticationProvider` builds a `NovoCorePrincipal` at login holding a **`UserView` snapshot**,
 which Spring Security stores in the session. `SecurityContextCurrentUser.find()` returns that
@@ -161,17 +202,21 @@ set, and then the *next* `GET /api/me` did not. The read-back was coming from th
 database. That is the same failure the whole permission model has, surfacing on the one route where
 it is immediately visible.
 
-**What was done now, and deliberately no more.** `MeController.me()` reads the user record fresh
+**`/api/me` was fixed first, on its own.** `MeController.me()` reads the user record fresh
 (`users.require(currentUser.require().id())`), because a route whose entire job is reporting current
 identity and grants must not report yesterday's. `MeIT.grantsAreReadFreshRatherThanFromTheSession`
-asserts it and was **proven to fail** against the snapshot-reading version. Nothing else changed:
-making the interceptor read fresh would add a database read to every request on the surface, and
-choosing between that, a short-lived cache, and an explicit session-eviction on role change is a
-decision to take on its own evidence rather than one to slip in behind an identity endpoint.
+asserts it and was **proven to fail** against the snapshot-reading version. That fix stands
+independently of the eviction above and is still worth having: eviction ends a session on a
+*revocation*, while this keeps `/api/me` honest about every other change — a rename, a language, a
+grant that was *widened* rather than removed, none of which end a session.
 
-**Scope when resolved:** decide between per-request read, cached-with-TTL, and eviction-on-change;
-whichever is chosen, `deactivate` and `changeRole` should invalidate that user's sessions, which
-needs a session registry that does not currently exist.
+**What is still true after the fix.** Eviction closes the revocation cases, which are the ones with
+a security consequence. It does not make the session's snapshot live: a user whose display name or
+grants change in a way that does *not* end their session still carries the old snapshot in
+`SectionAccessInterceptor` until they log in again. That is now a correctness wrinkle rather than a
+security hole — widening a grant mid-session takes effect at next login — and it is left alone
+deliberately, because closing it means a database read on every request and the case for paying that
+has not been made.
 
 ## ⚠️ To be aware of immediately
 
