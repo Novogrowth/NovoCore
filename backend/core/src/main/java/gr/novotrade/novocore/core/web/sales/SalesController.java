@@ -4,6 +4,7 @@ import gr.novotrade.novocore.core.api.sales.CreditNoteService;
 import gr.novotrade.novocore.core.api.sales.CreditNoteView;
 import gr.novotrade.novocore.core.api.sales.NewCreditNote;
 import gr.novotrade.novocore.core.api.sales.NewSalesInvoice;
+import gr.novotrade.novocore.core.api.sales.SalesInvoicePreview;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceService;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceView;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
@@ -111,6 +112,29 @@ class SalesController {
     @ResponseStatus(HttpStatus.CREATED)
     SalesInvoiceView record(@RequestBody NewSalesInvoice request) {
         return salesInvoices.record(request);
+    }
+
+    /**
+     * Prices an invoice without recording it — what an entry screen shows while it is being filled
+     * in.
+     *
+     * <p><strong>Same body as {@code POST /api/sales-invoices}</strong>, so a screen has one form
+     * and one request type, and previewing then submitting cannot disagree about what was asked for.
+     *
+     * <p><strong>200, never 201.</strong> Nothing was created, and answering 201 would invite a
+     * client to look for a {@code Location} that does not exist. Nothing is written at all — see
+     * {@code SalesInvoicePreview} for why this is not implemented as a rolled-back post.
+     *
+     * <p><strong>{@code FULL}, not {@code VIEW}, and that is deliberate.</strong> This computes a
+     * priced document from pricing and VAT configuration; served at {@code VIEW} it would be a
+     * second, weaker path to exactly what {@code Section.SALES} exists to govern. The same argument
+     * that makes a referenced email attachment re-check the record it belongs to (Q44).
+     */
+    @PostMapping(path = "/api/sales-invoices/preview",
+            consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Requires(section = Section.SALES, level = AccessLevel.FULL)
+    SalesInvoicePreview preview(@RequestBody NewSalesInvoice request) {
+        return salesInvoices.preview(request);
     }
 
     @PostMapping(path = "/api/sales-invoices/{id}/reversal",

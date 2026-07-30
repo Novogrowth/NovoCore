@@ -87,6 +87,37 @@ public interface SalesInvoiceService {
     SalesInvoiceView record(NewSalesInvoice request);
 
     /**
+     * What {@link #record} would produce for this request, <strong>computed and not posted</strong>.
+     *
+     * <p>Exists so an entry screen never has to do this arithmetic itself. VAT resolution throws
+     * rather than assuming a rate, net and VAT are rounded once each at a mode read from Settings,
+     * and the rounding difference is compared against a threshold that also lives in Settings — a
+     * second implementation of any of that, in a language whose numbers are IEEE-754 doubles, is the
+     * shape of the defect ADR 0015 exists to record.
+     *
+     * <p><strong>The same code produces both.</strong> This is not a parallel calculation that
+     * agrees today; {@code preview} and {@code record} share one method, and a test drives both with
+     * one request and compares every figure.
+     *
+     * <p>Nothing is written — and deliberately not by posting and rolling back, which would burn
+     * document numbers and leave audit entries behind, since those are written {@code REQUIRES_NEW}
+     * and survive a rolled-back caller.
+     *
+     * <p><strong>It refuses what {@code record} would refuse</strong>, with the same messages, which
+     * is most of its value. The single exception is a rounding difference above the threshold with
+     * nobody named as accepting it: {@code record} refuses that, and this reports it as
+     * {@link SalesInvoicePreview#roundingNeedsAcceptance} so the screen can show the difference and
+     * offer the acceptance rather than having to guess at it.
+     *
+     * @throws InvalidSalesInvoiceException for every refusal listed on {@link #record} except the
+     *     unaccepted rounding difference
+     * @throws gr.novotrade.novocore.core.api.tax.VatClassNotDeterminableException if a line's rate
+     *     cannot be resolved at any level — which is exactly when an operator most needs to be told
+     *     before the invoice is issued rather than after
+     */
+    SalesInvoicePreview preview(NewSalesInvoice request);
+
+    /**
      * Reverses a sale that should not have been recorded, posting the mirror and undoing everything
      * it did.
      *

@@ -31,6 +31,8 @@ import gr.novotrade.novocore.core.api.sales.SalesChannel;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceLineComponentView;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceLineView;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceNotFoundException;
+import gr.novotrade.novocore.core.api.sales.SalesInvoicePreview;
+import gr.novotrade.novocore.core.api.sales.SalesInvoicePreviewLine;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceService;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceView;
 import gr.novotrade.novocore.core.api.sales.SettlementMethod;
@@ -118,9 +120,22 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
     // Recording
     // ---------------------------------------------------------------------------------------
 
-    @Override
-    @Transactional
-    public SalesInvoiceView record(NewSalesInvoice request) {
+    /**
+     * Everything {@link #record} works out before it writes anything.
+     *
+     * <p>Extracted so {@link #preview} can produce the same figures <strong>from the same code</strong>
+     * rather than from a second implementation that agrees until it does not. Every refusal that is
+     * about the request rather than about posting lives here, so a preview refuses what a record
+     * would refuse — which is most of what a preview is for.
+     *
+     * <p>The one thing that is <em>not</em> decided here is what to do about a rounding difference
+     * above the threshold. {@link Rounding#needsAcceptance()} reports it and the caller decides:
+     * {@code record} refuses, {@code preview} returns it so an entry screen can offer the acceptance
+     * control before the operator submits. Deciding it here would make that screen impossible to
+     * build without a second way to compute the difference, which is the thing this method exists to
+     * prevent.
+     */
+    private Computation compute(NewSalesInvoice request) {
         Objects.requireNonNull(request, "request");
         CustomerView customer = customers.require(request.customerId());
         if (!customer.active()) {
@@ -165,6 +180,56 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
         Money receivable = computedGross.plus(rounding.amount());
 
         requireWithinCashLimit(request.settlementMethod(), receivable);
+
+        return new Computation(customer, priced, computedGross, rounding, receivable, currency);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SalesInvoicePreview preview(NewSalesInvoice request) {
+        Computation computation = compute(request);
+
+        List<SalesInvoicePreviewLine> lines = new ArrayList<>();
+        Money net = Money.zero(computation.currency());
+        Money vat = Money.zero(computation.currency());
+        for (PricedLine line : computation.priced()) {
+            lines.add(line.toPreviewLine());
+            net = net.plus(line.net());
+            vat = vat.plus(line.vat());
+        }
+
+        return new SalesInvoicePreview(
+                lines, net, vat, computation.computedGross(),
+                request.statedTotal(),
+                computation.rounding().amount(),
+                computation.rounding().threshold(),
+                computation.rounding().needsAcceptance(),
+                computation.receivable());
+    }
+
+    @Override
+    @Transactional
+    public SalesInvoiceView record(NewSalesInvoice request) {
+        Computation computation = compute(request);
+        CustomerView customer = computation.customer();
+        List<PricedLine> priced = computation.priced();
+        Rounding rounding = computation.rounding();
+        Money receivable = computation.receivable();
+        Currency currency = computation.currency();
+
+        // The one refusal compute() reports rather than raises, because preview has to be able to
+        // show the difference and offer the acceptance. Posting is where it becomes a refusal.
+        if (rounding.needsAcceptance()) {
+            throw new InvalidSalesInvoiceException(
+                    "This invoice's lines come to " + computation.computedGross()
+                            + " and the document states " + request.statedTotal()
+                            + ", a difference of " + rounding.amount() + ". That is more than the "
+                            + "rounding threshold of " + rounding.threshold() + ", so it is not a "
+                            + "rounding residual — it is a disagreement somebody has to look at. Fix "
+                            + "the lines, or record who accepts the difference and why; it will post "
+                            + "to Rounding differences either way, because Accounts receivable has "
+                            + "to agree with the document the customer holds.");
+        }
 
         long entryId = post(request, customer, priced, rounding, receivable, currency).id();
 
@@ -438,9 +503,11 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
      */
     private Rounding compareAgainstDocument(
             NewSalesInvoice request, Money computedGross, Currency currency) {
+        Money threshold = settings.requireEurAmount(SettingKeys.LEDGER_ROUNDING_THRESHOLD);
+
         Money stated = request.statedTotal();
         if (stated == null) {
-            return Rounding.none(currency);
+            return Rounding.none(currency, threshold);
         }
         if (!stated.currency().equals(currency)) {
             throw new InvalidSalesInvoiceException(
@@ -451,24 +518,19 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
 
         Money difference = stated.minus(computedGross);
         if (difference.isZero()) {
-            return Rounding.none(currency);
+            return Rounding.none(currency, threshold);
         }
 
-        Money threshold = settings.requireEurAmount(SettingKeys.LEDGER_ROUNDING_THRESHOLD);
         if (difference.abs().compareTo(threshold) <= 0) {
-            return Rounding.automatic(difference);
+            return Rounding.automatic(difference, threshold);
         }
         if (!request.roundingDifferenceIsAccepted()) {
-            throw new InvalidSalesInvoiceException(
-                    "This invoice's lines come to " + computedGross + " and the document states "
-                            + stated + ", a difference of " + difference + ". That is more than the "
-                            + "rounding threshold of " + threshold + ", so it is not a rounding "
-                            + "residual — it is a disagreement somebody has to look at. Fix the "
-                            + "lines, or record who accepts the difference and why; it will post to "
-                            + "Rounding differences either way, because Accounts receivable has to "
-                            + "agree with the document the customer holds.");
+            // Reported, not thrown: an entry screen has to be able to show this difference and
+            // offer the acceptance before the operator submits, and it cannot do that if asking
+            // what the difference is refuses to answer. record() raises it; see compute().
+            return Rounding.unaccepted(difference, threshold);
         }
-        return Rounding.accepted(difference, request.roundingAcceptedBy());
+        return Rounding.accepted(difference, request.roundingAcceptedBy(), threshold);
     }
 
     /**
@@ -744,20 +806,50 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
      *     accepted explicitly. Frozen here so a later change to the threshold cannot retroactively
      *     alter which invoices somebody had to agree to.
      */
+    /**
+     * The outcome of comparing the lines against the document, and the threshold it was compared to.
+     *
+     * <p>{@code threshold} is carried rather than looked up again by whoever needs it, so the figure
+     * a preview shows an operator is <em>the one the comparison actually used</em> and not a second
+     * read of a setting that could have changed in between.
+     *
+     * @param needsAcceptance the difference exceeds the threshold and nobody has accepted it. Not a
+     *     refusal in itself — see {@link #compute} for why this is reported rather than thrown.
+     */
     private record Rounding(
-            Money amount, boolean neededReview, String acceptedBy, Instant acceptedAt) {
+            Money amount, boolean neededReview, String acceptedBy, Instant acceptedAt,
+            Money threshold, boolean needsAcceptance) {
 
-        static Rounding none(Currency currency) {
-            return new Rounding(Money.zero(currency), false, null, null);
+        static Rounding none(Currency currency, Money threshold) {
+            return new Rounding(Money.zero(currency), false, null, null, threshold, false);
         }
 
-        static Rounding automatic(Money difference) {
-            return new Rounding(difference, false, null, null);
+        static Rounding automatic(Money difference, Money threshold) {
+            return new Rounding(difference, false, null, null, threshold, false);
         }
 
-        static Rounding accepted(Money difference, String acceptedBy) {
-            return new Rounding(difference, true, acceptedBy, Instant.now());
+        static Rounding accepted(Money difference, String acceptedBy, Money threshold) {
+            return new Rounding(difference, true, acceptedBy, Instant.now(), threshold, false);
         }
+
+        static Rounding unaccepted(Money difference, Money threshold) {
+            return new Rounding(difference, true, null, null, threshold, true);
+        }
+    }
+
+    /**
+     * Everything worked out from a request, before anything is written.
+     *
+     * <p>The single value {@link #record} and {@link #preview} share, which is what makes "the
+     * preview cannot drift from the posting" a property of the code rather than a promise.
+     */
+    private record Computation(
+            CustomerView customer,
+            List<PricedLine> priced,
+            Money computedGross,
+            Rounding rounding,
+            Money receivable,
+            Currency currency) {
     }
 
     /**
@@ -802,6 +894,23 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
 
         Money gross() {
             return net.plus(vat);
+        }
+
+        /**
+         * The same figures the entity would carry, for a caller who is not posting.
+         *
+         * <p>Built from this record rather than recomputed, which is the whole point: a preview line
+         * and a posted line differ in what happens to them, never in what they say.
+         */
+        SalesInvoicePreviewLine toPreviewLine() {
+            return new SalesInvoicePreviewLine(
+                    isProduct() ? product.id() : null,
+                    isProduct() ? null : chargeType.id(),
+                    request.description(),
+                    request.quantity(),
+                    request.unitPrice(),
+                    net, vat, gross(),
+                    vatClassId, vatClassSource, request.vatExemptionReasonId());
         }
 
         SalesInvoiceLine toEntity() {

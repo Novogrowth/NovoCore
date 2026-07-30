@@ -34,7 +34,12 @@ import gr.novotrade.novocore.core.api.sales.InvalidSalesInvoiceException;
 import gr.novotrade.novocore.core.api.sales.NewSalesInvoice;
 import gr.novotrade.novocore.core.api.sales.NewSalesInvoiceLine;
 import gr.novotrade.novocore.core.api.sales.SalesChannel;
+import gr.novotrade.novocore.core.api.sales.SalesInvoiceLineView;
+import gr.novotrade.novocore.core.api.sales.SalesInvoicePreview;
+import gr.novotrade.novocore.core.api.sales.SalesInvoicePreviewLine;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceService;
+import gr.novotrade.novocore.core.api.settings.SettingKeys;
+import gr.novotrade.novocore.core.api.settings.SettingsService;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceView;
 import gr.novotrade.novocore.core.api.sales.SettlementMethod;
 import gr.novotrade.novocore.core.api.shared.Money;
@@ -109,7 +114,17 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
     private UnitOfMeasureService unitsOfMeasure;
 
     @Autowired
+    private SettingsService settings;
+
+    @Autowired
     private JdbcTemplate jdbc;
+
+    /** The seeded {@code Delivery} charge type (V7), by name — its id is not fixed. */
+    private long deliveryChargeTypeId() {
+        return chargeTypes.all().stream()
+                .filter(type -> type.name().equals("Delivery"))
+                .findFirst().orElseThrow().id();
+    }
 
     // ---------------------------------------------------------------------------------------
     // Fixtures
@@ -422,6 +437,177 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
                             List.of(NewSalesInvoiceLine.product(
                                     machine.id(), Quantity.of(1L), UnitCost.ofEur("600.000000"))))))
                     .withMessageContaining("legal cash limit");
+        }
+    }
+
+    @Nested
+    @DisplayName("preview — the same arithmetic, without posting it")
+    class Preview {
+
+        /**
+         * The guard the whole preview design rests on: <strong>it agrees with the posting, figure
+         * for figure.</strong>
+         *
+         * <p>A preview computed along its own path would drift, and it would drift silently — the
+         * operator sees a correct-looking total and the recorded document says something else. The
+         * two share {@code compute()} so they cannot, and this asserts that rather than trusting it.
+         *
+         * <p>Deliberately over a request with everything that makes the arithmetic non-obvious: two
+         * rates, a charge line at its own rate independent of the goods (Q33), and a quantity that
+         * does not multiply to a round number of cents.
+         */
+        @Test
+        @DisplayName("preview agrees with record, figure for figure, on the same request")
+        void previewAgreesWithRecord() {
+            CustomerView buyer = customer("Preview agreement");
+            ProductView beans = goods("SIIT-PV1", "19.99");
+            stock(beans.id(), 100L, "4.000000");
+
+            NewSalesInvoice request = NewSalesInvoice.of(
+                    buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                    number(), JULY,
+                    List.of(
+                            NewSalesInvoiceLine.product(
+                                    beans.id(), Quantity.of("3.000000"),
+                                    UnitCost.ofEur("19.990000")),
+                            NewSalesInvoiceLine.charge(
+                                    deliveryChargeTypeId(), Money.ofEur("3.23"))));
+
+            SalesInvoicePreview preview = salesInvoices.preview(request);
+            SalesInvoiceView recorded = salesInvoices.record(request);
+
+            assertThat(preview.gross())
+                    .as("the preview's gross is the invoice's gross")
+                    .isEqualTo(recorded.grossTotal());
+            assertThat(preview.net()).isEqualTo(recorded.netTotal());
+            assertThat(preview.vat()).isEqualTo(recorded.vatTotal());
+            assertThat(preview.receivable()).isEqualTo(recorded.grossTotal());
+
+            // Per line, in order — a total that matches while the lines do not is worse than
+            // neither matching, because it looks right on the screen that shows the total.
+            assertThat(preview.lines()).hasSameSizeAs(recorded.lines());
+            for (int i = 0; i < preview.lines().size(); i++) {
+                SalesInvoicePreviewLine previewed = preview.lines().get(i);
+                SalesInvoiceLineView posted = recorded.lines().get(i);
+
+                assertThat(previewed.net()).as("line %d net", i).isEqualTo(posted.netAmount());
+                assertThat(previewed.vat()).as("line %d VAT", i).isEqualTo(posted.vatAmount());
+                assertThat(previewed.gross()).as("line %d gross", i)
+                        .isEqualTo(posted.grossAmount());
+                assertThat(previewed.vatClassId()).as("line %d class", i)
+                        .isEqualTo(posted.vatClassId());
+                assertThat(previewed.vatClassSource()).as("line %d precedence level", i)
+                        .isEqualTo(posted.vatClassSource());
+            }
+        }
+
+        @Test
+        @DisplayName("preview posts nothing — no invoice, no entry, and the number stays free")
+        void previewWritesNothing() {
+            CustomerView buyer = customer("Preview writes nothing");
+            ProductView beans = goods("SIIT-PV2", "10.00");
+            stock(beans.id(), 10L, "4.000000");
+            String documentNumber = number();
+
+            long entriesBefore = journal.entriesBetween(JULY, JULY).size();
+            NewSalesInvoice request = NewSalesInvoice.of(
+                    buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                    documentNumber, JULY,
+                    List.of(NewSalesInvoiceLine.product(
+                            beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000"))));
+
+            salesInvoices.preview(request);
+            salesInvoices.preview(request);
+
+            assertThat(journal.entriesBetween(JULY, JULY))
+                    .as("a preview that posted would be a rolled-back invoice at best, and this "
+                            + "system's audit entries survive a rollback")
+                    .hasSize((int) entriesBefore);
+            assertThat(salesInvoices.between(JULY, JULY))
+                    .extracting(SalesInvoiceView::documentNumber)
+                    .doesNotContain(documentNumber);
+
+            // And the number is still free, which is the operative proof: previewing twice did not
+            // consume it, so the operator can still record the invoice they were previewing.
+            assertThat(salesInvoices.record(request).documentNumber()).isEqualTo(documentNumber);
+        }
+
+        /**
+         * The one refusal preview reports instead of raising, and why.
+         *
+         * <p>An entry screen has to show the operator the difference and offer the acceptance
+         * <em>before</em> they submit. If asking what the difference is refused to answer, that
+         * screen could only be built by computing the difference in the client — which is the thing
+         * the preview endpoint exists to make unnecessary.
+         */
+        @Test
+        @DisplayName("an unaccepted large difference is reported by preview and refused by record")
+        void previewReportsWhatRecordRefuses() {
+            CustomerView buyer = customer("Preview disagreement");
+            ProductView beans = goods("SIIT-PV3", "10.00");
+            stock(beans.id(), 10L, "4.000000");
+
+            NewSalesInvoice request = NewSalesInvoice.of(
+                            buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                            number(), JULY,
+                            List.of(NewSalesInvoiceLine.product(
+                                    beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000"))))
+                    .statedAs(Money.ofEur("13.00"));
+
+            SalesInvoicePreview preview = salesInvoices.preview(request);
+
+            assertThat(preview.roundingNeedsAcceptance())
+                    .as("the screen must be able to learn this without submitting")
+                    .isTrue();
+            assertThat(preview.gross()).isEqualTo(Money.ofEur("12.40"));
+            assertThat(preview.roundingDifference()).isEqualTo(Money.ofEur("0.60"));
+            assertThat(preview.roundingThreshold())
+                    .as("the threshold the comparison actually used, so the screen can explain it "
+                            + "rather than reading the setting a second time")
+                    .isEqualTo(settings.requireEurAmount(SettingKeys.LEDGER_ROUNDING_THRESHOLD));
+
+            // Reporting it is not permitting it.
+            assertThatExceptionOfType(InvalidSalesInvoiceException.class)
+                    .isThrownBy(() -> salesInvoices.record(request))
+                    .withMessageContaining("rounding threshold");
+
+            // And once accepted, preview stops asking for it.
+            assertThat(salesInvoices.preview(
+                    request.acceptingRoundingDifference("kostas", "Go rounded it"))
+                    .roundingNeedsAcceptance())
+                    .isFalse();
+        }
+
+        @Test
+        @DisplayName("preview refuses what record refuses, with the same message")
+        void previewRefusesWhatRecordRefuses() {
+            CustomerView buyer = customer("Preview refusals");
+            ProductView beans = goods("SIIT-PV4", "10.00");
+            stock(beans.id(), 10L, "4.000000");
+
+            // A duplicate document number. Most of a preview's value is telling the operator this
+            // before they have filled in the rest of the form.
+            String taken = number();
+            salesInvoices.record(NewSalesInvoice.of(
+                    buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT, taken, JULY,
+                    List.of(NewSalesInvoiceLine.product(
+                            beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000")))));
+
+            assertThatExceptionOfType(InvalidSalesInvoiceException.class)
+                    .isThrownBy(() -> salesInvoices.preview(NewSalesInvoice.of(
+                            buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                            taken, JULY,
+                            List.of(NewSalesInvoiceLine.product(
+                                    beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000"))))))
+                    .withMessageContaining("already been recorded");
+
+            // A cash sale over the statutory limit is refused before it is priced into existence.
+            assertThatExceptionOfType(InvalidSalesInvoiceException.class)
+                    .isThrownBy(() -> salesInvoices.preview(NewSalesInvoice.of(
+                            buyer.id(), SalesChannel.STORE_AND_PHONE, SettlementMethod.CASH,
+                            number(), JULY,
+                            List.of(NewSalesInvoiceLine.product(
+                                    beans.id(), Quantity.of(1L), UnitCost.ofEur("5000.000000"))))));
         }
     }
 

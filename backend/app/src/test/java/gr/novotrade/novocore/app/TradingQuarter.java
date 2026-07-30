@@ -344,23 +344,42 @@ final class TradingQuarter {
     void januaryFirstSalesAndTheFreightInvoice() {
         long standard = id("vat:1410");
 
-        JsonNode sale = Json.ok(api.post("/api/sales-invoices", NewSalesInvoice.of(
-                        id("customer:wholesale"), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
-                        "TEST-SI-2026-0001", JANUARY_LAST,
-                        List.of(
-                                // Product default 13%, customer override 13%, and an explicit 24%
-                                // on the third line: all three precedence levels on one document.
-                                NewSalesInvoiceLine.product(id("product:beans"),
-                                        Quantity.of(20L), UnitCost.ofEur("18.000000")),
-                                NewSalesInvoiceLine.product(id("product:grinder"),
-                                        Quantity.of(2L), UnitCost.ofEur("120.000000")),
-                                NewSalesInvoiceLine.product(id("product:filters"),
-                                        Quantity.of(10L), UnitCost.ofEur("6.000000"))
-                                        .atVatClass(standard),
-                                NewSalesInvoiceLine.charge(
-                                        id("charge:Delivery"), Money.ofEur("5.00"))))),
+        NewSalesInvoice firstSale = NewSalesInvoice.of(
+                id("customer:wholesale"), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                "TEST-SI-2026-0001", JANUARY_LAST,
+                List.of(
+                        // Product default 13%, customer override 13%, and an explicit 24%
+                        // on the third line: all three precedence levels on one document.
+                        NewSalesInvoiceLine.product(id("product:beans"),
+                                Quantity.of(20L), UnitCost.ofEur("18.000000")),
+                        NewSalesInvoiceLine.product(id("product:grinder"),
+                                Quantity.of(2L), UnitCost.ofEur("120.000000")),
+                        NewSalesInvoiceLine.product(id("product:filters"),
+                                Quantity.of(10L), UnitCost.ofEur("6.000000"))
+                                .atVatClass(standard),
+                        NewSalesInvoiceLine.charge(
+                                id("charge:Delivery"), Money.ofEur("5.00"))));
+
+        // What an entry screen does before submitting: ask what this would come to. Driven here
+        // rather than in a test of its own because the point is that the figures a screen showed
+        // are the figures that got posted — over the wire, on a document with three VAT precedence
+        // levels and a charge line at its own rate, which is where a second implementation would
+        // diverge. SalesInvoiceIT.previewAgreesWithRecord asserts the same thing at the service.
+        JsonNode preview = Json.ok(api.post("/api/sales-invoices/preview", firstSale),
+                "the preview of the first wholesale sale");
+        assertThat(preview.has("id"))
+                .as("a preview is not a document and must not look like one")
+                .isFalse();
+
+        JsonNode sale = Json.ok(api.post("/api/sales-invoices", firstSale),
                 "the first wholesale sale");
         handles.put("sale:wholesale-january", sale.get("id").asLong());
+
+        assertThat(Json.amount(preview, "gross"))
+                .as("the total the screen showed is the total that posted")
+                .isEqualTo(Json.amount(sale, "grossTotal"));
+        assertThat(Json.amount(preview, "net")).isEqualTo(Json.amount(sale, "netTotal"));
+        assertThat(Json.amount(preview, "vat")).isEqualTo(Json.amount(sale, "vatTotal"));
 
         // The carrier's invoice, then allocated across both bean lots — one of which has already
         // partly sold.
