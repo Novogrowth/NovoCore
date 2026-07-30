@@ -1,7 +1,7 @@
 {
-  "app.name": "NovoCore",
+  "app.name": "Novocore",
   "app.loading": "Loading…",
-  "app.unreachable.title": "NovoCore is not answering",
+  "app.unreachable.title": "Novocore is not answering",
   "app.unreachable.body": "The server could not be reached. This is not a sign-out — your session may still be valid once it is back.",
   "auth.signIn": "Sign in",
   "auth.signOut": "Sign out",
@@ -29,7 +29,7 @@
   "table.clientPaged": "Paged in the browser",
   "registry.notBuilt": "Not built",
   "registry.adaptersTitle": "Adapters",
-  "registry.adaptersBody": "External systems NovoCore talks to. None is built yet, and these switches store nothing — there is no API behind them.",
+  "registry.adaptersBody": "External systems Novocore talks to. None is built yet, and these switches store nothing — there is no API behind them.",
   "registry.modulesTitle": "Modules",
   "registry.modulesBody": "Internally-driven features. None is built yet, and these switches store nothing — there is no API behind them.",
   "adapter.PROSVASIS_GO": "Prosvasis Go",

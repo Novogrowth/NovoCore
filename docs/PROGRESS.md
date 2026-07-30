@@ -1,6 +1,6 @@
 # NovoCore — Build Progress
 
-*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-07-30 (close of the step 16b session).*
+*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-07-31 (close of the frontend brand session).*
 
 *Close-out now also pushes to `origin` automatically (`CLAUDE.md`), so this file no longer tracks
 unpushed commits.*
@@ -35,6 +35,7 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 15 | **Dummy data validation** — the API driven end to end over HTTP | **Done** — 15a and 15b complete. **Nine real defects found and fixed**, migration **V26**. Route coverage **128/133 driven, 5 excused with reasons**, asserted rather than reported. See below |
 | 16a | **Backend prerequisites for the frontend** — four items agreed before any step 16 work | **Done** — `/me`, preview endpoints, the OpenAPI spec + drift check, and the paging contract. Migration **V27**, plus **session eviction**, a defect found while building the first item. See below |
 | 16b | **Users & roles, journal listing, settings** — the three sections with no HTTP surface at all | **Done, committed** `452b3fd` — 37 routes, **no migration**. Three defects found and fixed, none of them in the code the step set out to write. See below |
+| 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress**, four commits so far: `94e17cd` foundations, `56e3726` Products + the write-hooks defect, `28c4119` two guards for it, and this session's brand pass. **144 frontend tests.** See *Step 16 — the frontend* below |
 
 **Tests: 1326 passing, 0 skipped, `mvn clean verify` exit 0. 174 routes.** Counted from a local run
 on this machine, and **0 skipped** holds: the PostgreSQL 17 client tools are installed here, so
@@ -135,6 +136,35 @@ why the `core` row in the count above gained a "unit" half.
 
 `mvn test` runs the non-container tests in ~6 seconds and needs no Docker. `mvn verify`
 additionally runs the `*IT` tests under Failsafe against a real PostgreSQL 17 container.
+
+### 🔧 Small frontend fix for later — a missing route and a downed server look identical
+
+**Not urgent, and not a defect in either file's own logic** — both do exactly what they were written
+to do. But together they leave one message covering two very different situations, and it cost real
+time on 2026-07-31.
+
+`useSession` in `frontend/src/auth/session.tsx` treats a 401 as the answer "nobody is signed in" and
+**every other failure as `error`** — deliberately, and the reasoning is sound: a Settings page that
+renders as though the user has no grants when the server is down is worse than one that says the
+server is down. `App.tsx` then checks `error` *before* `isSignedOut`, also deliberately, so that a
+password box is never shown in front of a server that cannot check the password.
+
+The gap is that a **404 falls into the same bucket as a connection failure**, so the shell renders
+"Novocore is not answering — the server could not be reached" when the server answered perfectly
+well and simply does not have the route.
+
+**How it presented**, which is the part worth remembering: the running container was two days older
+than the working tree and predated `GET /api/me` (`3158239`). Unauthenticated, the security entry
+point answers 401 before routing, so the login form appeared normally and the password was accepted
+(`204`). Only *after* authenticating did the request reach the dispatcher and come back 404 — so the
+symptom was **"the server is unreachable, but only once I log in successfully"**, which points at
+authentication and at the credential, and is nowhere near the actual cause.
+
+**The fix is to distinguish them in the message, not to change either file's error/signed-out
+split**, which is right as it stands. A 404 on `/api/me` means the frontend and backend are built
+from different commits, and saying so ("this build expects an API this server does not have —
+rebuild the app container") turns a twenty-minute hunt into a one-line diagnosis. `session.test.tsx`
+is where the case belongs.
 
 ### CI — green, and `BackupIT` now runs for real on it (`5a6dfa5`, 2026-07-29)
 
@@ -3769,6 +3799,90 @@ test that passes or fails on ordering is worse than a narrower one.
   helper now; the overload stays because raw-JSON requests are what the refusal matrix needs.
 
 ---
+## Step 16 — the frontend (in progress)
+
+**`/frontend/` is no longer a scaffold.** Four commits have landed. The first three are summarised
+here from their own commit messages rather than re-derived; the fourth is this session.
+
+| Commit | What |
+|---|---|
+| `94e17cd` | **Foundations** — the nine mechanisms every screen after it is built out of |
+| `56e3726` | **Products, the first real screen** — list with a Bundles tab, detail at its own route, create, deactivate/reactivate, inline per-field PATCH. Found the write-hooks defect below |
+| `28c4119` | **Two guards for that defect**, plus a correction: 92 writes, not 66 |
+| *this session* | **Brand pass** — product name casing, logo and favicon |
+
+**The one defect worth carrying forward, because it nearly wrote to the ledger by rendering.**
+`query: { useQuery: true }` in `orval.config.ts` forced *every* generated operation into a
+`useQuery` — all 92 non-GET routes included. A component that merely rendered a write hook would
+have sent the PATCH on mount, and again on every refetch, invalidation and window focus. Nothing
+caught it because nothing had yet *consumed* a write hook: the foundations built no screen, and two
+reviews read code that never called one. **Same lesson as Q45 and step 15 — a checker only covers
+what it is pointed at.** Now guarded in both layers: `src/api/client-shape.test.ts` checks all 174
+operations against the spec, and `src/test/requests.ts` (`expectNoWrites()`) is the standing
+assertion in every screen test from Products on. Both guards are themselves proven to go red.
+
+### ✅ This session — the brand pass (2026-07-31)
+
+Small and self-contained, at the owner's direction: correct the product name and wire in the real
+logo. **No behaviour changed.**
+
+**The name is `Novocore`** — capital N, rest lowercase — not `NovoCore`. Seven user-facing strings
+corrected across four files: the `<title>`, and `app.name` / `app.unreachable.title` /
+`registry.adaptersBody` in both the `en` and `el` locales. The logo art itself is set all-lowercase
+("novocore"), which independently corroborates the casing.
+
+**Deliberately *not* renamed**, and this is the part to hold on to: the Java package
+`gr.novotrade.novocore`, the repo, every internal identifier, the `NOVOCORE_SITE_ADDRESS` env var,
+the `x-novocore-*` spec extensions — and the **414 files under `src/api/generated/`** that carry the
+Orval header comment `* NovoCore API`. That string comes from the backend OpenAPI spec's title and
+is reverted by the next `npm run api:generate`; editing it would be churn that undoes itself. Seven
+source-code comments and four developer-facing strings (`README.md`, `eslint.config.js`,
+`scripts/check-no-cdn.js`) were also left, by decision — this was a display-text fix, not a rename.
+
+**Assets.** `public/Logo-Novocore.svg` is the wordmark, in the sidebar header (`h-8`) and on the
+login card (`h-10`), replacing the `app.name` text that sat in both. `app.name` survives as the
+`alt` text, so the accessible name is unchanged. `public/Favicon-Novocore.png` is the favicon,
+replacing the purple Vite scaffold mark (`public/favicon.svg`, deleted).
+
+**⚠️ The supplied "SVGs" contain no vector data.** Both are a base64 PNG inside an `<svg>` wrapper —
+zero `<path>` elements, one `<image>`/`<use>` pair. So: not scalable, not smaller (the favicon SVG
+was 20KB against the PNG's 14KB), and **not recolourable by CSS**. The wordmark still ships as the
+SVG because the wrapper composites its two raster pieces at the right offsets and carries the aspect
+ratio; the favicon ships as the PNG because there the wrapper buys nothing and costs 6KB. The two
+unused variants were not committed. **If a true vector wordmark is ever produced, it replaces
+`Logo-Novocore.svg` at the same path and nothing else changes.**
+
+**Contrast was measured, not assumed.** Ink is exactly `#000000` and `#333333` on transparent.
+Against the sidebar's `--sidebar: oklch(0.985 0 0)` that is **20.1:1** and **12.1:1**; against the
+login card's white, 21:1 and 12.6:1. Both are far above the 3:1 threshold and were also checked by
+compositing the logo onto those exact colours at the exact rendered sizes and looking at it.
+
+**Three things flagged and deliberately left alone**, all confirmed by the owner:
+
+- **Dark mode would make the logo invisible.** `.dark` tokens exist in `src/index.css` but nothing
+  ever applies the class, so it is unreachable today. If it is ever switched on, the sidebar becomes
+  `oklch(0.21 …)` and the logo falls to **1.44:1 / 1.16:1**. Because the asset is raster,
+  `currentColor` cannot rescue it — it needs `dark:invert` or a light-ink variant. **Whoever enables
+  dark mode owns this.**
+- **There is no collapsed sidebar.** `components/ui/sidebar.tsx` defaults to `collapsible="offcanvas"`,
+  which slides the whole panel off rather than narrowing to an icon rail, so there is no tight-space
+  slot for the mark. Switching to `collapsible="icon"` is a navigation change, not a brand fix.
+- **The favicon is soft at 16px.** The mark's three horizontal bands blur together at 1× DPR; at
+  24/32px, and therefore on any 2× display, it is crisp. Acceptable as-is.
+
+**Verified:** typecheck clean, lint 0 errors (2 pre-existing warnings), **144/144 tests pass**,
+build clean, `check:offline` passes, `knip` clean.
+
+### 📋 Housekeeping note for the next frontend session
+
+**This file had drifted.** Three frontend commits (`94e17cd`, `56e3726`, `28c4119`) landed without
+the status table or the "Next action" section being updated, so it still claimed the frontend had no
+login screen. Corrected above. The summaries of those three commits are drawn from the commit
+messages, which are detailed — but they are second-hand, and the sessions that wrote them would have
+recorded more. **Two pre-existing unreferenced scaffold assets remain**: `frontend/public/icons.svg`
+and `frontend/src/assets/vite.svg`. Neither is imported anywhere. Left alone as out of scope.
+
+---
 ## Next action — read this first
 
 ### ⚠️ Queued for the next BACKEND session — one small standalone fix (raised 2026-07-30)
@@ -3794,17 +3908,24 @@ confirm green.
 
 ---
 
-**Steps 0–15 are complete, committed and pushed. `mvn clean verify` is green at 1152 tests, 0
-skipped.**
+**Steps 0–16b are complete, committed and pushed. `mvn clean verify` is green at 1326 tests, 0
+skipped, across 174 routes. Step 16, the frontend, is in progress** — see *Step 16 — the frontend*
+above for what has landed.
 
 **There is no known correctness defect in the ledger**, and step 15 is the strongest evidence this
 project has for that claim: a full trading quarter, built by nothing but HTTP requests, satisfies all
 twelve universal invariants — and still does after being dumped, restored into a fresh database and
 swept again.
 
-### ➡️ Next: step 16, the frontend.
+### ➡️ Step 16, the frontend — under way, not next.
 
-**Step 15 is done, and it earned its place ahead of step 16 nine times over.** Every one of the nine
+**Foundations, Products and a brand pass have landed** (`94e17cd`, `56e3726`, `28c4119`, and this
+session). The paragraphs below were written before any of that and are kept because the reasoning
+still holds — with one correction: **the frontend now has a login screen, and a human has used a
+browser.** What has *not* happened is a human driving the ledger screens end to end; every
+frontend test still runs because a test asked it to.
+
+**Step 15 earned its place ahead of step 16 nine times over.** Every one of the nine
 defects it found is one step 16 would otherwise have hit through a second layer, with two candidate
 causes for every symptom. The three found last — a `500` on sixteen routes given a form with a field
 missing, a reversal document reporting `0.00`, and a whole slice answering `400` where the rest of the
@@ -3816,8 +3937,9 @@ writing; every refusal is RFC 7807 with a status a client can branch on; every r
 route is asserted rather than assumed; no route answers a bare "Bad request." or a 500 to a bad form;
 and `?from=`/`?to=` are proven inclusive at both ends.
 
-**One thing it must still not rely on: no human has used a browser.** Every route that runs, runs
-because a test asked it to. The frontend has no login screen.
+**One thing it must still largely not rely on: almost nothing has been driven by hand.** Every
+route that runs, runs because a test asked it to. The login screen and the Products screen now
+exist; the rest of the surface has still never been rendered.
 
 **PLB-1 (2FA) is the only pre-launch blocker outstanding** — deferred, unchanged, and still blocking
 any external or remote access.

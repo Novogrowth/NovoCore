@@ -135,7 +135,14 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="px-4 py-3 text-lg font-semibold">{t('app.name')}</SidebarHeader>
+      <SidebarHeader className="px-4 py-3">
+        {/*
+         * The wordmark carries the product name, so `alt` is the name itself rather than a
+         * description of the image — this is the heading, not decoration. `self-start` because
+         * SidebarHeader is a flex column, which would otherwise stretch the image to full width.
+         */}
+        <img src="/Logo-Novocore.svg" alt={t('app.name')} className="h-8 w-auto self-start" />
+      </SidebarHeader>
       <SidebarContent>
         {/*
          * Every root node is a heading, and `visibleNav` returns a path-less node only when it has

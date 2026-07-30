@@ -36,11 +36,13 @@ and cache-read, which dominate it — read the note before drawing conclusions f
 
 ## Not started
 
-Estimates below are unchanged. Nothing in this section has been measured.
+Estimates below are unchanged, and no estimate in this section has been replaced by a measurement.
+**Step 16 is the one row with real time already spent against it** — it is in progress, not started,
+and what has been measured so far is recorded in footnote ᵒ rather than in the table.
 
 | Step | What                                                          |  Est. | Status        |
 |-----:|---------------------------------------------------------------|------:|---------------|
-|   16 | Frontend ⁱ                                                    |   8.0 | 🟡 **Current** |
+|   16 | Frontend ⁱ ᵒ                                                  |   8.0 | 🟡 **Current** |
 |   17 | Operational monitoring                                        |   1.0 | 🔴 Not started |
 |   18 | Prosvasis Go adapter (full adapter, sync everything)          |   4.5 | 🔴 Not started |
 |   19 | WooCommerce adapter (Plus uploading products)                 |   2.0 | 🔴 Not started |
@@ -224,6 +226,30 @@ separately, so the real cost is an N+1 per page. The decision stands, the justif
 and the test that was supposed to protect it **passed against a deliberately introduced fetch** until
 it was rewritten against the measured figures. Recorded because a false justification is how a good
 decision gets reversed by whoever checks it next.
+
+**ᵒ Step 16 is under way and is deliberately still in this table rather than moved up.** It is not
+finished, so it keeps its 8.0 h estimate and its 🟡 and gets no `Actual` column — a partial figure in
+a column whose entire value is that every number in it is a completed measurement would cost more
+than it tells anyone. What *has* been spent is recorded here instead, so the hours are not lost:
+
+| Session | Date | Active | Wall | Out | In | What |
+|---|---|---:|---:|---:|---:|---|
+| `94e17cd`, `56e3726`, `28c4119` | 2026-07-30/31 | *not measured* | — | — | — | Foundations, Products, two guards |
+| `d0ec9d9a` + `f4e4d84c` | 2026-07-31 | **0.73** | 0.97 | 232k | 23.6M | The brand pass and the session before it |
+
+**The first row is blank on purpose, and it is a gap.** Those three commits landed without a
+close-out recording their figures, and reconstructing them now would mean assigning transcripts to
+commits after the fact — exactly the guesswork the `Actual` column exists to keep out. The
+transcripts are still in `~/.claude/projects/c--Novocore/`, so a future session can measure them
+properly against the commit boundaries; **this note is here so nobody later reads the silence as
+zero.**
+
+**The second row is measured** by the method below: two sessions inside one window running from
+`28c4119` to this close-out, 462 timestamped events, gaps capped at 5 minutes. `d0ec9d9a` is
+included because the window rule includes it — it spent 0.45 h diagnosing a frontend/backend version
+mismatch and wrote the note about it that this close-out commits. **As with every row it excludes its
+own close-out**, which is not yet in the transcript when the figure is computed, so read it as "at
+least". The brand pass itself was 0.20 h and 96k out.
 
 ---
 

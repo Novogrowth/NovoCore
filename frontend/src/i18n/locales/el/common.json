@@ -1,7 +1,7 @@
 {
-  "app.name": "NovoCore",
+  "app.name": "Novocore",
   "app.loading": "Φόρτωση…",
-  "app.unreachable.title": "Το NovoCore δεν αποκρίνεται",
+  "app.unreachable.title": "Το Novocore δεν αποκρίνεται",
   "app.unreachable.body": "Δεν ήταν δυνατή η σύνδεση με τον διακομιστή. Δεν πρόκειται για αποσύνδεση — η συνεδρία σας μπορεί να εξακολουθεί να ισχύει μόλις επανέλθει.",
   "auth.signIn": "Σύνδεση",
   "auth.signOut": "Αποσύνδεση",
@@ -29,7 +29,7 @@
   "table.clientPaged": "Σελιδοποίηση στον browser",
   "registry.notBuilt": "Δεν έχει υλοποιηθεί",
   "registry.adaptersTitle": "Διασυνδέσεις",
-  "registry.adaptersBody": "Εξωτερικά συστήματα με τα οποία επικοινωνεί το NovoCore. Καμία δεν έχει υλοποιηθεί και οι διακόπτες δεν αποθηκεύουν τίποτα — δεν υπάρχει API πίσω τους.",
+  "registry.adaptersBody": "Εξωτερικά συστήματα με τα οποία επικοινωνεί το Novocore. Καμία δεν έχει υλοποιηθεί και οι διακόπτες δεν αποθηκεύουν τίποτα — δεν υπάρχει API πίσω τους.",
   "registry.modulesTitle": "Υπομονάδες",
   "registry.modulesBody": "Λειτουργίες που οδηγούνται εσωτερικά. Καμία δεν έχει υλοποιηθεί και οι διακόπτες δεν αποθηκεύουν τίποτα — δεν υπάρχει API πίσω τους.",
   "adapter.PROSVASIS_GO": "Prosvasis Go",

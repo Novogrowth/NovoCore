@@ -35,7 +35,9 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center p-6">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>{t('app.name')}</CardTitle>
+          <CardTitle>
+            <img src="/Logo-Novocore.svg" alt={t('app.name')} className="h-10 w-auto" />
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
