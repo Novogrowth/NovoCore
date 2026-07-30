@@ -1,0 +1,36 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "scripts/*.js",
+    "src/api/wire-format.assert.ts",
+    "src/auth/*.ts?(x)",
+    "src/components/data-table/*.ts?(x)",
+    "src/components/decimal/*.tsx",
+    "src/i18n/*.ts",
+    "src/lib/decimal.ts",
+    "src/nav/*.ts"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "scripts/*.js"
+  ],
+  "ignore": [
+    "src/api/generated/**",
+    "src/components/ui/**"
+  ],
+  "ignoreDependencies": [
+    "tailwindcss",
+    "tw-animate-css",
+    "shadcn"
+  ],
+  "vite": {
+    "config": [
+      "vite.config.ts"
+    ]
+  },
+  "vitest": {
+    "config": [
+      "vitest.config.ts"
+    ]
+  }
+}

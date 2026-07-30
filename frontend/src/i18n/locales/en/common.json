@@ -1,0 +1,68 @@
+{
+  "app.name": "NovoCore",
+  "app.loading": "Loading…",
+
+  "auth.signIn": "Sign in",
+  "auth.signOut": "Sign out",
+  "auth.username": "Username",
+  "auth.password": "Password",
+  "auth.signingIn": "Signing in…",
+  "auth.failed": "That username and password combination was not accepted.",
+
+  "language.label": "Language",
+  "language.en": "English",
+  "language.el": "Ελληνικά",
+
+  "nav.notBuilt": "Not built yet",
+  "nav.notBuiltHint": "Visible to you because you have full access. There is nothing behind it yet.",
+
+  "page.notBuilt.title": "Not built yet",
+  "page.notBuilt.body": "This screen is planned but has not been built.",
+  "page.notFound.title": "No such page",
+  "page.notFound.body": "The address does not match anything in this application.",
+  "page.noAccess.title": "Not available to you",
+  "page.noAccess.body": "Your role does not include this section. Ask an administrator if you need it.",
+  "page.placeholder.body": "The foundations for this screen are in place. It is built on {{endpoint}}.",
+
+  "table.empty": "Nothing to show.",
+  "table.loading": "Loading…",
+  "table.rowsPerPage": "Rows per page",
+  "table.page": "Page {{page}} of {{pages}}",
+  "table.previous": "Previous",
+  "table.next": "Next",
+  "table.of": "{{from}}–{{to}} of {{total}}",
+  "table.serverPaged": "Paged by the server",
+  "table.clientPaged": "Paged in the browser",
+
+  "field.hidden": "—",
+  "field.hiddenTitle": "Hidden from your role",
+
+  "registry.notBuilt": "Not built",
+  "registry.adaptersTitle": "Adapters",
+  "registry.adaptersBody": "External systems NovoCore talks to. None is built yet, and these switches store nothing — there is no API behind them.",
+  "registry.modulesTitle": "Modules",
+  "registry.modulesBody": "Internally-driven features. None is built yet, and these switches store nothing — there is no API behind them.",
+
+  "adapter.PROSVASIS_GO": "Prosvasis Go",
+  "adapter.WOOCOMMERCE": "WooCommerce",
+  "adapter.SKROUTZ": "Skroutz",
+  "adapter.ACS_COURIER": "ACS Courier",
+  "adapter.FILE_IMPORT": "File Import",
+  "adapter.AADE_VIES_LOOKUP": "AADE / VIES Lookup",
+  "adapter.AADE_MYDATA": "AADE myDATA",
+  "adapter.BANK_AGGREGATOR": "Bank Aggregator",
+  "adapter.AADE_PAROCHOS": "AADE Πάροχος",
+  "adapter.POS_PROVIDER": "POS Provider",
+
+  "module.SALES_ORDER_FULFILLMENT": "Sales Order Fulfillment",
+  "module.CLEARING_CHECKS": "Clearing Checks",
+  "module.PRICE_TAG_PRINTING": "Price Tag Printing",
+  "module.PURCHASE_ORDERS": "Purchase Orders",
+  "module.BACK_IN_STOCK_REMINDERS": "Back-in-Stock Reminders",
+  "module.SERVICE_TECHNICIAN_MANAGEMENT": "Service / Technician Management",
+  "module.REPORTS": "Reports",
+  "module.ACCOUNTANT_MONTHLY_PACKAGE": "Accountant Monthly Package",
+  "module.AI_ANALYSIS": "AI Analysis",
+  "module.EMPLOYEE_MANUAL_VOICE_ASSISTANT": "Employee Manual + Voice Assistant",
+  "module.ERGANI": "Ergani"
+}

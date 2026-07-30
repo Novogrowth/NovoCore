@@ -3771,6 +3771,29 @@ test that passes or fails on ordering is worse than a narrower one.
 ---
 ## Next action — read this first
 
+### ⚠️ Queued for the next BACKEND session — one small standalone fix (raised 2026-07-30)
+
+**`InventoryController_writeOff` is the `operationId` of two operations, which OpenAPI forbids.**
+`POST /api/inventory/write-offs` and `GET /api/inventory/write-offs/{id}` are two Java methods of
+the same name, and `OpenApiSpecIT` derives the id as `Controller_method`, so it emitted an invalid
+spec without complaining. Found by step 16 generating a TypeScript client from it: the output did
+not compile, twenty duplicate-identifier errors in one file.
+
+**Two parts, and the second is the one that matters.** Fix the collision — rename a controller
+method, or disambiguate in the generator. Then make `OpenApiSpecIT` **refuse** a duplicate
+`operationId` rather than writing one out: the generator produced a spec that no conforming
+consumer can read, and said nothing, which is the failure mode step 16a's drift check exists to
+prevent.
+
+**Do not fold this into frontend work.** The frontend carries a documented workaround
+(`frontend/orval.config.ts` suffixes the HTTP verb) pinned by `frontend/src/api/spec-hygiene.test.ts`,
+which is written to fail **in both directions** — including the moment this is fixed. So the
+sequence after the backend fix is: regenerate the spec, watch that test fail, delete the
+de-duplication block in `orval.config.ts` and the assertion that pinned it, regenerate the client,
+confirm green.
+
+---
+
 **Steps 0–15 are complete, committed and pushed. `mvn clean verify` is green at 1152 tests, 0
 skipped.**
 

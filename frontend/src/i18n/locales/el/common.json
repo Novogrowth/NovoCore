@@ -1,0 +1,68 @@
+{
+  "app.name": "NovoCore",
+  "app.loading": "Φόρτωση…",
+
+  "auth.signIn": "Σύνδεση",
+  "auth.signOut": "Αποσύνδεση",
+  "auth.username": "Όνομα χρήστη",
+  "auth.password": "Κωδικός",
+  "auth.signingIn": "Γίνεται σύνδεση…",
+  "auth.failed": "Ο συνδυασμός ονόματος χρήστη και κωδικού δεν έγινε δεκτός.",
+
+  "language.label": "Γλώσσα",
+  "language.en": "English",
+  "language.el": "Ελληνικά",
+
+  "nav.notBuilt": "Δεν έχει υλοποιηθεί",
+  "nav.notBuiltHint": "Εμφανίζεται σε εσάς επειδή έχετε πλήρη πρόσβαση. Δεν υπάρχει ακόμη τίποτα πίσω από αυτό.",
+
+  "page.notBuilt.title": "Δεν έχει υλοποιηθεί",
+  "page.notBuilt.body": "Η οθόνη αυτή έχει προγραμματιστεί αλλά δεν έχει υλοποιηθεί.",
+  "page.notFound.title": "Δεν βρέθηκε η σελίδα",
+  "page.notFound.body": "Η διεύθυνση δεν αντιστοιχεί σε κάτι μέσα στην εφαρμογή.",
+  "page.noAccess.title": "Δεν είναι διαθέσιμο σε εσάς",
+  "page.noAccess.body": "Ο ρόλος σας δεν περιλαμβάνει αυτή την ενότητα. Απευθυνθείτε σε διαχειριστή αν τη χρειάζεστε.",
+  "page.placeholder.body": "Οι υποδομές για την οθόνη αυτή είναι έτοιμες. Βασίζεται στο {{endpoint}}.",
+
+  "table.empty": "Δεν υπάρχουν εγγραφές.",
+  "table.loading": "Φόρτωση…",
+  "table.rowsPerPage": "Εγγραφές ανά σελίδα",
+  "table.page": "Σελίδα {{page}} από {{pages}}",
+  "table.previous": "Προηγούμενη",
+  "table.next": "Επόμενη",
+  "table.of": "{{from}}–{{to}} από {{total}}",
+  "table.serverPaged": "Σελιδοποίηση από τον διακομιστή",
+  "table.clientPaged": "Σελιδοποίηση στον browser",
+
+  "field.hidden": "—",
+  "field.hiddenTitle": "Κρυφό για τον ρόλο σας",
+
+  "registry.notBuilt": "Δεν έχει υλοποιηθεί",
+  "registry.adaptersTitle": "Διασυνδέσεις",
+  "registry.adaptersBody": "Εξωτερικά συστήματα με τα οποία επικοινωνεί το NovoCore. Καμία δεν έχει υλοποιηθεί και οι διακόπτες δεν αποθηκεύουν τίποτα — δεν υπάρχει API πίσω τους.",
+  "registry.modulesTitle": "Υπομονάδες",
+  "registry.modulesBody": "Λειτουργίες που οδηγούνται εσωτερικά. Καμία δεν έχει υλοποιηθεί και οι διακόπτες δεν αποθηκεύουν τίποτα — δεν υπάρχει API πίσω τους.",
+
+  "adapter.PROSVASIS_GO": "Prosvasis Go",
+  "adapter.WOOCOMMERCE": "WooCommerce",
+  "adapter.SKROUTZ": "Skroutz",
+  "adapter.ACS_COURIER": "ACS Courier",
+  "adapter.FILE_IMPORT": "Εισαγωγή αρχείων",
+  "adapter.AADE_VIES_LOOKUP": "Αναζήτηση ΑΑΔΕ / VIES",
+  "adapter.AADE_MYDATA": "ΑΑΔΕ myDATA",
+  "adapter.BANK_AGGREGATOR": "Συγκεντρωτής τραπεζών",
+  "adapter.AADE_PAROCHOS": "ΑΑΔΕ Πάροχος",
+  "adapter.POS_PROVIDER": "Πάροχος POS",
+
+  "module.SALES_ORDER_FULFILLMENT": "Εκτέλεση παραγγελιών",
+  "module.CLEARING_CHECKS": "Επιταγές προς είσπραξη",
+  "module.PRICE_TAG_PRINTING": "Εκτύπωση ετικετών τιμών",
+  "module.PURCHASE_ORDERS": "Παραγγελίες αγοράς",
+  "module.BACK_IN_STOCK_REMINDERS": "Ειδοποιήσεις επαναδιαθεσιμότητας",
+  "module.SERVICE_TECHNICIAN_MANAGEMENT": "Διαχείριση επισκευών / τεχνικών",
+  "module.REPORTS": "Αναφορές",
+  "module.ACCOUNTANT_MONTHLY_PACKAGE": "Μηνιαίο πακέτο λογιστή",
+  "module.AI_ANALYSIS": "Ανάλυση με AI",
+  "module.EMPLOYEE_MANUAL_VOICE_ASSISTANT": "Εγχειρίδιο προσωπικού + φωνητικός βοηθός",
+  "module.ERGANI": "Εργάνη"
+}

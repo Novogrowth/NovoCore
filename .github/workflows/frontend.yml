@@ -1,0 +1,85 @@
+name: frontend
+
+# The sibling of backend.yml, and for the same reason stated there: a check nobody has to
+# remember to run catches more than one that depends on someone running it.
+#
+# The frontend's equivalents of the ArchUnit suite are here rather than in a checklist — the
+# navigation tree's grants are checked against the OpenAPI spec, every enum is checked for a label
+# in both languages, and the generated API client is checked for drift against the committed spec.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - 'docs/api/openapi.json'
+      - '.github/workflows/frontend.yml'
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - 'docs/api/openapi.json'
+      - '.github/workflows/frontend.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  verify:
+    name: lint, typecheck, test, build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # NovoCore runs on the shop's own network. A font or script fetched from a CDN is a
+      # dependency on somebody else's uptime for the application that issues the invoices.
+      # Runs after the build because it reads what the build actually emitted.
+      - name: No external origins in the build
+        run: npm run check:offline
+
+      - name: Unused files, exports and dependencies
+        run: npm run knip
+
+      # The generated client is committed so that a checkout builds without a generation step,
+      # and committed generated code is code that can silently fall behind what generated it.
+      # Regenerating and diffing is the same guarantee OpenApiSpecIT gives the spec itself: the
+      # artefact in git is the artefact the generator produces from the current input.
+      - name: API client drift check
+        run: |
+          npm run api:generate
+          if ! git diff --exit-code -- src/api/generated scripts; then
+            echo "::error::The committed API client differs from what orval generates from docs/api/openapi.json. Run 'npm run api:generate' and commit the result."
+            exit 1
+          fi

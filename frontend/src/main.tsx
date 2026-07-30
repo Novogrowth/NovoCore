@@ -1,27 +1,19 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter } from 'react-router-dom'
+
+import { AppQueryProvider } from '@/auth/query-client'
 
 import App from './App.tsx'
-import { Placeholder } from './pages/placeholder.tsx'
+import './i18n'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
-      <Routes>
-        <Route element={<App />}>
-          <Route index element={<Placeholder title="Overview" />} />
-          <Route
-            path="section-two"
-            element={<Placeholder title="Section Two" />}
-          />
-          <Route
-            path="section-three"
-            element={<Placeholder title="Section Three" />}
-          />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <AppQueryProvider>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </AppQueryProvider>
   </StrictMode>,
 )
