@@ -9,7 +9,7 @@ and cache-read, which dominate it — read the note before drawing conclusions f
 
 ---
 
-## Phase 1 — the core (complete through step 16a)
+## Phase 1 — the core (complete through step 16b)
 
 | Step | What                                                          |  Est. | Actual |   Out |      In | Status  |
 |-----:|---------------------------------------------------------------|------:|-------:|------:|--------:|---------|
@@ -31,7 +31,8 @@ and cache-read, which dominate it — read the note before drawing conclusions f
 |   14 | REST surface — 133 routes, Q44, migration V25 ʰ               |   2.5 |    2.0 |  646k |  151.5M | 🟢 Done |
 |   15 | Dummy data validation — 9 defects, see ˡ                      |   0.7 |    4.5 | 1,729k|  669.4M | 🟢 Done |
 |  16a | Backend prerequisites for the frontend — 4 items, V27 ᵐ       |     — |    2.4 |  472k |  168.1M | 🟢 Done |
-|      | **Subtotal, steps 0–16a**                                     |**32.2**|**27.5**|**9.05M**|**2,229M**| |
+|  16b | Users & roles, journal listing, settings — 37 routes ⁿ        |     — |    2.0 |  526k |  184.3M | 🟢 Done |
+|      | **Subtotal, steps 0–16b**                                     |**32.2**|**29.5**|**9.58M**|**2,413M**| |
 
 ## Not started
 
@@ -41,7 +42,7 @@ Estimates below are unchanged. Nothing in this section has been measured.
 |-----:|---------------------------------------------------------------|------:|---------------|
 |   16 | Frontend ⁱ                                                    |   8.0 | 🟡 **Current** |
 |   17 | Operational monitoring                                        |   1.0 | 🔴 Not started |
-|   18 | Prosvasis Go adapter                                          |   4.5 | 🔴 Not started |
+|   18 | Prosvasis Go adapter (full adapter, sync everything)          |   4.5 | 🔴 Not started |
 |   19 | WooCommerce adapter                                           |   2.0 | 🔴 Not started |
 |   20 | Skroutz adapter                                               |   1.3 | 🔴 Not started |
 |   21 | ACS Courier adapter                                           |   1.3 | 🔴 Not started |
@@ -189,6 +190,40 @@ A pre-existing defect since step 4 — the authenticated principal is a snapshot
 deactivating an account did not log it out — surfaced by `/api/me` returning a stale language, and
 fixed in the same stretch. Attributed here rather than back to step 4, on the same basis as footnote
 ᶠ: the row that found and fixed it carries it.
+
+**ⁿ Step 16b — the three sections that had no HTTP surface at all.** Like 16a, unplanned and without
+an estimate: `USERS_AND_ROLES` and `JOURNAL` had zero routes and Settings had neither UI nor API, so
+all three were direct SQL and would have become permanent frontend placeholders. Delivered 18
+users/roles routes, 3 journal routes, 3 settings routes and 13 lookup-administration routes — **37 in
+total, 137 → 174** — and 138 tests, 1,188 → 1,326. **No migration**, checked against the three CHECK
+constraints that could have forced one rather than assumed, after step 14's plan said "no migrations
+expected" and was wrong.
+
+**Measured from a single session** (`ed1321f9`, 2026-07-30): 558 assistant messages, **2.37 h wall
+clock, 1.95 h active** under the 5-minute cap, 526k out, 184.3M in. Recorded as **2.0** and, as with
+every row, **it excludes the close-out that follows it, so it should be read as "at least"**.
+
+**Three defects were found and fixed inside this row**, none of them in the code the step set out to
+write, which is why they carry no separate line:
+
+- **Narrowing a role ended nobody's session.** `UserSessions` was wired into `UserService` only;
+  `RoleServiceImpl` had no reference to it. Harmless while role editing was direct SQL and not
+  harmless the moment a grant route exists. Same shape as the eviction defect in footnote ᵐ, one
+  layer along.
+- **User administration was a route to unlimited access.** Closed by two rules — per-section on
+  `grant`, by the `fullAccess` flag on user creation — because the compound path sidesteps either one
+  alone.
+- **An unparseable enum answered a bare `"Bad request."`** — `CLAUDE.md`'s named residual, latent on
+  every enum query parameter since 16a and surfaced by the first enum-typed *path* variables. Fixed
+  for the whole surface in `WebExceptionHandler`, so it belongs to no single route.
+
+**And one correction to a belief rather than to code.** The listing avoids fetching an entry's lines,
+justified in four javadocs by `HHH000104` — Hibernate paging a fetched collection in memory. That is
+Hibernate 5 behaviour; measured on 7, the limit is applied in SQL and the collections load
+separately, so the real cost is an N+1 per page. The decision stands, the justification was wrong,
+and the test that was supposed to protect it **passed against a deliberately introduced fetch** until
+it was rewritten against the measured figures. Recorded because a false justification is how a good
+decision gets reversed by whoever checks it next.
 
 ---
 

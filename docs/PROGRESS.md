@@ -1,6 +1,6 @@
 # NovoCore — Build Progress
 
-*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-07-30.*
+*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-07-30 (close of the step 16b session).*
 
 *Close-out now also pushes to `origin` automatically (`CLAUDE.md`), so this file no longer tracks
 unpushed commits.*
@@ -34,15 +34,17 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 14 | **The REST surface** — 133 routes, and Q44 answered in full | **Done, committed** `423bf34` + `e6354d6` + `b8aa9e2` + `f2e8e06` — three sub-steps as agreed, plus the BundleService follow-up. **Migration V25.** See below |
 | 15 | **Dummy data validation** — the API driven end to end over HTTP | **Done** — 15a and 15b complete. **Nine real defects found and fixed**, migration **V26**. Route coverage **128/133 driven, 5 excused with reasons**, asserted rather than reported. See below |
 | 16a | **Backend prerequisites for the frontend** — four items agreed before any step 16 work | **Done** — `/me`, preview endpoints, the OpenAPI spec + drift check, and the paging contract. Migration **V27**, plus **session eviction**, a defect found while building the first item. See below |
+| 16b | **Users & roles, journal listing, settings** — the three sections with no HTTP surface at all | **Done, committed** `452b3fd` — 37 routes, **no migration**. Three defects found and fixed, none of them in the code the step set out to write. See below |
 
-**Tests: 1188 passing, 0 skipped, `mvn clean verify` exit 0. 137 routes.** Counted from a local run
-on this machine, and **0 skipped is new**: the PostgreSQL 17 client tools are now installed here, so
-`BackupIT`'s 16 tests and the two backup legs run locally as well as on CI. Previous close-outs
-recorded 17 skipping on this machine; that is no longer true and the note has been corrected rather
-than carried forward.
+**Tests: 1326 passing, 0 skipped, `mvn clean verify` exit 0. 174 routes.** Counted from a local run
+on this machine, and **0 skipped** holds: the PostgreSQL 17 client tools are installed here, so
+`BackupIT`'s 16 tests and the two backup legs run locally as well as on CI.
 
 Step 16a added 36 (1152 → 1188) and four routes (133 → 137): `GET /api/me`,
 `PATCH /api/me/language`, `POST /api/sales-invoices/preview`, `POST /api/credit-notes/preview`.
+**Step 16b added 138 (1188 → 1326) and 37 routes (137 → 174)** — 18 users/roles, 3 journal, 3
+settings, 13 lookup administration. The OpenAPI spec was regenerated and the operation sets diffed
+directly rather than trusting the line count: **0 removed, 37 added, 174 total.**
 
 ---
 
@@ -74,6 +76,23 @@ gaining `page`/`size`/`sort`/`direction` through `Paging.of`.
    means a response shape changed rather than gained a field.
 
 Then `mvn verify -Dnovocore.openapi.write=true`, commit the spec with the change.
+
+**A third thing to check, learned in 16b.** Two of the five services page a list whose rows carry a
+collection (`GET /api/inventory/lots` reaches a lot's units; the outbox reaches a message's
+attachments). Do **not** reach for a `join fetch` there, and do not repeat the reason 16b first gave
+for that: `HHH000104` — Hibernate paging a fetched collection in memory — is **Hibernate 5
+behaviour**. On 7 the limit is applied in SQL and the collections load separately, so the real cost
+is an **N+1 per page**, measured at 5 entities/0 collection loads without a fetch against 15/5 with
+one. Still worth avoiding, and worth stating accurately.
+`JournalEndpointIT.aPageLoadsOnlyItsOwnRows` is the pattern to copy: assert entity **and** collection
+load counts from Hibernate's `Statistics`, and check `isStatisticsEnabled()` first — the earlier
+version of that test measured nothing and passed against a deliberately introduced fetch.
+
+**And a fourth**, if any of these gains an optional filter: a JPQL `(:param is null or …)` **does not
+work on PostgreSQL** — a bare parameter in `? IS NULL` gives the driver nothing to infer from and the
+statement is refused outright (`could not determine data type of parameter $1`). Use a
+`Specification`, as `JournalEntrySpecifications` does; casting each parameter also works and leaves
+dead conditions in every plan.
 
 Step 15 added 113 in total (1039 → 1152), and the count understates the change twice over:
 `WholeScenarioIT`'s 21 invariant tests were **replaced** by 12 shared ones fed to a `@TestFactory`,
@@ -229,6 +248,207 @@ anti-pattern; one helper keeps it from being got right in most routes.
 `grossTotal()` sums its lines in Java. Ordering by it needs a correlated subquery per page or a
 stored total that could disagree with the lines. **The same trap exists on purchase invoices, goods
 receipts and settlements** — check before adding a constant, not after.
+
+---
+
+## Step 16b — done (users & roles, journal listing, settings) — `452b3fd`
+
+**The three sections with no HTTP surface at all.** `USERS_AND_ROLES` and `JOURNAL` had zero routes;
+Settings had neither UI nor API. All three were administered by direct SQL, and all three would have
+become permanent frontend placeholders. **1188 → 1326 tests, 137 → 174 routes, no migration** —
+checked against the `role_section_grant`, `setting_key_format` and `journal_entry_source_known`
+CHECKs rather than assumed, after step 14's plan said "no migrations expected" and was wrong.
+
+Proposed in `docs/step-16b-users-journal-settings-proposal.md` and approved area by area.
+
+### Users & roles — 18 routes
+
+Real CRUD, per-section grants, field restrictions, plus `GET /api/sections` (the catalogue a role
+editor renders its grid from) and `GET /api/roles/{id}/users` (because role deactivation is refused
+while anybody holds it, and a refusal naming a count and not the people is a dead end).
+
+**Governed by `Section.USERS_AND_ROLES`, not hard-coded to Owner/Admin.** In practice that *is*
+Owner-and-Admin-only today — access is default-deny and nothing else is granted the section — but it
+stays configuration, which is what brief §7's "multiple custom roles from the start" requires of the
+section that administers roles. Hard-coding it would have made the section dead code and broken
+`PermissionSweepIT`'s granted-everywhere role, which asserts every read is admitted by *stored
+grants* rather than by the `fullAccess` flag.
+
+### 🛡️ Narrowing a role now ends its holders' sessions, and did not before
+
+`UserSessions` was wired into `UserService.deactivate` and `changeRole` only. **`RoleServiceImpl` had
+no reference to it at all.** Latent and harmless while role editing was direct SQL — an `UPDATE` to
+`role_section_grant` never went through Java — and not harmless the moment
+`PUT /api/roles/{id}/grants/{section}` exists: revoking a section would have left every holder of the
+role using it for up to a full session lifetime. Exactly the failure `UserSessions` was built to
+prevent, arriving through the door this step opened.
+
+| Operation | Ends sessions |
+|---|---|
+| revoke a section (`FULL`→`NONE`) | ✅ |
+| downgrade (`FULL`→`VIEW`) | ✅ |
+| restrict a field | ✅ |
+| reset a password | ✅ **new** |
+| widen a grant | ❌ correct |
+| re-grant the same level | ❌ correct |
+| re-restrict an already-restricted field | ❌ correct |
+| rename / change language | ❌ correct |
+
+**Both directions are asserted**, because a control that evicted on every change would pass a test
+checking only the revoking half while making the system unusable. **Each eviction assertion was
+confirmed to fail with its call removed**, then restored — the step-12 audit-log lesson: a structural
+test ("`RoleServiceImpl` depends on `UserSessions`") would pass against code that injects it and never
+calls it.
+
+**`AccessLevel.isNarrowerThan` uses an explicit `rank()` switch, not `ordinal()`.** Same answer today;
+silently different the day somebody reorders the constants, and the thing reading it decides whether
+a revoked user stays logged in.
+
+**Role deactivation deliberately does not evict** — it is refused while anybody holds the role, so
+there is provably nobody to evict. That reasoning is now a test, so weakening the refusal fails
+loudly instead of quietly leaving deactivation unable to log anyone out.
+
+### 🛡️ User administration was a route to unlimited access — closed by two rules
+
+Neither closes it alone:
+
+- **Per-section, on `RoleService.grant`** — you may only confer a level you already hold on that
+  section. Read through `RoleView.accessTo`, never off the grant rows, so a full-access actor holds
+  `FULL` everywhere by construction (Owner and Admin have no grant rows at all, and a check reading
+  them directly would conclude the Owner may grant nothing). Revoking is always allowed: `NONE` is
+  narrower than everything, and containment must not require the access being contained.
+- **By the `fullAccess` flag, on `UserService.create`/`changeRole`** — you may not put anybody into a
+  full-access role without holding one. This is the precedent `RoleService.create` already set (no
+  custom role can *become* full access), which was otherwise trivially sidestepped by creating an
+  account in one of the two that already exist.
+
+Plus a refusal to edit the permissions of your own role, or to change your own role.
+
+**`PrivilegeEscalationIT` walks the compound path** — a `USERS_AND_ROLES`-only role creates a second
+role, grants it `JOURNAL:FULL`, puts an account in it — and asserts it is **cut at the grant, not
+downstream**, with the target role verified to carry no `JOURNAL` key afterwards. Cutting it only at
+account creation would leave a role carrying `JOURNAL:FULL` in the database, one mistake from
+somebody being moved into it.
+
+**Confirmed to fail against the flag-only version.** The sequence never touches a full-access role at
+any point, which is precisely why a flag-only guard has nothing to fire on;
+`theFlagAloneWouldNotHaveCaughtTheCompoundPath` asserts that fact directly so the reasoning stays
+checkable once the probe is gone.
+
+### Journal — 3 routes
+
+`GET /api/journal-entries` (paged), `GET /api/journal-entries/{id}`, `GET /api/accounts/{id}/ledger`
+(paged). Filters: date range, account, source, sub-ledger — **all optional**, unlike
+`/api/sales-invoices` which demands a range, because a ledger screen's landing view is "everything,
+newest first" and the page already bounds the query.
+
+- **`source` accepts all ten `JournalSource` values**, not the six brief §6 names as the typed
+  transactions. Goods receipts, credit notes, freight allocations and inventory write-offs post too.
+- **The account filter is an `EXISTS` subquery, not a join** — an entry with three lines on the
+  account must appear once, and `distinct` would fix the duplicates while leaving `count(*)`, and
+  therefore "page 7 of 34", wrong.
+- **`/api/accounts/{id}/ledger` is governed by `JOURNAL`, not `CHART_OF_ACCOUNTS`**, despite the path.
+  Asserted behaviourally (a role with the chart and not the journal reads the account and is refused
+  its ledger) and carried as an explicit exception in `PermissionSweepIT`'s rule table, ordered above
+  the chart prefix.
+- **No write routes.** `postManualEntry`, `amend` and `reverse` have services and no routes: a
+  manual-entry screen is a design conversation — line editor, account picker, balance-as-you-type —
+  not something to add behind a listing.
+- **Q40 (a human-facing entry number) stays open.** The kickoff brief said it had been decided; this
+  file said otherwise and was right. Deferred: the format is genuinely unguessable, it needs a
+  migration plus a backfill plus a gap-free allocation strategy, and it is broader than the journal.
+
+⚠️ **`JournalEntrySummaryView` exists because `JournalEntryView` refuses to exist without its lines**
+— and **not** for the reason four javadocs originally gave. The received wisdom that a fetched
+collection forces in-memory paging (`HHH000104`) is **Hibernate 5 behaviour**. Measured on 7:
+
+```
+without a collection fetch:  5 entities loaded,  0 collection loads
+with one:                   15 entities loaded,  5 collection loads
+```
+
+So the cost is an **N+1 per page**, not an out-of-memory. **The test meant to protect this passed
+against a deliberately introduced fetch** until it was rewritten against the measured numbers and
+given an `isStatisticsEnabled()` check — the earlier version was asserting "0 is less than 25" and
+would have passed against any implementation. Recorded because a false justification is how a good
+decision gets reversed by whoever checks it next.
+
+**Filtering uses `Specification`s, not one JPQL string with optional predicates.** PostgreSQL cannot
+infer a type for a bare parameter in `? IS NULL` and refuses the statement outright. Casting each
+parameter works and keeps five dead conditions in every plan.
+
+### Settings — 3 routes, and the lookups — 13
+
+**An allowlist, not a view of the table.** `SettingsCatalog` (18 entries) binds to `{key}`, so an
+uncatalogued key **has no route** — Spring refuses it before any of our code runs, and the exposed
+set appears in the OpenAPI document.
+
+**The whole `backup.*` namespace is excluded, and per-key exclusion would not have been enough:**
+`backup.drive.*.folder-id` and `.client-id` are **not** flagged secret in the table and would arrive
+in the clear from any `listRedacted()`-based listing — and would be missed again by whoever adds a
+third destination. Asserted against the raw response bytes, not the parsed items. The published spec
+contains **zero occurrences of `backup.`**.
+
+The **backup encryption key needs no exclusion**: it has no row in the table at all, because the
+table is inside the dump it decrypts (ADR 0013). A test asserts that absence rather than trusting it.
+
+**Values are validated before they are stored**, so a refused write leaves the previous one intact.
+Today `SettingsService.put` accepts `"0,03"` with a comma and the failure surfaces on the next invoice
+recorded, naming a key nobody was thinking about.
+
+**`cash.payment.limit` is readable and never writable.** Statutory (€500, N. 5301/2026), not
+technically immutable — the catalogue entry records *why*, so the missing write route does not read
+as an oversight. The read serves **the administrator reviewing configuration**, not the operator who
+hit the refusal: they already get the limit interpolated into the 422 *and* into the invoice preview,
+with no `SETTINGS` grant. That is asserted by a test, so the placement decision does not quietly
+become wrong the day somebody stops interpolating it.
+
+**Six guards, three proven to fire against probes:** the `backup.` namespace rule; secrets-are-
+write-only; and an **ArchUnit rule keeping `..core.web..` off the untyped `SettingsService`**. Plus:
+every catalogued key exists in the table (except `smtp.password`, which no migration seeds); the
+encryption key has no row; and every seeded value satisfies its declared type.
+
+**VAT classes and units of measure got write routes under their existing sections**
+(`TAX_AND_CHARGES`, `PRODUCTS`), not `SETTINGS` — asserted behaviourally, since a role with
+`SETTINGS:FULL` reaches neither. ⚠️ **There is deliberately no route to change a rate, and its absence
+is asserted across three plausible paths**: editing one would retroactively change what every invoice
+already issued under that class appears to have charged, so a rate change is a new class plus a
+deactivation. `GET /api/units-of-measure/without-mydata-code` makes **Q38's outstanding list visible
+for the first time** — it was answerable only from `psql`, which is how a question waiting on the
+accountant stays unasked.
+
+### 🐛 A defect that was not this step's, fixed for the whole surface
+
+`MethodArgumentTypeMismatchException` **is an `IllegalArgumentException`**, so an unparseable enum
+fell through to the generic handler as a bare `400 "Bad request."` That is `CLAUDE.md`'s named
+residual — *a wrong but non-empty value, specifically an unparseable enum* — the case none of the
+three guards can see: it is not a 5xx, so `noRouteFailsOnAnEmptyBody` is blind to it, and nothing in
+`..core.web..` constructs the exception, so the ArchUnit rule is too.
+
+Found by **`PermissionSweepIT.noRouteRefusesWithoutSayingWhy`** when this step added the first
+enum-typed **path** variables — and **latent on every enum query parameter since 16a**, so a mistyped
+`?sort=` on any paged list had been answering `"Bad request."` all along. Fixed in
+`WebExceptionHandler`: the refusal now names the parameter and, for an enum, the accepted constants.
+
+### Coverage and the sweeps
+
+- **`TradingQuarterOverHttpIT` drives the three journal routes rather than excusing them** — it has
+  hundreds of real entries and runs as the Owner, so it cross-checks each summary's `total` and
+  `lineCount` against the full entry's own lines, over reversals, credit notes, freight allocations
+  and write-offs. A draft excuse claiming the quarter's operator lacks `JOURNAL` was **false** and
+  was caught before it went in.
+- Users/roles, settings and lookup administration are **excused with written reasons**, each naming
+  the test that covers it. `EXCUSED_ROUTES` moved from `Map.of` to `Map.ofEntries` (10-pair cap).
+- `PermissionSweepIT` gained four prefixes and one ordered exception.
+- The spec was regenerated and **the operation sets diffed directly**: 0 removed, 37 added, 174
+  total. The raw diff showed ~300 deleted lines, which was the paths block re-sorting alphabetically
+  — worth checking rather than trusting on an additive change.
+
+### One process note
+
+The proposal's section headers twice stated a route count its own tables contradicted — "17
+users/roles" against 9+9, and "11 lookup routes" against 6+7. **The tables were right both times.**
+Worth knowing for future proposals: count from the table, not the prose.
 
 ## 🚫 Pre-launch blockers
 
@@ -459,6 +679,7 @@ were already on `origin`.
 | `416ca82` | **Step 16a (3)** — the OpenAPI spec, generated from our own serialisers, with the CI drift check |
 | `2d37a68` | The generated API contract is LF in the working copy too |
 | `8c23e0b` | **Step 16a (4)** — the paging contract, and sales invoices as the worked tier-A example |
+| `452b3fd` | **Step 16b** — users & roles, the journal listing and settings: 37 routes, eviction on narrowing, the two anti-escalation rules, and the enum-refusal fix. No migration |
 
 Interleaved with these are small docs-only commits (`e25fcee`, `a09428e`, `920044c`, `de16e58`,
 `b065901`, `8c27cb4`, `2c3fa8a`, `21b2231`, `d1111d0`, `610f785`, `836a4eb`) and this session's

@@ -8,7 +8,7 @@
 
 An internally-owned system for Novotrade S.A. (Java Jives) replacing Manager.io, and eventually Prosvasis Go. **Not just "replace Manager"** — the real goal is unifying data across disconnected systems, automating repetitive tasks, and generating real reports. Manager replacement is the first workload, not the purpose. No regulatory/compliance filing responsibility sits with NovoCore — the external accountant handles that; Go remains the invoicing system of record until Phase 11.
 
-## Current build status (as of this primer — 2026-07-30, close of the step 16a session)
+## Current build status (as of this primer — 2026-07-30, close of the step 16b session)
 
 **Detailed, always-current status lives in `docs/PROGRESS.md`.** Read that first; this section is
 the summary.
@@ -48,6 +48,71 @@ the summary.
   - **⚠️ Remaining: tier-A paging on five more services** (purchase invoices, goods receipts,
     settlements, inventory lots/consumptions, the outbox). **Mechanical — same shape, no new design.**
     The recipe and the two traps are in `PROGRESS.md`.
+- **✅ Step 16b is DONE — the three sections that had no HTTP surface at all.** `USERS_AND_ROLES` and
+  `JOURNAL` had zero routes and Settings had neither UI nor API, so all three were direct SQL and
+  would have become permanent frontend placeholders. **1326 tests, 0 skipped, `mvn clean verify`
+  exit 0; 174 routes** (137 + 37). **No migration** — checked against the three CHECK constraints
+  that could have forced one rather than assumed, after step 14's plan said "no migrations expected"
+  and was wrong.
+  - **Users & roles — 18 routes**, governed by `Section.USERS_AND_ROLES` rather than hard-coded to
+    Owner/Admin, so brief §7's "multiple custom roles from the start" stays true for the section that
+    administers roles. Includes `GET /api/sections`, the catalogue a role editor renders from.
+  - **🛡️ Narrowing a role now ends its holders' sessions, and did not before.** `UserSessions` was
+    wired into `UserService.deactivate`/`changeRole` only; **`RoleServiceImpl` had no reference to it
+    at all**. Latent while role editing was direct SQL — an `UPDATE` to `role_section_grant` never
+    went through Java — and not latent the moment `PUT /api/roles/{id}/grants/{section}` exists.
+    **The asymmetry is asserted in both directions**: revoke, downgrade, restrict a field and reset a
+    password evict; widen, re-grant the same level, re-restrict, rename and change language do not.
+    Each eviction assertion was **confirmed to fail with its call removed**. `AccessLevel.isNarrowerThan`
+    uses an explicit `rank()` switch rather than `ordinal()`, because the thing reading it decides
+    whether a revoked user stays logged in.
+  - **🛡️ User administration was a route to unlimited access; it is closed by two rules, because
+    neither closes it alone.** *Per-section* on `RoleService.grant` (you may only confer a level you
+    hold, with a full-access actor holding `FULL` everywhere by construction rather than by grant
+    rows), and *by the `fullAccess` flag* on `UserService.create`/`changeRole` (you may not put anyone
+    into a full-access role without holding one), plus a refusal to edit your own role or change your
+    own. **`PrivilegeEscalationIT` walks the compound path** — build a second role, grant it
+    `JOURNAL`, put an account in it — and asserts it is cut **at the grant, not downstream**, so no
+    dangerous role is left sitting in the database. It was **confirmed to fail against the flag-only
+    version**, which the sequence sidesteps entirely because it never touches a full-access role.
+  - **Journal — 3 routes**: a paged listing (date range, account, source, sub-ledger; all optional),
+    the single entry with its lines, and the account ledger. `/api/accounts/{id}/ledger` is governed
+    by **`JOURNAL`, not `CHART_OF_ACCOUNTS`**, despite the path — asserted behaviourally, and carried
+    as an explicit exception in `PermissionSweepIT`'s table. **`source` accepts all ten
+    `JournalSource` values**, not the six brief §6 names. **No write routes**: a manual-entry screen
+    is a design conversation, not something to smuggle in behind a listing.
+  - **⚠️ `JournalEntrySummaryView` exists because `JournalEntryView` refuses to exist without its
+    lines** — and *not* for the reason four javadocs originally gave. The received wisdom that a
+    fetched collection forces in-memory paging (`HHH000104`) is **Hibernate 5 behaviour**; measured
+    on 7, the limit is applied in SQL and collections load separately (5 entities/0 collection loads
+    without a fetch, 15/5 with one). So the cost is an **N+1 per page, not an out-of-memory**. The
+    test meant to protect this **passed against a deliberately introduced fetch** until it was
+    rewritten against the measured figures. Recorded because a false justification is how a good
+    decision gets reversed by whoever checks it.
+  - **Filtering uses Specifications, not one JPQL string with optional predicates**: PostgreSQL
+    cannot infer a type for a bare parameter in `? IS NULL` and refuses the statement outright. Casts
+    would have worked and left five dead conditions in every plan.
+  - **Settings — 3 routes, and it is an allowlist rather than a view of the table.** `SettingsCatalog`
+    (18 entries) binds to `{key}`, so an uncatalogued key **has no route**: the whole `backup.*`
+    namespace is excluded structurally. **Per-key exclusion would not have been enough** —
+    `backup.drive.*.folder-id` and `.client-id` are *not* flagged secret and would arrive in the
+    clear from any `listRedacted()`-based listing. Values are **validated before they are stored**, so
+    a refused write leaves the previous one intact; today `SettingsService.put` accepts `"0,03"` and
+    the failure surfaces on the next invoice recorded. **`cash.payment.limit` is readable and never
+    writable** — statutory, not immutable. **Six guards, three proven to fire against probes**,
+    including an ArchUnit rule keeping `..core.web..` off the untyped `SettingsService`.
+  - **VAT classes and units of measure got write routes under their existing sections** (13 routes),
+    not `SETTINGS` — asserted behaviourally, since a role with `SETTINGS:FULL` reaches neither.
+    **There is deliberately no route to change a rate**, and its absence is asserted: editing one
+    would retroactively change what every invoice already issued under that class appears to have
+    charged, so a rate change is a new class plus a deactivation.
+    `GET /api/units-of-measure/without-mydata-code` makes **Q38's outstanding list visible for the
+    first time** — it was answerable only from `psql`.
+  - **🐛 One defect fixed that was not this step's**: `MethodArgumentTypeMismatchException` is an
+    `IllegalArgumentException`, so an **unparseable enum answered a bare `400 "Bad request."`** —
+    `CLAUDE.md`'s named residual, the wrong-but-non-empty value none of the three guards can see.
+    Found by `PermissionSweepIT` on the first enum-typed *path* variables and **latent on every enum
+    query parameter since 16a**. Fixed in `WebExceptionHandler` for the whole surface.
 - **🛡️ A permission change now takes effect immediately (session eviction).** Found while building
   `/api/me`: the principal is a snapshot taken at login, so **deactivating an account did not log it
   out** — for up to a session's lifetime, with no indication to the operator. Eviction rather than a
@@ -61,7 +126,7 @@ the summary.
   confirmed to fail with the eviction removed. ⚠️ Residuals, both deliberate: the registry is
   **per-process and in memory** (one instance, as the deployment already assumes), and a change that
   does *not* warrant ending a session — a rename, a widened grant — still applies at next login.
-- **Backend Phase 1: steps 0–15 done (plus inserted steps 3b, 4b and 16a).** Step 12 is operationally commissioned as well as built, step 13 — the test suite consolidation sweep — found and fixed one real ledger defect (Q45 → ADR 0015), **step 14 built the REST surface: 133 routes, migration V25, and Q44 answered in full**, and **step 15 validated it**. The agreed order was 15 validation → 16 frontend, and **that premise is now settled by evidence rather than argued:** when step 15 began, roughly half the 133 routes had never received an HTTP request and the untested half was the half that moves money. Nine defects later — none of them reachable from the service layer — the case is made. **Next is step 16, the frontend** — with its four backend prerequisites now done (step 16a above); the only backend work left before it is finishing tier-A paging on five more services, which is mechanical. PLB-1 (2FA) stays deferred — its trigger, external or remote access, has not arrived.
+- **Backend Phase 1: steps 0–15 done (plus inserted steps 3b, 4b, 16a and 16b).** Step 12 is operationally commissioned as well as built, step 13 — the test suite consolidation sweep — found and fixed one real ledger defect (Q45 → ADR 0015), **step 14 built the REST surface: 133 routes, migration V25, and Q44 answered in full**, and **step 15 validated it**. The agreed order was 15 validation → 16 frontend, and **that premise is now settled by evidence rather than argued:** when step 15 began, roughly half the 133 routes had never received an HTTP request and the untested half was the half that moves money. Nine defects later — none of them reachable from the service layer — the case is made. **Next is step 16, the frontend** — with its four backend prerequisites done (step 16a) *and* the three sections that had no API at all now built (step 16b), so no screen has to ship as a permanent placeholder. **The only backend work left before it is finishing tier-A paging on five more services, which is mechanical.** PLB-1 (2FA) stays deferred — its trigger, external or remote access, has not arrived.
   - Step 1 — Maven multi-module skeleton (`core-api` / `core` / `adapters` / `modules` / `app` / `architecture-tests`), ArchUnit guardrails, Docker Compose with Caddy HTTPS, GitHub Actions CI.
   - Step 2 — `Money` / `Quantity` / `SubLedgerRef`, schema conventions, migrations V1–V3, `SettingsService`, `AuditLogService`, `AttachmentService`, audit columns.
   - Step 3 — `AccountGroup` / `Account`, seven types, four kinds, `AccountSystemKey`, `ChartOfAccountsService`, migration V4 seeding **65 accounts across 13 groups**, plus `SchemaConventionsIT`.
@@ -297,7 +362,7 @@ per-step obligations are in `docs/PROGRESS.md`. Resolved shape:
 - **Commands, not CRUD.** One route per named service operation; no whole-object `PUT`. Lists are wrapped in `{"items": […]}` and **step 14 ships unpaged**, deliberately.
 - **⚠️ Six `InventoryService` methods have no route and an ArchUnit rule forbids one** — `receive`, `unreceive`, `consume`, `reverseConsumption`, `applyLandedCost`, `removeLandedCost`. Each moves stock and posts nothing on its own. **Stock moves through documents**, or the Inventory control account stops agreeing with what the lots carry.
 - **`GET /api/products/{id}/stock` is under `PRODUCTS`, not `INVENTORY`** — quantities carry no cost, and an order picker needs them. **An asset's carrying value gets no route**, because it is a `JOURNAL` read.
-- **Not built:** users, roles, settings, audit log, backup administration, journal writing, VAT-class administration. Each has a service; none is needed to drive a trading workflow.
+- ~~**Not built:** users, roles, settings, audit log, backup administration, journal writing, VAT-class administration.~~ **Step 16b built users, roles, settings, the journal *listing* and VAT-class/unit-of-measure administration** — 174 routes now. **Still not built, each deliberately:** the **audit log** (no route, and it is the one read that would expose every other section's activity at once); **backup administration** (its whole namespace is excluded from Settings, and it is its own step with its own section decision); and **journal *writing*** — `postManualEntry`, `amend` and `reverse` all have services and no routes, because a manual-entry screen is a design conversation rather than something to add behind a listing.
 - **⚠️ No human has used a browser.** Every route is exercised by an integration test over the real filter chain and none by a person; the frontend still has no login screen.
 
 **✅ Q44 — answered in full (step 14c).** The **section half** is a new `Section.EMAIL_OUTBOX`, deliberately not folded into `SETTINGS`: changing the SMTP password and reading who was emailed about what are different grants. The **access-path half** is built — `downloadAttachment` takes the viewer as a **required parameter with no unchecked overload**, and re-checks a referenced attachment against the section governing the record it belongs to. **It needed a piece the decision could not have anticipated**: `AttachmentService.entityType` is free text, so there was nothing to check against — hence **`AttachmentOwnerType`**, a typed registry that is **fail-closed on an unknown type, denying even the Owner** (if only restricted roles were refused, a missing registration would be invisible to whoever could fix it). **Proven behaviourally**: both denial tests were confirmed to fail against the check removed, then it was restored — the step-12 audit-log lesson applied on purpose.
