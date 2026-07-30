@@ -1,6 +1,6 @@
 # NovoCore — Roadmap & Effort Tracker
 
-**Legend:** 🟢 Done · **Bold + Current** = in progress · 🔴 Not started
+**Legend:** 🟢 Done · 🟡 **Current** = in progress · 🔴 Not started
 
 **Hours** — `Est.` is the original planning estimate, left untouched. `Actual` is measured from the
 Claude Code session transcripts, not estimated; see *How the actual figures were derived* below.
@@ -9,7 +9,7 @@ and cache-read, which dominate it — read the note before drawing conclusions f
 
 ---
 
-## Phase 1 — the core (complete through step 15)
+## Phase 1 — the core (complete through step 16a)
 
 | Step | What                                                          |  Est. | Actual |   Out |      In | Status  |
 |-----:|---------------------------------------------------------------|------:|-------:|------:|--------:|---------|
@@ -28,7 +28,7 @@ and cache-read, which dominate it — read the note before drawing conclusions f
 |   11 | Email service (incl. the ADR 0012 revision) ᵉ                 |   2.0 |    2.1 |  697k |  127.7M | 🟢 Done |
 |   12 | Auto backups (incl. commissioning, CI, self-invocation fixes)ᶠ|   2.7 |    2.6 |  606k |  151.5M | 🟢 Done |
 |   13 | Test suite consolidation sweep (incl. Q45 fix) ᵍ              |   2.6 |    1.8 |  490k |  151.9M | 🟢 Done |
-|   14 | REST surface — 133 routes, Q44, migration V25 ʲ               |   2.5 |    2.0 |  646k |  151.5M | 🟢 Done |
+|   14 | REST surface — 133 routes, Q44, migration V25 ʰ               |   2.5 |    2.0 |  646k |  151.5M | 🟢 Done |
 |   15 | Dummy data validation — 9 defects, see ˡ                      |   0.7 |    4.5 | 1,729k|  669.4M | 🟢 Done |
 |  16a | Backend prerequisites for the frontend — 4 items, V27 ᵐ       |     — |    2.4 |  472k |  168.1M | 🟢 Done |
 |      | **Subtotal, steps 0–16a**                                     |**32.2**|**27.5**|**9.05M**|**2,229M**| |
@@ -56,18 +56,18 @@ Estimates below are unchanged. Nothing in this section has been measured.
 |   30 | Bank aggregator adapter                                       |   1.3 | 🔴 Not started |
 |   31 | Roast Date Report module                                      |   0.5 | 🔴 Not started |
 |   32 | Back-in-Stock Reminders module                                |   0.5 | 🔴 Not started |
-|   34 | Service/Technician Management module                          |   2.5 | 🔴 Not started |
-|   30 | Reports module                                                |   3.0 | 🔴 Not started |
-|   36 | Accountant Monthly Package module                             |   1.3 | 🔴 Not started |
-|   37 | AI Analysis module, incl. bilingual (EN/EL) voice I/O ʲ       |   2.7 | 🔴 Not started |
-|  37b | Employee manual + grounded voice assistant (EN/EL) ᵏ          |   1.5 | 🔴 Not started |
+|   33 | Service/Technician Management module                          |   2.5 | 🔴 Not started |
+|   34 | Reports module                                                |   3.0 | 🔴 Not started |
+|   35 | Accountant Monthly Package module                             |   1.3 | 🔴 Not started |
+|   36 | AI Analysis module, incl. bilingual (EN/EL) voice I/O ʲ       |   2.7 | 🔴 Not started |
+|   37 | Employee manual + grounded voice assistant (EN/EL) ᵏ          |   1.5 | 🔴 Not started |
 |   38 | AADE Πάροχος adapter                                          |   2.0 | 🔴 Not started |
 |   39 | POS provider adapter                                          |   1.3 | 🔴 Not started |
-|   39 | Core-owned invoice issuing + POS terminal — retires Go        |   6.5 | 🔴 Not started |
-|   40 | Employee Digital Work-Card / Ergani module                    |   1.3 | 🔴 Not started |
-|   41 | Migration to a real production server                         |   1.0 | 🔴 Not started |
-|   42 | Requirements to go commercial                                 |     — | 🔴 Not started |
-|      | **Subtotal, steps 15–41**                                     |**57.6**| |
+|   40 | Core-owned invoice issuing + POS terminal — retires Go        |   6.5 | 🔴 Not started |
+|   41 | Employee Digital Work-Card / Ergani module                    |   1.3 | 🔴 Not started |
+|   42 | Migration to a real production server                         |   1.0 | 🔴 Not started |
+|   43 | Requirements to go commercial                                 |     — | 🔴 Not started |
+|      | **Subtotal, steps 16–43**                                     |**56.9**| |
 
 ---
 
@@ -99,7 +99,7 @@ was 1.5 h; commissioning 1.1 h.
 **ᵍ Step 13 includes the Q45 fix** (ADR 0015, migration V24 — `951929f`). The sweep itself was 1.0 h;
 finding, deciding and fixing the ledger defect it turned up added 0.8 h.
 
-**ʲ Step 14 is done** — the REST surface, in four commits (`423bf34`, `e6354d6`, `b8aa9e2`,
+**ʰ Step 14 is done** — the REST surface, in four commits (`423bf34`, `e6354d6`, `b8aa9e2`,
 `f2e8e06`). Its figures cover the whole of it up to the moment this file was written, so they
 **exclude the close-out commit and push that follow** — a few minutes and a few thousand tokens
 that land after the measurement, as they do for every step measured this way.
@@ -136,7 +136,7 @@ Three things account for the overrun, and none of them is the narrative itself:
    in steps 11–12, and it is the kind of cost that only appears once a pattern has repeated.
 
 **The single most useful calibration point in this file:** an estimate for *"validate what we built"*
-is really an estimate for *finding nothing*. Steps 20 (real data migration, parallel-run) and 31
+is really an estimate for *finding nothing*. Steps 24 (real data migration, parallel-run) and 25
 (Clearing Checks) are the two remaining rows with that same character, and both are priced the way
 step 15 was.
 
@@ -150,7 +150,7 @@ and has been untouched since — **0.7 h, 183k out, 14.2M in**, spent before ste
 no row in this table. The 8.0 h estimate stands as written; this is recorded so the foundation is not
 paid for twice.
 
-**ʲ Step 37's estimate now includes bilingual (English/Greek) two-way voice I/O** — speech-to-text and
+**ʲ Step 36's estimate now includes bilingual (English/Greek) two-way voice I/O** — speech-to-text and
 text-to-speech layered on top of AI Analysis's existing read-only, deterministic-query design, so a
 question can be spoken and the answer heard rather than only typed and read. This is an adapter to an
 external speech provider (candidates discussed: Speechmatics for Greek accuracy, or Azure/Google for
@@ -158,7 +158,7 @@ broader ecosystem fit), not a change to the core. +0.7 h added to the original 2
 provider integration; this does not include ongoing per-minute usage cost, which is metered separately
 and not a development-hours item.
 
-**ᵏ Step 37b is a new step, not in the original roadmap.** It pairs a searchable employee manual with
+**ᵏ Step 37 is a new step, not in the original roadmap.** It pairs a searchable employee manual with
 a voice-and-text assistant that answers strictly by retrieving and citing the manual's own content —
 never improvising a procedure — and explicitly says when a case isn't covered, the same
 never-silently-resolve-ambiguity discipline used throughout the ledger itself. The 1.5 h estimate
@@ -168,6 +168,27 @@ Claude Code can generate on its own, and its true cost isn't captured by this co
 modules most likely to generate real procedures worth documenting (Sales Order Fulfillment, Service/
 Technician Management), since a manual describing unstable or not-yet-built workflows would need
 rewriting.
+
+**ᵐ Step 16a — four backend prerequisites for the frontend, plus one defect found while building
+them.** Not a planned step and it never had an estimate: the four items were raised from frontend
+architecture planning and agreed before any step 16 work began. Delivered `GET /api/me` and
+`PATCH /api/me/language` (V27), preview endpoints for sales invoices and credit notes, the OpenAPI
+spec with its CI drift check, and the paging contract proven on sales invoices.
+
+**Measured from a single session** (`507c06fe`, 2026-07-30): 511 assistant messages, **4.10 h wall
+clock, 2.41 h active** under the 5-minute cap, 472k out, 168.1M in. As with every row it **excludes
+the close-out that follows it, so 2.4 h is short and should be read as "at least"**.
+
+**One session that day is deliberately excluded.** An earlier one (`906eb26d`, 1.52 h active, 408k
+out) did the frontend architecture planning that raised the four items; it wrote none of this code,
+and folding it in would attribute planning effort to a build row. It is recorded here rather than
+omitted so the day's totals can be reconciled.
+
+**A fifth piece of work sits inside this row without its own line: session eviction** (`fad0d11`).
+A pre-existing defect since step 4 — the authenticated principal is a snapshot taken at login, so
+deactivating an account did not log it out — surfaced by `/api/me` returning a stale language, and
+fixed in the same stretch. Attributed here rather than back to step 4, on the same basis as footnote
+ᶠ: the row that found and fixed it carries it.
 
 ---
 
@@ -208,7 +229,7 @@ why the two do not price alike. Only three build steps landed near or over
 their estimate — **11 (2.1 vs 2.0)**, **12 (2.6 vs 2.7)** and **14 (2.0 vs 2.5)**. The first two are
 the ones with real-world commissioning in them (live SMTP, live Google Drive) rather than pure build;
 the third is the largest single piece of code the project has produced in one step, which is the more
-ordinary reason an estimate holds. **The estimates for steps 15–41 have deliberately not been
+ordinary reason an estimate holds. **The estimates for steps 16–43 have deliberately not been
 adjusted by this ratio**: it was measured on core-domain build work with a settled architecture, and
 adapters against third-party APIs, a frontend, and a real data migration are different work with
 different failure modes. The ratio is recorded so the decision to rescale is yours and evidence-based
@@ -236,7 +257,7 @@ rather than overwritten, so the estimate-versus-actual comparison survives. Not-
 unchanged. Steps 0 and 1 are the one place where the record genuinely cannot separate two rows, and
 that is marked rather than split by guesswork.
 
-**Steps 37 and 37b were added after this file was last updated by Claude Code**, from a chat
+**Steps 36 and 37 were added after this file was last updated by Claude Code**, from a chat
 discussion about bilingual voice I/O and an employee manual with a grounded voice assistant. Both are
 brainstorm-stage additions, not yet reviewed or scoped by Claude Code against the real codebase the
 way the rest of this file was — treat their estimates as rougher than the others until they've had
