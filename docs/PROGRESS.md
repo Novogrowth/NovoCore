@@ -33,12 +33,47 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 13 | Test suite consolidation sweep | **Done** — property tests on the money types and on FIFO, one whole-scenario invariant sweep, **ADR 0014**, and **one real defect found and then fixed (Q45 / ADR 0015)**, see below |
 | 14 | **The REST surface** — 133 routes, and Q44 answered in full | **Done, committed** `423bf34` + `e6354d6` + `b8aa9e2` + `f2e8e06` — three sub-steps as agreed, plus the BundleService follow-up. **Migration V25.** See below |
 | 15 | **Dummy data validation** — the API driven end to end over HTTP | **Done** — 15a and 15b complete. **Nine real defects found and fixed**, migration **V26**. Route coverage **128/133 driven, 5 excused with reasons**, asserted rather than reported. See below |
+| 16a | **Backend prerequisites for the frontend** — four items agreed before any step 16 work | **Done** — `/me`, preview endpoints, the OpenAPI spec + drift check, and the paging contract. Migration **V27**, plus **session eviction**, a defect found while building the first item. See below |
 
-**Tests: 1152 passing, 0 skipped, `mvn clean verify` exit 0.** Counted from a local run on this
-machine, and **0 skipped is new**: the PostgreSQL 17 client tools are now installed here, so
+**Tests: 1188 passing, 0 skipped, `mvn clean verify` exit 0. 137 routes.** Counted from a local run
+on this machine, and **0 skipped is new**: the PostgreSQL 17 client tools are now installed here, so
 `BackupIT`'s 16 tests and the two backup legs run locally as well as on CI. Previous close-outs
 recorded 17 skipping on this machine; that is no longer true and the note has been corrected rather
 than carried forward.
+
+Step 16a added 36 (1152 → 1188) and four routes (133 → 137): `GET /api/me`,
+`PATCH /api/me/language`, `POST /api/sales-invoices/preview`, `POST /api/credit-notes/preview`.
+
+---
+
+## ▶ Next session — mechanical follow-through, no new design
+
+**Finish tier-A paging across the remaining five services.** The contract is settled and proven on
+sales invoices; what is left is the same shape applied again, with no decision outstanding:
+
+| Service | Routes | Sort enum to add |
+|---|---|---|
+| `PurchaseInvoiceService` | `GET /api/purchase-invoices` | invoice date, supplier number, recorded-at |
+| `GoodsReceiptService` | `GET /api/goods-receipts` | receipt date, recorded-at |
+| `SettlementService` | `GET /api/settlements` | settlement date, recorded-at |
+| `InventoryService` | `GET /api/inventory/lots`, `/consumptions` | acquisition date, recorded-at |
+| `EmailSender` | `GET /api/email/outbox` | queued-at, status |
+
+**The recipe, in order, per service:** a `…Sort` enum in `core-api` next to its service interface →
+a `page…` method on the interface taking `PageRequest` and returning `PageResponse` → a `Page<E>`
+finder on the repository with **no `OrderBy` in the method name** (the ordering comes from the
+`Pageable`) → a `SORTABLE` map plus a natural order in the impl, calling `SpringPaging` → the route
+gaining `page`/`size`/`sort`/`direction` through `Paging.of`.
+
+**Two things to check for each**, both of which bit on sales invoices:
+
+1. **Every sort key must be a real column.** `GROSS_TOTAL` was removed from `SalesInvoiceSort`
+   because an invoice's gross is summed in Java from its lines. The same trap exists on purchase
+   invoices, goods receipts and settlements — check before adding the constant, not after.
+2. **Regenerate the spec at the end and read the diff.** It should be additions only; a deletion
+   means a response shape changed rather than gained a field.
+
+Then `mvn verify -Dnovocore.openapi.write=true`, commit the spec with the change.
 
 Step 15 added 113 in total (1039 → 1152), and the count understates the change twice over:
 `WholeScenarioIT`'s 21 invariant tests were **replaced** by 12 shared ones fed to a `@TestFactory`,
@@ -105,6 +140,95 @@ lower — the client/server pairing is no longer an untested assumption — but 
 itself remains unexercised, and only a real build proves it.
 
 ---
+
+## Step 16a — done (the four backend prerequisites)
+
+Four items raised before any frontend foundation work, proposed in
+`docs/step-16-backend-prerequisites-proposal.md` and approved item by item. **None touched
+`/frontend/`.** All four are complete.
+
+**1. `GET /api/me` + `PATCH /api/me/language` (V27).** Identity, role, **every** `Section` with its
+level *and* `isAvailable()` — so a UI can tell "you may not see this" from "this is not built yet",
+which `Section` already modelled and nothing exposed. Q47(a): language is a column on `app_user`, not
+a Setting, because a preference belongs to a person and must follow them between devices. Nullable
+with no default — "has not chosen" is a real answer. Q47(b): **the backend localises nothing**, so
+the CHECK constrains the tag's *shape* and names no language; the frontend decides what it offers.
+The trigger to revisit is written into V27.
+
+**`@AuthenticatedOnly` rather than a hole in three checks.** `/api/me` is the route that tells a
+caller which sections they hold, so gating it behind one is circular. Instead of "unless the path is
+/api/me" inside the interceptor, the startup check and the ArchUnit rule, the rule became: **every
+`/api/**` handler carries exactly one of `@Requires` or `@AuthenticatedOnly`**, and both is refused
+at startup. The set of controllers allowed to use it is asserted **in both directions** — a new one
+fails, and a listed one that stops using it also fails — both proven against probes.
+
+**2. Preview endpoints — an extraction, never a second implementation.** `POST
+/api/sales-invoices/preview` and `POST /api/credit-notes/preview`. Everything `record`/`issue` worked
+out before writing became `compute()`, returning one value both paths consume, so they *cannot*
+disagree — asserted by driving one request through both and comparing every line's net, VAT, gross,
+class and precedence level. **Proven to fail** against a preview that adds a cent.
+
+Not implemented as post-then-rollback, deliberately: that would burn document numbers, fight the
+deferred debits=credits trigger, and **leave real audit entries behind**, since those are written
+`REQUIRES_NEW` and are proven to survive a rolled-back caller.
+
+One refusal is *reported* rather than raised — a rounding difference above the threshold with nobody
+accepting it. `record` still refuses; preview returns `roundingNeedsAcceptance` with the difference
+and the threshold used, because an entry screen has to show the operator the difference and offer the
+acceptance **before** they submit, and cannot if asking what the difference is refuses to answer.
+
+The credit note earns its own preview: it credits back **the VAT the sale actually charged**, read
+off the invoice line, not what the precedence rule resolves today. A test moves the customer's
+override between the sale and the credit and asserts the VAT still matches what was taken.
+
+**3. The OpenAPI spec — springdoc tried, rejected on evidence, generator written.** springdoc 3.0.3
+resolves and the app starts, but it pulls **Jackson 2** alongside our Jackson 3 and swagger-core
+introspects with the Jackson 2 mapper — so it cannot see `NovoCoreJsonModule` and reflects Java
+accessors. It produced `Money.amount` as a **number**, a whole `java.util.Currency` object for the
+currency, and `Quantity` as `{value: number, zero, negative, positive}` against a real wire format of
+a bare `"3.000000"`. **The probe's output is preserved verbatim in `OpenApiSchema`'s javadoc**,
+because the evidence is worth more than the conclusion.
+
+Built instead: `OpenApiSpecIT` walks the same `RequestMappingHandlerMapping` that `RouteCoverage`
+already reads. **137 operations, 150 schemas**, in `docs/api/openapi.json`. **An unknown type fails
+the build** rather than being guessed — a bare `BigDecimal` is refused by name, pointing at the
+`Rate` type. Every operation carries `x-novocore-section` / `x-novocore-level` from its own
+`@Requires`, so the permission model ships with the contract. The spec is committed and the build
+fails on drift, **proven** by tampering with one `operationId`. `moneyIsAlwaysAString` is a
+*separate* test from the drift check, deliberately: drift says the spec matches the code, that says
+the spec is not lying about the thing that matters most — a generator can pass the first and fail the
+second, which is exactly what springdoc did.
+
+⚠️ **A portability bug found while building it:** Jackson's pretty-printer indents with the *system*
+line separator, so the file was CRLF on Windows and would have been LF on the CI runner — the drift
+check would then have failed on every build that ran somewhere other than where the file was last
+written, reporting a contract change that had not happened. Normalised at generation, plus a
+`.gitattributes` rule.
+
+**4. Paging — the contract, and sales invoices as the worked example.** `PageRequest` /
+`PageResponse` / `SortDirection` in `core-api`, **not Spring Data's** (ADR 0003); `SpringPaging` is
+the one place the framework's paging meets ours. Offset paging **with a total, not a cursor**,
+because an accounting table needs "page 7 of 34" and a row count. `ListResponse` gains an *optional*
+`page`, absent on an unpaged list — the regenerated spec was **152 insertions and zero deletions**,
+which is that backward-compatibility claim checked rather than asserted.
+
+**The ordering is total, and that is the subtle part.** A sort on invoice date leaves rows tied and
+PostgreSQL may return tied rows differently per query, so successive pages could show one row twice
+and never show another — plausible on screen, wrong. `SpringPaging` appends the id to every ordering
+in the sort's own direction, and a test walks a 12-row list four at a time **with all twelve tied on
+the sort column**, asserting each was seen exactly once.
+
+Sort keys are a per-endpoint enum, so an unknown value is refused by Spring before our code runs and
+the accepted values land in the spec; the service *also* maps names to properties explicitly, which
+is the guard that holds if a service is called from elsewhere. `Paging.of` translates
+`PageRequest`'s `IllegalArgumentException` into `InvalidRequestException` — `PageRequest` is right to
+throw it, and `WebExceptionHandler` is right to discard it, which is precisely the named
+anti-pattern; one helper keeps it from being got right in most routes.
+
+⚠️ **`GROSS_TOTAL` had to be removed from the sort enum.** An invoice's gross is not a column —
+`grossTotal()` sums its lines in Java. Ordering by it needs a correlated subquery per page or a
+stored total that could disagree with the lines. **The same trap exists on purchase invoices, goods
+receipts and settlements** — check before adding a constant, not after.
 
 ## 🚫 Pre-launch blockers
 
@@ -328,6 +452,13 @@ were already on `origin`.
 | `1421dfb` | Step 15b — the quarter-end review, and the two error-reporting defects it found |
 | `b65f7b2` | **Q21 revised** — no field restricted from any role, migration **V26** |
 | `1a4b294` | **Step 15b complete** — the refusal matrix, the permission sweep, read-back and date boundaries, restore, `assertEveryRouteCoveredExcept`, and **defects 7, 8 and 9** with the guard the recurrence earned |
+| `3158239` | **Step 16a (1)** — `GET /api/me`, `PATCH /api/me/language`, `@AuthenticatedOnly`, migration **V27** |
+| `0df73c3` | **Step 16a (2a)** — `POST /api/sales-invoices/preview` |
+| `bc0c088` | **Step 16a (2b)** — `POST /api/credit-notes/preview` |
+| `fad0d11` | **Session eviction** — revoking access ends the session that holds it (defect found by item 1) |
+| `416ca82` | **Step 16a (3)** — the OpenAPI spec, generated from our own serialisers, with the CI drift check |
+| `2d37a68` | The generated API contract is LF in the working copy too |
+| `8c23e0b` | **Step 16a (4)** — the paging contract, and sales invoices as the worked tier-A example |
 
 Interleaved with these are small docs-only commits (`e25fcee`, `a09428e`, `920044c`, `de16e58`,
 `b065901`, `8c27cb4`, `2c3fa8a`, `21b2231`, `d1111d0`, `610f785`, `836a4eb`) and this session's

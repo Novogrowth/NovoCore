@@ -8,7 +8,7 @@
 
 An internally-owned system for Novotrade S.A. (Java Jives) replacing Manager.io, and eventually Prosvasis Go. **Not just "replace Manager"** — the real goal is unifying data across disconnected systems, automating repetitive tasks, and generating real reports. Manager replacement is the first workload, not the purpose. No regulatory/compliance filing responsibility sits with NovoCore — the external accountant handles that; Go remains the invoicing system of record until Phase 11.
 
-## Current build status (as of this primer — 2026-07-30)
+## Current build status (as of this primer — 2026-07-30, close of the step 16a session)
 
 **Detailed, always-current status lives in `docs/PROGRESS.md`.** Read that first; this section is
 the summary.
@@ -21,7 +21,47 @@ the summary.
   - **None of the nine was reachable from the service layer** — `WholeScenarioIT` never crosses the HTTP boundary.
 - **🛡️ "A client's mistake raised as a programming error" is now a named anti-pattern in `CLAUDE.md`, with three guards.** Defects 5, 7 and 9 are three occurrences of one root pattern inside a single step — an exception type meaning *our* code is wrong used to tell a caller that *their* request is wrong, after which the message is correctly discarded and the caller gets `400 "Bad request."` or a `500`. Same shape as proxy self-invocation, which earned its rules after biting across steps 11–12. The guards: an **ArchUnit rule** (no `..core.web..` class may construct `IllegalArgumentException`, proven to fail against a probe); **`noRouteRefusesWithoutSayingWhy`**, which sweeps every route and **found three of defect 9's four sites in the service layer, where the ArchUnit rule structurally cannot look**; and **`noRouteFailsOnAnEmptyBody`**, which forbids a `5xx` to a missing field whatever raised it. **`Objects.requireNonNull` is deliberately not banned** — it is correct on our own arguments and no static rule can tell a caller's omission from a programmer's, which is exactly the cries-wolf rule the self-invocation work avoided.
 - **The permission model is now asserted rather than assumed, across the whole surface.** `PermissionSweepIT` states its expectation **independently**, in a route-prefix→`Section` table rather than read back off each handler's own `@Requires` — a sweep that derives its expectation from the declaration proves only that the interceptor applies it. Three roles: the real Remote/Order Staff (reaches **20** of 133, refused on **113**, every refusal checked to leak neither section nor role nor level); a **view-everywhere** role, which every state-changing route must refuse (catches a mutating handler declared `VIEW`); and a **granted-everywhere** role by stored grants rather than the `fullAccess` flag, which every read must admit (catches a route guarded by a section no grant can satisfy). This is the first thing in the repository to test the permission model on more than four routes.
-- **Backend Phase 1: steps 0–15 done (plus inserted steps 3b and 4b).** Step 12 is operationally commissioned as well as built, step 13 — the test suite consolidation sweep — found and fixed one real ledger defect (Q45 → ADR 0015), **step 14 built the REST surface: 133 routes, migration V25, and Q44 answered in full**, and **step 15 validated it**. The agreed order was 15 validation → 16 frontend, and **that premise is now settled by evidence rather than argued:** when step 15 began, roughly half the 133 routes had never received an HTTP request and the untested half was the half that moves money. Nine defects later — none of them reachable from the service layer — the case is made. **Next is step 16, the frontend.** PLB-1 (2FA) stays deferred — its trigger, external or remote access, has not arrived.
+- **✅ Step 16a is DONE — the four backend prerequisites the frontend needed first.** Raised before any
+  foundation work, proposed in `docs/step-16-backend-prerequisites-proposal.md`, approved item by item,
+  and **none of them touched `/frontend/`**. **1188 tests, 0 skipped, `mvn clean verify` exit 0; 137
+  routes**; migration **V27**.
+  - **`GET /api/me`** returns identity, role, **every** section with its level *and* `isAvailable()`
+    (so a UI can tell "you may not see this" from "not built yet"), restricted fields, and language.
+    Its one exception is written down rather than carved out: **`@AuthenticatedOnly`** makes "exactly
+    one of `@Requires` or `@AuthenticatedOnly`" the rule, and an ArchUnit test asserts the set of
+    controllers allowed to use it **in both directions** — proven against probes.
+  - **Preview endpoints** for sales invoices and credit notes — **an extraction of the existing
+    pricing phase, not a second implementation**, asserted by driving one request through both paths
+    and comparing every figure, and proven to fail against a preview that drifts by a cent. Never
+    post-then-rollback: audit entries are `REQUIRES_NEW` and survive a rollback, so that would record
+    documents that never existed.
+  - **The OpenAPI spec is ours, and springdoc's output is kept as the reason.** springdoc pulls
+    Jackson 2 while our serialisers are Jackson 3, so it described `Money.amount` as a **number** and
+    `Quantity` as an object with four boolean fields. `OpenApiSpecIT` walks the same handler mapping
+    `RouteCoverage` reads — **137 operations, 150 schemas**, committed, with the build failing on
+    drift and a **separate** test asserting no schema anywhere is typed `number`.
+  - **Paging: the contract is settled and proven on sales invoices.** `PageRequest`/`PageResponse` in
+    `core-api` (not Spring Data's, ADR 0003), offset with a total rather than a cursor, and
+    `ListResponse` gaining an *optional* `page` — the spec diff was 152 insertions and **zero
+    deletions**. Every ordering ends with the id, because a sort on a tied column lets successive
+    pages repeat one row and skip another.
+  - **⚠️ Remaining: tier-A paging on five more services** (purchase invoices, goods receipts,
+    settlements, inventory lots/consumptions, the outbox). **Mechanical — same shape, no new design.**
+    The recipe and the two traps are in `PROGRESS.md`.
+- **🛡️ A permission change now takes effect immediately (session eviction).** Found while building
+  `/api/me`: the principal is a snapshot taken at login, so **deactivating an account did not log it
+  out** — for up to a session's lifetime, with no indication to the operator. Eviction rather than a
+  short-lived cache, because a window is exactly what must not exist when cutting off a departing
+  employee. `UserSessions` in `core-api`, `NovoCoreSessionRegistry` in `app`, called by `deactivate`
+  and `changeRole` **inside their own transaction**. **Keyed by user id, not by the principal object**
+  — Spring Security's own registry keys by principal, and ours wraps a `UserView` whose display name,
+  language and role all change, which would orphan the sessions and make eviction *report success
+  while ending nothing*. `UserSessions` is a **required** constructor argument, so the app refuses to
+  start without one rather than silently evicting nobody. Proven over real HTTP, four of five tests
+  confirmed to fail with the eviction removed. ⚠️ Residuals, both deliberate: the registry is
+  **per-process and in memory** (one instance, as the deployment already assumes), and a change that
+  does *not* warrant ending a session — a rename, a widened grant — still applies at next login.
+- **Backend Phase 1: steps 0–15 done (plus inserted steps 3b, 4b and 16a).** Step 12 is operationally commissioned as well as built, step 13 — the test suite consolidation sweep — found and fixed one real ledger defect (Q45 → ADR 0015), **step 14 built the REST surface: 133 routes, migration V25, and Q44 answered in full**, and **step 15 validated it**. The agreed order was 15 validation → 16 frontend, and **that premise is now settled by evidence rather than argued:** when step 15 began, roughly half the 133 routes had never received an HTTP request and the untested half was the half that moves money. Nine defects later — none of them reachable from the service layer — the case is made. **Next is step 16, the frontend** — with its four backend prerequisites now done (step 16a above); the only backend work left before it is finishing tier-A paging on five more services, which is mechanical. PLB-1 (2FA) stays deferred — its trigger, external or remote access, has not arrived.
   - Step 1 — Maven multi-module skeleton (`core-api` / `core` / `adapters` / `modules` / `app` / `architecture-tests`), ArchUnit guardrails, Docker Compose with Caddy HTTPS, GitHub Actions CI.
   - Step 2 — `Money` / `Quantity` / `SubLedgerRef`, schema conventions, migrations V1–V3, `SettingsService`, `AuditLogService`, `AttachmentService`, audit columns.
   - Step 3 — `AccountGroup` / `Account`, seven types, four kinds, `AccountSystemKey`, `ChartOfAccountsService`, migration V4 seeding **65 accounts across 13 groups**, plus `SchemaConventionsIT`.

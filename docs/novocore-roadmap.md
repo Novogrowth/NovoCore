@@ -30,7 +30,8 @@ and cache-read, which dominate it — read the note before drawing conclusions f
 |   13 | Test suite consolidation sweep (incl. Q45 fix) ᵍ              |   2.6 |    1.8 |  490k |  151.9M | 🟢 Done |
 |   14 | REST surface — 133 routes, Q44, migration V25 ʲ               |   2.5 |    2.0 |  646k |  151.5M | 🟢 Done |
 |   15 | Dummy data validation — 9 defects, see ˡ                      |   0.7 |    4.5 | 1,729k|  669.4M | 🟢 Done |
-|      | **Subtotal, steps 0–15**                                      |**32.2**|**25.1**|**8.58M**|**2,061M**| |
+|  16a | Backend prerequisites for the frontend — 4 items, V27 ᵐ       |     — |    2.4 |  472k |  168.1M | 🟢 Done |
+|      | **Subtotal, steps 0–16a**                                     |**32.2**|**27.5**|**9.05M**|**2,229M**| |
 
 ## Not started
 
@@ -38,30 +39,30 @@ Estimates below are unchanged. Nothing in this section has been measured.
 
 | Step | What                                                          |  Est. | Status        |
 |-----:|---------------------------------------------------------------|------:|---------------|
-|   16 | Frontend ⁱ                                                    |   8.0 | 🔴 Not started |
+|   16 | Frontend ⁱ                                                    |   8.0 | 🟡 **Current** |
 |   17 | Operational monitoring                                        |   1.0 | 🔴 Not started |
 |   18 | Prosvasis Go adapter                                          |   4.5 | 🔴 Not started |
 |   19 | WooCommerce adapter                                           |   2.0 | 🔴 Not started |
-|   20 | Real data migration from Manager.io, parallel-run             |   2.5 | 🔴 Not started |
-|   21 | Purchase Orders module                                        |   1.5 | 🔴 Not started |
+|   20 | Skroutz adapter                                               |   1.3 | 🔴 Not started |
+|   21 | ACS Courier adapter                                           |   1.3 | 🔴 Not started |
 |   22 | Sales Order Fulfillment module                                |   2.5 | 🔴 Not started |
 |   23 | File import adapter                                           |   1.0 | 🔴 Not started |
-|   24 | ACS Courier adapter                                           |   1.3 | 🔴 Not started |
-|   25 | Skroutz adapter                                               |   1.3 | 🔴 Not started |
-|   26 | POS provider adapter                                          |   1.3 | 🔴 Not started |
-|   27 | Bank aggregator adapter                                       |   1.3 | 🔴 Not started |
-|   28 | AADE myDATA adapter                                           |   2.5 | 🔴 Not started |
-|   29 | AADE/VIES lookup adapter                                      |   0.7 | 🔴 Not started |
-|   30 | Reports module                                                |   3.0 | 🔴 Not started |
-|   31 | Clearing Checks module                                        |   2.0 | 🔴 Not started |
-|   32 | Roast Date Report module                                      |   0.5 | 🔴 Not started |
-|   33 | Back-in-Stock Reminders module                                |   0.5 | 🔴 Not started |
+|   24 | Real data migration from Manager.io, parallel-run             |   2.5 | 🔴 Not started |
+|   25 | Clearing Checks module                                        |   2.0 | 🔴 Not started |
+|   26 | Price Tag Printing module                                     |   0.7 | 🔴 Not started |
+|   27 | Purchase Orders module                                        |   1.5 | 🔴 Not started |
+|   28 | AADE/VIES lookup adapter                                      |   0.7 | 🔴 Not started |
+|   29 | AADE myDATA adapter                                           |   2.5 | 🔴 Not started |
+|   30 | Bank aggregator adapter                                       |   1.3 | 🔴 Not started |
+|   31 | Roast Date Report module                                      |   0.5 | 🔴 Not started |
+|   32 | Back-in-Stock Reminders module                                |   0.5 | 🔴 Not started |
 |   34 | Service/Technician Management module                          |   2.5 | 🔴 Not started |
-|   35 | Price Tag Printing module                                     |   0.7 | 🔴 Not started |
+|   30 | Reports module                                                |   3.0 | 🔴 Not started |
 |   36 | Accountant Monthly Package module                             |   1.3 | 🔴 Not started |
 |   37 | AI Analysis module, incl. bilingual (EN/EL) voice I/O ʲ       |   2.7 | 🔴 Not started |
 |  37b | Employee manual + grounded voice assistant (EN/EL) ᵏ          |   1.5 | 🔴 Not started |
 |   38 | AADE Πάροχος adapter                                          |   2.0 | 🔴 Not started |
+|   39 | POS provider adapter                                          |   1.3 | 🔴 Not started |
 |   39 | Core-owned invoice issuing + POS terminal — retires Go        |   6.5 | 🔴 Not started |
 |   40 | Employee Digital Work-Card / Ergani module                    |   1.3 | 🔴 Not started |
 |   41 | Migration to a real production server                         |   1.0 | 🔴 Not started |
