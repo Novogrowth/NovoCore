@@ -38,11 +38,15 @@ import gr.novotrade.novocore.core.api.sales.SalesInvoiceLineView;
 import gr.novotrade.novocore.core.api.sales.SalesInvoicePreview;
 import gr.novotrade.novocore.core.api.sales.SalesInvoicePreviewLine;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceService;
+import gr.novotrade.novocore.core.api.sales.SalesInvoiceSort;
 import gr.novotrade.novocore.core.api.settings.SettingKeys;
 import gr.novotrade.novocore.core.api.settings.SettingsService;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceView;
 import gr.novotrade.novocore.core.api.sales.SettlementMethod;
 import gr.novotrade.novocore.core.api.shared.Money;
+import gr.novotrade.novocore.core.api.shared.PageRequest;
+import gr.novotrade.novocore.core.api.shared.PageResponse;
+import gr.novotrade.novocore.core.api.shared.SortDirection;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.SubLedgerRef;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
@@ -51,6 +55,7 @@ import gr.novotrade.novocore.core.api.tax.VatClassService;
 import gr.novotrade.novocore.core.api.ledger.VatDirection;
 import gr.novotrade.novocore.core.api.tax.VatClassSource;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.DisplayName;
@@ -437,6 +442,170 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
                             List.of(NewSalesInvoiceLine.product(
                                     machine.id(), Quantity.of(1L), UnitCost.ofEur("600.000000"))))))
                     .withMessageContaining("legal cash limit");
+        }
+    }
+
+    @Nested
+    @DisplayName("paging — tier A, because a year of invoicing is tens of thousands of rows")
+    class Paging {
+
+        /** Twelve invoices, all on ONE date, so every ordering below has ties to break. */
+        private List<Long> twelveOnOneDay(String skuPrefix) {
+            CustomerView buyer = customer("Paging " + skuPrefix);
+            ProductView beans = goods(skuPrefix, "10.00");
+            stock(beans.id(), 100L, "4.000000");
+
+            List<Long> ids = new ArrayList<>();
+            for (int i = 0; i < 12; i++) {
+                ids.add(salesInvoices.record(NewSalesInvoice.of(
+                        buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                        number(), JULY,
+                        List.of(NewSalesInvoiceLine.product(
+                                beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000")))))
+                        .id());
+            }
+            return ids;
+        }
+
+        @Test
+        @DisplayName("a page reports the whole list's size, not the page's")
+        void aPageKnowsHowBigTheListIs() {
+            List<Long> all = twelveOnOneDay("SIIT-PG1");
+            long customerId = salesInvoices.require(all.getFirst()).customerId();
+
+            PageResponse<SalesInvoiceView> first =
+                    salesInvoices.pageOfCustomer(customerId, PageRequest.of(0, 5));
+
+            assertThat(first.items()).hasSize(5);
+            assertThat(first.totalElements())
+                    .as("the count is of the list, which is what a table's 'of 34' comes from")
+                    .isEqualTo(12);
+            assertThat(first.totalPages()).isEqualTo(3);
+            assertThat(first.page()).isZero();
+            assertThat(first.size())
+                    .as("the size ASKED FOR, not the number returned — a client reading this as "
+                            + "'how many are here' would think it had reached the end early")
+                    .isEqualTo(5);
+            assertThat(first.hasNext()).isTrue();
+            assertThat(first.hasPrevious()).isFalse();
+
+            PageResponse<SalesInvoiceView> last =
+                    salesInvoices.pageOfCustomer(customerId, PageRequest.of(2, 5));
+            assertThat(last.items()).as("the last page holds the remainder").hasSize(2);
+            assertThat(last.size()).isEqualTo(5);
+            assertThat(last.hasNext()).isFalse();
+            assertThat(last.hasPrevious()).isTrue();
+        }
+
+        /**
+         * <strong>The assertion the ordering design exists for.</strong>
+         *
+         * <p>All twelve invoices share one date. Ordered by date alone the rows are tied, and
+         * PostgreSQL is free to return tied rows in a different order per query — so successive
+         * pages could show one invoice twice and never show another. That is a wrong answer that
+         * looks entirely plausible on screen.
+         *
+         * <p>{@code SpringPaging} appends the id to every ordering to make it total. This walks the
+         * whole list a page at a time and asserts it saw each row exactly once.
+         */
+        @Test
+        @DisplayName("paging a list with tied sort values sees every row exactly once")
+        void pagesDoNotRepeatOrSkipOnTiedValues() {
+            List<Long> all = twelveOnOneDay("SIIT-PG2");
+            long customerId = salesInvoices.require(all.getFirst()).customerId();
+
+            List<Long> seen = new ArrayList<>();
+            for (int page = 0; page < 4; page++) {
+                salesInvoices.pageOfCustomer(customerId,
+                                PageRequest.of(page, 4, SalesInvoiceSort.INVOICE_DATE.name(),
+                                        SortDirection.ASC))
+                        .items().forEach(invoice -> seen.add(invoice.id()));
+            }
+
+            assertThat(seen)
+                    .as("every invoice exactly once, across pages, on a sort where all twelve tie")
+                    .containsExactlyInAnyOrderElementsOf(all)
+                    .doesNotHaveDuplicates();
+        }
+
+        @Test
+        @DisplayName("sorting descending reverses the page, tiebreaker included")
+        void descendingReversesTheOrder() {
+            List<Long> all = twelveOnOneDay("SIIT-PG3");
+            long customerId = salesInvoices.require(all.getFirst()).customerId();
+
+            List<Long> ascending = salesInvoices.pageOfCustomer(customerId,
+                            PageRequest.of(0, 12, SalesInvoiceSort.INVOICE_DATE.name(),
+                                    SortDirection.ASC))
+                    .items().stream().map(SalesInvoiceView::id).toList();
+            List<Long> descending = salesInvoices.pageOfCustomer(customerId,
+                            PageRequest.of(0, 12, SalesInvoiceSort.INVOICE_DATE.name(),
+                                    SortDirection.DESC))
+                    .items().stream().map(SalesInvoiceView::id).toList();
+
+            assertThat(descending)
+                    .as("the tiebreaker follows the sort direction, so a descending page is the "
+                            + "ascending one reversed rather than an arbitrary reshuffle")
+                    .containsExactlyElementsOf(ascending.reversed());
+        }
+
+        @Test
+        @DisplayName("a sort this list does not offer is refused, naming the ones it does")
+        void anUnknownSortIsRefused() {
+            List<Long> all = twelveOnOneDay("SIIT-PG4");
+            long customerId = salesInvoices.require(all.getFirst()).customerId();
+
+            // The routes bind `sort` to the enum so this is unreachable over HTTP — this is the
+            // guard that holds if a service is called from somewhere else.
+            assertThatExceptionOfType(IllegalArgumentException.class)
+                    .isThrownBy(() -> salesInvoices.pageOfCustomer(customerId,
+                            PageRequest.of(0, 5, "GROSS_TOTAL", SortDirection.ASC)))
+                    .withMessageContaining("INVOICE_DATE");
+        }
+
+        @Test
+        @DisplayName("an empty list is page 1 of 1, not page 1 of 0")
+        void anEmptyListStillHasOnePage() {
+            CustomerView nobody = customer("Paging empty");
+
+            PageResponse<SalesInvoiceView> page =
+                    salesInvoices.pageOfCustomer(nobody.id(), PageRequest.firstPage());
+
+            assertThat(page.items()).isEmpty();
+            assertThat(page.totalElements()).isZero();
+            assertThat(page.totalPages())
+                    .as("a table showing 'page 1 of 0' is reporting a state that cannot exist")
+                    .isEqualTo(1);
+            assertThat(page.hasNext()).isFalse();
+        }
+
+        @Test
+        @DisplayName("a page larger than the maximum is refused rather than quietly truncated")
+        void anOversizedPageIsRefused() {
+            // Silently returning MAX_SIZE rows for a request of 5000 is how a client comes to
+            // believe it has seen the whole list. The bound is what makes exposing a large list
+            // safe at all, so it is stated rather than applied behind the caller's back.
+            assertThatExceptionOfType(IllegalArgumentException.class)
+                    .isThrownBy(() -> PageRequest.of(0, PageRequest.MAX_SIZE + 1))
+                    .withMessageContaining("at most");
+        }
+
+        @Test
+        @DisplayName("the paged and unpaged reads agree about what is in the list")
+        void pagedAgreesWithUnpaged() {
+            List<Long> all = twelveOnOneDay("SIIT-PG5");
+            long customerId = salesInvoices.require(all.getFirst()).customerId();
+
+            List<Long> unpaged = salesInvoices.ofCustomer(customerId).stream()
+                    .map(SalesInvoiceView::id).toList();
+            List<Long> paged = salesInvoices
+                    .pageOfCustomer(customerId, PageRequest.of(0, PageRequest.MAX_SIZE))
+                    .items().stream().map(SalesInvoiceView::id).toList();
+
+            assertThat(paged)
+                    .as("adding paging must not change which invoices the list contains — "
+                            + "between() and pageBetween() answer the same question")
+                    .containsExactlyElementsOf(unpaged);
         }
     }
 

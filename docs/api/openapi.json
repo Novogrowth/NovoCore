@@ -5768,6 +5768,36 @@
             "type" : "string",
             "format" : "date"
           }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "name" : "sort",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "$ref" : "#/components/schemas/SalesInvoiceSort"
+          }
+        }, {
+          "name" : "direction",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "$ref" : "#/components/schemas/SortDirection"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -8114,6 +8144,9 @@
             "items" : {
               "$ref" : "#/components/schemas/AccountGroupView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8125,6 +8158,9 @@
             "items" : {
               "$ref" : "#/components/schemas/AccountView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8136,6 +8172,9 @@
             "items" : {
               "$ref" : "#/components/schemas/AssetView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8147,6 +8186,9 @@
             "items" : {
               "$ref" : "#/components/schemas/BankTransferView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8158,6 +8200,9 @@
             "items" : {
               "$ref" : "#/components/schemas/BundleComponentView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8169,6 +8214,9 @@
             "items" : {
               "$ref" : "#/components/schemas/ChargeTypeView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8180,6 +8228,9 @@
             "items" : {
               "$ref" : "#/components/schemas/CreditNoteView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8191,6 +8242,9 @@
             "items" : {
               "$ref" : "#/components/schemas/CustomerCreditView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8202,6 +8256,9 @@
             "items" : {
               "$ref" : "#/components/schemas/CustomerView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8213,6 +8270,9 @@
             "items" : {
               "$ref" : "#/components/schemas/FreightAllocationView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8224,6 +8284,9 @@
             "items" : {
               "$ref" : "#/components/schemas/GoodsReceiptLineView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8235,6 +8298,9 @@
             "items" : {
               "$ref" : "#/components/schemas/GoodsReceiptView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8246,6 +8312,9 @@
             "items" : {
               "$ref" : "#/components/schemas/GrIrMatchView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8257,6 +8326,9 @@
             "items" : {
               "$ref" : "#/components/schemas/InventoryLotView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8268,6 +8340,9 @@
             "items" : {
               "$ref" : "#/components/schemas/OpenItem"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8279,6 +8354,9 @@
             "items" : {
               "$ref" : "#/components/schemas/ProductView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8290,6 +8368,9 @@
             "items" : {
               "$ref" : "#/components/schemas/PurchaseInvoiceLineView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8301,6 +8382,9 @@
             "items" : {
               "$ref" : "#/components/schemas/PurchaseInvoiceView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8312,6 +8396,9 @@
             "items" : {
               "$ref" : "#/components/schemas/QueuedEmailView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8323,6 +8410,9 @@
             "items" : {
               "$ref" : "#/components/schemas/SalesInvoiceView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8334,6 +8424,9 @@
             "items" : {
               "$ref" : "#/components/schemas/SentEmailAttachmentView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8345,6 +8438,9 @@
             "items" : {
               "$ref" : "#/components/schemas/SerializedUnitView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8356,6 +8452,9 @@
             "items" : {
               "$ref" : "#/components/schemas/SettlementView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8367,6 +8466,9 @@
             "items" : {
               "$ref" : "#/components/schemas/StockConsumptionView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8378,6 +8480,9 @@
             "items" : {
               "$ref" : "#/components/schemas/StockWriteOffView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8389,6 +8494,9 @@
             "items" : {
               "$ref" : "#/components/schemas/SupplierView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8400,6 +8508,9 @@
             "items" : {
               "$ref" : "#/components/schemas/UnitOfMeasureView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8411,6 +8522,9 @@
             "items" : {
               "$ref" : "#/components/schemas/VatClassView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -8422,6 +8536,9 @@
             "items" : {
               "$ref" : "#/components/schemas/VatExemptionReasonView"
             }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
           }
         }
       },
@@ -9095,6 +9212,33 @@
           }
         }
       },
+      "PageInfo" : {
+        "type" : "object",
+        "properties" : {
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "totalElements" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "totalPages" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "hasNext" : {
+            "type" : "boolean"
+          },
+          "hasPrevious" : {
+            "type" : "boolean"
+          }
+        }
+      },
       "PartyType" : {
         "type" : "string",
         "enum" : [ "CUSTOMER", "SUPPLIER" ]
@@ -9598,6 +9742,10 @@
           }
         }
       },
+      "SalesInvoiceSort" : {
+        "type" : "string",
+        "enum" : [ "INVOICE_DATE", "DOCUMENT_NUMBER", "RECORDED_AT" ]
+      },
       "SalesInvoiceView" : {
         "type" : "object",
         "properties" : {
@@ -9857,6 +10005,10 @@
             }
           }
         }
+      },
+      "SortDirection" : {
+        "type" : "string",
+        "enum" : [ "ASC", "DESC" ]
       },
       "StockConsumptionLineView" : {
         "type" : "object",

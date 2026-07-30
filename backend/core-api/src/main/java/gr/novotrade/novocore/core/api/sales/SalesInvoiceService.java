@@ -2,6 +2,8 @@ package gr.novotrade.novocore.core.api.sales;
 
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.shared.Money;
+import gr.novotrade.novocore.core.api.shared.PageRequest;
+import gr.novotrade.novocore.core.api.shared.PageResponse;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -152,6 +154,26 @@ public interface SalesInvoiceService {
 
     /** Sales in a date range, both ends inclusive, oldest first. Includes reversals. */
     List<SalesInvoiceView> between(LocalDate from, LocalDate to);
+
+    /**
+     * One page of the sales in a date range — <strong>the form a screen should use</strong>.
+     *
+     * <p>{@link #between} returns every invoice in the range and is kept for the core's own callers
+     * and for a report that genuinely needs the lot. This is what a table calls, because a quarter
+     * of real invoicing is thousands of rows and a year is tens of thousands.
+     *
+     * <p>The ordering is total: whatever {@link SalesInvoiceSort} is chosen, the id breaks ties, so
+     * successive pages cannot repeat a row or skip one — which an ordering on invoice date alone
+     * genuinely can, since PostgreSQL may return tied rows in a different order per query.
+     *
+     * @throws IllegalArgumentException if the request names a sort this list does not offer, which
+     *     is an internal failure: the routes bind the parameter to {@link SalesInvoiceSort} and
+     *     refuse an unknown value before reaching here
+     */
+    PageResponse<SalesInvoiceView> pageBetween(LocalDate from, LocalDate to, PageRequest page);
+
+    /** One page of the sales to one customer. Same ordering guarantee as {@link #pageBetween}. */
+    PageResponse<SalesInvoiceView> pageOfCustomer(long customerId, PageRequest page);
 
     /** The invoice one journal entry belongs to — the queried direction of the stored link. */
     Optional<SalesInvoiceView> findByJournalEntry(long journalEntryId);

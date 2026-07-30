@@ -7,12 +7,16 @@ import gr.novotrade.novocore.core.api.sales.NewCreditNote;
 import gr.novotrade.novocore.core.api.sales.NewSalesInvoice;
 import gr.novotrade.novocore.core.api.sales.SalesInvoicePreview;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceService;
+import gr.novotrade.novocore.core.api.sales.SalesInvoiceSort;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceView;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.shared.Money;
+import gr.novotrade.novocore.core.api.shared.PageRequest;
+import gr.novotrade.novocore.core.api.shared.SortDirection;
 import gr.novotrade.novocore.core.web.InvalidRequestException;
 import gr.novotrade.novocore.core.web.ListResponse;
+import gr.novotrade.novocore.core.web.Paging;
 import gr.novotrade.novocore.core.web.Requires;
 import gr.novotrade.novocore.core.web.ReversalCommand;
 import java.time.LocalDate;
@@ -71,18 +75,38 @@ class SalesController {
     // Sales invoices
     // -------------------------------------------------------------------------------------------
 
+    /**
+     * Sales invoices, <strong>paged</strong>, by customer or by date range.
+     *
+     * <p>Tier A: a quarter of real invoicing is thousands of rows and a year is tens of thousands, so
+     * this list is paged rather than returned whole. The response carries a {@code page} block; the
+     * lists that are bounded by the business (products, customers) carry the same envelope without
+     * one, and the fixed lookups (VAT classes, the chart of accounts) are never paged. One shape for
+     * the table component, and the difference visible in the type.
+     *
+     * <p>{@code sort} is bound to {@link SalesInvoiceSort}, so an unknown value is refused by Spring
+     * before any of our code runs and the accepted values appear in the OpenAPI document. Whichever
+     * is chosen, the id breaks ties — see {@code SpringPaging} for why a page of a non-total ordering
+     * is not a stable answer.
+     */
     @GetMapping(path = "/api/sales-invoices", produces = MediaType.APPLICATION_JSON_VALUE)
     ListResponse<SalesInvoiceView> invoices(
             @RequestParam(required = false) Long customerId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate to) {
+            LocalDate to,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) SalesInvoiceSort sort,
+            @RequestParam(required = false) SortDirection direction) {
 
+        PageRequest pageRequest = Paging.of(page, size, sort, direction);
         if (customerId != null) {
-            return ListResponse.of(salesInvoices.ofCustomer(customerId));
+            return ListResponse.of(salesInvoices.pageOfCustomer(customerId, pageRequest));
         }
-        return ListResponse.of(salesInvoices.between(requireRange(from), requireRange(to)));
+        return ListResponse.of(salesInvoices.pageBetween(
+                requireRange(from), requireRange(to), pageRequest));
     }
 
     @GetMapping(path = "/api/sales-invoices/{id}", produces = MediaType.APPLICATION_JSON_VALUE)

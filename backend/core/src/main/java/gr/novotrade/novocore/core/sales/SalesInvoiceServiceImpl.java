@@ -34,11 +34,14 @@ import gr.novotrade.novocore.core.api.sales.SalesInvoiceNotFoundException;
 import gr.novotrade.novocore.core.api.sales.SalesInvoicePreview;
 import gr.novotrade.novocore.core.api.sales.SalesInvoicePreviewLine;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceService;
+import gr.novotrade.novocore.core.api.sales.SalesInvoiceSort;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceView;
 import gr.novotrade.novocore.core.api.sales.SettlementMethod;
 import gr.novotrade.novocore.core.api.settings.SettingKeys;
 import gr.novotrade.novocore.core.api.settings.SettingsService;
 import gr.novotrade.novocore.core.api.shared.Money;
+import gr.novotrade.novocore.core.api.shared.PageRequest;
+import gr.novotrade.novocore.core.api.shared.PageResponse;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.SubLedgerRef;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
@@ -48,6 +51,7 @@ import gr.novotrade.novocore.core.api.tax.VatClassService;
 import gr.novotrade.novocore.core.api.tax.VatClassSource;
 import gr.novotrade.novocore.core.api.tax.VatClassView;
 import gr.novotrade.novocore.core.api.tax.VatExemptionReasonService;
+import gr.novotrade.novocore.core.support.SpringPaging;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -365,6 +369,42 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
         return invoices.findByInvoiceDateBetweenOrderByInvoiceDateAscIdAsc(from, to).stream()
                 .map(this::toView)
                 .toList();
+    }
+
+    /**
+     * The logical sort names this list accepts, and the entity property each orders by.
+     *
+     * <p>Stated here rather than derived from {@link SalesInvoiceSort}'s constant names, so adding a
+     * value to that enum does not silently start ordering by a property that happens to share its
+     * name — or fail at runtime because none does. The mapping is a decision; the enum is the
+     * vocabulary.
+     */
+    private static final Map<String, String> SORTABLE = Map.of(
+            SalesInvoiceSort.INVOICE_DATE.name(), "invoiceDate",
+            SalesInvoiceSort.DOCUMENT_NUMBER.name(), "documentNumber",
+            SalesInvoiceSort.RECORDED_AT.name(), "createdAt");
+
+    /** Ordering when the caller names none: the document's own date, as the unpaged list does. */
+    private static final String NATURAL_ORDER = "invoiceDate";
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<SalesInvoiceView> pageBetween(
+            LocalDate from, LocalDate to, PageRequest page) {
+        requireOrderedRange(from, to);
+        return SpringPaging.responseFrom(
+                invoices.findByInvoiceDateBetween(from, to,
+                        SpringPaging.pageableFor(page, SORTABLE, NATURAL_ORDER)),
+                this::toView);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<SalesInvoiceView> pageOfCustomer(long customerId, PageRequest page) {
+        return SpringPaging.responseFrom(
+                invoices.findByCustomerId(customerId,
+                        SpringPaging.pageableFor(page, SORTABLE, NATURAL_ORDER)),
+                this::toView);
     }
 
     @Override
