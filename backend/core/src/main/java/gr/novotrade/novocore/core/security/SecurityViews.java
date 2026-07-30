@@ -38,6 +38,7 @@ final class SecurityViews {
                 user.getId(),
                 user.getUsername(),
                 user.getDisplayName(),
+                user.getLanguage(),
                 toView(user.getRole()),
                 user.isActive());
     }

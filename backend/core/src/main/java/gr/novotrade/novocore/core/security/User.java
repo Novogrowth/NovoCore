@@ -56,6 +56,13 @@ class User extends AuditableEntity {
     @Column(name = "active", nullable = false)
     private boolean active = true;
 
+    /**
+     * A BCP 47 tag, or null meaning this person has not chosen one — a real answer, not a missing
+     * value. See {@link LanguageTag} and migration V27 for why there is no default.
+     */
+    @Column(name = "language", length = 8)
+    private String language;
+
     /** For JPA only. */
     protected User() {
     }
@@ -88,6 +95,10 @@ class User extends AuditableEntity {
         return active;
     }
 
+    String getLanguage() {
+        return language;
+    }
+
     /**
      * Whether a candidate password matches. The only way to interrogate the stored hash.
      *
@@ -112,5 +123,10 @@ class User extends AuditableEntity {
 
     void setActive(boolean nowActive) {
         this.active = nowActive;
+    }
+
+    /** @param normalisedTag already through {@link LanguageTag#normalise}; null clears the choice */
+    void chooseLanguage(String normalisedTag) {
+        this.language = normalisedTag;
     }
 }

@@ -79,7 +79,21 @@ class EndpointDeclarationCheck implements ApplicationListener<ContextRefreshedEv
                         + handlerMethod.getMethod().getName() + " " + paths;
 
                 Requires declaration = SectionAccessInterceptor.declarationOn(handlerMethod);
-                if (declaration == null) {
+                AuthenticatedOnly sectionless =
+                        SectionAccessInterceptor.sectionlessDeclarationOn(handlerMethod);
+
+                if (declaration != null && sectionless != null) {
+                    // A contradiction: one says "this belongs to a section", the other says "it
+                    // belongs to none". Refusing both is the only safe reading, because guessing
+                    // which was meant is how a route ends up governed by the weaker of the two.
+                    problems.add(name + " — carries both @Requires and @AuthenticatedOnly, which "
+                            + "contradict each other; a handler declares exactly one");
+                } else if (sectionless != null) {
+                    if (sectionless.because().isBlank()) {
+                        problems.add(name + " — @AuthenticatedOnly with a blank 'because'; a route "
+                                + "outside the section model must say why it is outside it");
+                    }
+                } else if (declaration == null) {
                     problems.add(name + " — no @Requires declaration");
                 } else if (declaration.level() == AccessLevel.NONE) {
                     // NONE would mean "grants nothing", which as a requirement is satisfied by
@@ -99,10 +113,11 @@ class EndpointDeclarationCheck implements ApplicationListener<ContextRefreshedEv
         if (!problems.isEmpty()) {
             throw new IllegalStateException(
                     "Refusing to start: " + problems.size() + " endpoint(s) under " + GOVERNED_PREFIX
-                            + "** are not properly declared. Every such handler must carry "
-                            + "@Requires(section = ..., level = ...) on the method or its "
-                            + "controller class, because an undeclared endpoint is one nothing "
-                            + "checks a permission for.\n  " + String.join("\n  ", problems));
+                            + "** are not properly declared. Every such handler must carry exactly "
+                            + "one of @Requires(section = ..., level = ...) or "
+                            + "@AuthenticatedOnly(because = ...), on the method or its controller "
+                            + "class, because an undeclared endpoint is one nothing checks a "
+                            + "permission for.\n  " + String.join("\n  ", problems));
         }
 
         log.info("Endpoint declaration check passed: {} handlers under {}** all declare a section.",

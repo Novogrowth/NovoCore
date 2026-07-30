@@ -49,6 +49,16 @@ class SectionAccessInterceptor implements HandlerInterceptor {
         }
 
         Requires declaration = declarationOn(handlerMethod);
+
+        if (declaration == null && sectionlessDeclarationOn(handlerMethod) != null) {
+            // An explicit "authenticated, no section" declaration — see AuthenticatedOnly for why
+            // this is a second declaration rather than an exemption carved into the check below.
+            // require() rather than find(): the guarantee this route still makes is that somebody
+            // is logged in, and it must fail closed if the filter chain ever stops ensuring it.
+            currentUser.require();
+            return true;
+        }
+
         if (declaration == null) {
             // Logged at ERROR because it is a defect in our code, not a caller's mistake, and
             // because the two checks that should have caught it earlier evidently did not.
@@ -84,5 +94,19 @@ class SectionAccessInterceptor implements HandlerInterceptor {
             return onMethod;
         }
         return handlerMethod.getBeanType().getAnnotation(Requires.class);
+    }
+
+    /**
+     * The {@link AuthenticatedOnly} declaration governing one handler, if it carries one.
+     *
+     * <p>Resolved with the same method-beats-class rule as {@link #declarationOn}, so the two
+     * declarations behave identically and a reader does not have to hold two lookup rules.
+     */
+    static AuthenticatedOnly sectionlessDeclarationOn(HandlerMethod handlerMethod) {
+        AuthenticatedOnly onMethod = handlerMethod.getMethodAnnotation(AuthenticatedOnly.class);
+        if (onMethod != null) {
+            return onMethod;
+        }
+        return handlerMethod.getBeanType().getAnnotation(AuthenticatedOnly.class);
     }
 }

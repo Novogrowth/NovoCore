@@ -135,6 +135,44 @@ Scope when resolved: TOTP is the obvious candidate, and the decision needs to co
 mandatory for full-access roles only or for everyone, plus recovery codes — a second factor with
 no recovery path locks the owner out of their own financial system.
 
+## 🐛 Open defect — a permission change does not take effect until the session ends
+
+**Found while building `/api/me` (step 16 prerequisites, 2026-07-30). Pre-existing since step 4, not
+introduced by that work.** Recorded here rather than fixed, because the fix is a decision with real
+cost attached and it is not the identity endpoint's to make.
+
+`CoreAuthenticationProvider` builds a `NovoCorePrincipal` at login holding a **`UserView` snapshot**,
+which Spring Security stores in the session. `SecurityContextCurrentUser.find()` returns that
+snapshot, and `SectionAccessInterceptor` checks permissions against it. So for the life of a session
+— **up to 8 hours** — the following have no effect on a user who is already logged in:
+
+- revoking a section grant, or lowering it from `FULL` to `VIEW`;
+- moving a user to a different role;
+- deactivating the role, or **deactivating the user**;
+- restricting a `ProtectedField` (the mechanism V26 emptied but left intact).
+
+The last two are the ones worth stating plainly: **deactivating an account does not log that account
+out**, and the operator doing it has no indication of that. `UserService.deactivate` refuses to
+remove the last full-access user, so the system cannot be locked out — but a departing employee's
+live session keeps working until it expires.
+
+**How it was found**, which is worth keeping: `GET /api/me` returned the language a `PATCH` had just
+set, and then the *next* `GET /api/me` did not. The read-back was coming from the session, not the
+database. That is the same failure the whole permission model has, surfacing on the one route where
+it is immediately visible.
+
+**What was done now, and deliberately no more.** `MeController.me()` reads the user record fresh
+(`users.require(currentUser.require().id())`), because a route whose entire job is reporting current
+identity and grants must not report yesterday's. `MeIT.grantsAreReadFreshRatherThanFromTheSession`
+asserts it and was **proven to fail** against the snapshot-reading version. Nothing else changed:
+making the interceptor read fresh would add a database read to every request on the surface, and
+choosing between that, a short-lived cache, and an explicit session-eviction on role change is a
+decision to take on its own evidence rather than one to slip in behind an identity endpoint.
+
+**Scope when resolved:** decide between per-request read, cached-with-TTL, and eviction-on-change;
+whichever is chosen, `deactivate` and `changeRole` should invalidate that user's sessions, which
+needs a session registry that does not currently exist.
+
 ## ⚠️ To be aware of immediately
 
 1. **`docker/.env` is gitignored and machine-local, and holds exactly three variables**:

@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.BeforeAll;
@@ -113,6 +114,7 @@ class PermissionSweepIT {
     private static final String GRANTEE_USERNAME = "sweep.grantee";
     private static final String BODY_PROBE_USERNAME = "sweep.bodyprobe";
     private static final String BARE_REFUSAL_USERNAME = "sweep.barerefusal";
+    private static final String NO_GRANTS_USERNAME = "sweep.nogrants";
     private static final String PASSWORD = "role-password-long-enough";
 
     /** For a path variable on a route this role cannot reach — the handler never runs, so it is
@@ -196,6 +198,25 @@ class PermissionSweepIT {
 
         return rules;
     }
+
+    /**
+     * The routes that deliberately have <strong>no</strong> section, named exactly.
+     *
+     * <p>{@code GET /api/me} tells a caller which sections they hold, so requiring one to reach it
+     * would be circular — see {@code AuthenticatedOnly}. {@code PATCH /api/me/language} changes the
+     * caller's own display preference and nothing else, and gating it behind
+     * {@code USERS_AND_ROLES} would mean nobody could set their own language without also being
+     * able to administer everyone.
+     *
+     * <p><strong>Listed as exact patterns, not a prefix.</strong> {@code /api/me} matched by prefix
+     * would silently absorb any future {@code /api/me/...} route into the set of things this sweep
+     * does not check — which is precisely the failure the whole class is built against.
+     *
+     * <p>They are not skipped: {@link TheSeededRole#sectionlessRoutesAreReachableByEveryone} drives
+     * them as the most restricted real role and requires success, which is the guarantee that
+     * actually matters about them.
+     */
+    private static final Set<String> SECTIONLESS_ROUTES = Set.of("/api/me", "/api/me/language");
 
     private static SectionRule prefix(String exact, Section section) {
         return new SectionRule(pattern -> pattern.equals(exact), section);
@@ -281,6 +302,12 @@ class PermissionSweepIT {
             int granted = 0;
 
             for (RouteCoverage.Route route : coverage.allRoutes()) {
+                if (SECTIONLESS_ROUTES.contains(route.pattern())) {
+                    // No section to compare against, by design. Covered instead by
+                    // sectionlessRoutesAreReachableByEveryone, which asserts the stronger thing:
+                    // this role reaches them.
+                    continue;
+                }
                 Section section = sectionGoverning(route.pattern());
                 if (section == null) {
                     // Reported by theSectionTableIsExhaustiveAndHasNoDeadRules, which says it
@@ -336,6 +363,51 @@ class PermissionSweepIT {
                     + refusedPerSection);
         }
 
+        /**
+         * The section-less routes are reachable by the most restricted real role, and by a role
+         * granted nothing at all.
+         *
+         * <p>This is the assertion {@code AuthenticatedOnly} exists to make true, and it is worth
+         * more than the negative one: a user with no grants must still be able to log in, learn who
+         * they are and be shown an application that correctly contains nothing. If
+         * {@code GET /api/me} answered 403 to them, the frontend could not render a login result at
+         * all — it would have an authenticated session and no way to discover what it may do.
+         *
+         * <p>The <em>no grants at all</em> half is the one that would catch a regression: the
+         * seeded staff role holds four sections, so a mistake that gated {@code /api/me} behind an
+         * arbitrary one could still pass against it by luck.
+         */
+        @Test
+        @DisplayName("a role granted nothing still reaches /api/me and can set its own language")
+        void sectionlessRoutesAreReachableByEveryone() {
+            RoleView staff = roles.requireByName("REMOTE_ORDER_STAFF");
+            ApiClient.Session staffSession = sessionFor(STAFF_USERNAME, staff.id());
+
+            // A freshly created role holds nothing — grants are a separate act (see NewRole) — so
+            // this is the emptiest role the system can express, and no grant is added to it.
+            RoleView nothing = roles.create(new NewRole(
+                    "SWEEP_NO_GRANTS_AT_ALL",
+                    "Holds no section at all. Exists to prove /api/me needs none."));
+            ApiClient.Session destituteSession = sessionFor(NO_GRANTS_USERNAME, nothing.id());
+
+            for (RouteCoverage.Route route : coverage.allRoutes()) {
+                if (!SECTIONLESS_ROUTES.contains(route.pattern())) {
+                    continue;
+                }
+                for (Map.Entry<String, ApiClient.Session> who : Map.of(
+                        "Remote/Order Staff", staffSession,
+                        "a role with no grants at all", destituteSession).entrySet()) {
+
+                    ResponseEntity<String> response = send(who.getValue(), route);
+                    assertThat(response.getStatusCode().value())
+                            .as("%s was refused %s, which has no section by design — see "
+                                    + "SECTIONLESS_ROUTES. Body: %s",
+                                    who.getKey(), route, response.getBody())
+                            .isNotIn(401, 403);
+                }
+            }
+        }
+
         @Test
         @DisplayName("every route is classified, and no rule describes routes that no longer exist")
         void theSectionTableIsExhaustiveAndHasNoDeadRules() {
@@ -343,7 +415,15 @@ class PermissionSweepIT {
             Map<String, Integer> hitsPerRule = new LinkedHashMap<>();
             GOVERNING_SECTION.keySet().forEach(name -> hitsPerRule.put(name, 0));
 
+            Set<String> sectionlessSeen = new java.util.TreeSet<>();
+
             for (RouteCoverage.Route route : coverage.allRoutes()) {
+                if (SECTIONLESS_ROUTES.contains(route.pattern())) {
+                    // Classified, not skipped — see SECTIONLESS_ROUTES, and the test below that
+                    // drives them.
+                    sectionlessSeen.add(route.pattern());
+                    continue;
+                }
                 String matched = null;
                 for (Map.Entry<String, SectionRule> rule : GOVERNING_SECTION.entrySet()) {
                     if (rule.getValue().matches().test(route.pattern())) {
@@ -362,13 +442,23 @@ class PermissionSweepIT {
                     .as("""
                             Routes this class has no opinion about. An unclassified route is one \
                             the sweep silently skips, which is the failure mode the whole design is \
-                            against: it would report 133 routes examined while examining fewer.""")
+                            against: it would report 133 routes examined while examining fewer. If \
+                            a route genuinely has no section, it belongs in SECTIONLESS_ROUTES and \
+                            must carry @AuthenticatedOnly — not here by omission.""")
                     .isEmpty();
 
             assertThat(hitsPerRule)
                     .as("a rule matching nothing describes a family of routes that has been renamed "
                             + "or removed, and it will go on passing while covering nothing")
                     .allSatisfy((name, hits) -> assertThat(hits).isPositive());
+
+            // The same staleness check the rules above get. A pattern listed as section-less that
+            // no route serves is an exemption nobody will remove, sitting ready to excuse whatever
+            // later takes that path.
+            assertThat(sectionlessSeen)
+                    .as("every pattern in SECTIONLESS_ROUTES must name a route that exists; one "
+                            + "that does not is a standing exemption for a path nobody serves yet")
+                    .containsExactlyInAnyOrderElementsOf(SECTIONLESS_ROUTES);
         }
 
         /**
@@ -408,6 +498,18 @@ class PermissionSweepIT {
         int swept = 0;
         for (RouteCoverage.Route route : coverage.allRoutes()) {
             if ("GET".equals(route.method())) {
+                continue;
+            }
+            if (SECTIONLESS_ROUTES.contains(route.pattern())) {
+                // PATCH /api/me/language genuinely changes state and genuinely must succeed here:
+                // a view-only operator has to be able to choose the language their own screen is
+                // in, and there is no section that could gate it without denying them that.
+                //
+                // Waved through only because of what it can touch, which is the caller's own row
+                // and one validated column of it — the user id comes from the session and is never
+                // read from the request, so this is not a route to editing anybody else. The set is
+                // bounded by an ArchUnit rule that fails the build if a second controller ever
+                // declares itself section-less, so this exclusion cannot quietly widen.
                 continue;
             }
             swept++;

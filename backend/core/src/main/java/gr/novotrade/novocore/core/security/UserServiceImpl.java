@@ -165,6 +165,28 @@ class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    public UserView changeLanguage(long id, String languageTag) {
+        // Validated before the lookup so a malformed tag is refused the same way whether or not the
+        // id happens to exist — the alternative distinguishes them and answers 404 for a request
+        // that was wrong on its own terms.
+        String normalised = LanguageTag.normalise(languageTag);
+        User user = users.findById(id).orElseThrow(() -> new UserNotFoundException(id));
+
+        String previous = user.getLanguage();
+        user.chooseLanguage(normalised);
+
+        // "(none)" rather than omitting the key: clearing a preference is a real change and an
+        // audit entry that records only one side of it does not say what happened.
+        auditLog.record("user.language-changed", ENTITY_TYPE, String.valueOf(id), Map.of(
+                "username", user.getUsername(),
+                "from", previous == null ? "(none)" : previous,
+                "to", normalised == null ? "(none)" : normalised));
+
+        return SecurityViews.toView(user);
+    }
+
+    @Override
+    @Transactional
     public UserView changeRole(long id, long roleId) {
         User user = users.findById(id).orElseThrow(() -> new UserNotFoundException(id));
         Role newRole = requireActiveRole(roleId);

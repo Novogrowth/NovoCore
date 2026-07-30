@@ -57,6 +57,25 @@ public interface UserService {
     UserView rename(long id, String newDisplayName);
 
     /**
+     * Records which language this person wants the interface in.
+     *
+     * <p><strong>Nothing in the core reads it.</strong> The backend localises none of its own
+     * messages (Q47b), so this is stored for a frontend to act on and for no other purpose — stated
+     * here so nobody later assumes an error message will honour it.
+     *
+     * <p>The tag is normalised before storage ({@code el-gr} and {@code EL-GR} are one preference),
+     * and its <em>shape</em> is checked while the set of languages deliberately is not: the backend
+     * supports no particular language, so it is in no position to refuse one.
+     *
+     * @param languageTag a BCP 47 tag such as {@code "el"} or {@code "el-GR"}, or null/blank to
+     *     clear the preference — which is allowed, because "has not chosen" is a state a user is
+     *     entitled to return to
+     * @throws InvalidUserException if the value is not a language tag
+     * @throws UserNotFoundException if there is no such user
+     */
+    UserView changeLanguage(long id, String languageTag);
+
+    /**
      * Moves a user to a different role.
      *
      * @throws InvalidUserException if the role does not exist or is inactive

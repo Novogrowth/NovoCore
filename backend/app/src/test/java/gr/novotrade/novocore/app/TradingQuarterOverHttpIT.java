@@ -113,7 +113,15 @@ class TradingQuarterOverHttpIT {
                     + "asserted by OutboxEndpointIT, which has a document to reference.",
             "POST /api/email/outbox/{id}/retry",
             "re-queueing needs a FAILED message, which needs a send that failed. OutboxEndpointIT "
-                    + "arranges one; nothing an operator does over HTTP produces it.");
+                    + "arranges one; nothing an operator does over HTTP produces it.",
+            "GET /api/me",
+            "session identity, not a trading action — it says who is logged in and what they may "
+                    + "reach, and nothing about the quarter. Covered by MeIT, which also asserts "
+                    + "the thing that matters about it: a role granted nothing still reaches it.",
+            "PATCH /api/me/language",
+            "same — a display preference the backend stores and never reads (Q47b). Driving it here "
+                    + "would change the owner's language mid-narrative to assert nothing. Covered "
+                    + "by MeIT.");
 
     private static StubDriveServer drive;
 

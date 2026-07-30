@@ -2,6 +2,7 @@ package gr.novotrade.novocore.architecture;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
@@ -13,23 +14,27 @@ import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * Four rules about what a controller may do, each closing a hole that would fail silently.
+ * Five rules about what a controller may do, each closing a hole that would fail silently.
  *
- * <p>All four share a shape: the thing they forbid <em>compiles, runs and looks right</em>. A
- * handler with no permission declaration serves data. A controller reading products unredacted
- * returns a complete-looking response. A controller receiving stock directly creates a lot. A
- * controller throwing {@code IllegalArgumentException} returns a perfectly valid 400. Nothing throws
- * in any of the four, which is exactly why they are build failures rather than review notes — the
- * same argument that made proxy self-invocation an ArchUnit rule after it had bitten three times.
+ * <p>All five share a shape: the thing they forbid <em>compiles, runs and looks right</em>. A
+ * handler with no permission declaration serves data. A handler declared section-less serves it to
+ * anyone logged in. A controller reading products unredacted returns a complete-looking response. A
+ * controller receiving stock directly creates a lot. A controller throwing
+ * {@code IllegalArgumentException} returns a perfectly valid 400. Nothing throws in any of them,
+ * which is exactly why they are build failures rather than review notes — the same argument that
+ * made proxy self-invocation an ArchUnit rule after it had bitten three times.
  */
 class WebAuthorizationRulesTest {
 
     private static final String CORE_WEB = "gr.novotrade.novocore.core.web..";
     private static final String REQUIRES = "gr.novotrade.novocore.core.web.Requires";
+    private static final String AUTHENTICATED_ONLY =
+            "gr.novotrade.novocore.core.web.AuthenticatedOnly";
 
     /** Everything Spring MVC treats as a route. */
     private static final List<String> MAPPING_ANNOTATIONS = List.of(
@@ -56,15 +61,15 @@ class WebAuthorizationRulesTest {
                 };
 
         ArchCondition<JavaMethod> declareASection =
-                new ArchCondition<>("declare @Requires, on the method or its controller") {
+                new ArchCondition<>("declare @Requires or @AuthenticatedOnly, on the method or its "
+                        + "controller") {
                     @Override
                     public void check(JavaMethod method, ConditionEvents events) {
-                        boolean declared = method.isAnnotatedWith(REQUIRES)
-                                || method.getOwner().isAnnotatedWith(REQUIRES);
+                        boolean declared = declaresSection(method) || declaresSectionless(method);
                         events.add(new SimpleConditionEvent(method, declared,
                                 method.getFullName() + " is mapped to an HTTP route but declares "
-                                        + "no @Requires section, so nothing checks a permission "
-                                        + "before it runs"));
+                                        + "neither @Requires nor @AuthenticatedOnly, so nothing "
+                                        + "checks a permission before it runs"));
                     }
                 };
 
@@ -83,6 +88,69 @@ class WebAuthorizationRulesTest {
         // would mean the web package had been emptied and would take the guarantee with it.
 
         rule.check(ImportedClasses.production());
+    }
+
+    private static boolean declaresSection(JavaMethod method) {
+        return method.isAnnotatedWith(REQUIRES) || method.getOwner().isAnnotatedWith(REQUIRES);
+    }
+
+    private static boolean declaresSectionless(JavaMethod method) {
+        return method.isAnnotatedWith(AUTHENTICATED_ONLY)
+                || method.getOwner().isAnnotatedWith(AUTHENTICATED_ONLY);
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // 1b. …and only one controller is allowed to declare itself section-less
+    // -------------------------------------------------------------------------------------------
+
+    /**
+     * The controllers permitted to carry {@code @AuthenticatedOnly}.
+     *
+     * <p><strong>One, and it should stay one.</strong> {@code MeController} serves the route that
+     * tells a caller which sections they hold, which cannot itself require a section without being
+     * circular. Nothing else on this surface has that property: every other route returns something
+     * about a party, a document or an amount, and all three have sections.
+     *
+     * <p>Named here rather than derived from anything, because the whole point is that adding a
+     * second one has to be a deliberate edit to a list somebody reviews — the same mechanism as
+     * {@code RouteCoverage}'s excused routes and {@code UNREDACTED_PRODUCT_READS} above.
+     */
+    private static final Set<String> MAY_BE_SECTIONLESS = Set.of(
+            "gr.novotrade.novocore.core.web.me.MeController");
+
+    /**
+     * {@code @AuthenticatedOnly} appears on exactly the controllers named above — no more, no fewer.
+     *
+     * <p><strong>Both directions, deliberately.</strong> A new controller declaring itself
+     * section-less fails, which is the obvious half. A controller <em>listed</em> here that no longer
+     * carries the annotation also fails, which is the half that keeps the list honest: an
+     * allowlist nobody prunes stops describing reality and starts pre-authorising whatever later
+     * takes that class's name. Same two-way check {@code assertEveryRouteCoveredExcept} applies to
+     * coverage excuses, for the same reason.
+     */
+    @Test
+    @DisplayName("only the identity route declares itself section-less")
+    void onlyTheIdentityRouteIsSectionless() {
+        Set<String> declared = new TreeSet<>();
+        for (JavaClass type : ImportedClasses.production()) {
+            if (type.isAnnotatedWith(AUTHENTICATED_ONLY)) {
+                declared.add(type.getFullName());
+            }
+            type.getMethods().stream()
+                    .filter(method -> method.isAnnotatedWith(AUTHENTICATED_ONLY))
+                    .forEach(method -> declared.add(method.getFullName()));
+        }
+
+        assertThat(declared)
+                .as("""
+                        @AuthenticatedOnly skips the section check entirely, so a route carrying \
+                        it is readable by anyone logged in — including a role granted nothing at \
+                        all. Exactly one route legitimately needs that (GET /api/me tells a caller \
+                        which sections they hold, so gating it behind one is circular). If a new \
+                        one genuinely qualifies, add it here and say why in its 'because'; if this \
+                        fails because a listed class no longer declares it, delete the entry — an \
+                        allowlist nobody prunes pre-authorises whatever later takes that name.""")
+                .containsExactlyInAnyOrderElementsOf(MAY_BE_SECTIONLESS);
     }
 
     // -------------------------------------------------------------------------------------------

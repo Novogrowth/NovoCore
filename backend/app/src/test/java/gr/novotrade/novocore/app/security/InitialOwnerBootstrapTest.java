@@ -74,7 +74,7 @@ class InitialOwnerBootstrapTest {
         when(users.noUsersExist()).thenReturn(true);
         when(roles.requireByName("OWNER")).thenReturn(OWNER_ROLE);
         when(users.create(any())).thenReturn(new UserView(
-                1L, "first.owner", "NovoCore Owner", OWNER_ROLE, true));
+                1L, "first.owner", "NovoCore Owner", null, OWNER_ROLE, true));
 
         new InitialOwnerBootstrap(users, roles, "first.owner", "a-password-long-enough")
                 .run(null);
