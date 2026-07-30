@@ -21,6 +21,24 @@ interface UserRepository extends JpaRepository<User, Long> {
 
     long countByRoleId(long roleId);
 
+    List<User> findByRoleIdOrderByUsernameAsc(long roleId);
+
+    /**
+     * The ids of everyone holding a role — who has to be logged out when it is narrowed.
+     *
+     * <p>Ids rather than entities, and that is the point rather than an optimisation: the caller
+     * needs nothing but the id, and returning entities from here would invite somebody to touch a
+     * lazy association outside the transaction that loaded it — the trap {@code CLAUDE.md} names
+     * alongside proxy self-invocation.
+     *
+     * <p><strong>Not restricted to active users.</strong> A deactivated account should have no
+     * session, but "should have none" and "has none" are different claims, and the one place not to
+     * assume the first is the code that exists to guarantee the second. {@code endAllFor} is
+     * documented safe for a user with no sessions, so the wider query costs nothing.
+     */
+    @Query("select u.id from User u where u.role.id = :roleId")
+    List<Long> findIdsByRoleId(long roleId);
+
     /**
      * How many active users hold a full-access role.
      *

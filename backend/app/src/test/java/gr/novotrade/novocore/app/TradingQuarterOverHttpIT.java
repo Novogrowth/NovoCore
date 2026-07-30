@@ -34,6 +34,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import tools.jackson.databind.JsonNode;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -100,28 +101,148 @@ class TradingQuarterOverHttpIT {
      * <p>They are covered — {@code OutboxEndpointIT} drives all five against messages it queues through
      * the service, which is the right place for it.
      */
-    private static final java.util.Map<String, String> EXCUSED_ROUTES = java.util.Map.of(
-            "GET /api/email/outbox",
-            "no route sends email; a trading narrative cannot put a message in the outbox without "
-                    + "calling EmailSender directly. Covered by OutboxEndpointIT.",
-            "GET /api/email/outbox/{id}",
-            "same — see GET /api/email/outbox. Covered by OutboxEndpointIT.",
-            "GET /api/email/outbox/{id}/attachments",
-            "same, and Q44's access path is asserted where the attachments exist: OutboxEndpointIT.",
-            "GET /api/email/attachments/{id}/content",
-            "same. Q44's other half — a referenced document re-checks its own record's section — is "
-                    + "asserted by OutboxEndpointIT, which has a document to reference.",
-            "POST /api/email/outbox/{id}/retry",
-            "re-queueing needs a FAILED message, which needs a send that failed. OutboxEndpointIT "
-                    + "arranges one; nothing an operator does over HTTP produces it.",
-            "GET /api/me",
-            "session identity, not a trading action — it says who is logged in and what they may "
-                    + "reach, and nothing about the quarter. Covered by MeIT, which also asserts "
-                    + "the thing that matters about it: a role granted nothing still reaches it.",
-            "PATCH /api/me/language",
-            "same — a display preference the backend stores and never reads (Q47b). Driving it here "
-                    + "would change the owner's language mid-narrative to assert nothing. Covered "
-                    + "by MeIT.");
+    /**
+     * Routes a trading quarter legitimately does not drive, each naming the test that does.
+     *
+     * <p>{@code Map.ofEntries} rather than {@code Map.of}, which caps at ten pairs — step 16b's
+     * administration surface took this past it.
+     *
+     * <p><strong>Administration is not trading, and pretending otherwise would weaken both.</strong>
+     * A quarter of invoicing has no business creating users or editing roles; driving them here to
+     * satisfy a coverage count would put irrelevant state in the middle of a ledger narrative whose
+     * whole value is that its twelve invariants hold over exactly the documents it wrote.
+     */
+    private static final java.util.Map<String, String> EXCUSED_ROUTES = java.util.Map.ofEntries(
+            java.util.Map.entry("GET /api/email/outbox",
+                    "no route sends email; a trading narrative cannot put a message in the outbox "
+                            + "without calling EmailSender directly. Covered by OutboxEndpointIT."),
+            java.util.Map.entry("GET /api/email/outbox/{id}",
+                    "same — see GET /api/email/outbox. Covered by OutboxEndpointIT."),
+            java.util.Map.entry("GET /api/email/outbox/{id}/attachments",
+                    "same, and Q44's access path is asserted where the attachments exist: "
+                            + "OutboxEndpointIT."),
+            java.util.Map.entry("GET /api/email/attachments/{id}/content",
+                    "same. Q44's other half — a referenced document re-checks its own record's "
+                            + "section — is asserted by OutboxEndpointIT, which has a document to "
+                            + "reference."),
+            java.util.Map.entry("POST /api/email/outbox/{id}/retry",
+                    "re-queueing needs a FAILED message, which needs a send that failed. "
+                            + "OutboxEndpointIT arranges one; nothing an operator does over HTTP "
+                            + "produces it."),
+            java.util.Map.entry("GET /api/me",
+                    "session identity, not a trading action — it says who is logged in and what "
+                            + "they may reach, and nothing about the quarter. Covered by MeIT, "
+                            + "which also asserts the thing that matters about it: a role granted "
+                            + "nothing still reaches it."),
+            java.util.Map.entry("PATCH /api/me/language",
+                    "same — a display preference the backend stores and never reads (Q47b). "
+                            + "Driving it here would change the owner's language mid-narrative to "
+                            + "assert nothing. Covered by MeIT."),
+
+            // Step 16b — user and role administration. All eighteen covered by UserRoleEndpointIT,
+            // with the two that carry a security guarantee also asserted where that guarantee lives:
+            // eviction in SessionEvictionIT, escalation in PrivilegeEscalationIT.
+            java.util.Map.entry("GET /api/users",
+                    "user administration, not trading. Covered by UserRoleEndpointIT."),
+            java.util.Map.entry("GET /api/users/{id}",
+                    "same — see GET /api/users."),
+            java.util.Map.entry("POST /api/users",
+                    "creating accounts mid-quarter would change who the narrative's own documents "
+                            + "are attributed to. Covered by UserRoleEndpointIT, and its escalation "
+                            + "refusal by PrivilegeEscalationIT."),
+            java.util.Map.entry("PATCH /api/users/{id}/display-name",
+                    "same — see POST /api/users."),
+            java.util.Map.entry("PATCH /api/users/{id}/role",
+                    "ends the target's sessions, so driving it here would log the narrative out of "
+                            + "its own session. Covered by UserRoleEndpointIT and SessionEvictionIT."),
+            java.util.Map.entry("PATCH /api/users/{id}/password",
+                    "same — it ends sessions. Covered by UserRoleEndpointIT and SessionEvictionIT."),
+            java.util.Map.entry("POST /api/users/{id}/deactivate",
+                    "same, and the quarter has exactly one operator to deactivate. Covered by "
+                            + "UserRoleEndpointIT and SessionEvictionIT."),
+            java.util.Map.entry("POST /api/users/{id}/reactivate",
+                    "same — see POST /api/users/{id}/deactivate."),
+            java.util.Map.entry("GET /api/sections",
+                    "the catalogue a role editor renders from; says nothing about a quarter. "
+                            + "Covered by UserRoleEndpointIT."),
+            java.util.Map.entry("GET /api/roles",
+                    "role administration, not trading. Covered by UserRoleEndpointIT."),
+            java.util.Map.entry("GET /api/roles/{id}",
+                    "same — see GET /api/roles."),
+            java.util.Map.entry("GET /api/roles/{id}/users",
+                    "same, and it exists to answer a refusal the quarter never provokes. Covered "
+                            + "by UserRoleEndpointIT."),
+            java.util.Map.entry("POST /api/roles",
+                    "same — see GET /api/roles."),
+            java.util.Map.entry("PATCH /api/roles/{id}/name",
+                    "same — see GET /api/roles."),
+            java.util.Map.entry("PUT /api/roles/{id}/grants/{section}",
+                    "narrowing a grant ends the sessions of everyone holding the role, including "
+                            + "the narrative's own. Covered by UserRoleEndpointIT, its eviction by "
+                            + "SessionEvictionIT and its escalation refusal by PrivilegeEscalationIT."),
+            java.util.Map.entry("PUT /api/roles/{id}/field-restrictions/{field}",
+                    "same — restricting a field ends sessions too. Covered by UserRoleEndpointIT "
+                            + "and SessionEvictionIT."),
+            java.util.Map.entry("POST /api/roles/{id}/deactivate",
+                    "refused while anybody holds the role, which is every role in the quarter. "
+                            + "Covered by UserRoleEndpointIT."),
+            java.util.Map.entry("POST /api/roles/{id}/reactivate",
+                    "same — see POST /api/roles/{id}/deactivate."),
+
+            // Step 16b — Settings. Configuration, not trading, and changing any of it mid-narrative
+            // would alter how the quarter's own remaining documents behave: the rounding threshold
+            // decides which invoices need acceptance, and the cash limit decides which sales are
+            // refused. A scenario that edits the rules it is being measured against proves nothing.
+            java.util.Map.entry("GET /api/settings",
+                    "configuration, not trading. Covered by SettingsEndpointIT."),
+            java.util.Map.entry("GET /api/settings/{key}",
+                    "same — see GET /api/settings."),
+            java.util.Map.entry("PUT /api/settings/{key}",
+                    "changing the rounding threshold or the retention policy mid-quarter would "
+                            + "change how the narrative's own later documents behave. Covered by "
+                            + "SettingsEndpointIT."),
+
+            // Step 16b — administering the two runtime-editable lookups. The quarter reads both
+            // heavily and creates neither: it uses the seeded VAT classes and units, which is what
+            // a real quarter does.
+            java.util.Map.entry("POST /api/vat-classes",
+                    "creating a VAT class is a statutory event, not something a trading quarter "
+                            + "does. Covered by LookupAdminEndpointIT."),
+            java.util.Map.entry("PATCH /api/vat-classes/{id}/description",
+                    "same — see POST /api/vat-classes."),
+            java.util.Map.entry("PUT /api/vat-classes/{id}/reduced-counterpart",
+                    "the island-reduced mappings are seeded (V5); remapping one mid-quarter would "
+                            + "change what later lines resolve to. Covered by LookupAdminEndpointIT."),
+            java.util.Map.entry("DELETE /api/vat-classes/{id}/reduced-counterpart",
+                    "same — see PUT /api/vat-classes/{id}/reduced-counterpart."),
+            java.util.Map.entry("POST /api/vat-classes/{id}/deactivate",
+                    "deactivating a class the quarter's own invoices use would be arranging a "
+                            + "failure rather than trading. Covered by LookupAdminEndpointIT."),
+            java.util.Map.entry("POST /api/vat-classes/{id}/reactivate",
+                    "same — see POST /api/vat-classes/{id}/deactivate."),
+            java.util.Map.entry("POST /api/units-of-measure",
+                    "the quarter uses the seeded units. Covered by LookupAdminEndpointIT."),
+            java.util.Map.entry("PATCH /api/units-of-measure/{id}/name",
+                    "same — see POST /api/units-of-measure."),
+            java.util.Map.entry("PATCH /api/units-of-measure/{id}/mydata-code",
+                    "the codes are pending the accountant (Q38), so there is no real value to "
+                            + "record. Covered by LookupAdminEndpointIT."),
+            java.util.Map.entry("PATCH /api/units-of-measure/{id}/fractional-quantity",
+                    "flipping this mid-quarter would change whether the narrative's own quantities "
+                            + "are valid. Covered by LookupAdminEndpointIT."),
+            java.util.Map.entry("POST /api/units-of-measure/{id}/deactivate",
+                    "refused while any product uses it, which is every seeded unit the quarter "
+                            + "touches. Covered by LookupAdminEndpointIT."),
+            java.util.Map.entry("POST /api/units-of-measure/{id}/reactivate",
+                    "same — see POST /api/units-of-measure/{id}/deactivate."),
+            java.util.Map.entry("GET /api/units-of-measure/without-mydata-code",
+                    "the list still waiting on the accountant (Q38) — an outstanding question, not "
+                            + "a trading action. Covered by LookupAdminEndpointIT."));
+
+    // The three journal routes are deliberately NOT excused. The quarter posts hundreds of real
+    // entries and runs as the Owner, so it is the only place with a realistic ledger to read — and
+    // reading it here cross-checks the paged summary against the full entry, which is the one
+    // assertion JournalEndpointIT's purpose-built fixtures cannot make as convincingly.
 
     private static StubDriveServer drive;
 
@@ -246,6 +367,76 @@ class TradingQuarterOverHttpIT {
                     .as("%s must say how to ask, not just refuse", listing.path())
                     .contains(listing.mustSay())
                     .doesNotContain("\"detail\":\"Bad request.\"");
+        }
+    }
+
+    /**
+     * The journal listing, read against a real quarter's postings.
+     *
+     * <p><strong>The cross-check is the point.</strong> A paged listing returns
+     * {@code JournalEntrySummaryView}, whose {@code total} comes from a separate aggregate query —
+     * not from the lines the single-entry route returns. Those two must agree, and nothing but a test
+     * that reads both can say so. A purpose-built fixture would assert it against two entries; this
+     * asserts it against a quarter of real trading, including reversals, credit notes, freight
+     * allocations and write-offs.
+     */
+    @Test
+    @Order(21)
+    @DisplayName("the journal listing agrees with the entries it summarises")
+    void journalListingAgreesWithTheEntries() {
+        ApiClient.Session owner = new ApiClient(rest).logIn(OWNER_USERNAME, OWNER_PASSWORD);
+
+        JsonNode listing = Json.ok(
+                owner.get("/api/journal-entries?size=50"), "GET /api/journal-entries");
+
+        assertThat(listing.get("page").get("totalElements").asLong())
+                .as("a quarter of trading posts a great many entries")
+                .isGreaterThan(20L);
+
+        // Every row on the page: fetch the full entry and compare. The summary's total is computed
+        // by an aggregate over the lines; the entry's is computed from the lines themselves.
+        int checked = 0;
+        for (JsonNode summary : listing.get("items")) {
+            long id = summary.get("id").asLong();
+            JsonNode entry = Json.ok(
+                    owner.get("/api/journal-entries/" + id), "GET /api/journal-entries/{id}");
+
+            java.math.BigDecimal debits = java.math.BigDecimal.ZERO;
+            int lines = 0;
+            for (JsonNode line : entry.get("lines")) {
+                lines++;
+                if ("DEBIT".equals(Json.text(line, "side"))) {
+                    debits = debits.add(new java.math.BigDecimal(Json.amount(line, "amount")));
+                }
+            }
+
+            assertThat(new java.math.BigDecimal(Json.amount(summary, "total")))
+                    .as("entry %d: the listing's total must equal the entry's own debits", id)
+                    .isEqualByComparingTo(debits);
+            assertThat(summary.get("lineCount").asInt())
+                    .as("entry %d: the listing's line count", id)
+                    .isEqualTo(lines);
+            checked++;
+        }
+        assertThat(checked).isGreaterThan(20);
+
+        // And the account ledger, on an account this quarter certainly posted to.
+        long inventoryId = Json.ok(owner.get("/api/accounts"), "GET /api/accounts")
+                .get("items").valueStream()
+                .filter(account -> "INVENTORY".equals(Json.text(account, "systemKey")))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("No account carries the INVENTORY system key."))
+                .get("id").asLong();
+
+        JsonNode ledger = Json.ok(
+                owner.get("/api/accounts/" + inventoryId + "/ledger?size=10"),
+                "GET /api/accounts/{id}/ledger");
+        assertThat(ledger.get("items")).isNotEmpty();
+        assertThat(ledger.get("page").get("totalElements").asLong()).isPositive();
+        for (JsonNode line : ledger.get("items")) {
+            assertThat(line.get("accountId").asLong())
+                    .as("a ledger must contain only the account it is a ledger of")
+                    .isEqualTo(inventoryId);
         }
     }
 

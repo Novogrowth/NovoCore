@@ -173,12 +173,21 @@ class PermissionSweepIT {
         rules.put("customer credit allocations", prefix("/api/customer-credits/{id}/allocations",
                 Section.SETTLEMENTS));
 
+        // The third deliberate overlap, and it must stay above the chart-of-accounts rule below.
+        // An account's LEDGER is what has posted to it, which is exactly what JOURNAL governs and
+        // what CHART_OF_ACCOUNTS deliberately does not: seeing the list of accounts is close to
+        // harmless, seeing every figure posted to them is the business. The path sits under
+        // /api/accounts because that is what it is a ledger of, so the section split shows up here
+        // as an exception rather than as a prefix.
+        rules.put("an account's ledger", prefix("/api/accounts/{id}/ledger", Section.JOURNAL));
+
         rules.put("the chart of accounts", startingWith(Section.CHART_OF_ACCOUNTS,
                 "/api/chart-of-accounts", "/api/accounts", "/api/account-groups"));
         rules.put("the fixed asset register", startingWith(Section.FIXED_ASSETS, "/api/assets"));
         rules.put("customers", startingWith(Section.CUSTOMERS, "/api/customers"));
         rules.put("the email outbox", startingWith(Section.EMAIL_OUTBOX, "/api/email/"));
         rules.put("inventory", startingWith(Section.INVENTORY, "/api/inventory/"));
+        rules.put("the journal", startingWith(Section.JOURNAL, "/api/journal-entries"));
 
         // /api/units-of-measure sits under PRODUCTS because it is the picker a product form needs;
         // it is a lookup, not a section of its own.
@@ -195,6 +204,15 @@ class PermissionSweepIT {
         rules.put("suppliers", startingWith(Section.SUPPLIERS, "/api/suppliers"));
         rules.put("tax and charges", startingWith(Section.TAX_AND_CHARGES,
                 "/api/vat-classes", "/api/vat-exemption-reasons", "/api/charge-types"));
+
+        // /api/sections is the catalogue of sections a role editor renders its grid from, so it
+        // belongs with role administration rather than being a section of its own. It reports only
+        // which sections exist and whether anything is built behind them — no grants, no identity,
+        // nothing about any party or amount — but it is still governed, because the list of what an
+        // administrator could grant is administration.
+        rules.put("users and roles", startingWith(Section.USERS_AND_ROLES,
+                "/api/users", "/api/roles", "/api/sections"));
+        rules.put("settings", startingWith(Section.SETTINGS, "/api/settings"));
 
         return rules;
     }

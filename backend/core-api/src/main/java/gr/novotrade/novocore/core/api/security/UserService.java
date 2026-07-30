@@ -38,6 +38,16 @@ public interface UserService {
 
     List<UserView> active();
 
+    /**
+     * Everyone holding a role, active and inactive, by username.
+     *
+     * <p>Exists because {@link RoleService#deactivate} refuses while any user still holds the role,
+     * and an operator who hits that refusal has to be able to find out <em>who</em> — a refusal
+     * naming a count and not the people is a dead end. Includes deactivated accounts, because they
+     * hold the role too and are equally in the way of deactivating it.
+     */
+    List<UserView> inRole(long roleId);
+
     /** True when no account exists at all — the condition the initial-owner bootstrap tests. */
     boolean noUsersExist();
 

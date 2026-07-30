@@ -4,6 +4,7 @@ import gr.novotrade.novocore.core.api.shared.SubLedgerType;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
 /**
@@ -19,7 +20,8 @@ import org.springframework.data.jpa.repository.Query;
  * currencies on one account come back as two rows and {@code Money.plus} refuses to combine them. That
  * failure is correct — a single figure would be meaningless.
  */
-interface JournalLineRepository extends JpaRepository<JournalLine, Long> {
+interface JournalLineRepository
+        extends JpaRepository<JournalLine, Long>, JpaSpecificationExecutor<JournalLine> {
 
     /**
      * One account's lines over a period, oldest first, with their entries fetched.

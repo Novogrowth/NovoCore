@@ -1,6 +1,7 @@
 package gr.novotrade.novocore.core.security;
 
 import gr.novotrade.novocore.core.api.audit.AuditLogService;
+import gr.novotrade.novocore.core.api.security.CurrentUser;
 import gr.novotrade.novocore.core.api.security.InvalidUserException;
 import gr.novotrade.novocore.core.api.security.NewUser;
 import gr.novotrade.novocore.core.api.security.UserNotFoundException;
@@ -36,13 +37,21 @@ class UserServiceImpl implements UserService {
      */
     private final UserSessions sessions;
 
+    /**
+     * Who is asking — for the guard on {@link #changeRole} that stops somebody moving themselves
+     * into a role they built. Required, and empty-means-unattended, for the reasons
+     * {@code RoleServiceImpl} states about its own copy.
+     */
+    private final CurrentUser currentUser;
+
     UserServiceImpl(UserRepository users, RoleRepository roles, PasswordEncoder passwordEncoder,
-            AuditLogService auditLog, UserSessions sessions) {
+            AuditLogService auditLog, UserSessions sessions, CurrentUser currentUser) {
         this.users = users;
         this.roles = roles;
         this.passwordEncoder = passwordEncoder;
         this.auditLog = auditLog;
         this.sessions = sessions;
+        this.currentUser = currentUser;
     }
 
     @Override
@@ -120,6 +129,14 @@ class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<UserView> inRole(long roleId) {
+        return users.findByRoleIdOrderByUsernameAsc(roleId).stream()
+                .map(SecurityViews::toView)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public boolean noUsersExist() {
         return users.count() == 0;
     }
@@ -136,6 +153,7 @@ class UserServiceImpl implements UserService {
             throw new InvalidUserException("Username '" + username + "' is already taken.");
         }
         Role role = requireActiveRole(request.roleId());
+        refuseIfConferringFullAccessTheCallerLacks(role, "create an account in");
 
         User saved = users.save(new User(
                 username, displayName, passwordEncoder.encode(request.rawPassword()), role));
@@ -157,8 +175,15 @@ class UserServiceImpl implements UserService {
 
         user.replacePasswordHash(passwordEncoder.encode(newRawPassword));
 
-        auditLog.record("user.password-changed", ENTITY_TYPE, String.valueOf(id),
-                Map.of("username", user.getUsername()));
+        // A password reset is, overwhelmingly, either containment of a compromise or an
+        // offboarding. Leaving the existing sessions alive would mean the new password locks out
+        // only the legitimate owner, while whoever prompted the reset keeps working — which is the
+        // opposite of what resetting it was for.
+        int ended = sessions.endAllFor(id);
+
+        auditLog.record("user.password-changed", ENTITY_TYPE, String.valueOf(id), Map.of(
+                "username", user.getUsername(),
+                "sessionsEnded", String.valueOf(ended)));
     }
 
     @Override
@@ -205,6 +230,19 @@ class UserServiceImpl implements UserService {
         Role newRole = requireActiveRole(roleId);
         Role previous = user.getRole();
 
+        // The other half of the guard RoleServiceImpl.refuseIfCallerHolds applies. That one stops
+        // somebody widening the role they hold; this stops them stepping into a wider one they
+        // built. Either alone leaves the escalation open, because the two together are one act.
+        // Unattended calls are unaffected: nobody is escalating when there is no caller.
+        currentUser.find()
+                .filter(caller -> caller.id() == id)
+                .ifPresent(caller -> {
+                    throw new InvalidUserException(
+                            "You cannot change your own role. Moving yourself into a role you can "
+                                    + "edit would let one person grant themselves any access in the "
+                                    + "system. Ask another administrator to make this change.");
+                });
+
         // Moving the last administrator out of a full-access role is the same lockout as
         // deactivating them, so it is checked the same way.
         if (previous.isFullAccess() && !newRole.isFullAccess() && user.isActive()
@@ -214,6 +252,8 @@ class UserServiceImpl implements UserService {
                             + "Moving them to '" + newRole.getName() + "' would leave nobody able "
                             + "to administer the system. Give another user full access first.");
         }
+
+        refuseIfConferringFullAccessTheCallerLacks(newRole, "move a user into");
 
         user.moveToRole(newRole);
 
@@ -270,6 +310,44 @@ class UserServiceImpl implements UserService {
         user.setActive(true);
         auditLog.record("user.reactivated", ENTITY_TYPE, String.valueOf(id),
                 Map.of("username", user.getUsername()));
+    }
+
+    /**
+     * Refuses when the caller is putting somebody into a full-access role without holding one.
+     *
+     * <p><strong>The other half of the anti-escalation rule</strong>, and gated on the
+     * {@code fullAccess} flag rather than per-section — which is the right shape here precisely
+     * because the flag is not a set of grants. Owner and Admin are full access by flag and hold no
+     * grant rows at all, so there is no per-section comparison to make against a role whose whole
+     * meaning is "everything, including sections not built yet".
+     *
+     * <p>This matches the precedent {@code RoleService.create} already sets: no custom role can
+     * <em>become</em> full access. Without this, that refusal was trivially sidestepped — a role
+     * holding only {@code USERS_AND_ROLES:FULL} could not create a full-access role, but could
+     * create an account in one of the two that already exist and log in as it.
+     *
+     * <p>The per-section rule in {@code RoleServiceImpl.refuseIfCallerCannotConferIt} closes the
+     * other route to the same place: building a new custom role and granting it what the actor does
+     * not hold. Both are needed. Neither alone closes the compound path, which is why
+     * {@code PrivilegeEscalationIT} walks the whole sequence rather than testing each in isolation.
+     *
+     * <p>Unattended calls pass through, which is what lets the initial-owner bootstrap create the
+     * first Owner when there is nobody to have authorised it.
+     */
+    private void refuseIfConferringFullAccessTheCallerLacks(Role role, String whatWasAttempted) {
+        if (!role.isFullAccess()) {
+            return;
+        }
+        Optional<UserView> caller = currentUser.find();
+        if (caller.isEmpty() || caller.get().role().fullAccess()) {
+            return;
+        }
+        throw new InvalidUserException(
+                "You cannot " + whatWasAttempted + " '" + role.getName() + "', which has full "
+                        + "access to everything, because your own role does not. Otherwise "
+                        + "administering users would be a route to unlimited access: create an "
+                        + "account in a full-access role, then log in as it. Ask an existing "
+                        + "administrator.");
     }
 
     private Role requireActiveRole(long roleId) {

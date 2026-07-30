@@ -126,6 +126,34 @@ class CoreBoundaryRulesTest {
     }
 
     /**
+     * The Settings API is an allowlist, and this is what stops a controller reaching past it.
+     *
+     * <p>{@code SettingsService} is deliberately untyped: {@code put(key, value)} takes any key and
+     * any string, and {@code listRedacted()} returns <em>every</em> row — including the Drive folder
+     * and client ids, which are not flagged secret and would come back in the clear.
+     *
+     * <p>All of that is correct for the core, which reads settings everywhere. It is exactly wrong
+     * behind a route, so the web layer goes through {@code SettingsAdminService}, which exposes only
+     * {@code SettingsCatalog}'s keys and validates a value before storing it. Without this rule a
+     * future controller injecting {@code SettingsService} directly would bypass the catalogue, the
+     * validation and the {@code backup.*} exclusion in one line that looks entirely reasonable.
+     */
+    @Test
+    @DisplayName("the web layer reaches settings only through the catalogued admin service")
+    void webLayerUsesTheSettingsAllowlist() {
+        ArchRule rule = noClasses()
+                .that().resideInAPackage(CORE_WEB)
+                .should().dependOnClassesThat().haveFullyQualifiedName(
+                        "gr.novotrade.novocore.core.api.settings.SettingsService")
+                .because("SettingsService accepts any key and returns every row, so a route over it "
+                        + "would expose the Google Drive OAuth credentials and let a caller store a "
+                        + "rounding threshold that breaks the next document posted. Settings routes "
+                        + "use SettingsAdminService, which is restricted to SettingsCatalog.");
+
+        rule.check(ImportedClasses.production());
+    }
+
+    /**
      * The mail client, which only the shared email service may hold.
      *
      * <p>{@code jakarta.mail} is the API and {@code org.springframework.mail} the Spring layer

@@ -51,6 +51,7 @@ import gr.novotrade.novocore.core.api.security.NotAuthenticatedException;
 import gr.novotrade.novocore.core.api.security.RoleNotFoundException;
 import gr.novotrade.novocore.core.api.security.SectionAccessDeniedException;
 import gr.novotrade.novocore.core.api.security.UserNotFoundException;
+import gr.novotrade.novocore.core.api.settings.InvalidSettingException;
 import gr.novotrade.novocore.core.api.settings.SettingNotFoundException;
 import gr.novotrade.novocore.core.api.settings.SettingValueException;
 import gr.novotrade.novocore.core.api.settlement.InvalidSettlementException;
@@ -62,6 +63,7 @@ import gr.novotrade.novocore.core.api.tax.InvalidVatExemptionReasonException;
 import gr.novotrade.novocore.core.api.tax.VatClassNotDeterminableException;
 import gr.novotrade.novocore.core.api.tax.VatClassNotFoundException;
 import gr.novotrade.novocore.core.api.tax.VatExemptionReasonNotFoundException;
+import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
@@ -71,6 +73,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
  * Turns the core's typed exceptions into HTTP status codes.
@@ -190,6 +193,7 @@ class WebExceptionHandler {
         InvalidPurchaseInvoiceException.class,
         InvalidRoleException.class,
         InvalidSalesInvoiceException.class,
+        InvalidSettingException.class,
         InvalidSettlementException.class,
         InvalidStockConsumptionException.class,
         InvalidStockWriteOffException.class,
@@ -343,6 +347,52 @@ class WebExceptionHandler {
     }
 
     /**
+     * 400, <strong>naming the parameter and — for an enum — the values it accepts.</strong>
+     *
+     * <p>Spring raises this when a path variable or query parameter cannot be converted to the
+     * handler's parameter type: {@code /api/roles/1/grants/JORUNAL}, {@code ?sort=NONSENSE},
+     * {@code /api/users/abc}. Unhandled, it reaches the generic {@link #badRequest} below — because
+     * {@code MethodArgumentTypeMismatchException} is an {@code IllegalArgumentException} — and the
+     * caller gets a bare {@code "Bad request."} with nothing about which parameter was wrong.
+     *
+     * <p><strong>This is the case {@code CLAUDE.md} names as the one the three guards cannot see</strong>:
+     * a <em>wrong but non-empty</em> value, specifically an unparseable enum. It is not covered by
+     * {@code noRouteFailsOnAnEmptyBody} (nothing 5xxs) nor by the ArchUnit rule (nothing in
+     * {@code ..core.web..} constructs the exception — Spring does). It was found by
+     * {@code PermissionSweepIT.noRouteRefusesWithoutSayingWhy}, which probes every path variable with
+     * a placeholder, when step 16b added the first enum-typed <em>path variables</em> on the surface.
+     *
+     * <p><strong>Fixed here rather than in the two routes that surfaced it</strong>, because the
+     * defect was never theirs. Every enum-bound query parameter already had it — a mistyped
+     * {@code ?sort=} on any paged list has been answering {@code "Bad request."} since step 16a — and
+     * every future one would have inherited it. One handler covers the surface, present and future.
+     *
+     * <p>Listing the accepted values discloses nothing: they are enum constants, already published in
+     * the OpenAPI document and, for sections, already returned by {@code /api/me}. The offending
+     * value is echoed because the caller supplied it, and truncated because they control its length.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    ProblemDetail unconvertibleParameter(MethodArgumentTypeMismatchException exception) {
+        log.info("Unconvertible parameter '{}': {}", exception.getName(), exception.getMessage());
+
+        Class<?> required = exception.getRequiredType();
+        String supplied = truncated(String.valueOf(exception.getValue()));
+
+        String detail;
+        if (required != null && required.isEnum()) {
+            detail = "\"" + exception.getName() + "\" must be one of "
+                    + Arrays.toString(required.getEnumConstants()) + "; got \"" + supplied + "\".";
+        } else if (required != null) {
+            detail = "\"" + exception.getName() + "\" must be a valid "
+                    + required.getSimpleName() + "; got \"" + supplied + "\".";
+        } else {
+            detail = "\"" + exception.getName() + "\" is not in a form this route can read; got \""
+                    + supplied + "\".";
+        }
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
+    }
+
+    /**
      * 400, <strong>carrying its message</strong>. The caller named a combination of query
      * parameters the route cannot answer, and the message says which combinations it can.
      *
@@ -374,6 +424,18 @@ class WebExceptionHandler {
     private static String message(RuntimeException exception) {
         String message = exception.getMessage();
         return message == null || message.isBlank() ? "Refused." : message;
+    }
+
+    /**
+     * Caps an echoed caller-supplied value.
+     *
+     * <p>The caller controls its length, and a refusal that reflects an unbounded string back is a
+     * way to make this service produce large responses cheaply. The value is echoed at all because
+     * naming what was rejected is what makes the message usable.
+     */
+    private static String truncated(String value) {
+        int limit = 100;
+        return value.length() <= limit ? value : value.substring(0, limit) + "…";
     }
 
     /**

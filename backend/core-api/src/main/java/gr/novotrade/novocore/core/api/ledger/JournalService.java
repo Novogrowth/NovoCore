@@ -3,6 +3,8 @@ package gr.novotrade.novocore.core.api.ledger;
 import gr.novotrade.novocore.core.api.account.AccountSystemKey;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.shared.Money;
+import gr.novotrade.novocore.core.api.shared.PageRequest;
+import gr.novotrade.novocore.core.api.shared.PageResponse;
 import gr.novotrade.novocore.core.api.shared.SubLedgerRef;
 import java.time.LocalDate;
 import java.util.Collection;
@@ -169,6 +171,47 @@ public interface JournalService {
      * to, which is the whole reason the two are separate columns.
      */
     List<JournalEntryView> entriesBetween(LocalDate from, LocalDate to);
+
+    /**
+     * A page of entries, <strong>without their lines</strong>, narrowed by {@code filter}.
+     *
+     * <p>The journal is the one table here genuinely expected to grow unbounded over the years the
+     * business runs — unlike users, roles or settings, which are small and bounded — so this is paged
+     * from the start rather than added to the list of unpaged reads needing retrofit later.
+     *
+     * <p><strong>Returns {@link JournalEntrySummaryView}, and that is not a convenience.</strong>
+     * {@link JournalEntryView} refuses to exist without its lines, and a listing carrying every line
+     * of every entry would be a different thing entirely. See that type before changing this.
+     *
+     * <p>The natural order is {@code entryDate} ascending with the id breaking ties. A screen wanting
+     * newest-first asks for {@link JournalEntrySort#ENTRY_DATE} descending.
+     *
+     * @throws gr.novotrade.novocore.core.api.account.AccountNotFoundException if the filter names an
+     *     account that does not exist — refused rather than answered with an empty page, which would
+     *     read as "this account has no entries"
+     */
+    PageResponse<JournalEntrySummaryView> pageOfEntries(
+            JournalEntryFilter filter, PageRequest pageRequest);
+
+    /**
+     * A page of one account's lines — the account ledger, paged.
+     *
+     * <p>The paged counterpart to {@link #linesOf}, which stays for the core's own callers. One bank
+     * account over a year is every transaction that touched it, so this is the second genuinely
+     * unbounded read in the ledger and the one a drill-down from an entry listing lands on.
+     *
+     * <p>Still returns lines rather than a ledger type carrying a running balance, for
+     * {@link #linesOf}'s reason — and paging makes that argument stronger rather than weaker, since a
+     * running balance computed within a page would silently restart at each page boundary. The
+     * opening figure is {@link #balanceOf} at the day before {@code from}.
+     *
+     * @param from earliest {@code entryDate}, inclusive; null for no lower bound
+     * @param to latest {@code entryDate}, inclusive; null for no upper bound
+     * @throws gr.novotrade.novocore.core.api.account.AccountNotFoundException if there is no such
+     *     account
+     */
+    PageResponse<JournalLineView> pageOfLines(
+            long accountId, LocalDate from, LocalDate to, PageRequest pageRequest);
 
     /**
      * One account's lines over a period, oldest first — the account ledger.

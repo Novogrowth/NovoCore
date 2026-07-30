@@ -9,7 +9,10 @@ import gr.novotrade.novocore.core.api.audit.AuditLogService;
 import gr.novotrade.novocore.core.api.ledger.AccountBalance;
 import gr.novotrade.novocore.core.api.ledger.InvalidJournalEntryException;
 import gr.novotrade.novocore.core.api.ledger.JournalEntryNotAmendableException;
+import gr.novotrade.novocore.core.api.ledger.JournalEntryFilter;
 import gr.novotrade.novocore.core.api.ledger.JournalEntryNotFoundException;
+import gr.novotrade.novocore.core.api.ledger.JournalEntrySort;
+import gr.novotrade.novocore.core.api.ledger.JournalEntrySummaryView;
 import gr.novotrade.novocore.core.api.ledger.JournalEntryView;
 import gr.novotrade.novocore.core.api.ledger.JournalLineView;
 import gr.novotrade.novocore.core.api.ledger.JournalService;
@@ -22,9 +25,12 @@ import gr.novotrade.novocore.core.api.ledger.VatDimension;
 import gr.novotrade.novocore.core.api.ledger.VatDirection;
 import gr.novotrade.novocore.core.api.ledger.VatTotal;
 import gr.novotrade.novocore.core.api.shared.Money;
+import gr.novotrade.novocore.core.api.shared.PageRequest;
+import gr.novotrade.novocore.core.api.shared.PageResponse;
 import gr.novotrade.novocore.core.api.shared.SubLedgerRef;
 import gr.novotrade.novocore.core.api.tax.VatClassService;
 import gr.novotrade.novocore.core.api.tax.VatClassView;
+import gr.novotrade.novocore.core.support.SpringPaging;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -38,6 +44,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -80,6 +87,31 @@ class JournalServiceImpl implements JournalService {
      * without reading it off a line.
      */
     private static final Currency REPORTING_CURRENCY = Money.EUR;
+
+    /**
+     * The orderings a journal listing offers, mapped to entity properties.
+     *
+     * <p>{@code SpringPaging} refuses anything not in this map, which is the check that holds if this
+     * service is ever called from somewhere that did not bind the parameter to
+     * {@link JournalEntrySort} first. The routes do bind it; this is the belt to that pair of braces,
+     * and it is why nothing a caller supplies can ever reach a query.
+     */
+    private static final Map<String, String> ENTRY_SORTS = Map.of(
+            JournalEntrySort.ENTRY_DATE.name(), "entryDate",
+            JournalEntrySort.RECORDED_AT.name(), "createdAt",
+            JournalEntrySort.SOURCE.name(), "source");
+
+    /**
+     * The account ledger's orderings.
+     *
+     * <p>Deliberately only the entry's own date: a line has no independent date, and offering
+     * {@code lineNumber} as a top-level sort would order the whole account by a number that is only
+     * meaningful within one entry.
+     */
+    private static final Map<String, String> LINE_SORTS = Map.of(
+            JournalEntrySort.ENTRY_DATE.name(), "entry.entryDate",
+            JournalEntrySort.RECORDED_AT.name(), "entry.createdAt",
+            JournalEntrySort.SOURCE.name(), "entry.source");
 
     private final JournalEntryRepository entries;
     private final JournalLineRepository lines;
@@ -301,6 +333,108 @@ class JournalServiceImpl implements JournalService {
         return found.stream()
                 .map(entry -> toView(entry, accounts, reversedBy.get(entry.getId())))
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<JournalEntrySummaryView> pageOfEntries(
+            JournalEntryFilter filter, PageRequest pageRequest) {
+        Objects.requireNonNull(filter, "filter");
+        Objects.requireNonNull(pageRequest, "pageRequest");
+
+        // Refused rather than answered with an empty page: "no such account" and "this account has
+        // no entries" are different facts, and only one of them is the caller's mistake.
+        if (filter.accountId() != null) {
+            chartOfAccounts.requireAccount(filter.accountId());
+        }
+
+        Page<JournalEntry> page = entries.findAll(
+                JournalEntrySpecifications.matching(filter),
+                SpringPaging.pageableFor(pageRequest, ENTRY_SORTS, "entryDate"));
+
+        Map<Long, LineSummary> summaries = summarise(page.getContent());
+        Map<Long, Long> reversedBy = reversalsOf(page.getContent());
+
+        return SpringPaging.responseFrom(page, entry -> {
+            LineSummary summary = summaries.get(entry.getId());
+            if (summary == null) {
+                // Unreachable: a posted entry always has at least two lines, by the same constraint
+                // trigger that makes it balance. Loud rather than a zero total, because a ledger
+                // listing showing 0.00 reads as a real figure.
+                throw new IllegalStateException(
+                        "Journal entry " + entry.getId() + " has no lines. A posted entry always "
+                                + "has at least " + NewJournalEntry.MINIMUM_LINES + ".");
+            }
+            return new JournalEntrySummaryView(
+                    entry.getId(),
+                    entry.getEntryDate(),
+                    entry.getDescription(),
+                    entry.getSource(),
+                    entry.getReversalOfId(),
+                    reversedBy.get(entry.getId()),
+                    summary.total(),
+                    summary.lineCount());
+        });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<JournalLineView> pageOfLines(
+            long accountId, LocalDate from, LocalDate to, PageRequest pageRequest) {
+        Objects.requireNonNull(pageRequest, "pageRequest");
+        if (from != null && to != null && from.isAfter(to)) {
+            throw new IllegalArgumentException(
+                    "Date range " + from + " to " + to + " runs backwards. An empty result would "
+                            + "look identical to a period with nothing in it.");
+        }
+        chartOfAccounts.requireAccount(accountId);
+
+        Page<JournalLine> page = lines.findAll(
+                JournalEntrySpecifications.linesOfAccount(accountId, from, to),
+                SpringPaging.pageableFor(pageRequest, LINE_SORTS, "entry.entryDate"));
+
+        Map<Long, AccountView> accounts = accountsById();
+        return SpringPaging.responseFrom(page, line -> toView(line, accounts));
+    }
+
+    /**
+     * The per-entry totals for one page, in one query.
+     *
+     * <p>Materialised into plain values here, inside the transaction, rather than returned as rows to
+     * be read later — the {@code CLAUDE.md} rule about not handing lazy state across a boundary,
+     * applied to a projection.
+     */
+    private Map<Long, LineSummary> summarise(List<JournalEntry> page) {
+        if (page.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, LineSummary> summaries = new LinkedHashMap<>();
+        for (Object[] row : entries.summariseLines(page.stream().map(JournalEntry::getId).toList())) {
+            summaries.put(
+                    (Long) row[0],
+                    new LineSummary(
+                            new Money(
+                                    (BigDecimal) row[1],
+                                    Currency.getInstance(((String) row[3]).trim())),
+                            ((Number) row[2]).intValue()));
+        }
+        return summaries;
+    }
+
+    private Map<Long, Long> reversalsOf(List<JournalEntry> page) {
+        if (page.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, Long> reversedBy = new LinkedHashMap<>();
+        for (Object[] pair : entries.findReversalPairs(
+                page.stream().map(JournalEntry::getId).toList())) {
+            reversedBy.put((Long) pair[0], (Long) pair[1]);
+        }
+        return reversedBy;
+    }
+
+    /** An entry's debits (which are also its credits) and how many lines it has. */
+    private record LineSummary(Money total, int lineCount) {
     }
 
     @Override

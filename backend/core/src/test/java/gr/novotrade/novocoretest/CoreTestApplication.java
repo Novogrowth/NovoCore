@@ -1,6 +1,10 @@
 package gr.novotrade.novocoretest;
 
+import gr.novotrade.novocore.core.api.security.CurrentUser;
+import gr.novotrade.novocore.core.api.security.NotAuthenticatedException;
 import gr.novotrade.novocore.core.api.security.UserSessions;
+import gr.novotrade.novocore.core.api.security.UserView;
+import java.util.Optional;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
@@ -89,5 +93,46 @@ public class CoreTestApplication {
     @Bean
     UserSessions noSessionsToEnd() {
         return userId -> 0;
+    }
+
+    /**
+     * A {@link CurrentUser} that reports nobody logged in, because in this context nobody is.
+     *
+     * <p><strong>This is not the permissive fallback the comment above rejects</strong>, for that
+     * comment's own reason: the rejection was of a default supplied <em>inside the core</em>, which
+     * would apply in production and fail open there. Here there is no servlet container and no login
+     * has happened, so "unattended" is not a substituted default — it is the truth.
+     *
+     * <p>It became necessary in step 16b, when {@code UserServiceImpl} and {@code RoleServiceImpl}
+     * took {@code CurrentUser} as required constructor arguments for the self-modification guard.
+     * Required rather than an {@code ObjectProvider} for the reason {@code UserSessions} is: a
+     * security guard that quietly does nothing when its dependency is absent is the failure mode
+     * this codebase has already refused twice.
+     *
+     * <p><strong>The guard is therefore not exercised here, deliberately.</strong> Every call in the
+     * core's own tests is unattended, so the guard correctly never fires — which is itself worth
+     * having, since it proves the bootstrap and seeding paths are not blocked by it. The behaviour
+     * that matters is asserted in {@code app} by {@code SessionEvictionIT}, over real HTTP with a
+     * real logged-in user, which is the only place the authentication path actually exists. Stubbing
+     * a caller here would prove the guard works against a stub.
+     */
+    @Bean
+    CurrentUser unattended() {
+        return new CurrentUser() {
+            @Override
+            public Optional<UserView> find() {
+                return Optional.empty();
+            }
+
+            @Override
+            public UserView require() {
+                throw new NotAuthenticatedException();
+            }
+
+            @Override
+            public Optional<String> username() {
+                return Optional.empty();
+            }
+        };
     }
 }
