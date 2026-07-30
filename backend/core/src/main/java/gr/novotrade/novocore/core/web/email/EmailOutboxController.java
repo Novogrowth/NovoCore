@@ -3,6 +3,7 @@ package gr.novotrade.novocore.core.web.email;
 import gr.novotrade.novocore.core.api.email.EmailAttachmentContent;
 import gr.novotrade.novocore.core.api.email.EmailSender;
 import gr.novotrade.novocore.core.api.email.EmailStatus;
+import gr.novotrade.novocore.core.api.email.QueuedEmailNotFoundException;
 import gr.novotrade.novocore.core.api.email.QueuedEmailView;
 import gr.novotrade.novocore.core.api.email.SentEmailAttachmentView;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
@@ -96,8 +97,7 @@ class EmailOutboxController {
 
     @GetMapping(path = "/api/email/outbox/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     QueuedEmailView message(@PathVariable long id) {
-        return email.find(id).orElseThrow(() ->
-                new IllegalArgumentException("No queued email with id " + id));
+        return email.find(id).orElseThrow(() -> new QueuedEmailNotFoundException(id));
     }
 
     /**

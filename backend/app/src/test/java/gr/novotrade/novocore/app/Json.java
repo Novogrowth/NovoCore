@@ -82,6 +82,20 @@ final class Json {
         return read(response);
     }
 
+    /**
+     * Asserts the call succeeded, for a route that answers {@code 204} and therefore has no body.
+     *
+     * <p>Distinct from {@link #ok} rather than a relaxation of it: {@code ok}'s insistence on a body
+     * is what catches a read that silently answered nothing, and weakening it for the handful of
+     * routes that legitimately return none would give that up everywhere. Deactivations, reorderings
+     * and the two deletions are the routes that need this.
+     */
+    static void succeeded(ResponseEntity<String> response, String what) {
+        assertThat(response.getStatusCode().is2xxSuccessful())
+                .as("%s failed with %s: %s", what, response.getStatusCode(), response.getBody())
+                .isTrue();
+    }
+
     /** The {@code items} array of a list response, which every list is wrapped in (step 14's D6). */
     static List<JsonNode> items(ResponseEntity<String> response, String what) {
         JsonNode body = ok(response, what);

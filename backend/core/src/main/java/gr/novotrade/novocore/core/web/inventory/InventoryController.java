@@ -11,6 +11,7 @@ import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.web.InvalidRequestException;
 import gr.novotrade.novocore.core.web.ListResponse;
+import gr.novotrade.novocore.core.web.Required;
 import gr.novotrade.novocore.core.web.Requires;
 import java.time.LocalDate;
 import java.util.List;
@@ -279,8 +280,17 @@ class InventoryController {
     // -------------------------------------------------------------------------------------------
 
     record LocationRequest(StockLocation location) {
+
+        LocationRequest {
+            Required.field(location, "location");
+        }
     }
 
+    /** The note is genuinely optional; the date is not. */
     record WriteOffReversalRequest(LocalDate reversalDate, String note) {
+
+        WriteOffReversalRequest {
+            Required.field(reversalDate, "reversalDate");
+        }
     }
 }

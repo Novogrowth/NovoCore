@@ -16,7 +16,9 @@ import gr.novotrade.novocore.core.api.charge.InvalidChargeTypeException;
 import gr.novotrade.novocore.core.api.customer.CustomerNotFoundException;
 import gr.novotrade.novocore.core.api.customer.InvalidCustomerException;
 import gr.novotrade.novocore.core.api.email.EmailAttachmentUnavailableException;
+import gr.novotrade.novocore.core.api.email.EmailAttachmentNotFoundException;
 import gr.novotrade.novocore.core.api.email.EmailNotConfiguredException;
+import gr.novotrade.novocore.core.api.email.QueuedEmailNotFoundException;
 import gr.novotrade.novocore.core.api.inventory.InvalidInventoryLotException;
 import gr.novotrade.novocore.core.api.inventory.InvalidStockConsumptionException;
 import gr.novotrade.novocore.core.api.inventory.InvalidStockWriteOffException;
@@ -137,12 +139,14 @@ class WebExceptionHandler {
         ChargeTypeNotFoundException.class,
         CreditNoteNotFoundException.class,
         CustomerNotFoundException.class,
+        EmailAttachmentNotFoundException.class,
         FreightAllocationNotFoundException.class,
         GoodsReceiptNotFoundException.class,
         InventoryLotNotFoundException.class,
         JournalEntryNotFoundException.class,
         ProductNotFoundException.class,
         PurchaseInvoiceNotFoundException.class,
+        QueuedEmailNotFoundException.class,
         RoleNotFoundException.class,
         SalesInvoiceNotFoundException.class,
         SerializedUnitNotFoundException.class,
@@ -323,6 +327,15 @@ class WebExceptionHandler {
     ProblemDetail unreadableBody(HttpMessageNotReadableException exception) {
         log.info("Unreadable request body: {}", exception.getMessage());
         Throwable cause = exception.getMostSpecificCause();
+
+        // A request record that refuses to be built without a required field (see Required) throws
+        // from its compact constructor, which Jackson wraps in this exception. Its message is about
+        // the field, not about the JSON — and the body parsed perfectly well — so it is reported as
+        // itself rather than prefixed with a claim that the request was malformed.
+        if (cause instanceof InvalidRequestException missingField) {
+            return invalidRequest(missingField);
+        }
+
         String detail = cause.getMessage() == null
                 ? "Malformed request body."
                 : "Malformed request body: " + firstLine(cause.getMessage());

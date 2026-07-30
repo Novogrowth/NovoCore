@@ -576,6 +576,32 @@ class FreightAllocationServiceImpl implements FreightAllocationService {
             lots.computeIfAbsent(line.getLotId(), inventory::requireLot);
         }
 
+        // A reversal keeps no lines of its own — the original's are what a reader needs, and this
+        // reversal read exactly those to undo itself. But its *totals* must still say what it did.
+        //
+        // Found by step 15, and it is the shape this step keeps finding: the ledger was right and
+        // the wire was not. Without this, a reversal reports 0.00 for the amount it took back out,
+        // so GET /api/freight-allocations?from=&to= overstates freight variance for the period by
+        // every reversal in it — a plausible number, wrong, with no document to point at. The
+        // reversing journal entry is the exact mirror of the original, so these figures are too.
+        if (allocation.isReversal()) {
+            FreightAllocationView original = toView(load(allocation.getReversalOfId()));
+            return new FreightAllocationView(
+                    allocation.getId(),
+                    sourceLine.getId(),
+                    sourceLine.getInvoice().getId(),
+                    sourceLine.getInvoice().getSupplierInvoiceNumber(),
+                    allocation.getAllocationDate(),
+                    allocation.getDescription(),
+                    original.amount().negated(),
+                    original.capitalised().negated(),
+                    original.variance().negated(),
+                    allocation.getJournalEntryId(),
+                    allocation.getReversalOfId(),
+                    null,
+                    List.of());
+        }
+
         List<FreightAllocationLineView> lineViews = new ArrayList<>();
         Money capitalised = Money.zero(currency);
         Money variance = Money.zero(currency);

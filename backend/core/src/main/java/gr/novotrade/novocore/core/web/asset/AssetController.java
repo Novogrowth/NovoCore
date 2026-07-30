@@ -7,6 +7,7 @@ import gr.novotrade.novocore.core.api.asset.NewAsset;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.web.ListResponse;
+import gr.novotrade.novocore.core.web.Required;
 import gr.novotrade.novocore.core.web.Requires;
 import gr.novotrade.novocore.core.api.shared.Rate;
 import java.time.LocalDate;
@@ -174,5 +175,11 @@ class AssetController {
     }
 
     record DisposalRequest(LocalDate disposalDate) {
+
+        DisposalRequest {
+            // Required exactly when the asset is disposed — the definitional pairing this route
+            // exists to record, so a disposal naming no date is not a disposal.
+            Required.field(disposalDate, "disposalDate");
+        }
     }
 }

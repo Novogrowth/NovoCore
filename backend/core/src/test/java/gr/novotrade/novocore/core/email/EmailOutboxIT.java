@@ -13,10 +13,12 @@ import gr.novotrade.novocore.core.api.audit.AuditEntry;
 import gr.novotrade.novocore.core.api.audit.AuditLogService;
 import gr.novotrade.novocore.core.api.email.EmailAttachment;
 import gr.novotrade.novocore.core.api.email.EmailAttachmentSource;
+import gr.novotrade.novocore.core.api.email.EmailAttachmentNotFoundException;
 import gr.novotrade.novocore.core.api.email.EmailAttachmentUnavailableException;
 import gr.novotrade.novocore.core.api.email.EmailMessage;
 import gr.novotrade.novocore.core.api.email.EmailSender;
 import gr.novotrade.novocore.core.api.email.EmailStatus;
+import gr.novotrade.novocore.core.api.email.QueuedEmailNotFoundException;
 import gr.novotrade.novocore.core.api.email.QueuedEmailView;
 import gr.novotrade.novocore.core.api.email.SentEmailAttachmentView;
 import gr.novotrade.novocore.core.api.settings.SettingKeys;
@@ -456,10 +458,14 @@ class EmailOutboxIT extends AbstractCoreIntegrationTest {
         assertThat(emailSender.find(id).orElseThrow().attachmentCount()).isEqualTo(1);
 
         // Asking for the bytes anyway is distinguishable from asking for an id that never existed.
+        // ADR 0012 turns on that distinction, and step 15 sharpened it: the second case was an
+        // IllegalArgumentException, which the web layer treats as a bug in our own code and answers
+        // with a bare 400 — so a caller saw "Bad request." where the rest of the surface says "Not
+        // found.". Two named exceptions now, 410 and 404, and the assertion states both.
         assertThatExceptionOfType(EmailAttachmentUnavailableException.class)
                 .isThrownBy(() -> emailSender.downloadAttachment(view.id(), owner()))
                 .withMessageContaining("po-1002.pdf");
-        assertThatExceptionOfType(IllegalArgumentException.class)
+        assertThatExceptionOfType(EmailAttachmentNotFoundException.class)
                 .isThrownBy(() -> emailSender.downloadAttachment(-1L, owner()));
     }
 
@@ -704,7 +710,10 @@ class EmailOutboxIT extends AbstractCoreIntegrationTest {
     @Test
     @DisplayName("retrying a message that does not exist names the id")
     void retryOfUnknownMessage() {
-        assertThatExceptionOfType(IllegalArgumentException.class)
+        // A not-found exception rather than IllegalArgumentException, so the route answers 404
+        // rather than a bare 400 that tells the caller nothing. The message still names the id —
+        // for the log; the 404 handler deliberately does not return it.
+        assertThatExceptionOfType(QueuedEmailNotFoundException.class)
                 .isThrownBy(() -> emailSender.retry(-1L))
                 .withMessageContaining("-1");
     }

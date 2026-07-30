@@ -6,11 +6,13 @@ import gr.novotrade.novocore.core.api.attachment.AttachmentService;
 import gr.novotrade.novocore.core.api.audit.AuditLogService;
 import gr.novotrade.novocore.core.api.email.EmailAttachment;
 import gr.novotrade.novocore.core.api.email.EmailAttachmentContent;
+import gr.novotrade.novocore.core.api.email.EmailAttachmentNotFoundException;
 import gr.novotrade.novocore.core.api.email.EmailConfigurationStatus;
 import gr.novotrade.novocore.core.api.email.EmailMessage;
 import gr.novotrade.novocore.core.api.email.EmailNotConfiguredException;
 import gr.novotrade.novocore.core.api.email.EmailSender;
 import gr.novotrade.novocore.core.api.email.EmailStatus;
+import gr.novotrade.novocore.core.api.email.QueuedEmailNotFoundException;
 import gr.novotrade.novocore.core.api.email.QueuedEmailView;
 import gr.novotrade.novocore.core.api.email.SentEmailAttachmentView;
 import gr.novotrade.novocore.core.api.security.RoleView;
@@ -126,8 +128,7 @@ class EmailSenderImpl implements EmailSender {
                 .map(QueuedEmail::attachmentViews)
                 // Not an empty list: that would say "this message had no attachments", which is a
                 // different and perfectly ordinary fact.
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "No queued email with id " + queuedEmailId));
+                .orElseThrow(() -> new QueuedEmailNotFoundException(queuedEmailId));
     }
 
     @Override
@@ -136,8 +137,7 @@ class EmailSenderImpl implements EmailSender {
         Objects.requireNonNull(viewer, "viewer");
 
         QueuedEmailAttachment attachment = attachmentRepository.findById(emailAttachmentId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "No email attachment with id " + emailAttachmentId));
+                .orElseThrow(() -> new EmailAttachmentNotFoundException(emailAttachmentId));
 
         requireAccessToTheSourceRecord(attachment, viewer);
 
@@ -175,8 +175,7 @@ class EmailSenderImpl implements EmailSender {
     @Transactional
     public QueuedEmailView retry(long queuedEmailId) {
         QueuedEmail message = repository.findById(queuedEmailId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "No queued email with id " + queuedEmailId));
+                .orElseThrow(() -> new QueuedEmailNotFoundException(queuedEmailId));
 
         message.requeue(Instant.now(clock), maxAttempts());
         repository.save(message);

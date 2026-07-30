@@ -17,14 +17,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * Three rules about what a controller may do, each closing a hole that would fail silently.
+ * Four rules about what a controller may do, each closing a hole that would fail silently.
  *
- * <p>All three share a shape: the thing they forbid <em>compiles, runs and looks right</em>. A
+ * <p>All four share a shape: the thing they forbid <em>compiles, runs and looks right</em>. A
  * handler with no permission declaration serves data. A controller reading products unredacted
- * returns a complete-looking response. A controller receiving stock directly creates a lot. Nothing
- * throws in any of the three, which is exactly why they are build failures rather than review notes
- * — the same argument that made proxy self-invocation an ArchUnit rule after it had bitten three
- * times.
+ * returns a complete-looking response. A controller receiving stock directly creates a lot. A
+ * controller throwing {@code IllegalArgumentException} returns a perfectly valid 400. Nothing throws
+ * in any of the four, which is exactly why they are build failures rather than review notes — the
+ * same argument that made proxy self-invocation an ArchUnit rule after it had bitten three times.
  */
 class WebAuthorizationRulesTest {
 
@@ -182,6 +182,81 @@ class WebAuthorizationRulesTest {
                         + "instead — that is the whole point of the two-layer design.");
 
         rule.check(ImportedClasses.production());
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // 4. A client's mistake is never signalled with the exception that means ours
+    // -------------------------------------------------------------------------------------------
+
+    /**
+     * <strong>The web layer may not construct {@link IllegalArgumentException}.</strong>
+     *
+     * <p>Step 14 settled that an {@code IllegalArgumentException} reaching {@code WebExceptionHandler}
+     * is a mistake in <em>calling code</em>, so its message is logged and the caller gets a bare
+     * {@code 400 "Bad request."} — correct, because such a message describes internal state. The web
+     * layer then used that same exception to tell callers what they had got wrong, and the handler did
+     * exactly what it was designed to do with it.
+     *
+     * <p><strong>This has now happened twice in one step, which is what earns it a rule.</strong>
+     * Defect 5: seventeen parameter-guidance messages across nine controllers discarded. Defect 9,
+     * found by writing this rule and running it: {@code GET /api/email/outbox/{id}} answered an unknown
+     * id with {@code 400 "Bad request."} where every other route on the surface answers
+     * {@code 404 "Not found."} — so on that one route a client could not tell a malformed request from
+     * a missing record. Same pattern as proxy self-invocation: it bit repeatedly, each time looking
+     * like working code, and the remedy each time was the same one sentence.
+     *
+     * <p>The remedy: {@link gr.novotrade.novocore.core.web.InvalidRequestException} when the
+     * <em>request</em> is wrong and the caller should be told how,
+     * {@code gr.novotrade.novocore.core.web.Required} for a missing body field, and the core's own
+     * {@code ...NotFoundException} when an id names nothing.
+     *
+     * <p><strong>Narrow on purpose, and here is what it cannot see.</strong> It forbids
+     * <em>constructing</em> the exception in this package, so catching one (as
+     * {@code NovoCoreJsonModule} legitimately does) and {@code IllegalStateException} for a genuinely
+     * unreachable branch are both untouched. It says nothing about the other half of the same
+     * anti-pattern — a wire value null-checked with {@code Objects.requireNonNull}, which is defect 7
+     * — because {@code ListResponse} uses that idiom correctly on our own arguments and ArchUnit
+     * cannot tell a caller's omission from a programmer's. That half is guarded behaviourally by
+     * {@code PermissionSweepIT.noRouteFailsOnAnEmptyBody}, which asks every state-changing route for a
+     * body it does not have, and named in {@code CLAUDE.md} for the cases neither can reach.
+     */
+    @Test
+    @DisplayName("no controller signals a client's mistake with IllegalArgumentException")
+    void clientMistakesAreNotProgrammingErrors() {
+        ArchRule rule = noClasses()
+                .that().resideInAPackage(CORE_WEB)
+                .should(constructAnInstanceOf(IllegalArgumentException.class))
+                .because("WebExceptionHandler treats IllegalArgumentException as a mistake in our "
+                        + "own code: it logs the message and answers a bare 400 \"Bad request.\" So "
+                        + "an IllegalArgumentException raised here to tell a caller what they got "
+                        + "wrong produces a valid-looking response with the explanation removed — "
+                        + "which is exactly what happened to seventeen controller messages in step "
+                        + "15's defect 5, and again to the outbox's unknown-id 404 in defect 9. Use "
+                        + "InvalidRequestException (the request is wrong, say how), Required.field "
+                        + "(a body field is missing), or the core's own ...NotFoundException (the id "
+                        + "names nothing).");
+
+        rule.check(ImportedClasses.production());
+    }
+
+    /**
+     * Matches construction of one exception type.
+     *
+     * <p>Construction rather than any reference, so that {@code catch (IllegalArgumentException ...)}
+     * — which {@code NovoCoreJsonModule} does correctly, translating the JDK's own refusal of an
+     * unknown currency into a message about the request — is not caught by a rule aimed at throwing.
+     */
+    private static ArchCondition<JavaClass> constructAnInstanceOf(Class<?> exceptionType) {
+        return new ArchCondition<>("construct " + exceptionType.getSimpleName()) {
+            @Override
+            public void check(JavaClass item, ConditionEvents events) {
+                item.getConstructorCallsFromSelf().stream()
+                        .filter(call -> call.getTargetOwner().isAssignableTo(exceptionType))
+                        .forEach(call -> events.add(SimpleConditionEvent.satisfied(call,
+                                call.getDescription() + " — a caller's mistake must not be raised "
+                                        + "as " + exceptionType.getSimpleName())));
+            }
+        };
     }
 
     // -------------------------------------------------------------------------------------------

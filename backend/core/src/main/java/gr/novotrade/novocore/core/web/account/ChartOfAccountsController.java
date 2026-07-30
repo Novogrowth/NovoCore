@@ -11,6 +11,7 @@ import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.SubLedgerType;
 import gr.novotrade.novocore.core.web.InvalidRequestException;
 import gr.novotrade.novocore.core.web.ListResponse;
+import gr.novotrade.novocore.core.web.Required;
 import gr.novotrade.novocore.core.web.Requires;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -203,6 +204,10 @@ class ChartOfAccountsController {
 
     /** A complete ordering. Partial lists are refused by the service, not tolerated here. */
     record OrderRequest(List<Long> idsInOrder) {
+
+        OrderRequest {
+            Required.field(idsInOrder, "idsInOrder");
+        }
     }
 
     /**

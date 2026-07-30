@@ -7,6 +7,7 @@ import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.tax.VatStatus;
 import gr.novotrade.novocore.core.web.ListResponse;
+import gr.novotrade.novocore.core.web.Required;
 import gr.novotrade.novocore.core.web.Requires;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -188,6 +189,12 @@ class CustomerController {
     }
 
     record VatStatusRequest(VatStatus vatStatus, Long vatExemptionReasonId) {
+
+        VatStatusRequest {
+            // The exemption reason stays optional here: it is required only for EXEMPT, which is
+            // the service's rule to state, with the message about VAT that goes with it.
+            Required.field(vatStatus, "vatStatus");
+        }
     }
 
     /** Null clears the override, leaving the product's default to decide. */

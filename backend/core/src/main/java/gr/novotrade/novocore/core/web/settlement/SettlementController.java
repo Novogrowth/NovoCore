@@ -13,6 +13,7 @@ import gr.novotrade.novocore.core.api.settlement.SettlementView;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.web.InvalidRequestException;
 import gr.novotrade.novocore.core.web.ListResponse;
+import gr.novotrade.novocore.core.web.Required;
 import gr.novotrade.novocore.core.web.Requires;
 import java.time.LocalDate;
 import java.util.List;
@@ -222,6 +223,10 @@ class SettlementController {
     // -------------------------------------------------------------------------------------------
 
     record AllocationsRequest(List<NewAllocation> allocations) {
+
+        AllocationsRequest {
+            Required.field(allocations, "allocations");
+        }
     }
 
     record TargetedAllocationRequest(long salesInvoiceId, Money amount) {

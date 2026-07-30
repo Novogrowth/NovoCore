@@ -45,6 +45,26 @@ A `@Transactional` method calling another on the same class with default propaga
 
 A related trap with the same shape: a method that is *not* transactional returning JPA entities with lazy associations, which then blow up on first access at the caller. Materialise plain data inside the transaction instead — `EmailOutbox.claimDue` and `BackupJournal.artefactToRemove` both state this requirement rather than leaving it to be discovered.
 
+### Named anti-pattern: a client's mistake raised as a programming error
+
+**An exception type that means "our code is wrong" must never be used to tell a caller that *their* request is wrong.** The two are handled differently on purpose — `WebExceptionHandler` returns a validation message because an operator who cannot see why a document was refused cannot fix it, and *withholds* the message from a programming error because it describes internal state. Signal a client mistake with the wrong type and the message is correctly discarded: the caller gets `400 "Bad request."`, or a `500` in Boot's legacy body shape, and in both cases a response that looks deliberate.
+
+**This bit three times inside step 15 alone**, in three different disguises:
+
+1. **`IllegalArgumentException` for parameter guidance** — seventeen messages across nine controllers, all thrown away. Fixed by `InvalidRequestException`.
+2. **`Objects.requireNonNull` on a request-body field** — sixteen routes answered `500` to a form submitted with something missing. Fixed by `Required.field` in the request record's compact constructor, which is also why `ReversalCommand` fixes six routes in one statement.
+3. **`IllegalArgumentException` for an id that names nothing** — four sites in the email slice, answering `400 "Bad request."` where every other route on the surface answers `404 "Not found."`. Fixed by `QueuedEmailNotFoundException` / `EmailAttachmentNotFoundException`.
+
+**The remedy is always to name the failure:** `InvalidRequestException` (the request is wrong, and say how), `Required.field` (a body field is missing), or the core's own `...NotFoundException` (the id names nothing). If a new one is needed, add it to `core-api` — `WebExceptionMappingTest` then *forces* it to be mapped, which is the point.
+
+**Three layers guard it, and each catches what the others cannot:**
+
+- `WebAuthorizationRulesTest.clientMistakesAreNotProgrammingErrors` — no class in `..core.web..` may **construct** `IllegalArgumentException`. Build-time and precise; proven to fail against a probe. Blind to anything thrown below the web layer.
+- `PermissionSweepIT.noRouteRefusesWithoutSayingWhy` — every route, reads with no parameters and writes with no body, must not answer a bare `"Bad request."`. **This is what found instance 3**, in the service layer where the ArchUnit rule structurally cannot look.
+- `PermissionSweepIT.noRouteFailsOnAnEmptyBody` — no route may answer `5xx` to a missing field. Catches instance 2 whatever raised it: a `requireNonNull`, an unboxed null, an `orElseThrow` with the wrong supplier.
+
+**What none of them can see, so watch for it in review:** a *wrong but non-empty* value — an unparseable enum, an id of the right shape naming another party's record, a date range running backwards. Those reach the handler and are only as good as the message written for them. And **`Objects.requireNonNull` is not banned anywhere**, deliberately: it is correct on our own arguments (`ListResponse` uses it properly) and no rule can tell a caller's omission from a programmer's, which is exactly the judgement a reviewer has to make.
+
 ## Stack
 
 **Backend:** Java + Spring Boot, PostgreSQL, Docker, self-hosted with an HTTPS reverse proxy from the start. No SQLite, no Python/PHP backend — these were deliberately ruled out, don't reintroduce them for "quick" tooling either.

@@ -2,6 +2,9 @@ package gr.novotrade.novocore.app;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import gr.novotrade.novocore.core.api.account.AccountKind;
+import gr.novotrade.novocore.core.api.account.AccountType;
+import gr.novotrade.novocore.core.api.account.NewAccount;
 import gr.novotrade.novocore.core.api.asset.NewAsset;
 import gr.novotrade.novocore.core.api.banking.NewBankTransfer;
 import gr.novotrade.novocore.core.api.bundle.NewBundleComponent;
@@ -26,6 +29,7 @@ import gr.novotrade.novocore.core.api.settlement.NewAllocation;
 import gr.novotrade.novocore.core.api.settlement.NewSettlement;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
+import gr.novotrade.novocore.core.api.shared.Rate;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
 import gr.novotrade.novocore.core.api.supplier.NewSupplier;
 import gr.novotrade.novocore.core.api.tax.VatStatus;
@@ -262,6 +266,9 @@ final class TradingQuarter {
         handles.put("purchase:invoice-first", invoice.get("id").asLong());
 
         long invoiceLineId = Json.lineIds(invoice).getFirst();
+        // Kept because the refusal matrix needs a fully delivered invoice line: receiving against
+        // one that is already satisfied is what drives GR/IR below zero.
+        handles.put("purchase-line:invoice-first", invoiceLineId);
         JsonNode receipt = Json.ok(api.post("/api/goods-receipts", new NewGoodsReceipt(
                         id("supplier:roaster"), "TEST-GR-2026-001", JANUARY_MID,
                         "Beans arriving against an existing invoice",
@@ -749,6 +756,373 @@ final class TradingQuarter {
     }
 
     // ===================================================================================
+    // Quarter end — the housekeeping, and the corrections that undo something
+    // ===================================================================================
+
+    /**
+     * <strong>Everything an operator does that the story above had no natural place for.</strong>
+     *
+     * <p>Written because {@code assertEveryRouteCoveredExcept} forced the question. Forty-three routes
+     * were uncovered, and going through them one at a time turned out to be the useful part: most were
+     * not unreachable, they were simply the second half of something the narrative did once — a
+     * supplier renamed where a product had been, a settlement allocated <em>later</em> where every
+     * other one was allocated as it was recorded. Those are ordinary operator actions and there was no
+     * reason not to drive them; excusing them would have been the coverage ledger being used as a place
+     * to put things rather than as a question to answer.
+     *
+     * <h2>Nothing here disturbs the quarter the invariants are asserted against</h2>
+     *
+     * <p>That is the constraint every line below is written to, and it is why so much of this creates
+     * its own throwaway record rather than reusing one from the story:
+     *
+     * <ul>
+     *   <li><strong>Each reversal reverses a document created for the purpose</strong>, one line above
+     *       it. Reversing a load-bearing one would be a correction the ledger is entitled to reflect,
+     *       and then twelve invariants would be asserting something other than what January to March
+     *       actually was.
+     *   <li><strong>The bundle dissolved is a second bundle</strong>, not the starter kit. The kit was
+     *       sold in February and the refusal matrix still needs it to <em>be</em> a bundle; a
+     *       dissolution is exactly the kind of change that reads as harmless and quietly turns another
+     *       test's premise false.
+     *   <li><strong>The asset put through its lifecycle is a second asset</strong>, because the
+     *       roaster's absent depreciation rate is a read-back assertion — Q12's "not known yet" must
+     *       still be not known.
+     *   <li><strong>Deactivations are paired with the reactivation</strong>, so a record the story
+     *       depends on ends where it started.
+     * </ul>
+     */
+    void quarterEndHousekeeping() {
+        chartOfAccountsMaintenance();
+        masterDataCorrections();
+        theAssetThatWasDisposedOfInError();
+        theProductThatNeverSold();
+        stockMovedAndRead();
+        settlementsAllocatedLaterAndOneReleased();
+        theSixReversals();
+        theBundleNobodyWanted();
+    }
+
+    /**
+     * Adding an account and a group, renaming both, and reordering.
+     *
+     * <p>The chart is the spine of the ledger and <strong>no test had ever written to it over
+     * HTTP</strong> — {@code ChartOfAccountsEndpointIT} and the quarter's own reads only ever read it.
+     */
+    private void chartOfAccountsMaintenance() {
+        long group = Json.createdId(api.post("/api/account-groups",
+                new NameBody("TEST-GROUP Sundries")), "a new account group");
+        handles.put("group:sundries", group);
+
+        long account = Json.createdId(api.post("/api/accounts",
+                new NewAccount("TEST-ACCOUNT Sundry expenses", AccountType.EXPENSE,
+                        AccountKind.STANDARD, null, group, false)), "a new account");
+        handles.put("account:sundries", account);
+
+        Json.ok(api.patchBody("/api/accounts/" + account + "/name",
+                new NameBody("TEST-ACCOUNT Sundry expenses (renamed)")), "renaming the account");
+        Json.ok(api.patchBody("/api/account-groups/" + group + "/name",
+                new NameBody("TEST-GROUP Sundries (renamed)")), "renaming the group");
+
+        // Deactivate and reactivate: there is no delete in this chart, because with no period
+        // locking there is no point at which an account is safely finished with.
+        Json.succeeded(api.post("/api/accounts/" + account + "/deactivate", "{}"), "deactivating it");
+        Json.succeeded(api.post("/api/accounts/" + account + "/reactivate", "{}"), "reactivating it");
+
+        // A reorder must name every member exactly once — a partial list is refused rather than
+        // leaving the remainder in an order nobody chose (CLAUDE.md rule 7). So both of these read
+        // the current order first and send it back whole, which is the only way to call these routes
+        // at all and is what a drag-and-drop screen will do.
+        Json.succeeded(api.putBody("/api/account-groups/" + group + "/account-order",
+                new OrderBody(List.of(account))), "reordering one group's accounts");
+
+        List<Long> groupIds = Json.idsIn(api.get("/api/account-groups"), "every account group");
+        Json.succeeded(api.putBody("/api/account-groups/order", new OrderBody(groupIds)),
+                "reordering the groups themselves");
+    }
+
+    /** The corrections whose counterparts the narrative already made on the other party. */
+    private void masterDataCorrections() {
+        long cafe = id("customer:cafe");
+        Json.ok(api.patchBody("/api/customers/" + cafe + "/vat-number",
+                new VatNumberBody("EL999100022")), "correcting the cafe's VAT number");
+        // DOMESTIC to DOMESTIC and no exemption reason: the point here is the route, and changing a
+        // party's VAT status to something the quarter's issued invoices contradict would be a real
+        // correction with real consequences rather than housekeeping.
+        Json.ok(api.patchBody("/api/customers/" + cafe + "/vat-status",
+                new VatStatusBody(VatStatus.DOMESTIC, null)), "restating the cafe's VAT status");
+        Json.ok(api.patchBody("/api/customers/" + cafe + "/vat-class-override",
+                new VatClassOverrideBody(null)), "clearing the cafe's VAT class override");
+
+        long carrier = id("supplier:carrier");
+        Json.ok(api.patchBody("/api/suppliers/" + carrier + "/name",
+                new NameBody("TEST-SUPPLIER-02 Carrier (renamed)")), "renaming the carrier");
+        Json.ok(api.patchBody("/api/suppliers/" + carrier + "/vat-number",
+                new VatNumberBody("EL999000022")), "correcting the carrier's VAT number");
+        Json.ok(api.patchBody("/api/suppliers/" + carrier + "/vat-status",
+                new VatStatusBody(VatStatus.DOMESTIC, null)), "restating the carrier's VAT status");
+
+        // Deactivate and reactivate, on both parties. Paired deliberately — the story still needs
+        // these records, and a deactivation left standing would change what the listings return.
+        Json.succeeded(api.post("/api/customers/" + id("customer:cafe-similar") + "/deactivate", "{}"),
+                "deactivating the near-duplicate cafe");
+        Json.succeeded(api.post("/api/customers/" + id("customer:cafe-similar") + "/reactivate", "{}"),
+                "reactivating it");
+        Json.succeeded(api.post("/api/suppliers/" + carrier + "/deactivate", "{}"),
+                "deactivating the carrier");
+        Json.succeeded(api.post("/api/suppliers/" + carrier + "/reactivate", "{}"), "reactivating it");
+    }
+
+    /**
+     * A second asset, given a rate, disposed of, and reinstated.
+     *
+     * <p>A second one because {@code asset:roaster} is the register's honest state — Q12's rate is
+     * still pending the accountant, and a read-back asserts that it arrives as absent rather than as a
+     * zero anybody could depreciate by.
+     */
+    private void theAssetThatWasDisposedOfInError() {
+        long asset = Json.createdId(api.post("/api/assets", new NewAsset(
+                "TEST-ASSET-02", "TEST-ASSET-02 Delivery van", JANUARY_FIRST, null, null)),
+                "the second asset");
+        handles.put("asset:van", asset);
+
+        Json.ok(api.patchBody("/api/assets/" + asset + "/name",
+                new NameBody("TEST-ASSET-02 Delivery van (renamed)")), "renaming the asset");
+        // 10% — a hundred-year life is what the 1% lower bound exists to refuse, and 0.1 written for
+        // 10% is what it exists to catch. Nothing posts to assets yet, so this changes no figure.
+        Json.ok(api.patchBody("/api/assets/" + asset + "/depreciation-rate",
+                new DepreciationRateBody(Rate.of("10"))), "setting a depreciation rate");
+        Json.ok(api.patchBody("/api/assets/" + asset + "/depreciation-start-date",
+                new DepreciationStartDateBody(FEBRUARY_FIRST)), "a later depreciation start");
+
+        Json.ok(api.post("/api/assets/" + asset + "/disposal",
+                new DisposalBody(MARCH_LAST)), "disposing of the van");
+        // And undone: the disposal date is required exactly when disposed and refused otherwise, so
+        // reinstatement has to clear it rather than leave a date on an asset still in use.
+        Json.ok(api.post("/api/assets/" + asset + "/reinstatement", "{}"),
+                "reinstating it — the disposal was recorded against the wrong asset");
+    }
+
+    /** A product that never sells: serial tracking switched on, then deactivated and brought back. */
+    private void theProductThatNeverSold() {
+        long product = createProduct("TEST-PRODUCT-SPARE-01", "Spare portafilter",
+                ProductType.GOODS, id("uom:PIECE"), id("vat:1410"), "35.00", null, false);
+        handles.put("product:spare", product);
+
+        // Refused once the product has lots, for the same reason the unit of measure is: it would
+        // mean inventing identities for stock nothing tracked. This one has none.
+        Json.ok(api.patchBody("/api/products/" + product + "/serial-tracking",
+                new SerialTrackingBody(true)), "turning on serial tracking");
+
+        Json.succeeded(api.post("/api/products/" + product + "/deactivate", "{}"), "discontinuing it");
+        Json.succeeded(api.post("/api/products/" + product + "/reactivate", "{}"), "bringing it back");
+    }
+
+    /** One machine goes out for repair, and the reads that follow a unit and a consumption. */
+    private void stockMovedAndRead() {
+        List<JsonNode> machineUnits = Json.items(
+                api.get("/api/inventory/units?productId=" + id("product:machine")), "the machines");
+        // TEST-SN-0002, not the one February sold. A serial-tracked lot stores its location per
+        // unit precisely so this move does not take the others with it.
+        // By the derived onHand flag rather than by naming a status: the view computes it, and a
+        // test that re-derives it from the enum would be a second copy of the rule (SOLD is on hand
+        // for nobody, and UNRECEIVED exists too).
+        JsonNode onHand = machineUnits.stream()
+                .filter(unit -> unit.get("onHand").asBoolean())
+                .findFirst()
+                .orElseThrow(() -> new AssertionError(
+                        "no machine is still on hand to move: " + machineUnits));
+        long unitId = onHand.get("id").asLong();
+        Json.ok(api.post("/api/inventory/units/" + unitId + "/location",
+                new LocationBody("DAMAGED_GOODS")), "a machine going out for repair");
+
+        // Moving to Damaged Goods posts nothing, so the lot still carries it — which is the whole
+        // reason phase 8's Clearing Checks has to surface stock aging there.
+        long machineLot = Json.idsIn(api.get("/api/inventory/lots?productId=" + id("product:machine")),
+                "the machine lots").getFirst();
+        Json.items(api.get("/api/inventory/lots/" + machineLot + "/units"), "that lot's units");
+
+        List<Long> consumptions = Json.idsIn(
+                api.get("/api/inventory/consumptions?from=" + JANUARY_FIRST + "&to=" + MARCH_LAST),
+                "the quarter's consumptions");
+        Json.ok(api.get("/api/inventory/consumptions/" + consumptions.getFirst()),
+                "one consumption on its own");
+    }
+
+    /**
+     * A receipt banked now and matched to an invoice later, then one match undone.
+     *
+     * <p>Every other settlement in the quarter allocates as it is recorded. This is the other shape,
+     * and it is the ordinary one: money arrives, and which invoices it settles is worked out
+     * afterwards. <strong>The release is the only {@code DELETE} in this API that removes a row</strong>
+     * — an allocation states a current relationship rather than records an event, which is exactly what
+     * makes Q13's second half implementable and why nothing has to be un-posted here.
+     */
+    private void settlementsAllocatedLaterAndOneReleased() {
+        // An invoice with something outstanding to allocate against, which turns out to be a
+        // narrower requirement than it sounds: the narrative first tried the bundle sale and was
+        // told that "a sales invoice paid in cash or through a partner clearing account is born
+        // fully settled and never has an open amount". CARD_POS is one of those. ON_ACCOUNT is the
+        // only settlement method that leaves a receivable, which is the whole point of it — so this
+        // is a service-only ON_ACCOUNT sale, moving no stock and owing 40.00 plus VAT.
+        long onAccountSale = created("/api/sales-invoices",
+                NewSalesInvoice.of(id("customer:cafe"), SalesChannel.STORE_AND_PHONE,
+                        SettlementMethod.ON_ACCOUNT, "TEST-SI-2026-0008", MARCH_LAST,
+                        List.of(NewSalesInvoiceLine.product(
+                                id("product:install"), Quantity.of(1L), UnitCost.ofEur("40.000000")))),
+                "an installation invoiced on account");
+        handles.put("sale:on-account", onAccountSale);
+
+        JsonNode receipt = Json.ok(api.post("/api/settlements",
+                NewSettlement.receiptFrom(id("customer:cafe"), id("account:bank"), MARCH_LAST,
+                        Money.ofEur("49.60"), List.of())),
+                "a receipt banked before anybody worked out what it settles");
+        long settlementId = receipt.get("id").asLong();
+        handles.put("settlement:unallocated", settlementId);
+
+        JsonNode allocated = Json.ok(api.post("/api/settlements/" + settlementId + "/allocations",
+                        new AllocationsBody(List.of(NewAllocation.againstSalesInvoice(
+                                onAccountSale, Money.ofEur("20.00"))))),
+                "matching it against the invoice, afterwards");
+
+        JsonNode allocation = allocated.get("allocations").get(0);
+        Json.succeeded(api.delete("/api/allocations/" + allocation.get("id").asLong()),
+                "releasing the match — it was entered against the wrong invoice");
+
+        // Released, not reversed: an allocation posts nothing, so unsaying it needs nothing
+        // un-posted and the customer's position is exactly what it was before.
+        assertThat(Json.amount(Json.ok(api.get("/api/settlements/" + settlementId),
+                        "the settlement after the release"), "unallocatedAmount"))
+                .as("releasing the only allocation leaves the whole receipt unapplied")
+                .isEqualTo("49.60");
+
+        // Then applied properly. Left unallocated it would be a real open item — a legitimate state,
+        // and not one to leave lying around at the end of a quarter the invariants are asserted on.
+        Json.ok(api.post("/api/settlements/" + settlementId + "/allocations",
+                        new AllocationsBody(List.of(NewAllocation.againstSalesInvoice(
+                                onAccountSale, Money.ofEur("49.60"))))),
+                "applying the receipt to the invoice it was actually for");
+    }
+
+    /**
+     * Six documents recorded in error and reversed, one per reversible type.
+     *
+     * <p>Each is created here and reversed immediately, which is both what makes it safe and what
+     * makes it realistic: the commonest reason to reverse a document is that it was entered wrong,
+     * and the second commonest — reversing something the business has since acted on — is refused
+     * anyway, by design and with a named remedy.
+     */
+    private void theSixReversals() {
+        long standard = id("vat:1410");
+
+        // A sale of the installation service alone: no stock moves, so the reversal is a clean
+        // mirror with no lot to have been re-costed underneath it (ADR 0011).
+        long strandedSale = created("/api/sales-invoices",
+                NewSalesInvoice.of(id("customer:cafe"), SalesChannel.STORE_AND_PHONE,
+                        SettlementMethod.ON_ACCOUNT, "TEST-SI-2026-0007", MARCH_LAST,
+                        List.of(NewSalesInvoiceLine.product(
+                                id("product:install"), Quantity.of(1L), UnitCost.ofEur("40.000000")))),
+                "a sale billed to the wrong customer");
+        Json.ok(api.post("/api/sales-invoices/" + strandedSale + "/reversal",
+                new ReversalBody(MARCH_LAST, "Billed to the wrong customer")), "reversing it");
+
+        // A price-only credit note, which moves no stock and therefore stays reversible where a
+        // stock-returning one does not.
+        //
+        // Against its own invoice, and not against the Skroutz sale as this first tried: March
+        // already credited that line in full, and the API said so — "6.000000 has already been
+        // credited, so 1.000000 cannot be. Crediting more than was sold would reclaim output VAT
+        // that was never charged." Another case of the system being right and the narrative wrong.
+        JsonNode creditable = Json.ok(api.post("/api/sales-invoices", NewSalesInvoice.of(
+                        id("customer:cafe"), SalesChannel.STORE_AND_PHONE,
+                        SettlementMethod.ON_ACCOUNT, "TEST-SI-2026-0009", MARCH_LAST,
+                        List.of(NewSalesInvoiceLine.product(id("product:install"),
+                                Quantity.of(1L), UnitCost.ofEur("40.000000"))))),
+                "a second installation, invoiced on account");
+        long strayNote = created("/api/credit-notes",
+                NewCreditNote.of(creditable.get("id").asLong(), "TEST-CN-2026-0003", MARCH_LAST,
+                        List.of(NewCreditNoteLine.priceOnly(
+                                Json.lineIds(creditable).getFirst(), Quantity.of(1L),
+                                UnitCost.ofEur("1.000000")))),
+                "a credit note for a discount nobody agreed");
+        Json.ok(api.post("/api/credit-notes/" + strayNote + "/reversal",
+                new ReversalBody(MARCH_LAST, "The discount was never agreed")), "reversing it");
+
+        // A delivery that never arrived. Refused once its lots have been touched — this one's have
+        // not, which is the only state in which un-receiving is honest.
+        JsonNode phantom = Json.ok(api.post("/api/goods-receipts", new NewGoodsReceipt(
+                        id("supplier:roaster"), "TEST-GR-2026-004", MARCH_LAST,
+                        "Entered against the wrong delivery note",
+                        List.of(NewGoodsReceiptLine.pooled(id("product:filters"),
+                                Quantity.of(10L), UnitCost.ofEur("1.000000"))))),
+                "a delivery entered in error");
+        Json.ok(api.post("/api/goods-receipts/" + phantom.get("id").asLong() + "/reversal",
+                new ReversalBody(MARCH_LAST, "Entered against the wrong delivery note")),
+                "un-receiving it");
+
+        // A transfer between our own accounts, the wrong way round.
+        long strayTransfer = created("/api/bank-transfers",
+                NewBankTransfer.of(id("account:bank"), id("account:CASH"), MARCH_LAST,
+                        Money.ofEur("20.00")).describedAs("The wrong way round"),
+                "a transfer in the wrong direction");
+        Json.ok(api.post("/api/bank-transfers/" + strayTransfer + "/reversal",
+                new ReversalBody(MARCH_LAST, "The wrong way round")), "reversing it");
+
+        // Freight allocated to the wrong shipment, on a lot received above and nowhere else — so
+        // the reversal cannot collide with the January allocation the invariants examine.
+        JsonNode strayFreightInvoice = Json.ok(api.post("/api/purchase-invoices",
+                        new NewPurchaseInvoice(id("supplier:carrier"), "TEST-PI-FREIGHT-003",
+                                MARCH_LAST, "Freight allocated to the wrong shipment",
+                                List.of(NewPurchaseInvoiceLine.expense(
+                                        id("account:FREIGHT_LANDED_COST_UNALLOCATED"),
+                                        Money.ofEur("30.00"), standard)))),
+                "a third carrier invoice");
+        long filterLot = Json.idsIn(api.get("/api/inventory/lots?productId=" + id("product:filters")),
+                "the filter lots").getFirst();
+        long strayAllocation = created("/api/freight-allocations",
+                new NewFreightAllocation(Json.lineIds(strayFreightInvoice).getFirst(),
+                        Money.ofEur("30.00"), MARCH_LAST, "Allocated to the wrong shipment",
+                        List.of(filterLot)),
+                "a freight allocation onto the wrong lot");
+        Json.ok(api.post("/api/freight-allocations/" + strayAllocation + "/reversal",
+                new ReversalBody(MARCH_LAST, "Allocated to the wrong shipment")), "reversing it");
+
+        // And a write-off that was a miscount. Restores the quantity and posts the mirror in one
+        // transaction, which is why JournalService.reverse refuses this source outright.
+        //
+        // From the grinder lot, and the choice is forced twice over. The filter lot is empty —
+        // March oversold it, and the API said so: "Lot 4 has 0.000000 left, so 1.000000 cannot be
+        // written off it. Stock that was never there cannot be lost." And a bean lot would be
+        // worse: freight re-costed both, and ADR 0011 refuses to reverse a movement on a re-costed
+        // lot, so the write-off would go in and the reversal would be turned down. The grinder lot
+        // carries no landed cost and still has stock.
+        long strayWriteOff = created("/api/inventory/write-offs",
+                NewStockWriteOff.pooled(id("lot:damaged"), Quantity.of(1L), WriteOffReason.SHRINKAGE,
+                                MARCH_LAST).withNote("Counted short"),
+                "a write-off from a miscount");
+        Json.ok(api.post("/api/inventory/write-offs/" + strayWriteOff + "/reversal",
+                new WriteOffReversalBody(MARCH_LAST, "The count was wrong, not the stock")),
+                "reversing the write-off");
+    }
+
+    /**
+     * A bundle defined and then dissolved.
+     *
+     * <p>Its own bundle rather than the starter kit, and the reason is worth keeping: the kit was sold
+     * in February, so dissolving it would be the very case brief §5's "alias forward, never rewrite
+     * history" is about — safe in the ledger, since a sale materialises its own decomposition, and
+     * quietly false for anything still asserting that the kit <em>is</em> a bundle.
+     */
+    private void theBundleNobodyWanted() {
+        long spare = createProduct("TEST-PRODUCT-KIT-02", "Cleaning kit",
+                ProductType.GOODS, id("uom:PIECE"), id("vat:1410"), "25.00", null, false);
+        Json.ok(api.putBody("/api/products/" + spare + "/components",
+                        new ComponentsBody(List.of(NewBundleComponent.of(id("product:filters"), 4L)))),
+                "defining a cleaning kit");
+        Json.succeeded(api.delete("/api/products/" + spare + "/components"),
+                "dissolving it again — it never sold");
+    }
+
+    // ===================================================================================
     // Helpers
     // ===================================================================================
 
@@ -801,6 +1175,46 @@ final class TradingQuarter {
 
     /** Mirrors the {@code NameRequest} several controllers declare. */
     record NameBody(String name) {
+    }
+
+    /** Mirrors {@code ChartOfAccountsController.OrderRequest}. */
+    record OrderBody(List<Long> idsInOrder) {
+    }
+
+    /** Mirrors the {@code VatNumberRequest} on Customer and Supplier. */
+    record VatNumberBody(String vatNumber) {
+    }
+
+    /** Mirrors the {@code VatStatusRequest} on Customer and Supplier. */
+    record VatStatusBody(VatStatus vatStatus, Long vatExemptionReasonId) {
+    }
+
+    /** Mirrors {@code CustomerController.VatClassOverrideRequest}. */
+    record VatClassOverrideBody(Long vatClassId) {
+    }
+
+    /** Mirrors {@code AssetController.DepreciationRateRequest}. */
+    record DepreciationRateBody(Rate ratePercent) {
+    }
+
+    /** Mirrors {@code AssetController.DepreciationStartDateRequest}. */
+    record DepreciationStartDateBody(LocalDate depreciationStartDate) {
+    }
+
+    /** Mirrors {@code AssetController.DisposalRequest}. */
+    record DisposalBody(LocalDate disposalDate) {
+    }
+
+    /** Mirrors {@code ProductController.SerialTrackingRequest}. */
+    record SerialTrackingBody(boolean serialTracked) {
+    }
+
+    /** Mirrors {@code SettlementController.AllocationsRequest}. */
+    record AllocationsBody(List<NewAllocation> allocations) {
+    }
+
+    /** Mirrors {@code InventoryController.WriteOffReversalRequest}. */
+    record WriteOffReversalBody(LocalDate reversalDate, String note) {
     }
 
     record SellingPriceBody(Money sellingPrice) {

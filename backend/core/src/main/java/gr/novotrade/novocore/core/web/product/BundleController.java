@@ -9,6 +9,7 @@ import gr.novotrade.novocore.core.api.security.CurrentUser;
 import gr.novotrade.novocore.core.api.security.RoleView;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.web.ListResponse;
+import gr.novotrade.novocore.core.web.Required;
 import gr.novotrade.novocore.core.web.Requires;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -119,5 +120,11 @@ class BundleController {
 
     /** The complete component list. A partial list would be a merge, which {@code define} is not. */
     record ComponentsRequest(List<NewBundleComponent> components) {
+
+        ComponentsRequest {
+            // An absent list is refused here; an empty one is refused by the service, which owns
+            // the reason — a bundle is never left existing with no components.
+            Required.field(components, "components");
+        }
     }
 }
