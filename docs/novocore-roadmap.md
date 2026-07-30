@@ -9,7 +9,7 @@ and cache-read, which dominate it — read the note before drawing conclusions f
 
 ---
 
-## Phase 1 — the core (complete through step 14; step 15 in progress)
+## Phase 1 — the core (complete through step 15)
 
 | Step | What                                                          |  Est. | Actual |   Out |      In | Status  |
 |-----:|---------------------------------------------------------------|------:|-------:|------:|--------:|---------|
@@ -29,8 +29,8 @@ and cache-read, which dominate it — read the note before drawing conclusions f
 |   12 | Auto backups (incl. commissioning, CI, self-invocation fixes)ᶠ|   2.7 |    2.6 |  606k |  151.5M | 🟢 Done |
 |   13 | Test suite consolidation sweep (incl. Q45 fix) ᵍ              |   2.6 |    1.8 |  490k |  151.9M | 🟢 Done |
 |   14 | REST surface — 133 routes, Q44, migration V25 ʲ               |   2.5 |    2.0 |  646k |  151.5M | 🟢 Done |
-|   15 | Dummy data validation — **in progress**, see ˡ                |   0.7 |    3.1 | 1,355k|  559.5M | **Current** |
-|      | **Subtotal, steps 0–15**                                      |**32.2**|**23.7**|**8.21M**|**1,951M**| |
+|   15 | Dummy data validation — 9 defects, see ˡ                       |   0.7 |    4.5 | 1,729k|  669.4M | 🟢 Done |
+|      | **Subtotal, steps 0–15**                                      |**32.2**|**25.1**|**8.58M**|**2,061M**| |
 
 ## Not started
 
@@ -108,28 +108,40 @@ estimate this project has come close to on a pure-build step. It also produced t
 the plan said would not be needed (V25), which is the sort of thing the estimate could not have
 priced either way.
 
-**ˡ Step 15 is NOT finished, and its row is measured anyway.** 15a (the harness) is complete and
-15b (the narrative) is partly complete; the refusal matrix, the permission sweep, the read-back and
-date-boundary checks, restore and `assertEveryRouteCoveredExcept` are still to come. The figures
-cover one session, measured the same way as every other row and by the same method at the bottom of
-this file — 1,171 timestamped events, 3.25 h wall clock, 3.14 h active under the 5-minute cap, seven
-gaps capped. They exclude the close-out that follows them, as every row does.
+**ˡ Step 15 is complete, and it is the one large estimate miss in this table — 0.7 h estimated
+against 4.5 h measured.** A ratio of 6.4, where every other step in the project came in at or under
+estimate. It is worth reading rather than averaging away.
 
-Recorded mid-step rather than left blank because a partial measurement is a fact and a blank is not,
-and the calibration point is worth having early: **the estimate was 0.7 h and the step is at 3.1 h
-with work remaining.** That is the largest overrun in this table by a wide margin — every other step
-came in at or under estimate. Two things account for it, and neither is the narrative itself:
+The figures cover two sessions, measured the same way as every other row and by the method at the
+bottom of this file. The first: 1,171 timestamped events, 3.25 h wall clock, **3.14 h active** under
+the 5-minute cap. The second (2026-07-30, which finished the step): 637 events, 1.66 h wall clock,
+**1.40 h active**, 374k out, 109.9M in. As with every row, both exclude the close-out that follows
+them — **so 4.5 h is short, and the way to read it is "at least".**
+
+Three things account for the overrun, and none of them is the narrative itself:
 
 1. **0.7 h priced the wrong thing.** It reads like an estimate for "write a script that inserts some
    rows". What was agreed and built is six classes of check over 133 routes, a shared invariant
-   component, a route-coverage ledger and a permission sweep. The proposal said so before any code
-   was written and put the full version at 2.0–2.5 h.
-2. **The step's whole purpose is finding defects, and it found six** — each needing a decision, a
-   fix, tests and a commit, which is work an estimate for a validation harness cannot contain by
-   construction. A validation step that finds nothing is cheap; one that earns its keep is not.
+   component, a route-coverage ledger, a refusal matrix and a three-role permission sweep. The
+   proposal said so before any code was written and put the full version at 2.0–2.5 h — so even the
+   corrected estimate was low by about half.
+2. **The step's whole purpose is finding defects, and it found nine** — each needing a decision, a
+   root-cause fix, tests and a commit. That is work an estimate for a validation harness cannot
+   contain by construction. **A validation step that finds nothing is cheap; one that earns its keep
+   is not.** Step 15 has by far the highest defects-found-per-hour of any step here.
+3. **Two of the nine turned out to be recurrences of one root pattern**, which meant not just fixing
+   them but naming the anti-pattern and building three guards against it — an ArchUnit rule, and two
+   behavioural sweeps over the whole surface. That is the same shape as the proxy self-invocation work
+   in steps 11–12, and it is the kind of cost that only appears once a pattern has repeated.
 
-**The other estimates are deliberately not rescaled**, for the reason already stated below: this
-figure comes from validating an existing API and does not transfer to a frontend or an adapter.
+**The single most useful calibration point in this file:** an estimate for *"validate what we built"*
+is really an estimate for *finding nothing*. Steps 20 (real data migration, parallel-run) and 31
+(Clearing Checks) are the two remaining rows with that same character, and both are priced the way
+step 15 was.
+
+**The other estimates are still deliberately not rescaled**, for the reason stated below: this figure
+comes from validating an existing API against a settled architecture and does not transfer to a
+frontend or an adapter.
 
 **ⁱ Step 16's estimate is untouched, but the frontend is not at zero.** A verified Vite + React 19 +
 Tailwind v4 + shadcn/ui foundation with an app shell was built on 2026-07-27 (`492ce24`, `531f12a`)
@@ -168,8 +180,9 @@ rewriting.
 (including its close-out commit, so the documentation written for a step counts towards it). Active
 time is the sum of the gaps between consecutive events in that window, **each gap capped at 5
 minutes** — so thinking and tool time count, and lunch, overnight and between-session idling do not.
-Measured total is **18.6 h of active time against ≈22.6 h of session wall-clock**, which is the sanity
-check that the cap is doing what it should.
+Across steps 0–14 the measured total was **18.6 h of active time against ≈22.6 h of session
+wall-clock**, which is the sanity check that the cap is doing what it should; step 15's two sessions
+add 4.5 h active against 4.9 h wall-clock, a tighter ratio because both were single long sittings.
 
 **Tokens.** Read from the `usage` field of every assistant message in those transcripts and summed
 over the same windows.
@@ -186,8 +199,11 @@ Code session in this project — the brief and the early design work happened el
 offered for it rather than a guessed one.
 
 **One observation, offered without acting on it.** Measured effort came in consistently below
-estimate: **20.6 h actual against 31.5 h estimated** for steps 0–14, a ratio of about 0.65, and the
-actual figure includes step 3b, which had no estimate at all. Only three steps landed near or over
+estimate **for every build step**: **20.6 h actual against 31.5 h estimated** for steps 0–14, a ratio
+of about 0.65, and the actual figure includes step 3b, which had no estimate at all. **Step 15 is the
+sole exception and it is a large one** — 4.5 h against 0.7 h — which is why it is excluded from that
+ratio rather than folded into it: it is a validation step, not a build step, and footnote ˡ sets out
+why the two do not price alike. Only three build steps landed near or over
 their estimate — **11 (2.1 vs 2.0)**, **12 (2.6 vs 2.7)** and **14 (2.0 vs 2.5)**. The first two are
 the ones with real-world commissioning in them (live SMTP, live Google Drive) rather than pure build;
 the third is the largest single piece of code the project has produced in one step, which is the more
