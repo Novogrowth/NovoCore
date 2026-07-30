@@ -28,6 +28,58 @@ is not one of the three options in the question.
 
 # Item 1 — Typed API client generation
 
+## ✅ RESOLVED 2026-07-30 — springdoc tried, failed the acceptance test, fallback built
+
+**D1's timeboxed attempt was made and the answer was decisive.** springdoc 3.0.3 resolves and the
+application starts, so the Boot 4 half is fine — but it pulls **Jackson 2** (`jackson-databind
+2.21.4`) alongside our Jackson 3, and swagger-core introspects models with the Jackson 2
+`ObjectMapper`. It therefore cannot see `NovoCoreJsonModule` at all and falls back to reflecting Java
+accessors. What `GET /v3/api-docs` actually returned:
+
+```
+Money    {"amount": {"type":"number"},
+          "currency": {"currencyCode":…,"displayName":…,"symbol":…,
+                       "defaultFractionDigits":…,"numericCode":…},
+          "zero": bool, "negative": bool, …}
+Quantity {"value": {"type":"number"}, "zero": bool, "negative": bool, "positive": bool}
+Rate     {"percent": {"type":"number"}, "zero": bool}
+```
+
+Against the real wire format — `{"amount":"12.50","currency":"EUR"}`, `"3.000000"`, `"24.000000"`.
+
+**Worse than the predicted failure.** The prediction was `amount: number`; the reality is a
+*different structure* for three of the four, with derived accessors (`zero`, `negative`, `positive`)
+invented as fields. Per the agreed rule, no time was spent configuring it into compliance — the
+dependency was removed and D2's fallback built. **The probe's output is preserved verbatim in
+`OpenApiSchema`'s javadoc**, because "we chose to write it ourselves" is worth much less than the
+evidence that the alternative described a money amount as a JavaScript number.
+
+**Built instead (D2, D3):** `OpenApiSpecIT` walks the same `RequestMappingHandlerMapping` that
+`RouteCoverage` and `EndpointDeclarationCheck` already read, and `OpenApiSchema` maps types by
+reading our own serialisers. **137 operations, 150 schemas**, written to `docs/api/openapi.json`.
+
+- **An unknown type fails the build** rather than being emitted as a permissive `{}` or a guessed
+  `object`. A bare `BigDecimal` reaching the surface is refused by name, pointing at the `Rate` type
+  step 15a added for exactly that. Two shapes were found and added deliberately this way
+  (`ResponseEntity<T>`, `Resource`), which is the mechanism working.
+- **The permission model travels with the contract**: every operation carries
+  `x-novocore-section` and `x-novocore-level` from its own `@Requires`, and `/api/me` correctly
+  reports `AUTHENTICATED_ONLY`. springdoc could not have known either.
+- **The drift check is the point**: the spec is committed, regenerated on every build, and the build
+  fails if it differs — **proven** by tampering with one `operationId`. Accepting a change is
+  `mvn verify -Dnovocore.openapi.write=true` plus a commit, so a contract change is visible in the
+  diff and reviewed like any other.
+- **The acceptance test is separate from the drift check**, deliberately: drift says the spec matches
+  the code, `moneyIsAlwaysAString` says the spec is not lying about the thing that matters most. It
+  asserts the four types *and* that **no schema anywhere in the document is typed `number`**.
+- ⚠️ **One portability bug found and fixed while building it.** Jackson's pretty-printer indents with
+  the *system* line separator, so the file was CRLF on Windows and would have been LF on the CI
+  runner — the drift check would then have failed on every build that ran somewhere other than where
+  the file was last written, reporting a contract change that had not happened. Output is normalised
+  to LF at generation.
+
+*The original proposal follows, unchanged.*
+
 ## What was found
 
 `ListResponse`, `ProductView` and the rest are `core-api` records serialised by Jackson. There is no
