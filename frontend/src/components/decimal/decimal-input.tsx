@@ -1,5 +1,4 @@
 import { useId, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 
 import type { Money, Quantity, Rate, UnitCost } from '@/api/generated/model'
 import { Input } from '@/components/ui/input'
@@ -131,61 +130,72 @@ export function DecimalInput({
 
 type FieldProps = Omit<DecimalInputProps, 'value' | 'onValueChange' | 'scale'>
 
-/** An amount of money, at two decimals, with its currency. */
-export function MoneyInput({
-  value,
-  currency,
-  onValueChange,
-  ...rest
-}: FieldProps & {
-  value: Money | undefined
-  currency: string
-  onValueChange: (value: Money | undefined) => void
-}) {
-  const id = useId()
+/** A decimal field with something written after it — a currency code, a percent sign. */
+function WithSuffix({ suffix, children }: { suffix: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2">
-      <DecimalInput
-        {...rest}
-        id={rest.id ?? id}
-        scale="money"
-        value={value?.amount}
-        onValueChange={(amount) =>
-          onValueChange(amount === undefined ? undefined : { amount, currency })
-        }
-      />
-      {/* The currency is shown, never chosen by omission: the API never defaults it. */}
-      <span className="text-muted-foreground text-sm">{currency}</span>
+      {children}
+      <span className="text-muted-foreground text-sm">{suffix}</span>
     </div>
   )
 }
 
-/** A unit cost: the same shape as money, at six decimals rather than two. */
-export function UnitCostInput({
+/**
+ * An amount and its currency.
+ *
+ * `MoneyInput` and `UnitCostInput` were 45 duplicated lines differing in one word. They are one
+ * component now, with the scale — the only real difference — passed in, because two copies of a
+ * money field are two places for a money field to be fixed.
+ */
+function AmountInput({
   value,
   currency,
   onValueChange,
+  scale,
   ...rest
 }: FieldProps & {
-  value: UnitCost | undefined
+  value: Money | UnitCost | undefined
   currency: string
-  onValueChange: (value: UnitCost | undefined) => void
+  onValueChange: (value: { amount: string; currency: string } | undefined) => void
+  scale: 'money' | 'unitCost'
 }) {
-  const id = useId()
+  const generatedId = useId()
   return (
-    <div className="flex items-center gap-2">
+    // The currency is shown, never chosen by omission: the API never defaults it.
+    <WithSuffix suffix={currency}>
       <DecimalInput
         {...rest}
-        id={rest.id ?? id}
-        scale="unitCost"
+        id={rest.id ?? generatedId}
+        scale={scale}
         value={value?.amount}
         onValueChange={(amount) =>
           onValueChange(amount === undefined ? undefined : { amount, currency })
         }
       />
-      <span className="text-muted-foreground text-sm">{currency}</span>
-    </div>
+    </WithSuffix>
   )
+}
+
+/** An amount of money, at two decimals, with its currency. */
+export function MoneyInput(
+  props: FieldProps & {
+    value: Money | undefined
+    currency: string
+    onValueChange: (value: Money | undefined) => void
+  },
+) {
+  return <AmountInput {...props} scale="money" />
+}
+
+/** A unit cost: the same shape as money, at six decimals rather than two. */
+export function UnitCostInput(
+  props: FieldProps & {
+    value: UnitCost | undefined
+    currency: string
+    onValueChange: (value: UnitCost | undefined) => void
+  },
+) {
+  return <AmountInput {...props} scale="unitCost" />
 }
 
 /**
@@ -225,13 +235,11 @@ export function RateInput({
   value: Rate | undefined
   onValueChange: (value: Rate | undefined) => void
 }) {
-  const { t } = useTranslation()
+  // No translation key: the per-cent sign is the same character in both languages, and the key
+  // this once looked up existed in neither locale file, so it always fell through to the literal.
   return (
-    <div className="flex items-center gap-2">
+    <WithSuffix suffix="%">
       <DecimalInput {...rest} scale="rate" value={value} onValueChange={onValueChange} />
-      <span className="text-muted-foreground text-sm" aria-label={t('rate.percent', '%')}>
-        %
-      </span>
-    </div>
+    </WithSuffix>
   )
 }

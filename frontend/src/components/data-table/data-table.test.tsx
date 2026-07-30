@@ -1,12 +1,23 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ColumnDef } from '@tanstack/react-table'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import '@/i18n'
 
 import { DataTable } from './data-table'
 import { isServerPaged, unwrapList } from './list-response'
+import type { ListStateHandle } from './use-list-state'
+
+/** What a screen passes down from `useListState` when the server does the paging. */
+const listHandle = (page: number): ListStateHandle => ({
+  state: { page, size: 25 },
+  setPage: vi.fn(),
+  setSize: vi.fn(),
+  setSort: vi.fn(),
+  params: { page, size: 25 },
+  serverPaged: true,
+})
 
 interface Row {
   id: number
@@ -99,6 +110,7 @@ describe('DataTable', () => {
           page: { page: 0, size: 25, totalElements: 200, totalPages: 8, hasNext: true },
         }}
         columns={columns}
+        list={listHandle(0)}
       />,
     )
 
@@ -109,6 +121,25 @@ describe('DataTable', () => {
     expect(screen.getByRole('button', { name: /next/i })).toBeEnabled()
   })
 
+  it('asks the list handle for the next page rather than paging what it has', async () => {
+    const user = userEvent.setup()
+    const list = listHandle(0)
+    render(
+      <DataTable
+        data={{
+          items: rows(25),
+          page: { page: 0, size: 25, totalElements: 200, totalPages: 8, hasNext: true },
+        }}
+        columns={columns}
+        list={list}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /next/i }))
+    // The next 25 rows live on the server; the only correct action is to ask for them.
+    expect(list.setPage).toHaveBeenCalledWith(1)
+  })
+
   it('trusts hasNext over the row count on the last server page', () => {
     render(
       <DataTable
@@ -117,8 +148,26 @@ describe('DataTable', () => {
           page: { page: 7, size: 25, totalElements: 200, totalPages: 8, hasNext: false },
         }}
         columns={columns}
+        list={listHandle(7)}
       />,
     )
     expect(screen.getByRole('button', { name: /next/i })).toBeDisabled()
+  })
+
+  it('shows the position but no buttons when nothing owns the page number', () => {
+    // A server-paged response with no list handle has nowhere to put the next page number. Buttons
+    // here would render enabled and do nothing, which reads as broken rather than as absent.
+    render(
+      <DataTable
+        data={{
+          items: rows(25),
+          page: { page: 0, size: 25, totalElements: 200, totalPages: 8, hasNext: true },
+        }}
+        columns={columns}
+      />,
+    )
+
+    expect(screen.getByText('Page 1 of 8')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /next/i })).not.toBeInTheDocument()
   })
 })

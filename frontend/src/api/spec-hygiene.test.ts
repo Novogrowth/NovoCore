@@ -18,7 +18,7 @@ interface Operation {
 
 const HTTP_VERBS = ['get', 'put', 'post', 'delete', 'patch', 'head', 'options']
 
-export function operations(): { route: string; operation: Operation }[] {
+function operations(): { route: string; operation: Operation }[] {
   const found: { route: string; operation: Operation }[] = []
   for (const [path, verbs] of Object.entries(spec.paths as Record<string, unknown>)) {
     for (const [verb, operation] of Object.entries(verbs as Record<string, Operation>)) {

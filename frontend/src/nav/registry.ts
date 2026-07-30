@@ -63,4 +63,3 @@ export const MODULES: readonly RegistryEntry<ModuleKey>[] = [
  * Tuesday, which is not a state the ledger or the tax authority recognises. It needs its own
  * control when that step arrives, and adding it here would be the wrong shape by default.
  */
-export const NOT_A_TOGGLE = ['CORE_OWNED_INVOICE_ISSUING'] as const

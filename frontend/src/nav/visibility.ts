@@ -103,7 +103,3 @@ export function flatten(tree: readonly NavNode[] = NAV_TREE): NavNode[] {
   return nodes
 }
 
-/** The node owning a route, or undefined if the path is not in the tree at all. */
-export function nodeFor(path: string, tree: readonly NavNode[] = NAV_TREE): NavNode | undefined {
-  return flatten(tree).find((node) => node.path === path)
-}

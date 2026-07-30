@@ -43,7 +43,7 @@ Estimates below are unchanged. Nothing in this section has been measured.
 |   16 | Frontend ⁱ                                                    |   8.0 | 🟡 **Current** |
 |   17 | Operational monitoring                                        |   1.0 | 🔴 Not started |
 |   18 | Prosvasis Go adapter (full adapter, sync everything)          |   4.5 | 🔴 Not started |
-|   19 | WooCommerce adapter                                           |   2.0 | 🔴 Not started |
+|   19 | WooCommerce adapter (Plus uploading products)                 |   2.0 | 🔴 Not started |
 |   20 | Skroutz adapter                                               |   1.3 | 🔴 Not started |
 |   21 | ACS Courier adapter                                           |   1.3 | 🔴 Not started |
 |   22 | Sales Order Fulfillment module                                |   2.5 | 🔴 Not started |

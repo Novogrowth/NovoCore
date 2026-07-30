@@ -4,6 +4,7 @@ import {
   Decimal,
   formatDecimal,
   formatMoney,
+  formatUnitCost,
   formatQuantity,
   formatRate,
   fromWire,
@@ -141,6 +142,21 @@ describe('formatting for display', () => {
 
     const english = formatMoney({ amount: '1234.50', currency: 'EUR' }, 'en-GB')
     expect(english).toContain('1,234.50')
+  })
+
+  it('keeps a unit cost at six decimals rather than rounding it to money', () => {
+    // A union parameter with a money-scale default rendered this as €12.51 — a wrong number on
+    // screen, no rounding indicated, no compile error. Unit costs have their own function now.
+    expect(formatUnitCost({ amount: '12.505000', currency: 'EUR' }, 'en-GB')).toContain('12.505000')
+    expect(formatMoney({ amount: '12.50', currency: 'EUR' }, 'en-GB')).toContain('12.50')
+  })
+
+  it('does not put a minus sign in front of nothing', () => {
+    // -0.001 at money scale rounds away to zero, and zero has no sign. "-0,00" in a report reads
+    // as a real negative to whoever is looking at it.
+    expect(formatDecimal(new Decimal('-0.001'), 'money', 'el-GR')).toBe('0,00')
+    // A value that survives the rounding keeps its sign.
+    expect(formatDecimal(new Decimal('-0.005'), 'money', 'el-GR')).toBe('-0,01')
   })
 
   it('formats a big amount without reaching for a float', () => {

@@ -112,6 +112,16 @@ describe('the navigation tree', () => {
           `${node.id} requires ${section}/${required.level}, but ${node.endpoint} needs ${section}/${level}`,
         )
       }
+
+      // "Exactly", not "at least". A node requiring a section its endpoint does not need hides
+      // itself from a role that should see it — a permission bug that presents as a missing menu
+      // item, which nobody reports as a bug.
+      const surplus = node.requires.filter((requirement) => requirement.section !== section)
+      if (surplus.length > 0) {
+        mismatched.push(
+          `${node.id} also requires ${surplus.map((r) => r.section).join(', ')}, which ${node.endpoint} does not need`,
+        )
+      }
     }
 
     expect(mismatched).toEqual([])
@@ -131,10 +141,37 @@ describe('the navigation tree', () => {
     ).toBe(false)
   })
 
-  it('maps modules only onto sections the backend actually declares', () => {
-    const known = new Set<string>(Object.values(Section))
-    const unknown = MODULES.filter((module) => module.section && !known.has(module.section))
-    expect(unknown.map((module) => module.key)).toEqual([])
+  it('keeps the module registry and the tree telling the same story', () => {
+    /*
+     * This replaced an assertion that could not fail: it checked that `RegistryEntry.section` was
+     * one of `Section`'s values, which TypeScript already guarantees, so it passed by construction
+     * and tested nothing.
+     *
+     * What is actually worth checking is that the two data structures agree. A module the registry
+     * calls NOT_BUILT must not have a tree item claiming to be built, and an item that names a
+     * module must require that module's section where one exists — otherwise the menu and the
+     * registry can drift, and the Settings grid says "not built" beside a working link.
+     *
+     * What NO test here can check is whether the registry agrees with the *backend* about
+     * `available`: that flag arrives at runtime on `/api/me` and is absent from the spec. The
+     * design does not rely on a test for it — `visibility.ts` treats the backend's answer as
+     * authoritative and downgrades a stale claim, which is asserted separately below.
+     */
+    const notBuilt = new Set(MODULES.filter((m) => m.status === 'NOT_BUILT').map((m) => m.key))
+
+    const contradictions = nodes
+      .filter((node) => node.module && notBuilt.has(node.module))
+      .filter((node) => node.status !== 'NOT_BUILT')
+    expect(contradictions.map((node) => node.id)).toEqual([])
+
+    const mismatchedSections = nodes
+      .filter((node) => node.module)
+      .filter((node) => {
+        const module = MODULES.find((m) => m.key === node.module)
+        if (!module?.section) return false
+        return !node.requires.some((requirement) => requirement.section === module.section)
+      })
+    expect(mismatchedSections.map((node) => node.id)).toEqual([])
   })
 })
 
@@ -213,6 +250,26 @@ describe('navigation visibility', () => {
 
     expect(customers).toBeDefined()
     expect(customers?.enabled).toBe(false)
+  })
+
+  it('never lets the backend upgrade a placeholder into a working link', () => {
+    // The other direction, which the test above did not check. If the backend reports a section
+    // as available while this tree still says NOT_BUILT, the item stays a placeholder: there is no
+    // screen behind it here, whatever the server has. Enabling it would route to nothing.
+    const backendIsAhead: Me = {
+      role: { name: 'OWNER', fullAccess: true, systemRole: true },
+      sections: [
+        { section: Section.SALES_ORDER_FULFILLMENT, level: AccessLevel.FULL, available: true },
+      ],
+    }
+    const visible = visibleNav(permissionsOf(backendIsAhead))
+    const orders = visible
+      .find((entry) => entry.node.id === 'operations')
+      ?.children.find((entry) => entry.node.id === 'orders')
+
+    expect(orders).toBeDefined()
+    expect(orders?.enabled).toBe(false)
+    expect(reachablePaths(visible).has('/orders')).toBe(false)
   })
 
   it('makes only enabled items reachable', () => {

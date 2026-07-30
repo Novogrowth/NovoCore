@@ -12,10 +12,17 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    /*
+     * The document's origin, which is what a relative request resolves against.
+     *
+     * jsdom defaults to `http://localhost:3000`, so `/api/me` — the path the generated client
+     * actually uses — resolved to a URL no mock handler matched, and the request failed as
+     * "unhandled" instead of being answered. Tests then passed or failed for reasons that had
+     * nothing to do with the code under test. Pinning it to `http://localhost` makes a relative
+     * path resolve where the handlers are, which is also where the real backend is.
+     */
+    environmentOptions: { jsdom: { url: 'http://localhost' } },
     setupFiles: ['./src/test/setup.ts'],
-    // The OpenAPI spec lives outside this package and several tests read it directly — the
-    // nav/permission and enum-label checks are only worth anything if they read the real one.
-    server: { deps: { inline: [] } },
     include: ['src/**/*.test.{ts,tsx}'],
   },
 })

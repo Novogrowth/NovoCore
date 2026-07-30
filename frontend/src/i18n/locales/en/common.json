@@ -1,21 +1,19 @@
 {
   "app.name": "NovoCore",
   "app.loading": "Loading…",
-
+  "app.unreachable.title": "NovoCore is not answering",
+  "app.unreachable.body": "The server could not be reached. This is not a sign-out — your session may still be valid once it is back.",
   "auth.signIn": "Sign in",
   "auth.signOut": "Sign out",
   "auth.username": "Username",
   "auth.password": "Password",
   "auth.signingIn": "Signing in…",
   "auth.failed": "That username and password combination was not accepted.",
-
   "language.label": "Language",
   "language.en": "English",
   "language.el": "Ελληνικά",
-
   "nav.notBuilt": "Not built yet",
   "nav.notBuiltHint": "Visible to you because you have full access. There is nothing behind it yet.",
-
   "page.notBuilt.title": "Not built yet",
   "page.notBuilt.body": "This screen is planned but has not been built.",
   "page.notFound.title": "No such page",
@@ -23,26 +21,17 @@
   "page.noAccess.title": "Not available to you",
   "page.noAccess.body": "Your role does not include this section. Ask an administrator if you need it.",
   "page.placeholder.body": "The foundations for this screen are in place. It is built on {{endpoint}}.",
-
   "table.empty": "Nothing to show.",
-  "table.loading": "Loading…",
-  "table.rowsPerPage": "Rows per page",
   "table.page": "Page {{page}} of {{pages}}",
   "table.previous": "Previous",
   "table.next": "Next",
-  "table.of": "{{from}}–{{to}} of {{total}}",
   "table.serverPaged": "Paged by the server",
   "table.clientPaged": "Paged in the browser",
-
-  "field.hidden": "—",
-  "field.hiddenTitle": "Hidden from your role",
-
   "registry.notBuilt": "Not built",
   "registry.adaptersTitle": "Adapters",
   "registry.adaptersBody": "External systems NovoCore talks to. None is built yet, and these switches store nothing — there is no API behind them.",
   "registry.modulesTitle": "Modules",
   "registry.modulesBody": "Internally-driven features. None is built yet, and these switches store nothing — there is no API behind them.",
-
   "adapter.PROSVASIS_GO": "Prosvasis Go",
   "adapter.WOOCOMMERCE": "WooCommerce",
   "adapter.SKROUTZ": "Skroutz",
@@ -53,7 +42,6 @@
   "adapter.BANK_AGGREGATOR": "Bank Aggregator",
   "adapter.AADE_PAROCHOS": "AADE Πάροχος",
   "adapter.POS_PROVIDER": "POS Provider",
-
   "module.SALES_ORDER_FULFILLMENT": "Sales Order Fulfillment",
   "module.CLEARING_CHECKS": "Clearing Checks",
   "module.PRICE_TAG_PRINTING": "Price Tag Printing",

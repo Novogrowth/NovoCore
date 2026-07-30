@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { AccessLevel, ProtectedField, Section, type Me } from '@/api/generated/model'
 
-import { permissionsOf } from './permissions'
+import { hiddenInResponse, permissionsOf } from './permissions'
 
 /**
  * The seeded Remote/Order Staff role, as V6 grants it: Sales Order Fulfillment, Customers and
@@ -21,12 +21,25 @@ const remoteOrderStaff: Me = {
   restrictedFields: [],
 }
 
+/**
+ * An owner, shaped the way `/api/me` actually answers.
+ *
+ * `MeController.describe` builds `EnumSet.allOf(Section.class)` and sends **one row per section,
+ * always** — with `NONE` where the role has no grant. An earlier version of this fixture used
+ * `sections: []` on the theory that a full-access role carries no grant rows; that is true of the
+ * database table and false of the response, and it made this file and `tree.test.ts` disagree
+ * about the shape of the thing they both draw conclusions from.
+ */
 const owner: Me = {
   id: 1,
   username: 'owner',
   role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
-  // A full-access role carries no grant rows at all, which is the case worth testing.
-  sections: [],
+  sections: Object.values(Section).map((section) => ({
+    section,
+    level: AccessLevel.FULL,
+    available:
+      section !== Section.SALES_ORDER_FULFILLMENT && section !== Section.BACK_IN_STOCK_REMINDERS,
+  })),
   restrictedFields: [],
 }
 
@@ -50,11 +63,24 @@ describe('permissions', () => {
     expect(permissions.canView(Section.JOURNAL)).toBe(false)
   })
 
-  it('gives a full-access role everything, including sections it has no row for', () => {
+  it('gives a full-access role everything', () => {
     const permissions = permissionsOf(owner)
     expect(permissions.canEdit(Section.JOURNAL)).toBe(true)
     expect(permissions.canEdit(Section.SETTINGS)).toBe(true)
     expect(permissions.isFullAccess).toBe(true)
+  })
+
+  it('gives a full-access role a section that is missing from the response entirely', () => {
+    // Defensive rather than expected: `/api/me` always sends every section. But a section added
+    // to the backend and not yet known here must not read as "denied" to an owner, which is the
+    // direction that would lock somebody out of a feature that shipped.
+    const withoutRows = permissionsOf({ ...owner, sections: [] })
+    expect(withoutRows.canEdit(Section.JOURNAL)).toBe(true)
+
+    // `available` gets no such bypass, deliberately: whether something is BUILT is a fact about
+    // the software, not about the role, and an owner must not be shown a working link to a
+    // feature that does not exist.
+    expect(withoutRows.isAvailable(Section.JOURNAL)).toBe(false)
   })
 
   it('reads full access from the flag rather than the role name', () => {
@@ -80,11 +106,53 @@ describe('permissions', () => {
     // same choice the backend's own redaction tests made, and for the same reason.
     const restricted = permissionsOf({
       ...remoteOrderStaff,
-      restrictedFields: [ProtectedField.PRODUCT_LAST_PURCHASE_PRICE, ProtectedField.PRODUCT_SUPPLIER],
+      restrictedFields: [ProtectedField.PRODUCT_LAST_PURCHASE_PRICE],
     })
     expect(restricted.isFieldHidden(ProtectedField.PRODUCT_LAST_PURCHASE_PRICE)).toBe(true)
-    expect(restricted.isFieldHidden(ProtectedField.PRODUCT_SUPPLIER_SKU)).toBe(false)
+    expect(restricted.isFieldHidden(ProtectedField.PRODUCT_SUPPLIER)).toBe(false)
     expect(permissionsOf(remoteOrderStaff).isFieldHidden(ProtectedField.PRODUCT_SUPPLIER)).toBe(false)
+  })
+
+  it('hides the supplier SKU whenever the supplier is hidden', () => {
+    /*
+     * The backend applies this implication on the way out — `ProductView.redactedFor` computes
+     * `hideSupplierSku = hideSupplier || !canSee(PRODUCT_SUPPLIER_SKU)`, because a supplier code
+     * identifies the supplier indirectly — but `/api/me` reports the stored restrictions with no
+     * derivation. So a role restricting only PRODUCT_SUPPLIER receives products with BOTH fields
+     * blanked while `restrictedFields` names one.
+     *
+     * Without this, a screen asking about the SKU is told `false` about a value that was withheld,
+     * and renders "not set" for "not shown to you" — the two states this convention exists to keep
+     * apart, on the one field the backend hides indirectly.
+     */
+    const supplierHidden = permissionsOf({
+      ...remoteOrderStaff,
+      restrictedFields: [ProtectedField.PRODUCT_SUPPLIER],
+    })
+    expect(supplierHidden.isFieldHidden(ProtectedField.PRODUCT_SUPPLIER)).toBe(true)
+    expect(supplierHidden.isFieldHidden(ProtectedField.PRODUCT_SUPPLIER_SKU)).toBe(true)
+
+    // Not the other way round: the SKU can be hidden on its own.
+    const skuHidden = permissionsOf({
+      ...remoteOrderStaff,
+      restrictedFields: [ProtectedField.PRODUCT_SUPPLIER_SKU],
+    })
+    expect(skuHidden.isFieldHidden(ProtectedField.PRODUCT_SUPPLIER)).toBe(false)
+  })
+
+  it('reads what a single response says was blanked, which cannot drift', () => {
+    // The per-record question, answered by the backend's own report rather than by mirroring its
+    // rules. This is what a screen should prefer.
+    const product = {
+      id: 7,
+      hiddenFields: [ProtectedField.PRODUCT_SUPPLIER, ProtectedField.PRODUCT_SUPPLIER_SKU],
+    }
+    expect(hiddenInResponse(product, ProtectedField.PRODUCT_SUPPLIER_SKU)).toBe(true)
+    expect(hiddenInResponse(product, ProtectedField.PRODUCT_LAST_PURCHASE_PRICE)).toBe(false)
+
+    // An unredacted response carries an empty list; a response not yet loaded carries nothing.
+    expect(hiddenInResponse({ hiddenFields: [] }, ProtectedField.PRODUCT_SUPPLIER)).toBe(false)
+    expect(hiddenInResponse(undefined, ProtectedField.PRODUCT_SUPPLIER)).toBe(false)
   })
 
   it('denies everything when nobody is signed in', () => {

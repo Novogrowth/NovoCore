@@ -59,21 +59,52 @@ export default tseslint.config(
       'no-restricted-syntax': [
         'error',
         {
-          // CLAUDE.md rule 5, expressed where it can be enforced. `<input type="number">` parses
-          // through an IEEE-754 double, localises its decimal separator inconsistently, and
-          // changes value on a mouse wheel. Every decimal field in NovoCore uses MoneyInput,
-          // UnitCostInput, QuantityInput or RateInput — text inputs backed by decimal.js.
-          selector:
-            'JSXAttribute[name.name="type"][value.value="number"]',
+          /*
+           * CLAUDE.md rule 5, expressed where it can be enforced. `<input type="number">` parses
+           * through an IEEE-754 double, localises its decimal separator inconsistently, and
+           * changes value on a mouse wheel. Every decimal field in NovoCore uses MoneyInput,
+           * UnitCostInput, QuantityInput or RateInput — text inputs backed by decimal.js.
+           *
+           * ⚠️ WHAT THIS RULE CANNOT SEE — established by probing it, not assumed:
+           * `<input {...{ type: 'number' }} />` and `<input type={someVariable} />` both pass.
+           * An AST selector can only read what is written at the attribute, so a value assembled
+           * anywhere else is invisible to it. Worth watching for in review — and the reason the
+           * decimal components exist as the single obvious alternative, rather than this rule
+           * being the only defence.
+           */
+          selector: 'JSXAttribute[name.name="type"][value.value="number"]',
           message:
             'Never <input type="number">: it loses precision on money and quantities. Use MoneyInput, UnitCostInput, QuantityInput or RateInput from @/components/decimal.',
         },
         {
-          // The same rule from the other direction: a wire value must never reach a float.
+          // The same attribute written as an expression — `type={'number'}` — which the selector
+          // above does not match, because its value is a container rather than a literal.
           selector:
-            'CallExpression[callee.name=/^(parseFloat|parseInt)$/]',
+            'JSXAttribute[name.name="type"] > JSXExpressionContainer > Literal[value="number"]',
           message:
-            'parseFloat/parseInt cannot represent a NovoCore amount or quantity. Use Decimal from decimal.js via @/lib/decimal.',
+            'Never <input type="number">: it loses precision on money and quantities. Use MoneyInput, UnitCostInput, QuantityInput or RateInput from @/components/decimal.',
+        },
+        {
+          /*
+           * The same rule from the other direction: a wire value must never reach a float.
+           *
+           * The first version banned the bare `parseFloat` / `parseInt` calls only, which a probe
+           * showed to be a spelling check rather than a rule — `Number.parseFloat(x)`, `Number(x)`
+           * and `+x` all passed, and `Number(x)` is the one somebody would actually write.
+           * `Number('9007199254740993.01')` is `9007199254740992`; `+'12.10' * 100` is
+           * `1209.9999999999998`.
+           *
+           * Every spelling is banned. Where a genuine integer has to be read from text — a page
+           * size out of a URL, say — disable this rule on the line and say why: converting a
+           * COUNT is fine, converting a VALUE never is.
+           */
+          selector:
+            'CallExpression[callee.name=/^(parseFloat|parseInt|Number)$/], ' +
+            'CallExpression[callee.object.name="Number"][callee.property.name=/^parse(Float|Int)$/], ' +
+            'CallExpression[callee.object.name="globalThis"][callee.property.name=/^parse(Float|Int)$/], ' +
+            'UnaryExpression[operator="+"][argument.type!="Literal"]',
+          message:
+            'A NovoCore amount or quantity must never become a JavaScript number — it is an IEEE-754 double and cannot hold the value. Use Decimal from decimal.js via @/lib/decimal. If this is genuinely a count rather than a value, disable this rule on the line with a reason.',
         },
       ],
     },

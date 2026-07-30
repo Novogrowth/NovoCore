@@ -24,7 +24,7 @@ import { AppRoutes } from '@/routes'
  * than from anything this application remembers for itself.
  */
 export default function App() {
-  const { me, isLoading, isSignedOut } = useSession()
+  const { me, isLoading, isSignedOut, error } = useSession()
   const { t } = useTranslation('common')
 
   useSessionExpiryHandler()
@@ -34,6 +34,20 @@ export default function App() {
     return (
       <div className="text-muted-foreground flex min-h-screen items-center justify-center text-sm">
         {t('app.loading')}
+      </div>
+    )
+  }
+
+  /*
+   * The server could not be reached, or failed. This is deliberately NOT the login form: a
+   * password box in front of an unreachable server invites somebody to type a credential that
+   * cannot be checked, and presents an outage as a sign-out.
+   */
+  if (error) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-2 p-6 text-center">
+        <p className="font-medium">{t('app.unreachable.title')}</p>
+        <p className="text-muted-foreground text-sm">{t('app.unreachable.body')}</p>
       </div>
     )
   }

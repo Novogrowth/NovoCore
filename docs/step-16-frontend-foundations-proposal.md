@@ -193,9 +193,17 @@ grids in Settings render from it; nav placeholders reference it by key.
 `BACK_IN_STOCK_REMINDERS`, both declared `available(false)` in
 [Section.java:135-139](../backend/core-api/src/main/java/gr/novotrade/novocore/core/api/security/Section.java#L135-L139).
 For those two the built/not-built fact belongs to the backend and arrives on `/api/me` as
-`SectionAccess.available`; **a test asserts the registry agrees with the spec**, so the day the module
-lands, a stale frontend constant is a failure rather than a lie. The other nineteen have no backend
-fact, so the registry is their only source and says so.
+`SectionAccess.available`. The other nineteen have no backend fact, so the registry is their only
+source and says so.
+
+**No test can compare the registry to the backend's `available` flag**, and the first draft of this
+document claimed one did. That flag arrives at runtime and is absent from the spec, so there is
+nothing at build time to compare against. What protects the case instead is `visibility.ts`: the
+backend's answer is authoritative and a stale frontend claim is **downgraded**, never upgraded — an
+item this tree calls BUILT renders as a placeholder if the backend says nothing is behind it, and an
+item this tree calls NOT_BUILT stays a placeholder whatever the backend says. Both directions are
+asserted in `tree.test.ts`. What `tree.test.ts` does check about the registry is that it and the
+tree tell the same story: a module the registry calls not-built has no item claiming otherwise.
 
 `Section.isAvailable`'s own Javadoc names why this distinction is worth carrying: *"so that a UI can
 distinguish 'you may not see this' from 'this does not exist yet' — two states that look identical to
@@ -234,8 +242,14 @@ from anywhere clears it and routes to `/login`; a successful login invalidates i
 **On redaction.** `Me.restrictedFields` and `ProductView.hiddenFields` both exist, and Jackson's
 `non_null` inclusion means a redacted field is genuinely *absent* rather than null. Since V26 no role
 restricts anything, so this mechanism is currently unexercised by real data — which is precisely why
-it gets a helper and a test now rather than being discovered later. A hidden field renders as `—`,
-never as `undefined` and never as a crash.
+it gets helpers and tests now rather than being discovered later.
+
+**Two questions, two answers, because they are not the same question.** `isFieldHidden(field)` is
+role-level — *should this column exist at all* — and it applies the one implication the backend
+derives without reporting (`ProductView.redactedFor` hides a supplier's SKU whenever it hides the
+supplier). `hiddenInResponse(view, field)` is per-record and reads the response's own
+`hiddenFields`, which cannot drift because it is part of what was sent. How a hidden field *renders*
+is a screen's decision and belongs to the first screen that has one, not here.
 
 ---
 
@@ -342,7 +356,9 @@ model over the full array.
 ## 7. i18n
 
 react-i18next, scaffolded now so every screen after is bilingual from birth. Namespaces:
-`common`, `nav`, `enums`, `errors`, `fields`.
+`common`, `nav`, `enums` — three, not the five this document first listed; `errors` and `fields`
+were named before there was anything to put in them, and an empty namespace is a place for strings
+nobody reads to accumulate.
 
 Language is per-user: read from `me.language`, written with `PATCH /api/me/language`, falling back to
 the browser then `en`. The backend validates the *shape* of a language tag and deliberately does not
@@ -498,9 +514,71 @@ seeing the navigation filtered by real grants needs one manual login.
 - **Two lint warnings remain**, both upstream: TanStack Table's `useReactTable` cannot be memoised
   by the React Compiler, and one shadcn file exports a hook beside a component.
 
+---
+
+## Addendum 2 — the fresh-session review pass
+
+Two independent reviews of the committed code, one targeted at the wire-format rules / the redaction
+convention / the `type="number"` prohibition, one general. Neither wrote the code. Every finding
+below was re-verified before acting on it, and two were verified and **rejected**.
+
+### What was wrong, and is now fixed
+
+**The redaction helper under-reported, on the one field the backend hides indirectly.**
+`ProductView.redactedFor` derives `hideSupplierSku = hideSupplier || !canSee(PRODUCT_SUPPLIER_SKU)`
+— a supplier code identifies the supplier in a different column — but `/api/me` reports stored
+restrictions with no derivation. A role restricting only `PRODUCT_SUPPLIER` therefore received
+products with **both** fields blanked while `restrictedFields` named one, and `isFieldHidden` said
+`false` about a value that had been withheld: "not set" and "not shown to you" collapsed into one,
+which is the exact failure this convention exists to prevent. Fixed with the implication mirrored
+(and flagged as a mirror), plus `hiddenInResponse` reading the backend's own per-record report.
+
+**The session ended badly when it expired.** `useSessionExpiryHandler` wrote `null` to `['me']` and
+then called `queryClient.clear()`, which removed the query it had just written — the second line
+undid the first. Proven by probe: reverting to that pair fails three of the five new session tests.
+
+**A server outage presented as a sign-out.** `useSession` kept only `ApiError`s, and `fetch` rejects
+with a `TypeError` when the server is unreachable, so a network failure produced neither an error
+nor a user and the app rendered the login form — inviting somebody to type a password at a server
+that cannot check it. Proven by probe: restoring the old filter fails the new test.
+
+**Two hand-written API paths the documentation said did not exist.** `session.tsx` and
+`useLanguage.ts` wrote `/api/me` and `/api/me/language` by hand while orval had generated both. A
+URL literal outside the generated client is a path a regeneration cannot update. Both now call the
+generated functions.
+
+**Tests that could not fail.** The registry-versus-spec check asserted something TypeScript already
+guaranteed; `useListState` — the hook the whole paging design rests on — had no tests at all; two
+test names promised more than their bodies checked. All three addressed, and §1 and §7 of this
+document corrected where they described guarantees the code did not provide.
+
+**The float ban was a spelling check.** It caught bare `parseFloat`/`parseInt` only —
+`Number.parseFloat(x)`, `Number(x)` and `+x` all passed, and `Number(x)` is the one somebody would
+actually write. Widened, with a documented per-line escape for genuine counts.
+
+Also: a dead pager control, a `formatMoney` default that rounded unit costs to two decimals, a
+`-0,00`, an unreachable sidebar branch, a translation key that existed in neither locale, 45
+duplicated lines across two input wrappers, five orphan strings, and three dead exports.
+
+### What was reported and did not survive checking
+
+**Two of the three claimed session defects do not reproduce.** The reviewer reported that
+`queryClient.clear()` in `useLogin` and `useLogout` left the shell rendering the previous user and
+made a correct password appear to do nothing. Probed both directly — restore the old line, run the
+tests — and **neither fails**: a mounted observer whose query is removed re-subscribes and refetches,
+so the user-visible outcome was correct either way. The new code is still preferred, because it says
+what it means rather than depending on that behaviour, but the old code was not broken and this
+document does not claim it was.
+
+**A test bug the reviews did not find, which the fixes exposed.** The first run of the new session
+tests failed for a reason that had nothing to do with the code: jsdom's default origin is
+`http://localhost:3000`, so the relative `/api/me` the generated client uses resolved somewhere no
+mock handler matched. Every assertion was passing or failing on an unhandled request. Pinned the
+test origin to `http://localhost`, which is also where the real backend is.
+
 ### Final state
 
-174 routes generated into 21 modules, **99 frontend tests**, lint clean, typecheck clean, knip
+174 routes generated into 21 modules, **120 frontend tests**, lint clean, typecheck clean, knip
 clean, build clean, no external origins.
 
 ---

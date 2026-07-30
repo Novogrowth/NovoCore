@@ -137,17 +137,14 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="px-4 py-3 text-lg font-semibold">{t('app.name')}</SidebarHeader>
       <SidebarContent>
-        {visibleNav(permissions).map((entry) =>
-          entry.children.length > 0 ? (
-            <TopGroup key={entry.node.id} entry={entry} />
-          ) : (
-            <SidebarGroup key={entry.node.id}>
-              <SidebarMenu>
-                <Leaf entry={entry} />
-              </SidebarMenu>
-            </SidebarGroup>
-          ),
-        )}
+        {/*
+         * Every root node is a heading, and `visibleNav` returns a path-less node only when it has
+         * visible children — so a root entry always has some. An earlier version had a branch here
+         * for a childless root, which could not be reached.
+         */}
+        {visibleNav(permissions).map((entry) => (
+          <TopGroup key={entry.node.id} entry={entry} />
+        ))}
       </SidebarContent>
       <SidebarRail />
     </Sidebar>

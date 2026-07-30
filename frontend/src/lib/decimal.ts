@@ -74,8 +74,9 @@ export function toWire(value: Decimal, scale: WireScale): string {
  *
  * Accepts the comma as a decimal separator, because a Greek keyboard produces one and an operator
  * typing `1,50` means one and a half. Returns undefined for anything that is not a number yet —
- * an empty field, a lone `-`, `1.` mid-typing — which is a normal state during editing rather
- * than an error to shout about.
+ * an empty field, a lone `-` or a lone separator — which is a normal state during editing rather
+ * than an error to shout about. A TRAILING separator is not one of those: `12,` reads as 12, so
+ * the field holds a valid value for the whole time it takes to type the next character.
  *
  * Grouping separators are deliberately NOT accepted: `1.234` is 1.234 in one locale and 1234 in
  * another, and no amount of guessing makes that safe. Inputs therefore never display grouping
@@ -132,11 +133,36 @@ export function formatDecimal(value: Decimal, scale: WireScale, locale: string):
     .find((part) => part.type === 'decimal')?.value ?? '.'
 
   const rendered = fraction ? `${groupedWhole}${decimalSeparator}${fraction}` : groupedWhole
-  return negative ? `-${rendered}` : rendered
+
+  // A value that rounds away to nothing at this scale is zero, and zero has no sign. Without this,
+  // -0.001 at money scale renders as "-0,00" — a minus sign in a report in front of nothing, which
+  // reads as a real negative to whoever is looking at it.
+  const isZero = !/[1-9]/.test(fixed)
+  return negative && !isZero ? `-${rendered}` : rendered
 }
 
-/** `1.234,56 €` in Greek, `€1,234.56` in English — the currency the value actually carries. */
-export function formatMoney(money: Money | UnitCost, locale: string, scale: WireScale = 'money'): string {
+/**
+ * `1.234,56 €` in Greek, `€1,234.56` in English — the currency the value actually carries.
+ *
+ * **Money only, and there is no scale parameter on purpose.** `Money` and `UnitCost` are the same
+ * shape in TypeScript, so a union parameter with a money-scale default silently rendered a unit
+ * cost of `12.505000` as `€12.51` — a wrong number on screen, with nothing to indicate rounding
+ * had happened and no compile error to catch it. Unit costs go through {@link formatUnitCost}.
+ */
+export function formatMoney(money: Money, locale: string): string {
+  return formatAmount(money, locale, 'money')
+}
+
+/** A unit cost, at its own six decimals. `12.505000`, not `12.51`. */
+export function formatUnitCost(cost: UnitCost, locale: string): string {
+  return formatAmount(cost, locale, 'unitCost')
+}
+
+function formatAmount(
+  money: { amount: string; currency: string },
+  locale: string,
+  scale: WireScale,
+): string {
   const amount = formatDecimal(fromWire(money.amount), scale, locale)
   const symbol =
     new Intl.NumberFormat(locale, { style: 'currency', currency: money.currency })
@@ -168,6 +194,3 @@ export function toMoney(amount: Decimal, currency: string): Money {
   return { amount: toWire(amount, 'money'), currency }
 }
 
-export function toUnitCost(amount: Decimal, currency: string): UnitCost {
-  return { amount: toWire(amount, 'unitCost'), currency }
-}

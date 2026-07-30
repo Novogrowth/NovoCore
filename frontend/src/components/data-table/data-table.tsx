@@ -105,6 +105,14 @@ export function DataTable<T>({
 
   const pageCount = pagedByServer ? (serverPage.totalPages ?? 1) : table.getPageCount()
   const pageIndex = table.getState().pagination.pageIndex
+
+  /*
+   * A server-paged response with no list handle has nowhere to put the next page number, so the
+   * buttons would render enabled and do nothing — a control that looks broken rather than one that
+   * is absent. Showing the position without the buttons is the honest version: the caller passes a
+   * handle from `useListState` when it wants the table to page.
+   */
+  const canPage = !pagedByServer || list !== undefined
   const showPager = pageCount > 1
 
   return (
@@ -167,24 +175,26 @@ export function DataTable<T>({
               {pagedByServer ? t('table.serverPaged') : t('table.clientPaged')}
             </span>
           </span>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <CaretLeftIcon /> {t('table.previous')}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={pagedByServer ? !(serverPage.hasNext ?? false) : !table.getCanNextPage()}
-            >
-              {t('table.next')} <CaretRightIcon />
-            </Button>
-          </div>
+          {canPage && (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <CaretLeftIcon /> {t('table.previous')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.nextPage()}
+                disabled={pagedByServer ? !(serverPage.hasNext ?? false) : !table.getCanNextPage()}
+              >
+                {t('table.next')} <CaretRightIcon />
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

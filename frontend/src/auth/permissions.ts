@@ -1,4 +1,4 @@
-import { AccessLevel, type Me, type ProtectedField, type Section } from '@/api/generated/model'
+import { AccessLevel, ProtectedField, type Me, type Section } from '@/api/generated/model'
 
 import { useSession } from './session'
 
@@ -44,16 +44,66 @@ export interface Permissions {
    */
   isFullAccess: boolean
   /**
-   * Whether the role has this field withheld from it.
+   * Whether this role has a field withheld from it, **across the application**.
    *
    * A withheld field is *absent* from the response rather than null — Jackson's `non_null`
    * inclusion — so this is what tells a component that a missing value means "not shown to you"
    * rather than "not set". Since V26 no role restricts anything, which is exactly why this is
    * built and tested now rather than discovered by the first role that does.
+   *
+   * **This is the role-level question — "should this column exist at all".** For "was this value
+   * blanked out of *this record*", read the response's own `hiddenFields` through
+   * {@link hiddenInResponse}, which is the backend's per-response report and cannot drift from it.
    */
   isFieldHidden(field: ProtectedField): boolean
   /** True while `/api/me` has not answered yet. Callers must not read a `false` as a refusal. */
   isLoading: boolean
+}
+
+/**
+ * Restrictions the backend applies but does not list on `/api/me`.
+ *
+ * `MeController.restrictedFieldsOf` reports the fields the role cannot see, field by field, with no
+ * derivation. `ProductView.redactedFor` then applies one on the way out:
+ *
+ * > `hideSupplierSku = hideSupplier || !role.canSee(PRODUCT_SUPPLIER_SKU)`
+ *
+ * — because a supplier code identifies the supplier indirectly, so returning it while blanking the
+ * supplier would hand over the answer in a different column.
+ *
+ * The consequence for a client reading `/api/me` alone: a role restricting only `PRODUCT_SUPPLIER`
+ * receives products with **both** fields blanked, while `restrictedFields` names only one. Asking
+ * `isFieldHidden(PRODUCT_SUPPLIER_SKU)` would answer `false` about a value that was withheld — the
+ * two states this convention exists to keep apart, collapsed into one, on the single field the
+ * backend hides indirectly.
+ *
+ * ⚠️ **This mirrors backend logic, which is duplication and can drift.** It is here rather than in
+ * the components because one mirror in one place is inspectable; the real fix is for `/api/me` to
+ * report derived restrictions too, which is a backend change and is noted in PROGRESS.md. The
+ * per-record answer never needs this — {@link hiddenInResponse} reads what the response itself
+ * says was blanked.
+ */
+function withImpliedRestrictions(restricted: readonly ProtectedField[]): Set<ProtectedField> {
+  const fields = new Set<ProtectedField>(restricted)
+  if (fields.has(ProtectedField.PRODUCT_SUPPLIER)) {
+    fields.add(ProtectedField.PRODUCT_SUPPLIER_SKU)
+  }
+  return fields
+}
+
+/**
+ * Whether a field was blanked out of **this particular response**.
+ *
+ * The authoritative answer, and the one to prefer: `hiddenFields` is written by the backend for the
+ * record it accompanies, after every rule — stored restrictions, section access and the
+ * supplier-implies-SKU narrowing — has been applied. It cannot disagree with what was actually
+ * sent, because it is part of what was sent.
+ */
+export function hiddenInResponse(
+  view: { hiddenFields?: ProtectedField[] } | undefined,
+  field: ProtectedField,
+): boolean {
+  return view?.hiddenFields?.includes(field) ?? false
 }
 
 export function permissionsOf(me: Me | undefined, isLoading = false): Permissions {
@@ -67,7 +117,7 @@ export function permissionsOf(me: Me | undefined, isLoading = false): Permission
   }
 
   const fullAccess = me?.role?.fullAccess ?? false
-  const restricted = new Set<ProtectedField>(me?.restrictedFields ?? [])
+  const restricted = withImpliedRestrictions(me?.restrictedFields ?? [])
 
   const levelOf = (section: Section): AccessLevel => {
     // A full-access role reaches every section without a grant row, including sections added
