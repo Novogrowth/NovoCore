@@ -1,0 +1,165 @@
+import { CheckIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
+
+import { ApiError } from '@/api/http'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { cn } from '@/lib/utils'
+
+/**
+ * One field, one request.
+ *
+ * NovoCore's master-data API is shaped as per-field PATCH routes — a product has seven of them, and
+ * a customer, supplier and unit of measure are the same — each returning the complete updated
+ * record. This component is the single answer to that shape, and every master-data screen after
+ * this one uses it.
+ *
+ * **Nothing here batches.** A form that fires seven PATCHes on submit invents partial-failure
+ * states the backend has no transaction to prevent: three succeed, one is refused, three never run,
+ * and the operator is left to work out which. One field at a time cannot produce that state.
+ *
+ * **A refusal belongs to the field that caused it.** The message is the backend's own `detail`,
+ * which explains itself for a validation refusal and deliberately says nothing for a permission
+ * refusal. ⚠️ Those messages are English even in the Greek UI — the backend localises nothing
+ * (Q47(b)) and there are no error codes to translate from.
+ */
+
+export interface FieldEditorProps<T> {
+  label: string
+  /** What the field currently holds, as the record reports it. */
+  value: T
+  /** Read-only rendering. A withheld or unset value decides its own presentation here. */
+  display: ReactNode
+  /** The editing control, wired to the draft value. */
+  children: (draft: T, setDraft: (value: T) => void) => ReactNode
+  /** Sends exactly one request. Resolves when the server has accepted it. */
+  onSave: (value: T) => Promise<unknown>
+  /** False for a VIEW grant: the field renders with no edit affordance at all. */
+  editable: boolean
+  /** Refuses a save that cannot succeed — an empty required value, an uninterpretable amount. */
+  isValid?: (value: T) => boolean
+  id?: string
+}
+
+export function FieldEditor<T>({
+  label,
+  value,
+  display,
+  children,
+  onSave,
+  editable,
+  isValid,
+  id,
+}: FieldEditorProps<T>) {
+  const { t } = useTranslation('common')
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState<T>(value)
+  const [saving, setSaving] = useState(false)
+  const [justSaved, setJustSaved] = useState(false)
+  const [error, setError] = useState<string | undefined>()
+
+  const start = () => {
+    setDraft(value)
+    setError(undefined)
+    setJustSaved(false)
+    setEditing(true)
+  }
+
+  const cancel = () => {
+    setEditing(false)
+    setError(undefined)
+  }
+
+  const save = async () => {
+    if (isValid && !isValid(draft)) return
+    setSaving(true)
+    setError(undefined)
+    try {
+      await onSave(draft)
+      setEditing(false)
+      setJustSaved(true)
+    } catch (caught) {
+      /*
+       * The field stays open, holding what was typed. Closing it would discard the operator's
+       * input and leave the old value on screen as though nothing had happened — which is how
+       * somebody comes to believe a change was saved when it was refused.
+       */
+      setError(
+        caught instanceof ApiError
+          ? (caught.detail ?? t('field.refused'))
+          : t('field.unreachable'),
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!editing) {
+    return (
+      <div className="flex items-baseline justify-between gap-4 border-b py-2">
+        <Label className="text-muted-foreground w-48 shrink-0 text-sm">{label}</Label>
+        <div className="flex flex-1 items-baseline gap-2">
+          <span className="flex-1 text-sm">{display}</span>
+          {justSaved && (
+            <span className="text-muted-foreground flex items-center gap-1 text-xs">
+              <CheckIcon aria-hidden /> {t('field.saved')}
+            </span>
+          )}
+          {editable && (
+            <Button variant="ghost" size="sm" onClick={start}>
+              {t('field.edit')}
+            </Button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className={cn('border-b py-2', error && 'border-destructive')}>
+      <div className="flex items-baseline justify-between gap-4">
+        <Label htmlFor={id} className="text-muted-foreground w-48 shrink-0 text-sm">
+          {label}
+        </Label>
+        <div className="flex flex-1 items-center gap-2">
+          <div className="flex-1">{children(draft, setDraft)}</div>
+          <Button size="sm" onClick={() => void save()} disabled={saving}>
+            {saving ? t('field.saving') : t('field.save')}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={cancel} disabled={saving}>
+            {t('field.cancel')}
+          </Button>
+        </div>
+      </div>
+      {error && (
+        <p role="alert" className="text-destructive mt-1 flex items-start gap-1 pl-52 text-sm">
+          <WarningCircleIcon aria-hidden className="mt-0.5 shrink-0" />
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * A value the current role is not allowed to see.
+ *
+ * Rendered differently from an empty one on purpose: the backend omits a withheld field entirely
+ * (Jackson's `non_null` inclusion), so "absent" means two completely different things — "nobody has
+ * set this" and "this is not yours to see" — and a screen that draws them the same way tells the
+ * operator something false.
+ */
+export function HiddenValue() {
+  const { t } = useTranslation('common')
+  return (
+    <span className="text-muted-foreground" title={t('field.hiddenTitle')}>
+      —
+    </span>
+  )
+}
+
+/** A value that is genuinely not set. */
+export function UnsetValue() {
+  return <span className="text-muted-foreground/60">—</span>
+}

@@ -8,16 +8,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -83,78 +87,48 @@ export const settlementControllerRelease = (
 
 
 
-export const getSettlementControllerReleaseQueryKey = (id: number,) => {
-    return [
-    'DELETE', `/api/allocations/${id}`
-    ] as const;
+export const getSettlementControllerReleaseMutationOptions = <TError = SettlementControllerRelease4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof settlementControllerRelease>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof settlementControllerRelease>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['settlementControllerRelease'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof settlementControllerRelease>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  settlementControllerRelease(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SettlementControllerReleaseMutationResult = NonNullable<Awaited<ReturnType<typeof settlementControllerRelease>>>
+
+    export type SettlementControllerReleaseMutationError = SettlementControllerRelease4xx
+
+    export const useSettlementControllerRelease = <TError = SettlementControllerRelease4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof settlementControllerRelease>>, TError,{id: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof settlementControllerRelease>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getSettlementControllerReleaseMutationOptions(options), queryClient);
     }
-
-
-export const getSettlementControllerReleaseQueryOptions = <TData = Awaited<ReturnType<typeof settlementControllerRelease>>, TError = SettlementControllerRelease4xx>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerRelease>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSettlementControllerReleaseQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof settlementControllerRelease>>> = ({ signal }) => settlementControllerRelease(id, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof settlementControllerRelease>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SettlementControllerReleaseQueryResult = NonNullable<Awaited<ReturnType<typeof settlementControllerRelease>>>
-export type SettlementControllerReleaseQueryError = SettlementControllerRelease4xx
-
-
-export function useSettlementControllerRelease<TData = Awaited<ReturnType<typeof settlementControllerRelease>>, TError = SettlementControllerRelease4xx>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerRelease>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof settlementControllerRelease>>,
-          TError,
-          Awaited<ReturnType<typeof settlementControllerRelease>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSettlementControllerRelease<TData = Awaited<ReturnType<typeof settlementControllerRelease>>, TError = SettlementControllerRelease4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerRelease>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof settlementControllerRelease>>,
-          TError,
-          Awaited<ReturnType<typeof settlementControllerRelease>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSettlementControllerRelease<TData = Awaited<ReturnType<typeof settlementControllerRelease>>, TError = SettlementControllerRelease4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerRelease>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSettlementControllerRelease<TData = Awaited<ReturnType<typeof settlementControllerRelease>>, TError = SettlementControllerRelease4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerRelease>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSettlementControllerReleaseQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const settlementControllerAllocateCreditNote = (
+    export const settlementControllerAllocateCreditNote = (
     id: number,
     targetedAllocationRequest: TargetedAllocationRequest,
  signal?: AbortSignal
@@ -172,84 +146,48 @@ export const settlementControllerAllocateCreditNote = (
 
 
 
-export const getSettlementControllerAllocateCreditNoteQueryKey = (id: number,
-    targetedAllocationRequest?: TargetedAllocationRequest,) => {
-    return [
-    'POST', `/api/credit-notes/${id}/allocations`, targetedAllocationRequest
-    ] as const;
+export const getSettlementControllerAllocateCreditNoteMutationOptions = <TError = SettlementControllerAllocateCreditNote4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>, TError,{id: number;data: TargetedAllocationRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>, TError,{id: number;data: TargetedAllocationRequest}, TContext> => {
+
+const mutationKey = ['settlementControllerAllocateCreditNote'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>, {id: number;data: TargetedAllocationRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  settlementControllerAllocateCreditNote(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SettlementControllerAllocateCreditNoteMutationResult = NonNullable<Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>>
+    export type SettlementControllerAllocateCreditNoteMutationBody = TargetedAllocationRequest
+    export type SettlementControllerAllocateCreditNoteMutationError = SettlementControllerAllocateCreditNote4xx
+
+    export const useSettlementControllerAllocateCreditNote = <TError = SettlementControllerAllocateCreditNote4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>, TError,{id: number;data: TargetedAllocationRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>,
+        TError,
+        {id: number;data: TargetedAllocationRequest},
+        TContext
+      > => {
+      return useMutation(getSettlementControllerAllocateCreditNoteMutationOptions(options), queryClient);
     }
-
-
-export const getSettlementControllerAllocateCreditNoteQueryOptions = <TData = Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>, TError = SettlementControllerAllocateCreditNote4xx>(id: number,
-    targetedAllocationRequest: TargetedAllocationRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSettlementControllerAllocateCreditNoteQueryKey(id,targetedAllocationRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>> = ({ signal }) => settlementControllerAllocateCreditNote(id,targetedAllocationRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SettlementControllerAllocateCreditNoteQueryResult = NonNullable<Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>>
-export type SettlementControllerAllocateCreditNoteQueryError = SettlementControllerAllocateCreditNote4xx
-
-
-export function useSettlementControllerAllocateCreditNote<TData = Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>, TError = SettlementControllerAllocateCreditNote4xx>(
- id: number,
-    targetedAllocationRequest: TargetedAllocationRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>,
-          TError,
-          Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSettlementControllerAllocateCreditNote<TData = Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>, TError = SettlementControllerAllocateCreditNote4xx>(
- id: number,
-    targetedAllocationRequest: TargetedAllocationRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>,
-          TError,
-          Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSettlementControllerAllocateCreditNote<TData = Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>, TError = SettlementControllerAllocateCreditNote4xx>(
- id: number,
-    targetedAllocationRequest: TargetedAllocationRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSettlementControllerAllocateCreditNote<TData = Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>, TError = SettlementControllerAllocateCreditNote4xx>(
- id: number,
-    targetedAllocationRequest: TargetedAllocationRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAllocateCreditNote>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSettlementControllerAllocateCreditNoteQueryOptions(id,targetedAllocationRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const settlementControllerCustomerCredits = (
+    export const settlementControllerCustomerCredits = (
     params?: SettlementControllerCustomerCreditsParams,
  signal?: AbortSignal
 ) => {
@@ -354,84 +292,48 @@ export const settlementControllerAllocateCustomerCredit = (
 
 
 
-export const getSettlementControllerAllocateCustomerCreditQueryKey = (id: number,
-    targetedAllocationRequest?: TargetedAllocationRequest,) => {
-    return [
-    'POST', `/api/customer-credits/${id}/allocations`, targetedAllocationRequest
-    ] as const;
+export const getSettlementControllerAllocateCustomerCreditMutationOptions = <TError = SettlementControllerAllocateCustomerCredit4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>, TError,{id: number;data: TargetedAllocationRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>, TError,{id: number;data: TargetedAllocationRequest}, TContext> => {
+
+const mutationKey = ['settlementControllerAllocateCustomerCredit'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>, {id: number;data: TargetedAllocationRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  settlementControllerAllocateCustomerCredit(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SettlementControllerAllocateCustomerCreditMutationResult = NonNullable<Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>>
+    export type SettlementControllerAllocateCustomerCreditMutationBody = TargetedAllocationRequest
+    export type SettlementControllerAllocateCustomerCreditMutationError = SettlementControllerAllocateCustomerCredit4xx
+
+    export const useSettlementControllerAllocateCustomerCredit = <TError = SettlementControllerAllocateCustomerCredit4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>, TError,{id: number;data: TargetedAllocationRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>,
+        TError,
+        {id: number;data: TargetedAllocationRequest},
+        TContext
+      > => {
+      return useMutation(getSettlementControllerAllocateCustomerCreditMutationOptions(options), queryClient);
     }
-
-
-export const getSettlementControllerAllocateCustomerCreditQueryOptions = <TData = Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>, TError = SettlementControllerAllocateCustomerCredit4xx>(id: number,
-    targetedAllocationRequest: TargetedAllocationRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSettlementControllerAllocateCustomerCreditQueryKey(id,targetedAllocationRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>> = ({ signal }) => settlementControllerAllocateCustomerCredit(id,targetedAllocationRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SettlementControllerAllocateCustomerCreditQueryResult = NonNullable<Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>>
-export type SettlementControllerAllocateCustomerCreditQueryError = SettlementControllerAllocateCustomerCredit4xx
-
-
-export function useSettlementControllerAllocateCustomerCredit<TData = Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>, TError = SettlementControllerAllocateCustomerCredit4xx>(
- id: number,
-    targetedAllocationRequest: TargetedAllocationRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>,
-          TError,
-          Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSettlementControllerAllocateCustomerCredit<TData = Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>, TError = SettlementControllerAllocateCustomerCredit4xx>(
- id: number,
-    targetedAllocationRequest: TargetedAllocationRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>,
-          TError,
-          Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSettlementControllerAllocateCustomerCredit<TData = Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>, TError = SettlementControllerAllocateCustomerCredit4xx>(
- id: number,
-    targetedAllocationRequest: TargetedAllocationRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSettlementControllerAllocateCustomerCredit<TData = Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>, TError = SettlementControllerAllocateCustomerCredit4xx>(
- id: number,
-    targetedAllocationRequest: TargetedAllocationRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAllocateCustomerCredit>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSettlementControllerAllocateCustomerCreditQueryOptions(id,targetedAllocationRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const settlementControllerOpenItems = (
+    export const settlementControllerOpenItems = (
     params: SettlementControllerOpenItemsParams,
  signal?: AbortSignal
 ) => {
@@ -622,78 +524,48 @@ export const settlementControllerRecord = (
 
 
 
-export const getSettlementControllerRecordQueryKey = (newSettlement?: NewSettlement,) => {
-    return [
-    'POST', `/api/settlements`, newSettlement
-    ] as const;
+export const getSettlementControllerRecordMutationOptions = <TError = SettlementControllerRecord4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof settlementControllerRecord>>, TError,{data: NewSettlement}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof settlementControllerRecord>>, TError,{data: NewSettlement}, TContext> => {
+
+const mutationKey = ['settlementControllerRecord'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof settlementControllerRecord>>, {data: NewSettlement}> = (props) => {
+          const {data} = props ?? {};
+
+          return  settlementControllerRecord(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SettlementControllerRecordMutationResult = NonNullable<Awaited<ReturnType<typeof settlementControllerRecord>>>
+    export type SettlementControllerRecordMutationBody = NewSettlement
+    export type SettlementControllerRecordMutationError = SettlementControllerRecord4xx
+
+    export const useSettlementControllerRecord = <TError = SettlementControllerRecord4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof settlementControllerRecord>>, TError,{data: NewSettlement}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof settlementControllerRecord>>,
+        TError,
+        {data: NewSettlement},
+        TContext
+      > => {
+      return useMutation(getSettlementControllerRecordMutationOptions(options), queryClient);
     }
-
-
-export const getSettlementControllerRecordQueryOptions = <TData = Awaited<ReturnType<typeof settlementControllerRecord>>, TError = SettlementControllerRecord4xx>(newSettlement: NewSettlement, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerRecord>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSettlementControllerRecordQueryKey(newSettlement);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof settlementControllerRecord>>> = ({ signal }) => settlementControllerRecord(newSettlement, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof settlementControllerRecord>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SettlementControllerRecordQueryResult = NonNullable<Awaited<ReturnType<typeof settlementControllerRecord>>>
-export type SettlementControllerRecordQueryError = SettlementControllerRecord4xx
-
-
-export function useSettlementControllerRecord<TData = Awaited<ReturnType<typeof settlementControllerRecord>>, TError = SettlementControllerRecord4xx>(
- newSettlement: NewSettlement, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerRecord>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof settlementControllerRecord>>,
-          TError,
-          Awaited<ReturnType<typeof settlementControllerRecord>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSettlementControllerRecord<TData = Awaited<ReturnType<typeof settlementControllerRecord>>, TError = SettlementControllerRecord4xx>(
- newSettlement: NewSettlement, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerRecord>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof settlementControllerRecord>>,
-          TError,
-          Awaited<ReturnType<typeof settlementControllerRecord>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSettlementControllerRecord<TData = Awaited<ReturnType<typeof settlementControllerRecord>>, TError = SettlementControllerRecord4xx>(
- newSettlement: NewSettlement, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerRecord>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSettlementControllerRecord<TData = Awaited<ReturnType<typeof settlementControllerRecord>>, TError = SettlementControllerRecord4xx>(
- newSettlement: NewSettlement, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerRecord>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSettlementControllerRecordQueryOptions(newSettlement,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const settlementControllerUnallocated = (
+    export const settlementControllerUnallocated = (
 
  signal?: AbortSignal
 ) => {
@@ -883,84 +755,48 @@ export const settlementControllerAmend = (
 
 
 
-export const getSettlementControllerAmendQueryKey = (id: number,
-    amendRequest?: AmendRequest,) => {
-    return [
-    'PATCH', `/api/settlements/${id}`, amendRequest
-    ] as const;
+export const getSettlementControllerAmendMutationOptions = <TError = SettlementControllerAmend4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof settlementControllerAmend>>, TError,{id: number;data: AmendRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof settlementControllerAmend>>, TError,{id: number;data: AmendRequest}, TContext> => {
+
+const mutationKey = ['settlementControllerAmend'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof settlementControllerAmend>>, {id: number;data: AmendRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  settlementControllerAmend(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SettlementControllerAmendMutationResult = NonNullable<Awaited<ReturnType<typeof settlementControllerAmend>>>
+    export type SettlementControllerAmendMutationBody = AmendRequest
+    export type SettlementControllerAmendMutationError = SettlementControllerAmend4xx
+
+    export const useSettlementControllerAmend = <TError = SettlementControllerAmend4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof settlementControllerAmend>>, TError,{id: number;data: AmendRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof settlementControllerAmend>>,
+        TError,
+        {id: number;data: AmendRequest},
+        TContext
+      > => {
+      return useMutation(getSettlementControllerAmendMutationOptions(options), queryClient);
     }
-
-
-export const getSettlementControllerAmendQueryOptions = <TData = Awaited<ReturnType<typeof settlementControllerAmend>>, TError = SettlementControllerAmend4xx>(id: number,
-    amendRequest: AmendRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAmend>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSettlementControllerAmendQueryKey(id,amendRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof settlementControllerAmend>>> = ({ signal }) => settlementControllerAmend(id,amendRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAmend>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SettlementControllerAmendQueryResult = NonNullable<Awaited<ReturnType<typeof settlementControllerAmend>>>
-export type SettlementControllerAmendQueryError = SettlementControllerAmend4xx
-
-
-export function useSettlementControllerAmend<TData = Awaited<ReturnType<typeof settlementControllerAmend>>, TError = SettlementControllerAmend4xx>(
- id: number,
-    amendRequest: AmendRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAmend>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof settlementControllerAmend>>,
-          TError,
-          Awaited<ReturnType<typeof settlementControllerAmend>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSettlementControllerAmend<TData = Awaited<ReturnType<typeof settlementControllerAmend>>, TError = SettlementControllerAmend4xx>(
- id: number,
-    amendRequest: AmendRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAmend>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof settlementControllerAmend>>,
-          TError,
-          Awaited<ReturnType<typeof settlementControllerAmend>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSettlementControllerAmend<TData = Awaited<ReturnType<typeof settlementControllerAmend>>, TError = SettlementControllerAmend4xx>(
- id: number,
-    amendRequest: AmendRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAmend>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSettlementControllerAmend<TData = Awaited<ReturnType<typeof settlementControllerAmend>>, TError = SettlementControllerAmend4xx>(
- id: number,
-    amendRequest: AmendRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAmend>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSettlementControllerAmendQueryOptions(id,amendRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const settlementControllerAllocate = (
+    export const settlementControllerAllocate = (
     id: number,
     allocationsRequest: AllocationsRequest,
  signal?: AbortSignal
@@ -978,80 +814,44 @@ export const settlementControllerAllocate = (
 
 
 
-export const getSettlementControllerAllocateQueryKey = (id: number,
-    allocationsRequest?: AllocationsRequest,) => {
-    return [
-    'POST', `/api/settlements/${id}/allocations`, allocationsRequest
-    ] as const;
+export const getSettlementControllerAllocateMutationOptions = <TError = SettlementControllerAllocate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof settlementControllerAllocate>>, TError,{id: number;data: AllocationsRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof settlementControllerAllocate>>, TError,{id: number;data: AllocationsRequest}, TContext> => {
+
+const mutationKey = ['settlementControllerAllocate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof settlementControllerAllocate>>, {id: number;data: AllocationsRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  settlementControllerAllocate(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SettlementControllerAllocateMutationResult = NonNullable<Awaited<ReturnType<typeof settlementControllerAllocate>>>
+    export type SettlementControllerAllocateMutationBody = AllocationsRequest
+    export type SettlementControllerAllocateMutationError = SettlementControllerAllocate4xx
+
+    export const useSettlementControllerAllocate = <TError = SettlementControllerAllocate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof settlementControllerAllocate>>, TError,{id: number;data: AllocationsRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof settlementControllerAllocate>>,
+        TError,
+        {id: number;data: AllocationsRequest},
+        TContext
+      > => {
+      return useMutation(getSettlementControllerAllocateMutationOptions(options), queryClient);
     }
-
-
-export const getSettlementControllerAllocateQueryOptions = <TData = Awaited<ReturnType<typeof settlementControllerAllocate>>, TError = SettlementControllerAllocate4xx>(id: number,
-    allocationsRequest: AllocationsRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAllocate>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSettlementControllerAllocateQueryKey(id,allocationsRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof settlementControllerAllocate>>> = ({ signal }) => settlementControllerAllocate(id,allocationsRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAllocate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SettlementControllerAllocateQueryResult = NonNullable<Awaited<ReturnType<typeof settlementControllerAllocate>>>
-export type SettlementControllerAllocateQueryError = SettlementControllerAllocate4xx
-
-
-export function useSettlementControllerAllocate<TData = Awaited<ReturnType<typeof settlementControllerAllocate>>, TError = SettlementControllerAllocate4xx>(
- id: number,
-    allocationsRequest: AllocationsRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAllocate>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof settlementControllerAllocate>>,
-          TError,
-          Awaited<ReturnType<typeof settlementControllerAllocate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSettlementControllerAllocate<TData = Awaited<ReturnType<typeof settlementControllerAllocate>>, TError = SettlementControllerAllocate4xx>(
- id: number,
-    allocationsRequest: AllocationsRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAllocate>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof settlementControllerAllocate>>,
-          TError,
-          Awaited<ReturnType<typeof settlementControllerAllocate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSettlementControllerAllocate<TData = Awaited<ReturnType<typeof settlementControllerAllocate>>, TError = SettlementControllerAllocate4xx>(
- id: number,
-    allocationsRequest: AllocationsRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAllocate>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSettlementControllerAllocate<TData = Awaited<ReturnType<typeof settlementControllerAllocate>>, TError = SettlementControllerAllocate4xx>(
- id: number,
-    allocationsRequest: AllocationsRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settlementControllerAllocate>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSettlementControllerAllocateQueryOptions(id,allocationsRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-

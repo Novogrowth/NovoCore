@@ -1,11 +1,15 @@
+import type { ReactElement } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { usePermissions } from '@/auth/permissions'
 import { NAV_TREE } from '@/nav/tree'
 import type { NavNode } from '@/nav/types'
 import { flatten, reachablePaths, visibleNav } from '@/nav/visibility'
-import { AdaptersGrid, ModulesGrid } from '@/pages/registry-grid'
 import { NoAccess, NotFound, ScreenPlaceholder } from '@/pages/placeholder'
+import { ProductCreate } from '@/pages/products/product-create'
+import { ProductDetail } from '@/pages/products/product-detail'
+import { ProductsList } from '@/pages/products/products-list'
+import { AdaptersGrid, ModulesGrid } from '@/pages/registry-grid'
 
 /**
  * The routes, derived from the navigation tree rather than listed again.
@@ -16,13 +20,30 @@ import { NoAccess, NotFound, ScreenPlaceholder } from '@/pages/placeholder'
  * console — it produces the same answer the menu would have given.
  */
 
-/** The handful of routes that have a real screen today. Everything else is a placeholder. */
-const SCREENS: Record<string, () => React.ReactElement> = {
+/** Routes with a real screen behind them. Everything else in the tree is a placeholder. */
+const SCREENS: Record<string, () => ReactElement> = {
+  '/products': ProductsList,
   '/settings/adapters': AdaptersGrid,
   '/settings/modules': ModulesGrid,
 }
 
-function RouteElement({ node }: { node: NavNode }) {
+/**
+ * Routes that belong to a menu item without being one.
+ *
+ * A product's detail page is not a menu entry — nobody navigates to "product 41" from a sidebar —
+ * but it is still governed by the grant that governs Products. `owner` names the nav node whose
+ * permission decides, so these cannot drift out of step with the menu, and adding one does not mean
+ * inventing a second permission rule.
+ *
+ * Order matters: `/products/new` is declared before `/products/:id`, or React Router matches the
+ * literal path as an id.
+ */
+const CHILD_ROUTES: { path: string; owner: string; element: () => ReactElement }[] = [
+  { path: '/products/new', owner: 'products', element: ProductCreate },
+  { path: '/products/:id', owner: 'products', element: ProductDetail },
+]
+
+function RouteElement({ node, screen }: { node: NavNode; screen?: () => ReactElement }) {
   const permissions = usePermissions()
   const reachable = reachablePaths(visibleNav(permissions))
 
@@ -37,22 +58,36 @@ function RouteElement({ node }: { node: NavNode }) {
     return <NoAccess />
   }
 
-  const Screen = SCREENS[node.path]
+  const Screen = screen ?? SCREENS[node.path]
   if (Screen) return <Screen />
 
   return <ScreenPlaceholder titleKey={node.id} endpoint={node.endpoint} />
 }
 
 export function AppRoutes() {
-  const routable = flatten(NAV_TREE).filter((node) => node.path)
+  const nodes = flatten(NAV_TREE)
+  const routable = nodes.filter((node) => node.path)
 
   return (
     <Routes>
       {/* Products is the busiest screen in the building and the obvious landing page. */}
       <Route index element={<Navigate to="/products" replace />} />
+
+      {CHILD_ROUTES.map((child) => {
+        const owner = nodes.find((node) => node.id === child.owner)
+        return owner ? (
+          <Route
+            key={child.path}
+            path={child.path}
+            element={<RouteElement node={owner} screen={child.element} />}
+          />
+        ) : null
+      })}
+
       {routable.map((node) => (
         <Route key={node.path} path={node.path} element={<RouteElement node={node} />} />
       ))}
+
       <Route path="*" element={<NotFound />} />
     </Routes>
   )

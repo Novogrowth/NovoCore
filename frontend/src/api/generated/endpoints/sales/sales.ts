@@ -8,16 +8,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -173,78 +177,48 @@ export const salesControllerIssue = (
 
 
 
-export const getSalesControllerIssueQueryKey = (newCreditNote?: NewCreditNote,) => {
-    return [
-    'POST', `/api/credit-notes`, newCreditNote
-    ] as const;
+export const getSalesControllerIssueMutationOptions = <TError = SalesControllerIssue4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerIssue>>, TError,{data: NewCreditNote}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof salesControllerIssue>>, TError,{data: NewCreditNote}, TContext> => {
+
+const mutationKey = ['salesControllerIssue'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof salesControllerIssue>>, {data: NewCreditNote}> = (props) => {
+          const {data} = props ?? {};
+
+          return  salesControllerIssue(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SalesControllerIssueMutationResult = NonNullable<Awaited<ReturnType<typeof salesControllerIssue>>>
+    export type SalesControllerIssueMutationBody = NewCreditNote
+    export type SalesControllerIssueMutationError = SalesControllerIssue4xx
+
+    export const useSalesControllerIssue = <TError = SalesControllerIssue4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerIssue>>, TError,{data: NewCreditNote}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof salesControllerIssue>>,
+        TError,
+        {data: NewCreditNote},
+        TContext
+      > => {
+      return useMutation(getSalesControllerIssueMutationOptions(options), queryClient);
     }
-
-
-export const getSalesControllerIssueQueryOptions = <TData = Awaited<ReturnType<typeof salesControllerIssue>>, TError = SalesControllerIssue4xx>(newCreditNote: NewCreditNote, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerIssue>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSalesControllerIssueQueryKey(newCreditNote);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof salesControllerIssue>>> = ({ signal }) => salesControllerIssue(newCreditNote, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof salesControllerIssue>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SalesControllerIssueQueryResult = NonNullable<Awaited<ReturnType<typeof salesControllerIssue>>>
-export type SalesControllerIssueQueryError = SalesControllerIssue4xx
-
-
-export function useSalesControllerIssue<TData = Awaited<ReturnType<typeof salesControllerIssue>>, TError = SalesControllerIssue4xx>(
- newCreditNote: NewCreditNote, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerIssue>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof salesControllerIssue>>,
-          TError,
-          Awaited<ReturnType<typeof salesControllerIssue>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSalesControllerIssue<TData = Awaited<ReturnType<typeof salesControllerIssue>>, TError = SalesControllerIssue4xx>(
- newCreditNote: NewCreditNote, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerIssue>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof salesControllerIssue>>,
-          TError,
-          Awaited<ReturnType<typeof salesControllerIssue>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSalesControllerIssue<TData = Awaited<ReturnType<typeof salesControllerIssue>>, TError = SalesControllerIssue4xx>(
- newCreditNote: NewCreditNote, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerIssue>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSalesControllerIssue<TData = Awaited<ReturnType<typeof salesControllerIssue>>, TError = SalesControllerIssue4xx>(
- newCreditNote: NewCreditNote, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerIssue>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSalesControllerIssueQueryOptions(newCreditNote,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const salesControllerPreviewNote = (
+    export const salesControllerPreviewNote = (
     newCreditNote: NewCreditNote,
  signal?: AbortSignal
 ) => {
@@ -261,78 +235,48 @@ export const salesControllerPreviewNote = (
 
 
 
-export const getSalesControllerPreviewNoteQueryKey = (newCreditNote?: NewCreditNote,) => {
-    return [
-    'POST', `/api/credit-notes/preview`, newCreditNote
-    ] as const;
+export const getSalesControllerPreviewNoteMutationOptions = <TError = SalesControllerPreviewNote4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerPreviewNote>>, TError,{data: NewCreditNote}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof salesControllerPreviewNote>>, TError,{data: NewCreditNote}, TContext> => {
+
+const mutationKey = ['salesControllerPreviewNote'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof salesControllerPreviewNote>>, {data: NewCreditNote}> = (props) => {
+          const {data} = props ?? {};
+
+          return  salesControllerPreviewNote(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SalesControllerPreviewNoteMutationResult = NonNullable<Awaited<ReturnType<typeof salesControllerPreviewNote>>>
+    export type SalesControllerPreviewNoteMutationBody = NewCreditNote
+    export type SalesControllerPreviewNoteMutationError = SalesControllerPreviewNote4xx
+
+    export const useSalesControllerPreviewNote = <TError = SalesControllerPreviewNote4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerPreviewNote>>, TError,{data: NewCreditNote}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof salesControllerPreviewNote>>,
+        TError,
+        {data: NewCreditNote},
+        TContext
+      > => {
+      return useMutation(getSalesControllerPreviewNoteMutationOptions(options), queryClient);
     }
-
-
-export const getSalesControllerPreviewNoteQueryOptions = <TData = Awaited<ReturnType<typeof salesControllerPreviewNote>>, TError = SalesControllerPreviewNote4xx>(newCreditNote: NewCreditNote, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerPreviewNote>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSalesControllerPreviewNoteQueryKey(newCreditNote);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof salesControllerPreviewNote>>> = ({ signal }) => salesControllerPreviewNote(newCreditNote, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof salesControllerPreviewNote>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SalesControllerPreviewNoteQueryResult = NonNullable<Awaited<ReturnType<typeof salesControllerPreviewNote>>>
-export type SalesControllerPreviewNoteQueryError = SalesControllerPreviewNote4xx
-
-
-export function useSalesControllerPreviewNote<TData = Awaited<ReturnType<typeof salesControllerPreviewNote>>, TError = SalesControllerPreviewNote4xx>(
- newCreditNote: NewCreditNote, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerPreviewNote>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof salesControllerPreviewNote>>,
-          TError,
-          Awaited<ReturnType<typeof salesControllerPreviewNote>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSalesControllerPreviewNote<TData = Awaited<ReturnType<typeof salesControllerPreviewNote>>, TError = SalesControllerPreviewNote4xx>(
- newCreditNote: NewCreditNote, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerPreviewNote>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof salesControllerPreviewNote>>,
-          TError,
-          Awaited<ReturnType<typeof salesControllerPreviewNote>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSalesControllerPreviewNote<TData = Awaited<ReturnType<typeof salesControllerPreviewNote>>, TError = SalesControllerPreviewNote4xx>(
- newCreditNote: NewCreditNote, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerPreviewNote>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSalesControllerPreviewNote<TData = Awaited<ReturnType<typeof salesControllerPreviewNote>>, TError = SalesControllerPreviewNote4xx>(
- newCreditNote: NewCreditNote, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerPreviewNote>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSalesControllerPreviewNoteQueryOptions(newCreditNote,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const salesControllerNote = (
+    export const salesControllerNote = (
     id: number,
  signal?: AbortSignal
 ) => {
@@ -436,84 +380,48 @@ export const salesControllerReverseNote = (
 
 
 
-export const getSalesControllerReverseNoteQueryKey = (id: number,
-    reversalCommand?: ReversalCommand,) => {
-    return [
-    'POST', `/api/credit-notes/${id}/reversal`, reversalCommand
-    ] as const;
+export const getSalesControllerReverseNoteMutationOptions = <TError = SalesControllerReverseNote4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerReverseNote>>, TError,{id: number;data: ReversalCommand}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof salesControllerReverseNote>>, TError,{id: number;data: ReversalCommand}, TContext> => {
+
+const mutationKey = ['salesControllerReverseNote'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof salesControllerReverseNote>>, {id: number;data: ReversalCommand}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  salesControllerReverseNote(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SalesControllerReverseNoteMutationResult = NonNullable<Awaited<ReturnType<typeof salesControllerReverseNote>>>
+    export type SalesControllerReverseNoteMutationBody = ReversalCommand
+    export type SalesControllerReverseNoteMutationError = SalesControllerReverseNote4xx
+
+    export const useSalesControllerReverseNote = <TError = SalesControllerReverseNote4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerReverseNote>>, TError,{id: number;data: ReversalCommand}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof salesControllerReverseNote>>,
+        TError,
+        {id: number;data: ReversalCommand},
+        TContext
+      > => {
+      return useMutation(getSalesControllerReverseNoteMutationOptions(options), queryClient);
     }
-
-
-export const getSalesControllerReverseNoteQueryOptions = <TData = Awaited<ReturnType<typeof salesControllerReverseNote>>, TError = SalesControllerReverseNote4xx>(id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerReverseNote>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSalesControllerReverseNoteQueryKey(id,reversalCommand);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof salesControllerReverseNote>>> = ({ signal }) => salesControllerReverseNote(id,reversalCommand, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof salesControllerReverseNote>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SalesControllerReverseNoteQueryResult = NonNullable<Awaited<ReturnType<typeof salesControllerReverseNote>>>
-export type SalesControllerReverseNoteQueryError = SalesControllerReverseNote4xx
-
-
-export function useSalesControllerReverseNote<TData = Awaited<ReturnType<typeof salesControllerReverseNote>>, TError = SalesControllerReverseNote4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerReverseNote>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof salesControllerReverseNote>>,
-          TError,
-          Awaited<ReturnType<typeof salesControllerReverseNote>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSalesControllerReverseNote<TData = Awaited<ReturnType<typeof salesControllerReverseNote>>, TError = SalesControllerReverseNote4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerReverseNote>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof salesControllerReverseNote>>,
-          TError,
-          Awaited<ReturnType<typeof salesControllerReverseNote>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSalesControllerReverseNote<TData = Awaited<ReturnType<typeof salesControllerReverseNote>>, TError = SalesControllerReverseNote4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerReverseNote>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSalesControllerReverseNote<TData = Awaited<ReturnType<typeof salesControllerReverseNote>>, TError = SalesControllerReverseNote4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerReverseNote>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSalesControllerReverseNoteQueryOptions(id,reversalCommand,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const salesControllerInvoices = (
+    export const salesControllerInvoices = (
     params?: SalesControllerInvoicesParams,
  signal?: AbortSignal
 ) => {
@@ -617,78 +525,48 @@ export const salesControllerRecord = (
 
 
 
-export const getSalesControllerRecordQueryKey = (newSalesInvoice?: NewSalesInvoice,) => {
-    return [
-    'POST', `/api/sales-invoices`, newSalesInvoice
-    ] as const;
+export const getSalesControllerRecordMutationOptions = <TError = SalesControllerRecord4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerRecord>>, TError,{data: NewSalesInvoice}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof salesControllerRecord>>, TError,{data: NewSalesInvoice}, TContext> => {
+
+const mutationKey = ['salesControllerRecord'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof salesControllerRecord>>, {data: NewSalesInvoice}> = (props) => {
+          const {data} = props ?? {};
+
+          return  salesControllerRecord(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SalesControllerRecordMutationResult = NonNullable<Awaited<ReturnType<typeof salesControllerRecord>>>
+    export type SalesControllerRecordMutationBody = NewSalesInvoice
+    export type SalesControllerRecordMutationError = SalesControllerRecord4xx
+
+    export const useSalesControllerRecord = <TError = SalesControllerRecord4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerRecord>>, TError,{data: NewSalesInvoice}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof salesControllerRecord>>,
+        TError,
+        {data: NewSalesInvoice},
+        TContext
+      > => {
+      return useMutation(getSalesControllerRecordMutationOptions(options), queryClient);
     }
-
-
-export const getSalesControllerRecordQueryOptions = <TData = Awaited<ReturnType<typeof salesControllerRecord>>, TError = SalesControllerRecord4xx>(newSalesInvoice: NewSalesInvoice, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerRecord>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSalesControllerRecordQueryKey(newSalesInvoice);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof salesControllerRecord>>> = ({ signal }) => salesControllerRecord(newSalesInvoice, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof salesControllerRecord>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SalesControllerRecordQueryResult = NonNullable<Awaited<ReturnType<typeof salesControllerRecord>>>
-export type SalesControllerRecordQueryError = SalesControllerRecord4xx
-
-
-export function useSalesControllerRecord<TData = Awaited<ReturnType<typeof salesControllerRecord>>, TError = SalesControllerRecord4xx>(
- newSalesInvoice: NewSalesInvoice, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerRecord>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof salesControllerRecord>>,
-          TError,
-          Awaited<ReturnType<typeof salesControllerRecord>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSalesControllerRecord<TData = Awaited<ReturnType<typeof salesControllerRecord>>, TError = SalesControllerRecord4xx>(
- newSalesInvoice: NewSalesInvoice, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerRecord>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof salesControllerRecord>>,
-          TError,
-          Awaited<ReturnType<typeof salesControllerRecord>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSalesControllerRecord<TData = Awaited<ReturnType<typeof salesControllerRecord>>, TError = SalesControllerRecord4xx>(
- newSalesInvoice: NewSalesInvoice, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerRecord>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSalesControllerRecord<TData = Awaited<ReturnType<typeof salesControllerRecord>>, TError = SalesControllerRecord4xx>(
- newSalesInvoice: NewSalesInvoice, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerRecord>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSalesControllerRecordQueryOptions(newSalesInvoice,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const salesControllerPreview = (
+    export const salesControllerPreview = (
     newSalesInvoice: NewSalesInvoice,
  signal?: AbortSignal
 ) => {
@@ -705,78 +583,48 @@ export const salesControllerPreview = (
 
 
 
-export const getSalesControllerPreviewQueryKey = (newSalesInvoice?: NewSalesInvoice,) => {
-    return [
-    'POST', `/api/sales-invoices/preview`, newSalesInvoice
-    ] as const;
+export const getSalesControllerPreviewMutationOptions = <TError = SalesControllerPreview4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerPreview>>, TError,{data: NewSalesInvoice}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof salesControllerPreview>>, TError,{data: NewSalesInvoice}, TContext> => {
+
+const mutationKey = ['salesControllerPreview'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof salesControllerPreview>>, {data: NewSalesInvoice}> = (props) => {
+          const {data} = props ?? {};
+
+          return  salesControllerPreview(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SalesControllerPreviewMutationResult = NonNullable<Awaited<ReturnType<typeof salesControllerPreview>>>
+    export type SalesControllerPreviewMutationBody = NewSalesInvoice
+    export type SalesControllerPreviewMutationError = SalesControllerPreview4xx
+
+    export const useSalesControllerPreview = <TError = SalesControllerPreview4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerPreview>>, TError,{data: NewSalesInvoice}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof salesControllerPreview>>,
+        TError,
+        {data: NewSalesInvoice},
+        TContext
+      > => {
+      return useMutation(getSalesControllerPreviewMutationOptions(options), queryClient);
     }
-
-
-export const getSalesControllerPreviewQueryOptions = <TData = Awaited<ReturnType<typeof salesControllerPreview>>, TError = SalesControllerPreview4xx>(newSalesInvoice: NewSalesInvoice, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerPreview>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSalesControllerPreviewQueryKey(newSalesInvoice);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof salesControllerPreview>>> = ({ signal }) => salesControllerPreview(newSalesInvoice, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof salesControllerPreview>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SalesControllerPreviewQueryResult = NonNullable<Awaited<ReturnType<typeof salesControllerPreview>>>
-export type SalesControllerPreviewQueryError = SalesControllerPreview4xx
-
-
-export function useSalesControllerPreview<TData = Awaited<ReturnType<typeof salesControllerPreview>>, TError = SalesControllerPreview4xx>(
- newSalesInvoice: NewSalesInvoice, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerPreview>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof salesControllerPreview>>,
-          TError,
-          Awaited<ReturnType<typeof salesControllerPreview>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSalesControllerPreview<TData = Awaited<ReturnType<typeof salesControllerPreview>>, TError = SalesControllerPreview4xx>(
- newSalesInvoice: NewSalesInvoice, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerPreview>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof salesControllerPreview>>,
-          TError,
-          Awaited<ReturnType<typeof salesControllerPreview>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSalesControllerPreview<TData = Awaited<ReturnType<typeof salesControllerPreview>>, TError = SalesControllerPreview4xx>(
- newSalesInvoice: NewSalesInvoice, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerPreview>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSalesControllerPreview<TData = Awaited<ReturnType<typeof salesControllerPreview>>, TError = SalesControllerPreview4xx>(
- newSalesInvoice: NewSalesInvoice, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerPreview>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSalesControllerPreviewQueryOptions(newSalesInvoice,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const salesControllerRoundingDifferences = (
+    export const salesControllerRoundingDifferences = (
     params: SalesControllerRoundingDifferencesParams,
  signal?: AbortSignal
 ) => {
@@ -967,80 +815,44 @@ export const salesControllerReverse = (
 
 
 
-export const getSalesControllerReverseQueryKey = (id: number,
-    reversalCommand?: ReversalCommand,) => {
-    return [
-    'POST', `/api/sales-invoices/${id}/reversal`, reversalCommand
-    ] as const;
+export const getSalesControllerReverseMutationOptions = <TError = SalesControllerReverse4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerReverse>>, TError,{id: number;data: ReversalCommand}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof salesControllerReverse>>, TError,{id: number;data: ReversalCommand}, TContext> => {
+
+const mutationKey = ['salesControllerReverse'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof salesControllerReverse>>, {id: number;data: ReversalCommand}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  salesControllerReverse(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SalesControllerReverseMutationResult = NonNullable<Awaited<ReturnType<typeof salesControllerReverse>>>
+    export type SalesControllerReverseMutationBody = ReversalCommand
+    export type SalesControllerReverseMutationError = SalesControllerReverse4xx
+
+    export const useSalesControllerReverse = <TError = SalesControllerReverse4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerReverse>>, TError,{id: number;data: ReversalCommand}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof salesControllerReverse>>,
+        TError,
+        {id: number;data: ReversalCommand},
+        TContext
+      > => {
+      return useMutation(getSalesControllerReverseMutationOptions(options), queryClient);
     }
-
-
-export const getSalesControllerReverseQueryOptions = <TData = Awaited<ReturnType<typeof salesControllerReverse>>, TError = SalesControllerReverse4xx>(id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerReverse>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSalesControllerReverseQueryKey(id,reversalCommand);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof salesControllerReverse>>> = ({ signal }) => salesControllerReverse(id,reversalCommand, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof salesControllerReverse>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SalesControllerReverseQueryResult = NonNullable<Awaited<ReturnType<typeof salesControllerReverse>>>
-export type SalesControllerReverseQueryError = SalesControllerReverse4xx
-
-
-export function useSalesControllerReverse<TData = Awaited<ReturnType<typeof salesControllerReverse>>, TError = SalesControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerReverse>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof salesControllerReverse>>,
-          TError,
-          Awaited<ReturnType<typeof salesControllerReverse>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSalesControllerReverse<TData = Awaited<ReturnType<typeof salesControllerReverse>>, TError = SalesControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerReverse>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof salesControllerReverse>>,
-          TError,
-          Awaited<ReturnType<typeof salesControllerReverse>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSalesControllerReverse<TData = Awaited<ReturnType<typeof salesControllerReverse>>, TError = SalesControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerReverse>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSalesControllerReverse<TData = Awaited<ReturnType<typeof salesControllerReverse>>, TError = SalesControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerReverse>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSalesControllerReverseQueryOptions(id,reversalCommand,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-

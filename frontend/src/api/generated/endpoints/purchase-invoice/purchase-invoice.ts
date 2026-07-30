@@ -8,16 +8,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -251,78 +255,48 @@ export const purchaseInvoiceControllerRecord = (
 
 
 
-export const getPurchaseInvoiceControllerRecordQueryKey = (newPurchaseInvoice?: NewPurchaseInvoice,) => {
-    return [
-    'POST', `/api/purchase-invoices`, newPurchaseInvoice
-    ] as const;
+export const getPurchaseInvoiceControllerRecordMutationOptions = <TError = PurchaseInvoiceControllerRecord4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>, TError,{data: NewPurchaseInvoice}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>, TError,{data: NewPurchaseInvoice}, TContext> => {
+
+const mutationKey = ['purchaseInvoiceControllerRecord'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>, {data: NewPurchaseInvoice}> = (props) => {
+          const {data} = props ?? {};
+
+          return  purchaseInvoiceControllerRecord(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PurchaseInvoiceControllerRecordMutationResult = NonNullable<Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>>
+    export type PurchaseInvoiceControllerRecordMutationBody = NewPurchaseInvoice
+    export type PurchaseInvoiceControllerRecordMutationError = PurchaseInvoiceControllerRecord4xx
+
+    export const usePurchaseInvoiceControllerRecord = <TError = PurchaseInvoiceControllerRecord4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>, TError,{data: NewPurchaseInvoice}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>,
+        TError,
+        {data: NewPurchaseInvoice},
+        TContext
+      > => {
+      return useMutation(getPurchaseInvoiceControllerRecordMutationOptions(options), queryClient);
     }
-
-
-export const getPurchaseInvoiceControllerRecordQueryOptions = <TData = Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>, TError = PurchaseInvoiceControllerRecord4xx>(newPurchaseInvoice: NewPurchaseInvoice, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getPurchaseInvoiceControllerRecordQueryKey(newPurchaseInvoice);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>> = ({ signal }) => purchaseInvoiceControllerRecord(newPurchaseInvoice, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type PurchaseInvoiceControllerRecordQueryResult = NonNullable<Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>>
-export type PurchaseInvoiceControllerRecordQueryError = PurchaseInvoiceControllerRecord4xx
-
-
-export function usePurchaseInvoiceControllerRecord<TData = Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>, TError = PurchaseInvoiceControllerRecord4xx>(
- newPurchaseInvoice: NewPurchaseInvoice, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>,
-          TError,
-          Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePurchaseInvoiceControllerRecord<TData = Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>, TError = PurchaseInvoiceControllerRecord4xx>(
- newPurchaseInvoice: NewPurchaseInvoice, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>,
-          TError,
-          Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePurchaseInvoiceControllerRecord<TData = Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>, TError = PurchaseInvoiceControllerRecord4xx>(
- newPurchaseInvoice: NewPurchaseInvoice, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function usePurchaseInvoiceControllerRecord<TData = Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>, TError = PurchaseInvoiceControllerRecord4xx>(
- newPurchaseInvoice: NewPurchaseInvoice, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof purchaseInvoiceControllerRecord>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getPurchaseInvoiceControllerRecordQueryOptions(newPurchaseInvoice,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const purchaseInvoiceControllerVariances = (
+    export const purchaseInvoiceControllerVariances = (
     params: PurchaseInvoiceControllerVariancesParams,
  signal?: AbortSignal
 ) => {
@@ -599,80 +573,44 @@ export const purchaseInvoiceControllerReverse = (
 
 
 
-export const getPurchaseInvoiceControllerReverseQueryKey = (id: number,
-    reversalCommand?: ReversalCommand,) => {
-    return [
-    'POST', `/api/purchase-invoices/${id}/reversal`, reversalCommand
-    ] as const;
+export const getPurchaseInvoiceControllerReverseMutationOptions = <TError = PurchaseInvoiceControllerReverse4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>, TError,{id: number;data: ReversalCommand}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>, TError,{id: number;data: ReversalCommand}, TContext> => {
+
+const mutationKey = ['purchaseInvoiceControllerReverse'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>, {id: number;data: ReversalCommand}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  purchaseInvoiceControllerReverse(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PurchaseInvoiceControllerReverseMutationResult = NonNullable<Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>>
+    export type PurchaseInvoiceControllerReverseMutationBody = ReversalCommand
+    export type PurchaseInvoiceControllerReverseMutationError = PurchaseInvoiceControllerReverse4xx
+
+    export const usePurchaseInvoiceControllerReverse = <TError = PurchaseInvoiceControllerReverse4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>, TError,{id: number;data: ReversalCommand}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>,
+        TError,
+        {id: number;data: ReversalCommand},
+        TContext
+      > => {
+      return useMutation(getPurchaseInvoiceControllerReverseMutationOptions(options), queryClient);
     }
-
-
-export const getPurchaseInvoiceControllerReverseQueryOptions = <TData = Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>, TError = PurchaseInvoiceControllerReverse4xx>(id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getPurchaseInvoiceControllerReverseQueryKey(id,reversalCommand);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>> = ({ signal }) => purchaseInvoiceControllerReverse(id,reversalCommand, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type PurchaseInvoiceControllerReverseQueryResult = NonNullable<Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>>
-export type PurchaseInvoiceControllerReverseQueryError = PurchaseInvoiceControllerReverse4xx
-
-
-export function usePurchaseInvoiceControllerReverse<TData = Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>, TError = PurchaseInvoiceControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>,
-          TError,
-          Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePurchaseInvoiceControllerReverse<TData = Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>, TError = PurchaseInvoiceControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>,
-          TError,
-          Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePurchaseInvoiceControllerReverse<TData = Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>, TError = PurchaseInvoiceControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function usePurchaseInvoiceControllerReverse<TData = Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>, TError = PurchaseInvoiceControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof purchaseInvoiceControllerReverse>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getPurchaseInvoiceControllerReverseQueryOptions(id,reversalCommand,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-

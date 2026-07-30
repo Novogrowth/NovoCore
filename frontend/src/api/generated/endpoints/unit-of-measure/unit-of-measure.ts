@@ -8,16 +8,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -164,78 +168,48 @@ export const unitOfMeasureControllerCreate = (
 
 
 
-export const getUnitOfMeasureControllerCreateQueryKey = (newUnitOfMeasure?: NewUnitOfMeasure,) => {
-    return [
-    'POST', `/api/units-of-measure`, newUnitOfMeasure
-    ] as const;
+export const getUnitOfMeasureControllerCreateMutationOptions = <TError = UnitOfMeasureControllerCreate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>, TError,{data: NewUnitOfMeasure}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>, TError,{data: NewUnitOfMeasure}, TContext> => {
+
+const mutationKey = ['unitOfMeasureControllerCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>, {data: NewUnitOfMeasure}> = (props) => {
+          const {data} = props ?? {};
+
+          return  unitOfMeasureControllerCreate(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnitOfMeasureControllerCreateMutationResult = NonNullable<Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>>
+    export type UnitOfMeasureControllerCreateMutationBody = NewUnitOfMeasure
+    export type UnitOfMeasureControllerCreateMutationError = UnitOfMeasureControllerCreate4xx
+
+    export const useUnitOfMeasureControllerCreate = <TError = UnitOfMeasureControllerCreate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>, TError,{data: NewUnitOfMeasure}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>,
+        TError,
+        {data: NewUnitOfMeasure},
+        TContext
+      > => {
+      return useMutation(getUnitOfMeasureControllerCreateMutationOptions(options), queryClient);
     }
-
-
-export const getUnitOfMeasureControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>, TError = UnitOfMeasureControllerCreate4xx>(newUnitOfMeasure: NewUnitOfMeasure, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getUnitOfMeasureControllerCreateQueryKey(newUnitOfMeasure);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>> = ({ signal }) => unitOfMeasureControllerCreate(newUnitOfMeasure, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type UnitOfMeasureControllerCreateQueryResult = NonNullable<Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>>
-export type UnitOfMeasureControllerCreateQueryError = UnitOfMeasureControllerCreate4xx
-
-
-export function useUnitOfMeasureControllerCreate<TData = Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>, TError = UnitOfMeasureControllerCreate4xx>(
- newUnitOfMeasure: NewUnitOfMeasure, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>,
-          TError,
-          Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useUnitOfMeasureControllerCreate<TData = Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>, TError = UnitOfMeasureControllerCreate4xx>(
- newUnitOfMeasure: NewUnitOfMeasure, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>,
-          TError,
-          Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useUnitOfMeasureControllerCreate<TData = Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>, TError = UnitOfMeasureControllerCreate4xx>(
- newUnitOfMeasure: NewUnitOfMeasure, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useUnitOfMeasureControllerCreate<TData = Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>, TError = UnitOfMeasureControllerCreate4xx>(
- newUnitOfMeasure: NewUnitOfMeasure, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerCreate>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getUnitOfMeasureControllerCreateQueryOptions(newUnitOfMeasure,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const unitOfMeasureControllerWithoutMydataCode = (
+    export const unitOfMeasureControllerWithoutMydataCode = (
 
  signal?: AbortSignal
 ) => {
@@ -336,78 +310,48 @@ export const unitOfMeasureControllerDeactivate = (
 
 
 
-export const getUnitOfMeasureControllerDeactivateQueryKey = (id: number,) => {
-    return [
-    'POST', `/api/units-of-measure/${id}/deactivate`
-    ] as const;
+export const getUnitOfMeasureControllerDeactivateMutationOptions = <TError = UnitOfMeasureControllerDeactivate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['unitOfMeasureControllerDeactivate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  unitOfMeasureControllerDeactivate(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnitOfMeasureControllerDeactivateMutationResult = NonNullable<Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>>
+
+    export type UnitOfMeasureControllerDeactivateMutationError = UnitOfMeasureControllerDeactivate4xx
+
+    export const useUnitOfMeasureControllerDeactivate = <TError = UnitOfMeasureControllerDeactivate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>, TError,{id: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getUnitOfMeasureControllerDeactivateMutationOptions(options), queryClient);
     }
-
-
-export const getUnitOfMeasureControllerDeactivateQueryOptions = <TData = Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>, TError = UnitOfMeasureControllerDeactivate4xx>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getUnitOfMeasureControllerDeactivateQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>> = ({ signal }) => unitOfMeasureControllerDeactivate(id, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type UnitOfMeasureControllerDeactivateQueryResult = NonNullable<Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>>
-export type UnitOfMeasureControllerDeactivateQueryError = UnitOfMeasureControllerDeactivate4xx
-
-
-export function useUnitOfMeasureControllerDeactivate<TData = Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>, TError = UnitOfMeasureControllerDeactivate4xx>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>,
-          TError,
-          Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useUnitOfMeasureControllerDeactivate<TData = Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>, TError = UnitOfMeasureControllerDeactivate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>,
-          TError,
-          Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useUnitOfMeasureControllerDeactivate<TData = Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>, TError = UnitOfMeasureControllerDeactivate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useUnitOfMeasureControllerDeactivate<TData = Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>, TError = UnitOfMeasureControllerDeactivate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerDeactivate>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getUnitOfMeasureControllerDeactivateQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const unitOfMeasureControllerChangeFractionalQuantityAllowed = (
+    export const unitOfMeasureControllerChangeFractionalQuantityAllowed = (
     id: number,
     fractionalQuantityRequest: FractionalQuantityRequest,
  signal?: AbortSignal
@@ -425,84 +369,48 @@ export const unitOfMeasureControllerChangeFractionalQuantityAllowed = (
 
 
 
-export const getUnitOfMeasureControllerChangeFractionalQuantityAllowedQueryKey = (id: number,
-    fractionalQuantityRequest?: FractionalQuantityRequest,) => {
-    return [
-    'PATCH', `/api/units-of-measure/${id}/fractional-quantity`, fractionalQuantityRequest
-    ] as const;
+export const getUnitOfMeasureControllerChangeFractionalQuantityAllowedMutationOptions = <TError = UnitOfMeasureControllerChangeFractionalQuantityAllowed4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>, TError,{id: number;data: FractionalQuantityRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>, TError,{id: number;data: FractionalQuantityRequest}, TContext> => {
+
+const mutationKey = ['unitOfMeasureControllerChangeFractionalQuantityAllowed'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>, {id: number;data: FractionalQuantityRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  unitOfMeasureControllerChangeFractionalQuantityAllowed(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnitOfMeasureControllerChangeFractionalQuantityAllowedMutationResult = NonNullable<Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>>
+    export type UnitOfMeasureControllerChangeFractionalQuantityAllowedMutationBody = FractionalQuantityRequest
+    export type UnitOfMeasureControllerChangeFractionalQuantityAllowedMutationError = UnitOfMeasureControllerChangeFractionalQuantityAllowed4xx
+
+    export const useUnitOfMeasureControllerChangeFractionalQuantityAllowed = <TError = UnitOfMeasureControllerChangeFractionalQuantityAllowed4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>, TError,{id: number;data: FractionalQuantityRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>,
+        TError,
+        {id: number;data: FractionalQuantityRequest},
+        TContext
+      > => {
+      return useMutation(getUnitOfMeasureControllerChangeFractionalQuantityAllowedMutationOptions(options), queryClient);
     }
-
-
-export const getUnitOfMeasureControllerChangeFractionalQuantityAllowedQueryOptions = <TData = Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>, TError = UnitOfMeasureControllerChangeFractionalQuantityAllowed4xx>(id: number,
-    fractionalQuantityRequest: FractionalQuantityRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getUnitOfMeasureControllerChangeFractionalQuantityAllowedQueryKey(id,fractionalQuantityRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>> = ({ signal }) => unitOfMeasureControllerChangeFractionalQuantityAllowed(id,fractionalQuantityRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type UnitOfMeasureControllerChangeFractionalQuantityAllowedQueryResult = NonNullable<Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>>
-export type UnitOfMeasureControllerChangeFractionalQuantityAllowedQueryError = UnitOfMeasureControllerChangeFractionalQuantityAllowed4xx
-
-
-export function useUnitOfMeasureControllerChangeFractionalQuantityAllowed<TData = Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>, TError = UnitOfMeasureControllerChangeFractionalQuantityAllowed4xx>(
- id: number,
-    fractionalQuantityRequest: FractionalQuantityRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>,
-          TError,
-          Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useUnitOfMeasureControllerChangeFractionalQuantityAllowed<TData = Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>, TError = UnitOfMeasureControllerChangeFractionalQuantityAllowed4xx>(
- id: number,
-    fractionalQuantityRequest: FractionalQuantityRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>,
-          TError,
-          Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useUnitOfMeasureControllerChangeFractionalQuantityAllowed<TData = Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>, TError = UnitOfMeasureControllerChangeFractionalQuantityAllowed4xx>(
- id: number,
-    fractionalQuantityRequest: FractionalQuantityRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useUnitOfMeasureControllerChangeFractionalQuantityAllowed<TData = Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>, TError = UnitOfMeasureControllerChangeFractionalQuantityAllowed4xx>(
- id: number,
-    fractionalQuantityRequest: FractionalQuantityRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerChangeFractionalQuantityAllowed>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getUnitOfMeasureControllerChangeFractionalQuantityAllowedQueryOptions(id,fractionalQuantityRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const unitOfMeasureControllerRecordMydataCode = (
+    export const unitOfMeasureControllerRecordMydataCode = (
     id: number,
     mydataCodeRequest: MydataCodeRequest,
  signal?: AbortSignal
@@ -520,84 +428,48 @@ export const unitOfMeasureControllerRecordMydataCode = (
 
 
 
-export const getUnitOfMeasureControllerRecordMydataCodeQueryKey = (id: number,
-    mydataCodeRequest?: MydataCodeRequest,) => {
-    return [
-    'PATCH', `/api/units-of-measure/${id}/mydata-code`, mydataCodeRequest
-    ] as const;
+export const getUnitOfMeasureControllerRecordMydataCodeMutationOptions = <TError = UnitOfMeasureControllerRecordMydataCode4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>, TError,{id: number;data: MydataCodeRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>, TError,{id: number;data: MydataCodeRequest}, TContext> => {
+
+const mutationKey = ['unitOfMeasureControllerRecordMydataCode'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>, {id: number;data: MydataCodeRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  unitOfMeasureControllerRecordMydataCode(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnitOfMeasureControllerRecordMydataCodeMutationResult = NonNullable<Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>>
+    export type UnitOfMeasureControllerRecordMydataCodeMutationBody = MydataCodeRequest
+    export type UnitOfMeasureControllerRecordMydataCodeMutationError = UnitOfMeasureControllerRecordMydataCode4xx
+
+    export const useUnitOfMeasureControllerRecordMydataCode = <TError = UnitOfMeasureControllerRecordMydataCode4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>, TError,{id: number;data: MydataCodeRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>,
+        TError,
+        {id: number;data: MydataCodeRequest},
+        TContext
+      > => {
+      return useMutation(getUnitOfMeasureControllerRecordMydataCodeMutationOptions(options), queryClient);
     }
-
-
-export const getUnitOfMeasureControllerRecordMydataCodeQueryOptions = <TData = Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>, TError = UnitOfMeasureControllerRecordMydataCode4xx>(id: number,
-    mydataCodeRequest: MydataCodeRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getUnitOfMeasureControllerRecordMydataCodeQueryKey(id,mydataCodeRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>> = ({ signal }) => unitOfMeasureControllerRecordMydataCode(id,mydataCodeRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type UnitOfMeasureControllerRecordMydataCodeQueryResult = NonNullable<Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>>
-export type UnitOfMeasureControllerRecordMydataCodeQueryError = UnitOfMeasureControllerRecordMydataCode4xx
-
-
-export function useUnitOfMeasureControllerRecordMydataCode<TData = Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>, TError = UnitOfMeasureControllerRecordMydataCode4xx>(
- id: number,
-    mydataCodeRequest: MydataCodeRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>,
-          TError,
-          Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useUnitOfMeasureControllerRecordMydataCode<TData = Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>, TError = UnitOfMeasureControllerRecordMydataCode4xx>(
- id: number,
-    mydataCodeRequest: MydataCodeRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>,
-          TError,
-          Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useUnitOfMeasureControllerRecordMydataCode<TData = Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>, TError = UnitOfMeasureControllerRecordMydataCode4xx>(
- id: number,
-    mydataCodeRequest: MydataCodeRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useUnitOfMeasureControllerRecordMydataCode<TData = Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>, TError = UnitOfMeasureControllerRecordMydataCode4xx>(
- id: number,
-    mydataCodeRequest: MydataCodeRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRecordMydataCode>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getUnitOfMeasureControllerRecordMydataCodeQueryOptions(id,mydataCodeRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const unitOfMeasureControllerRename = (
+    export const unitOfMeasureControllerRename = (
     id: number,
     nameRequest: NameRequest,
  signal?: AbortSignal
@@ -615,84 +487,48 @@ export const unitOfMeasureControllerRename = (
 
 
 
-export const getUnitOfMeasureControllerRenameQueryKey = (id: number,
-    nameRequest?: NameRequest,) => {
-    return [
-    'PATCH', `/api/units-of-measure/${id}/name`, nameRequest
-    ] as const;
+export const getUnitOfMeasureControllerRenameMutationOptions = <TError = UnitOfMeasureControllerRename4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError,{id: number;data: NameRequest}, TContext> => {
+
+const mutationKey = ['unitOfMeasureControllerRename'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, {id: number;data: NameRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  unitOfMeasureControllerRename(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnitOfMeasureControllerRenameMutationResult = NonNullable<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>>
+    export type UnitOfMeasureControllerRenameMutationBody = NameRequest
+    export type UnitOfMeasureControllerRenameMutationError = UnitOfMeasureControllerRename4xx
+
+    export const useUnitOfMeasureControllerRename = <TError = UnitOfMeasureControllerRename4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof unitOfMeasureControllerRename>>,
+        TError,
+        {id: number;data: NameRequest},
+        TContext
+      > => {
+      return useMutation(getUnitOfMeasureControllerRenameMutationOptions(options), queryClient);
     }
-
-
-export const getUnitOfMeasureControllerRenameQueryOptions = <TData = Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError = UnitOfMeasureControllerRename4xx>(id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getUnitOfMeasureControllerRenameQueryKey(id,nameRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>> = ({ signal }) => unitOfMeasureControllerRename(id,nameRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type UnitOfMeasureControllerRenameQueryResult = NonNullable<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>>
-export type UnitOfMeasureControllerRenameQueryError = UnitOfMeasureControllerRename4xx
-
-
-export function useUnitOfMeasureControllerRename<TData = Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError = UnitOfMeasureControllerRename4xx>(
- id: number,
-    nameRequest: NameRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof unitOfMeasureControllerRename>>,
-          TError,
-          Awaited<ReturnType<typeof unitOfMeasureControllerRename>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useUnitOfMeasureControllerRename<TData = Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError = UnitOfMeasureControllerRename4xx>(
- id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof unitOfMeasureControllerRename>>,
-          TError,
-          Awaited<ReturnType<typeof unitOfMeasureControllerRename>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useUnitOfMeasureControllerRename<TData = Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError = UnitOfMeasureControllerRename4xx>(
- id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useUnitOfMeasureControllerRename<TData = Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError = UnitOfMeasureControllerRename4xx>(
- id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getUnitOfMeasureControllerRenameQueryOptions(id,nameRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const unitOfMeasureControllerReactivate = (
+    export const unitOfMeasureControllerReactivate = (
     id: number,
  signal?: AbortSignal
 ) => {
@@ -707,74 +543,44 @@ export const unitOfMeasureControllerReactivate = (
 
 
 
-export const getUnitOfMeasureControllerReactivateQueryKey = (id: number,) => {
-    return [
-    'POST', `/api/units-of-measure/${id}/reactivate`
-    ] as const;
+export const getUnitOfMeasureControllerReactivateMutationOptions = <TError = UnitOfMeasureControllerReactivate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['unitOfMeasureControllerReactivate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  unitOfMeasureControllerReactivate(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnitOfMeasureControllerReactivateMutationResult = NonNullable<Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>>
+
+    export type UnitOfMeasureControllerReactivateMutationError = UnitOfMeasureControllerReactivate4xx
+
+    export const useUnitOfMeasureControllerReactivate = <TError = UnitOfMeasureControllerReactivate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>, TError,{id: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getUnitOfMeasureControllerReactivateMutationOptions(options), queryClient);
     }
-
-
-export const getUnitOfMeasureControllerReactivateQueryOptions = <TData = Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>, TError = UnitOfMeasureControllerReactivate4xx>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getUnitOfMeasureControllerReactivateQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>> = ({ signal }) => unitOfMeasureControllerReactivate(id, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type UnitOfMeasureControllerReactivateQueryResult = NonNullable<Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>>
-export type UnitOfMeasureControllerReactivateQueryError = UnitOfMeasureControllerReactivate4xx
-
-
-export function useUnitOfMeasureControllerReactivate<TData = Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>, TError = UnitOfMeasureControllerReactivate4xx>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>,
-          TError,
-          Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useUnitOfMeasureControllerReactivate<TData = Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>, TError = UnitOfMeasureControllerReactivate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>,
-          TError,
-          Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useUnitOfMeasureControllerReactivate<TData = Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>, TError = UnitOfMeasureControllerReactivate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useUnitOfMeasureControllerReactivate<TData = Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>, TError = UnitOfMeasureControllerReactivate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof unitOfMeasureControllerReactivate>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getUnitOfMeasureControllerReactivateQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-

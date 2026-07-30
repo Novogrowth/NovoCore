@@ -8,16 +8,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -242,80 +246,44 @@ export const settingsControllerPut = (
 
 
 
-export const getSettingsControllerPutQueryKey = (key: SettingsCatalog,
-    valueRequest?: ValueRequest,) => {
-    return [
-    'PUT', `/api/settings/${key}`, valueRequest
-    ] as const;
+export const getSettingsControllerPutMutationOptions = <TError = SettingsControllerPut4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof settingsControllerPut>>, TError,{key: SettingsCatalog;data: ValueRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof settingsControllerPut>>, TError,{key: SettingsCatalog;data: ValueRequest}, TContext> => {
+
+const mutationKey = ['settingsControllerPut'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof settingsControllerPut>>, {key: SettingsCatalog;data: ValueRequest}> = (props) => {
+          const {key,data} = props ?? {};
+
+          return  settingsControllerPut(key,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SettingsControllerPutMutationResult = NonNullable<Awaited<ReturnType<typeof settingsControllerPut>>>
+    export type SettingsControllerPutMutationBody = ValueRequest
+    export type SettingsControllerPutMutationError = SettingsControllerPut4xx
+
+    export const useSettingsControllerPut = <TError = SettingsControllerPut4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof settingsControllerPut>>, TError,{key: SettingsCatalog;data: ValueRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof settingsControllerPut>>,
+        TError,
+        {key: SettingsCatalog;data: ValueRequest},
+        TContext
+      > => {
+      return useMutation(getSettingsControllerPutMutationOptions(options), queryClient);
     }
-
-
-export const getSettingsControllerPutQueryOptions = <TData = Awaited<ReturnType<typeof settingsControllerPut>>, TError = SettingsControllerPut4xx>(key: SettingsCatalog,
-    valueRequest: ValueRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsControllerPut>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSettingsControllerPutQueryKey(key,valueRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof settingsControllerPut>>> = ({ signal }) => settingsControllerPut(key,valueRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: key !== null && key !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof settingsControllerPut>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SettingsControllerPutQueryResult = NonNullable<Awaited<ReturnType<typeof settingsControllerPut>>>
-export type SettingsControllerPutQueryError = SettingsControllerPut4xx
-
-
-export function useSettingsControllerPut<TData = Awaited<ReturnType<typeof settingsControllerPut>>, TError = SettingsControllerPut4xx>(
- key: SettingsCatalog,
-    valueRequest: ValueRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsControllerPut>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof settingsControllerPut>>,
-          TError,
-          Awaited<ReturnType<typeof settingsControllerPut>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSettingsControllerPut<TData = Awaited<ReturnType<typeof settingsControllerPut>>, TError = SettingsControllerPut4xx>(
- key: SettingsCatalog,
-    valueRequest: ValueRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsControllerPut>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof settingsControllerPut>>,
-          TError,
-          Awaited<ReturnType<typeof settingsControllerPut>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSettingsControllerPut<TData = Awaited<ReturnType<typeof settingsControllerPut>>, TError = SettingsControllerPut4xx>(
- key: SettingsCatalog,
-    valueRequest: ValueRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsControllerPut>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSettingsControllerPut<TData = Awaited<ReturnType<typeof settingsControllerPut>>, TError = SettingsControllerPut4xx>(
- key: SettingsCatalog,
-    valueRequest: ValueRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof settingsControllerPut>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSettingsControllerPutQueryOptions(key,valueRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-

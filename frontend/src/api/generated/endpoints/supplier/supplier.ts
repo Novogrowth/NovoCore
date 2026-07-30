@@ -8,16 +8,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -169,78 +173,48 @@ export const supplierControllerCreate = (
 
 
 
-export const getSupplierControllerCreateQueryKey = (newSupplier?: NewSupplier,) => {
-    return [
-    'POST', `/api/suppliers`, newSupplier
-    ] as const;
+export const getSupplierControllerCreateMutationOptions = <TError = SupplierControllerCreate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerCreate>>, TError,{data: NewSupplier}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof supplierControllerCreate>>, TError,{data: NewSupplier}, TContext> => {
+
+const mutationKey = ['supplierControllerCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof supplierControllerCreate>>, {data: NewSupplier}> = (props) => {
+          const {data} = props ?? {};
+
+          return  supplierControllerCreate(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SupplierControllerCreateMutationResult = NonNullable<Awaited<ReturnType<typeof supplierControllerCreate>>>
+    export type SupplierControllerCreateMutationBody = NewSupplier
+    export type SupplierControllerCreateMutationError = SupplierControllerCreate4xx
+
+    export const useSupplierControllerCreate = <TError = SupplierControllerCreate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerCreate>>, TError,{data: NewSupplier}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof supplierControllerCreate>>,
+        TError,
+        {data: NewSupplier},
+        TContext
+      > => {
+      return useMutation(getSupplierControllerCreateMutationOptions(options), queryClient);
     }
-
-
-export const getSupplierControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof supplierControllerCreate>>, TError = SupplierControllerCreate4xx>(newSupplier: NewSupplier, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerCreate>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSupplierControllerCreateQueryKey(newSupplier);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof supplierControllerCreate>>> = ({ signal }) => supplierControllerCreate(newSupplier, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof supplierControllerCreate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SupplierControllerCreateQueryResult = NonNullable<Awaited<ReturnType<typeof supplierControllerCreate>>>
-export type SupplierControllerCreateQueryError = SupplierControllerCreate4xx
-
-
-export function useSupplierControllerCreate<TData = Awaited<ReturnType<typeof supplierControllerCreate>>, TError = SupplierControllerCreate4xx>(
- newSupplier: NewSupplier, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerCreate>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof supplierControllerCreate>>,
-          TError,
-          Awaited<ReturnType<typeof supplierControllerCreate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSupplierControllerCreate<TData = Awaited<ReturnType<typeof supplierControllerCreate>>, TError = SupplierControllerCreate4xx>(
- newSupplier: NewSupplier, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerCreate>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof supplierControllerCreate>>,
-          TError,
-          Awaited<ReturnType<typeof supplierControllerCreate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSupplierControllerCreate<TData = Awaited<ReturnType<typeof supplierControllerCreate>>, TError = SupplierControllerCreate4xx>(
- newSupplier: NewSupplier, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerCreate>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSupplierControllerCreate<TData = Awaited<ReturnType<typeof supplierControllerCreate>>, TError = SupplierControllerCreate4xx>(
- newSupplier: NewSupplier, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerCreate>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSupplierControllerCreateQueryOptions(newSupplier,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const supplierControllerByVatNumber = (
+    export const supplierControllerByVatNumber = (
     vatNumber: string,
  signal?: AbortSignal
 ) => {
@@ -517,84 +491,48 @@ export const supplierControllerChangeContactDetails = (
 
 
 
-export const getSupplierControllerChangeContactDetailsQueryKey = (id: number,
-    contactDetailsRequest?: ContactDetailsRequest,) => {
-    return [
-    'PATCH', `/api/suppliers/${id}/contact-details`, contactDetailsRequest
-    ] as const;
+export const getSupplierControllerChangeContactDetailsMutationOptions = <TError = SupplierControllerChangeContactDetails4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError,{id: number;data: ContactDetailsRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError,{id: number;data: ContactDetailsRequest}, TContext> => {
+
+const mutationKey = ['supplierControllerChangeContactDetails'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, {id: number;data: ContactDetailsRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  supplierControllerChangeContactDetails(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SupplierControllerChangeContactDetailsMutationResult = NonNullable<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>>
+    export type SupplierControllerChangeContactDetailsMutationBody = ContactDetailsRequest
+    export type SupplierControllerChangeContactDetailsMutationError = SupplierControllerChangeContactDetails4xx
+
+    export const useSupplierControllerChangeContactDetails = <TError = SupplierControllerChangeContactDetails4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError,{id: number;data: ContactDetailsRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>,
+        TError,
+        {id: number;data: ContactDetailsRequest},
+        TContext
+      > => {
+      return useMutation(getSupplierControllerChangeContactDetailsMutationOptions(options), queryClient);
     }
-
-
-export const getSupplierControllerChangeContactDetailsQueryOptions = <TData = Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError = SupplierControllerChangeContactDetails4xx>(id: number,
-    contactDetailsRequest: ContactDetailsRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSupplierControllerChangeContactDetailsQueryKey(id,contactDetailsRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>> = ({ signal }) => supplierControllerChangeContactDetails(id,contactDetailsRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SupplierControllerChangeContactDetailsQueryResult = NonNullable<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>>
-export type SupplierControllerChangeContactDetailsQueryError = SupplierControllerChangeContactDetails4xx
-
-
-export function useSupplierControllerChangeContactDetails<TData = Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError = SupplierControllerChangeContactDetails4xx>(
- id: number,
-    contactDetailsRequest: ContactDetailsRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>,
-          TError,
-          Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSupplierControllerChangeContactDetails<TData = Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError = SupplierControllerChangeContactDetails4xx>(
- id: number,
-    contactDetailsRequest: ContactDetailsRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>,
-          TError,
-          Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSupplierControllerChangeContactDetails<TData = Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError = SupplierControllerChangeContactDetails4xx>(
- id: number,
-    contactDetailsRequest: ContactDetailsRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSupplierControllerChangeContactDetails<TData = Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError = SupplierControllerChangeContactDetails4xx>(
- id: number,
-    contactDetailsRequest: ContactDetailsRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSupplierControllerChangeContactDetailsQueryOptions(id,contactDetailsRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const supplierControllerDeactivate = (
+    export const supplierControllerDeactivate = (
     id: number,
  signal?: AbortSignal
 ) => {
@@ -609,78 +547,48 @@ export const supplierControllerDeactivate = (
 
 
 
-export const getSupplierControllerDeactivateQueryKey = (id: number,) => {
-    return [
-    'POST', `/api/suppliers/${id}/deactivate`
-    ] as const;
+export const getSupplierControllerDeactivateMutationOptions = <TError = SupplierControllerDeactivate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerDeactivate>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof supplierControllerDeactivate>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['supplierControllerDeactivate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof supplierControllerDeactivate>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  supplierControllerDeactivate(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SupplierControllerDeactivateMutationResult = NonNullable<Awaited<ReturnType<typeof supplierControllerDeactivate>>>
+
+    export type SupplierControllerDeactivateMutationError = SupplierControllerDeactivate4xx
+
+    export const useSupplierControllerDeactivate = <TError = SupplierControllerDeactivate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerDeactivate>>, TError,{id: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof supplierControllerDeactivate>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getSupplierControllerDeactivateMutationOptions(options), queryClient);
     }
-
-
-export const getSupplierControllerDeactivateQueryOptions = <TData = Awaited<ReturnType<typeof supplierControllerDeactivate>>, TError = SupplierControllerDeactivate4xx>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerDeactivate>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSupplierControllerDeactivateQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof supplierControllerDeactivate>>> = ({ signal }) => supplierControllerDeactivate(id, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof supplierControllerDeactivate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SupplierControllerDeactivateQueryResult = NonNullable<Awaited<ReturnType<typeof supplierControllerDeactivate>>>
-export type SupplierControllerDeactivateQueryError = SupplierControllerDeactivate4xx
-
-
-export function useSupplierControllerDeactivate<TData = Awaited<ReturnType<typeof supplierControllerDeactivate>>, TError = SupplierControllerDeactivate4xx>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerDeactivate>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof supplierControllerDeactivate>>,
-          TError,
-          Awaited<ReturnType<typeof supplierControllerDeactivate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSupplierControllerDeactivate<TData = Awaited<ReturnType<typeof supplierControllerDeactivate>>, TError = SupplierControllerDeactivate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerDeactivate>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof supplierControllerDeactivate>>,
-          TError,
-          Awaited<ReturnType<typeof supplierControllerDeactivate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSupplierControllerDeactivate<TData = Awaited<ReturnType<typeof supplierControllerDeactivate>>, TError = SupplierControllerDeactivate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerDeactivate>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSupplierControllerDeactivate<TData = Awaited<ReturnType<typeof supplierControllerDeactivate>>, TError = SupplierControllerDeactivate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerDeactivate>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSupplierControllerDeactivateQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const supplierControllerRename = (
+    export const supplierControllerRename = (
     id: number,
     nameRequest: NameRequest,
  signal?: AbortSignal
@@ -698,84 +606,48 @@ export const supplierControllerRename = (
 
 
 
-export const getSupplierControllerRenameQueryKey = (id: number,
-    nameRequest?: NameRequest,) => {
-    return [
-    'PATCH', `/api/suppliers/${id}/name`, nameRequest
-    ] as const;
+export const getSupplierControllerRenameMutationOptions = <TError = SupplierControllerRename4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof supplierControllerRename>>, TError,{id: number;data: NameRequest}, TContext> => {
+
+const mutationKey = ['supplierControllerRename'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof supplierControllerRename>>, {id: number;data: NameRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  supplierControllerRename(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SupplierControllerRenameMutationResult = NonNullable<Awaited<ReturnType<typeof supplierControllerRename>>>
+    export type SupplierControllerRenameMutationBody = NameRequest
+    export type SupplierControllerRenameMutationError = SupplierControllerRename4xx
+
+    export const useSupplierControllerRename = <TError = SupplierControllerRename4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof supplierControllerRename>>,
+        TError,
+        {id: number;data: NameRequest},
+        TContext
+      > => {
+      return useMutation(getSupplierControllerRenameMutationOptions(options), queryClient);
     }
-
-
-export const getSupplierControllerRenameQueryOptions = <TData = Awaited<ReturnType<typeof supplierControllerRename>>, TError = SupplierControllerRename4xx>(id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerRename>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSupplierControllerRenameQueryKey(id,nameRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof supplierControllerRename>>> = ({ signal }) => supplierControllerRename(id,nameRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof supplierControllerRename>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SupplierControllerRenameQueryResult = NonNullable<Awaited<ReturnType<typeof supplierControllerRename>>>
-export type SupplierControllerRenameQueryError = SupplierControllerRename4xx
-
-
-export function useSupplierControllerRename<TData = Awaited<ReturnType<typeof supplierControllerRename>>, TError = SupplierControllerRename4xx>(
- id: number,
-    nameRequest: NameRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerRename>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof supplierControllerRename>>,
-          TError,
-          Awaited<ReturnType<typeof supplierControllerRename>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSupplierControllerRename<TData = Awaited<ReturnType<typeof supplierControllerRename>>, TError = SupplierControllerRename4xx>(
- id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerRename>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof supplierControllerRename>>,
-          TError,
-          Awaited<ReturnType<typeof supplierControllerRename>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSupplierControllerRename<TData = Awaited<ReturnType<typeof supplierControllerRename>>, TError = SupplierControllerRename4xx>(
- id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerRename>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSupplierControllerRename<TData = Awaited<ReturnType<typeof supplierControllerRename>>, TError = SupplierControllerRename4xx>(
- id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerRename>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSupplierControllerRenameQueryOptions(id,nameRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const supplierControllerReactivate = (
+    export const supplierControllerReactivate = (
     id: number,
  signal?: AbortSignal
 ) => {
@@ -790,78 +662,48 @@ export const supplierControllerReactivate = (
 
 
 
-export const getSupplierControllerReactivateQueryKey = (id: number,) => {
-    return [
-    'POST', `/api/suppliers/${id}/reactivate`
-    ] as const;
+export const getSupplierControllerReactivateMutationOptions = <TError = SupplierControllerReactivate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerReactivate>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof supplierControllerReactivate>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['supplierControllerReactivate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof supplierControllerReactivate>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  supplierControllerReactivate(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SupplierControllerReactivateMutationResult = NonNullable<Awaited<ReturnType<typeof supplierControllerReactivate>>>
+
+    export type SupplierControllerReactivateMutationError = SupplierControllerReactivate4xx
+
+    export const useSupplierControllerReactivate = <TError = SupplierControllerReactivate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerReactivate>>, TError,{id: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof supplierControllerReactivate>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getSupplierControllerReactivateMutationOptions(options), queryClient);
     }
-
-
-export const getSupplierControllerReactivateQueryOptions = <TData = Awaited<ReturnType<typeof supplierControllerReactivate>>, TError = SupplierControllerReactivate4xx>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerReactivate>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSupplierControllerReactivateQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof supplierControllerReactivate>>> = ({ signal }) => supplierControllerReactivate(id, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof supplierControllerReactivate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SupplierControllerReactivateQueryResult = NonNullable<Awaited<ReturnType<typeof supplierControllerReactivate>>>
-export type SupplierControllerReactivateQueryError = SupplierControllerReactivate4xx
-
-
-export function useSupplierControllerReactivate<TData = Awaited<ReturnType<typeof supplierControllerReactivate>>, TError = SupplierControllerReactivate4xx>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerReactivate>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof supplierControllerReactivate>>,
-          TError,
-          Awaited<ReturnType<typeof supplierControllerReactivate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSupplierControllerReactivate<TData = Awaited<ReturnType<typeof supplierControllerReactivate>>, TError = SupplierControllerReactivate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerReactivate>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof supplierControllerReactivate>>,
-          TError,
-          Awaited<ReturnType<typeof supplierControllerReactivate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSupplierControllerReactivate<TData = Awaited<ReturnType<typeof supplierControllerReactivate>>, TError = SupplierControllerReactivate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerReactivate>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSupplierControllerReactivate<TData = Awaited<ReturnType<typeof supplierControllerReactivate>>, TError = SupplierControllerReactivate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerReactivate>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSupplierControllerReactivateQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const supplierControllerChangeVatNumber = (
+    export const supplierControllerChangeVatNumber = (
     id: number,
     vatNumberRequest: VatNumberRequest,
  signal?: AbortSignal
@@ -879,84 +721,48 @@ export const supplierControllerChangeVatNumber = (
 
 
 
-export const getSupplierControllerChangeVatNumberQueryKey = (id: number,
-    vatNumberRequest?: VatNumberRequest,) => {
-    return [
-    'PATCH', `/api/suppliers/${id}/vat-number`, vatNumberRequest
-    ] as const;
+export const getSupplierControllerChangeVatNumberMutationOptions = <TError = SupplierControllerChangeVatNumber4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError,{id: number;data: VatNumberRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError,{id: number;data: VatNumberRequest}, TContext> => {
+
+const mutationKey = ['supplierControllerChangeVatNumber'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, {id: number;data: VatNumberRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  supplierControllerChangeVatNumber(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SupplierControllerChangeVatNumberMutationResult = NonNullable<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>>
+    export type SupplierControllerChangeVatNumberMutationBody = VatNumberRequest
+    export type SupplierControllerChangeVatNumberMutationError = SupplierControllerChangeVatNumber4xx
+
+    export const useSupplierControllerChangeVatNumber = <TError = SupplierControllerChangeVatNumber4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError,{id: number;data: VatNumberRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>,
+        TError,
+        {id: number;data: VatNumberRequest},
+        TContext
+      > => {
+      return useMutation(getSupplierControllerChangeVatNumberMutationOptions(options), queryClient);
     }
-
-
-export const getSupplierControllerChangeVatNumberQueryOptions = <TData = Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError = SupplierControllerChangeVatNumber4xx>(id: number,
-    vatNumberRequest: VatNumberRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSupplierControllerChangeVatNumberQueryKey(id,vatNumberRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>> = ({ signal }) => supplierControllerChangeVatNumber(id,vatNumberRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SupplierControllerChangeVatNumberQueryResult = NonNullable<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>>
-export type SupplierControllerChangeVatNumberQueryError = SupplierControllerChangeVatNumber4xx
-
-
-export function useSupplierControllerChangeVatNumber<TData = Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError = SupplierControllerChangeVatNumber4xx>(
- id: number,
-    vatNumberRequest: VatNumberRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>,
-          TError,
-          Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSupplierControllerChangeVatNumber<TData = Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError = SupplierControllerChangeVatNumber4xx>(
- id: number,
-    vatNumberRequest: VatNumberRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>,
-          TError,
-          Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSupplierControllerChangeVatNumber<TData = Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError = SupplierControllerChangeVatNumber4xx>(
- id: number,
-    vatNumberRequest: VatNumberRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSupplierControllerChangeVatNumber<TData = Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError = SupplierControllerChangeVatNumber4xx>(
- id: number,
-    vatNumberRequest: VatNumberRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSupplierControllerChangeVatNumberQueryOptions(id,vatNumberRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const supplierControllerChangeVatStatus = (
+    export const supplierControllerChangeVatStatus = (
     id: number,
     vatStatusRequest: VatStatusRequest,
  signal?: AbortSignal
@@ -974,80 +780,44 @@ export const supplierControllerChangeVatStatus = (
 
 
 
-export const getSupplierControllerChangeVatStatusQueryKey = (id: number,
-    vatStatusRequest?: VatStatusRequest,) => {
-    return [
-    'PATCH', `/api/suppliers/${id}/vat-status`, vatStatusRequest
-    ] as const;
+export const getSupplierControllerChangeVatStatusMutationOptions = <TError = SupplierControllerChangeVatStatus4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError,{id: number;data: VatStatusRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError,{id: number;data: VatStatusRequest}, TContext> => {
+
+const mutationKey = ['supplierControllerChangeVatStatus'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, {id: number;data: VatStatusRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  supplierControllerChangeVatStatus(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SupplierControllerChangeVatStatusMutationResult = NonNullable<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>>
+    export type SupplierControllerChangeVatStatusMutationBody = VatStatusRequest
+    export type SupplierControllerChangeVatStatusMutationError = SupplierControllerChangeVatStatus4xx
+
+    export const useSupplierControllerChangeVatStatus = <TError = SupplierControllerChangeVatStatus4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError,{id: number;data: VatStatusRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>,
+        TError,
+        {id: number;data: VatStatusRequest},
+        TContext
+      > => {
+      return useMutation(getSupplierControllerChangeVatStatusMutationOptions(options), queryClient);
     }
-
-
-export const getSupplierControllerChangeVatStatusQueryOptions = <TData = Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError = SupplierControllerChangeVatStatus4xx>(id: number,
-    vatStatusRequest: VatStatusRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSupplierControllerChangeVatStatusQueryKey(id,vatStatusRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>> = ({ signal }) => supplierControllerChangeVatStatus(id,vatStatusRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SupplierControllerChangeVatStatusQueryResult = NonNullable<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>>
-export type SupplierControllerChangeVatStatusQueryError = SupplierControllerChangeVatStatus4xx
-
-
-export function useSupplierControllerChangeVatStatus<TData = Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError = SupplierControllerChangeVatStatus4xx>(
- id: number,
-    vatStatusRequest: VatStatusRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>,
-          TError,
-          Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSupplierControllerChangeVatStatus<TData = Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError = SupplierControllerChangeVatStatus4xx>(
- id: number,
-    vatStatusRequest: VatStatusRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>,
-          TError,
-          Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSupplierControllerChangeVatStatus<TData = Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError = SupplierControllerChangeVatStatus4xx>(
- id: number,
-    vatStatusRequest: VatStatusRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useSupplierControllerChangeVatStatus<TData = Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError = SupplierControllerChangeVatStatus4xx>(
- id: number,
-    vatStatusRequest: VatStatusRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getSupplierControllerChangeVatStatusQueryOptions(id,vatStatusRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-

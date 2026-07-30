@@ -8,16 +8,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -247,78 +251,48 @@ export const goodsReceiptControllerRecord = (
 
 
 
-export const getGoodsReceiptControllerRecordQueryKey = (newGoodsReceipt?: NewGoodsReceipt,) => {
-    return [
-    'POST', `/api/goods-receipts`, newGoodsReceipt
-    ] as const;
+export const getGoodsReceiptControllerRecordMutationOptions = <TError = GoodsReceiptControllerRecord4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof goodsReceiptControllerRecord>>, TError,{data: NewGoodsReceipt}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof goodsReceiptControllerRecord>>, TError,{data: NewGoodsReceipt}, TContext> => {
+
+const mutationKey = ['goodsReceiptControllerRecord'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof goodsReceiptControllerRecord>>, {data: NewGoodsReceipt}> = (props) => {
+          const {data} = props ?? {};
+
+          return  goodsReceiptControllerRecord(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GoodsReceiptControllerRecordMutationResult = NonNullable<Awaited<ReturnType<typeof goodsReceiptControllerRecord>>>
+    export type GoodsReceiptControllerRecordMutationBody = NewGoodsReceipt
+    export type GoodsReceiptControllerRecordMutationError = GoodsReceiptControllerRecord4xx
+
+    export const useGoodsReceiptControllerRecord = <TError = GoodsReceiptControllerRecord4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof goodsReceiptControllerRecord>>, TError,{data: NewGoodsReceipt}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof goodsReceiptControllerRecord>>,
+        TError,
+        {data: NewGoodsReceipt},
+        TContext
+      > => {
+      return useMutation(getGoodsReceiptControllerRecordMutationOptions(options), queryClient);
     }
-
-
-export const getGoodsReceiptControllerRecordQueryOptions = <TData = Awaited<ReturnType<typeof goodsReceiptControllerRecord>>, TError = GoodsReceiptControllerRecord4xx>(newGoodsReceipt: NewGoodsReceipt, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof goodsReceiptControllerRecord>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGoodsReceiptControllerRecordQueryKey(newGoodsReceipt);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof goodsReceiptControllerRecord>>> = ({ signal }) => goodsReceiptControllerRecord(newGoodsReceipt, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof goodsReceiptControllerRecord>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GoodsReceiptControllerRecordQueryResult = NonNullable<Awaited<ReturnType<typeof goodsReceiptControllerRecord>>>
-export type GoodsReceiptControllerRecordQueryError = GoodsReceiptControllerRecord4xx
-
-
-export function useGoodsReceiptControllerRecord<TData = Awaited<ReturnType<typeof goodsReceiptControllerRecord>>, TError = GoodsReceiptControllerRecord4xx>(
- newGoodsReceipt: NewGoodsReceipt, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof goodsReceiptControllerRecord>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof goodsReceiptControllerRecord>>,
-          TError,
-          Awaited<ReturnType<typeof goodsReceiptControllerRecord>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGoodsReceiptControllerRecord<TData = Awaited<ReturnType<typeof goodsReceiptControllerRecord>>, TError = GoodsReceiptControllerRecord4xx>(
- newGoodsReceipt: NewGoodsReceipt, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof goodsReceiptControllerRecord>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof goodsReceiptControllerRecord>>,
-          TError,
-          Awaited<ReturnType<typeof goodsReceiptControllerRecord>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGoodsReceiptControllerRecord<TData = Awaited<ReturnType<typeof goodsReceiptControllerRecord>>, TError = GoodsReceiptControllerRecord4xx>(
- newGoodsReceipt: NewGoodsReceipt, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof goodsReceiptControllerRecord>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useGoodsReceiptControllerRecord<TData = Awaited<ReturnType<typeof goodsReceiptControllerRecord>>, TError = GoodsReceiptControllerRecord4xx>(
- newGoodsReceipt: NewGoodsReceipt, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof goodsReceiptControllerRecord>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getGoodsReceiptControllerRecordQueryOptions(newGoodsReceipt,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const goodsReceiptControllerByLot = (
+    export const goodsReceiptControllerByLot = (
     lotId: number,
  signal?: AbortSignal
 ) => {
@@ -508,80 +482,44 @@ export const goodsReceiptControllerReverse = (
 
 
 
-export const getGoodsReceiptControllerReverseQueryKey = (id: number,
-    reversalCommand?: ReversalCommand,) => {
-    return [
-    'POST', `/api/goods-receipts/${id}/reversal`, reversalCommand
-    ] as const;
+export const getGoodsReceiptControllerReverseMutationOptions = <TError = GoodsReceiptControllerReverse4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof goodsReceiptControllerReverse>>, TError,{id: number;data: ReversalCommand}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof goodsReceiptControllerReverse>>, TError,{id: number;data: ReversalCommand}, TContext> => {
+
+const mutationKey = ['goodsReceiptControllerReverse'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof goodsReceiptControllerReverse>>, {id: number;data: ReversalCommand}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  goodsReceiptControllerReverse(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GoodsReceiptControllerReverseMutationResult = NonNullable<Awaited<ReturnType<typeof goodsReceiptControllerReverse>>>
+    export type GoodsReceiptControllerReverseMutationBody = ReversalCommand
+    export type GoodsReceiptControllerReverseMutationError = GoodsReceiptControllerReverse4xx
+
+    export const useGoodsReceiptControllerReverse = <TError = GoodsReceiptControllerReverse4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof goodsReceiptControllerReverse>>, TError,{id: number;data: ReversalCommand}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof goodsReceiptControllerReverse>>,
+        TError,
+        {id: number;data: ReversalCommand},
+        TContext
+      > => {
+      return useMutation(getGoodsReceiptControllerReverseMutationOptions(options), queryClient);
     }
-
-
-export const getGoodsReceiptControllerReverseQueryOptions = <TData = Awaited<ReturnType<typeof goodsReceiptControllerReverse>>, TError = GoodsReceiptControllerReverse4xx>(id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof goodsReceiptControllerReverse>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGoodsReceiptControllerReverseQueryKey(id,reversalCommand);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof goodsReceiptControllerReverse>>> = ({ signal }) => goodsReceiptControllerReverse(id,reversalCommand, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof goodsReceiptControllerReverse>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GoodsReceiptControllerReverseQueryResult = NonNullable<Awaited<ReturnType<typeof goodsReceiptControllerReverse>>>
-export type GoodsReceiptControllerReverseQueryError = GoodsReceiptControllerReverse4xx
-
-
-export function useGoodsReceiptControllerReverse<TData = Awaited<ReturnType<typeof goodsReceiptControllerReverse>>, TError = GoodsReceiptControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof goodsReceiptControllerReverse>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof goodsReceiptControllerReverse>>,
-          TError,
-          Awaited<ReturnType<typeof goodsReceiptControllerReverse>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGoodsReceiptControllerReverse<TData = Awaited<ReturnType<typeof goodsReceiptControllerReverse>>, TError = GoodsReceiptControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof goodsReceiptControllerReverse>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof goodsReceiptControllerReverse>>,
-          TError,
-          Awaited<ReturnType<typeof goodsReceiptControllerReverse>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGoodsReceiptControllerReverse<TData = Awaited<ReturnType<typeof goodsReceiptControllerReverse>>, TError = GoodsReceiptControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof goodsReceiptControllerReverse>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useGoodsReceiptControllerReverse<TData = Awaited<ReturnType<typeof goodsReceiptControllerReverse>>, TError = GoodsReceiptControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof goodsReceiptControllerReverse>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getGoodsReceiptControllerReverseQueryOptions(id,reversalCommand,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-

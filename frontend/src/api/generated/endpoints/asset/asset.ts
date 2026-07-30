@@ -8,16 +8,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -168,78 +172,48 @@ export const assetControllerCreate = (
 
 
 
-export const getAssetControllerCreateQueryKey = (newAsset?: NewAsset,) => {
-    return [
-    'POST', `/api/assets`, newAsset
-    ] as const;
+export const getAssetControllerCreateMutationOptions = <TError = AssetControllerCreate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assetControllerCreate>>, TError,{data: NewAsset}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof assetControllerCreate>>, TError,{data: NewAsset}, TContext> => {
+
+const mutationKey = ['assetControllerCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assetControllerCreate>>, {data: NewAsset}> = (props) => {
+          const {data} = props ?? {};
+
+          return  assetControllerCreate(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssetControllerCreateMutationResult = NonNullable<Awaited<ReturnType<typeof assetControllerCreate>>>
+    export type AssetControllerCreateMutationBody = NewAsset
+    export type AssetControllerCreateMutationError = AssetControllerCreate4xx
+
+    export const useAssetControllerCreate = <TError = AssetControllerCreate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assetControllerCreate>>, TError,{data: NewAsset}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof assetControllerCreate>>,
+        TError,
+        {data: NewAsset},
+        TContext
+      > => {
+      return useMutation(getAssetControllerCreateMutationOptions(options), queryClient);
     }
-
-
-export const getAssetControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof assetControllerCreate>>, TError = AssetControllerCreate4xx>(newAsset: NewAsset, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerCreate>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getAssetControllerCreateQueryKey(newAsset);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof assetControllerCreate>>> = ({ signal }) => assetControllerCreate(newAsset, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof assetControllerCreate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type AssetControllerCreateQueryResult = NonNullable<Awaited<ReturnType<typeof assetControllerCreate>>>
-export type AssetControllerCreateQueryError = AssetControllerCreate4xx
-
-
-export function useAssetControllerCreate<TData = Awaited<ReturnType<typeof assetControllerCreate>>, TError = AssetControllerCreate4xx>(
- newAsset: NewAsset, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerCreate>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof assetControllerCreate>>,
-          TError,
-          Awaited<ReturnType<typeof assetControllerCreate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAssetControllerCreate<TData = Awaited<ReturnType<typeof assetControllerCreate>>, TError = AssetControllerCreate4xx>(
- newAsset: NewAsset, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerCreate>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof assetControllerCreate>>,
-          TError,
-          Awaited<ReturnType<typeof assetControllerCreate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAssetControllerCreate<TData = Awaited<ReturnType<typeof assetControllerCreate>>, TError = AssetControllerCreate4xx>(
- newAsset: NewAsset, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerCreate>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useAssetControllerCreate<TData = Awaited<ReturnType<typeof assetControllerCreate>>, TError = AssetControllerCreate4xx>(
- newAsset: NewAsset, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerCreate>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getAssetControllerCreateQueryOptions(newAsset,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const assetControllerByCode = (
+    export const assetControllerByCode = (
     code: string,
  signal?: AbortSignal
 ) => {
@@ -601,84 +575,48 @@ export const assetControllerChangeDepreciationRate = (
 
 
 
-export const getAssetControllerChangeDepreciationRateQueryKey = (id: number,
-    depreciationRateRequest?: DepreciationRateRequest,) => {
-    return [
-    'PATCH', `/api/assets/${id}/depreciation-rate`, depreciationRateRequest
-    ] as const;
+export const getAssetControllerChangeDepreciationRateMutationOptions = <TError = AssetControllerChangeDepreciationRate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>, TError,{id: number;data: DepreciationRateRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>, TError,{id: number;data: DepreciationRateRequest}, TContext> => {
+
+const mutationKey = ['assetControllerChangeDepreciationRate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>, {id: number;data: DepreciationRateRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  assetControllerChangeDepreciationRate(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssetControllerChangeDepreciationRateMutationResult = NonNullable<Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>>
+    export type AssetControllerChangeDepreciationRateMutationBody = DepreciationRateRequest
+    export type AssetControllerChangeDepreciationRateMutationError = AssetControllerChangeDepreciationRate4xx
+
+    export const useAssetControllerChangeDepreciationRate = <TError = AssetControllerChangeDepreciationRate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>, TError,{id: number;data: DepreciationRateRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>,
+        TError,
+        {id: number;data: DepreciationRateRequest},
+        TContext
+      > => {
+      return useMutation(getAssetControllerChangeDepreciationRateMutationOptions(options), queryClient);
     }
-
-
-export const getAssetControllerChangeDepreciationRateQueryOptions = <TData = Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>, TError = AssetControllerChangeDepreciationRate4xx>(id: number,
-    depreciationRateRequest: DepreciationRateRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getAssetControllerChangeDepreciationRateQueryKey(id,depreciationRateRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>> = ({ signal }) => assetControllerChangeDepreciationRate(id,depreciationRateRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type AssetControllerChangeDepreciationRateQueryResult = NonNullable<Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>>
-export type AssetControllerChangeDepreciationRateQueryError = AssetControllerChangeDepreciationRate4xx
-
-
-export function useAssetControllerChangeDepreciationRate<TData = Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>, TError = AssetControllerChangeDepreciationRate4xx>(
- id: number,
-    depreciationRateRequest: DepreciationRateRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>,
-          TError,
-          Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAssetControllerChangeDepreciationRate<TData = Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>, TError = AssetControllerChangeDepreciationRate4xx>(
- id: number,
-    depreciationRateRequest: DepreciationRateRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>,
-          TError,
-          Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAssetControllerChangeDepreciationRate<TData = Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>, TError = AssetControllerChangeDepreciationRate4xx>(
- id: number,
-    depreciationRateRequest: DepreciationRateRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useAssetControllerChangeDepreciationRate<TData = Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>, TError = AssetControllerChangeDepreciationRate4xx>(
- id: number,
-    depreciationRateRequest: DepreciationRateRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerChangeDepreciationRate>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getAssetControllerChangeDepreciationRateQueryOptions(id,depreciationRateRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const assetControllerChangeDepreciationStartDate = (
+    export const assetControllerChangeDepreciationStartDate = (
     id: number,
     depreciationStartDateRequest: DepreciationStartDateRequest,
  signal?: AbortSignal
@@ -696,84 +634,48 @@ export const assetControllerChangeDepreciationStartDate = (
 
 
 
-export const getAssetControllerChangeDepreciationStartDateQueryKey = (id: number,
-    depreciationStartDateRequest?: DepreciationStartDateRequest,) => {
-    return [
-    'PATCH', `/api/assets/${id}/depreciation-start-date`, depreciationStartDateRequest
-    ] as const;
+export const getAssetControllerChangeDepreciationStartDateMutationOptions = <TError = AssetControllerChangeDepreciationStartDate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>, TError,{id: number;data: DepreciationStartDateRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>, TError,{id: number;data: DepreciationStartDateRequest}, TContext> => {
+
+const mutationKey = ['assetControllerChangeDepreciationStartDate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>, {id: number;data: DepreciationStartDateRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  assetControllerChangeDepreciationStartDate(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssetControllerChangeDepreciationStartDateMutationResult = NonNullable<Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>>
+    export type AssetControllerChangeDepreciationStartDateMutationBody = DepreciationStartDateRequest
+    export type AssetControllerChangeDepreciationStartDateMutationError = AssetControllerChangeDepreciationStartDate4xx
+
+    export const useAssetControllerChangeDepreciationStartDate = <TError = AssetControllerChangeDepreciationStartDate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>, TError,{id: number;data: DepreciationStartDateRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>,
+        TError,
+        {id: number;data: DepreciationStartDateRequest},
+        TContext
+      > => {
+      return useMutation(getAssetControllerChangeDepreciationStartDateMutationOptions(options), queryClient);
     }
-
-
-export const getAssetControllerChangeDepreciationStartDateQueryOptions = <TData = Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>, TError = AssetControllerChangeDepreciationStartDate4xx>(id: number,
-    depreciationStartDateRequest: DepreciationStartDateRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getAssetControllerChangeDepreciationStartDateQueryKey(id,depreciationStartDateRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>> = ({ signal }) => assetControllerChangeDepreciationStartDate(id,depreciationStartDateRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type AssetControllerChangeDepreciationStartDateQueryResult = NonNullable<Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>>
-export type AssetControllerChangeDepreciationStartDateQueryError = AssetControllerChangeDepreciationStartDate4xx
-
-
-export function useAssetControllerChangeDepreciationStartDate<TData = Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>, TError = AssetControllerChangeDepreciationStartDate4xx>(
- id: number,
-    depreciationStartDateRequest: DepreciationStartDateRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>,
-          TError,
-          Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAssetControllerChangeDepreciationStartDate<TData = Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>, TError = AssetControllerChangeDepreciationStartDate4xx>(
- id: number,
-    depreciationStartDateRequest: DepreciationStartDateRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>,
-          TError,
-          Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAssetControllerChangeDepreciationStartDate<TData = Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>, TError = AssetControllerChangeDepreciationStartDate4xx>(
- id: number,
-    depreciationStartDateRequest: DepreciationStartDateRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useAssetControllerChangeDepreciationStartDate<TData = Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>, TError = AssetControllerChangeDepreciationStartDate4xx>(
- id: number,
-    depreciationStartDateRequest: DepreciationStartDateRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerChangeDepreciationStartDate>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getAssetControllerChangeDepreciationStartDateQueryOptions(id,depreciationStartDateRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const assetControllerDispose = (
+    export const assetControllerDispose = (
     id: number,
     disposalRequest: DisposalRequest,
  signal?: AbortSignal
@@ -791,84 +693,48 @@ export const assetControllerDispose = (
 
 
 
-export const getAssetControllerDisposeQueryKey = (id: number,
-    disposalRequest?: DisposalRequest,) => {
-    return [
-    'POST', `/api/assets/${id}/disposal`, disposalRequest
-    ] as const;
+export const getAssetControllerDisposeMutationOptions = <TError = AssetControllerDispose4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assetControllerDispose>>, TError,{id: number;data: DisposalRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof assetControllerDispose>>, TError,{id: number;data: DisposalRequest}, TContext> => {
+
+const mutationKey = ['assetControllerDispose'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assetControllerDispose>>, {id: number;data: DisposalRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  assetControllerDispose(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssetControllerDisposeMutationResult = NonNullable<Awaited<ReturnType<typeof assetControllerDispose>>>
+    export type AssetControllerDisposeMutationBody = DisposalRequest
+    export type AssetControllerDisposeMutationError = AssetControllerDispose4xx
+
+    export const useAssetControllerDispose = <TError = AssetControllerDispose4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assetControllerDispose>>, TError,{id: number;data: DisposalRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof assetControllerDispose>>,
+        TError,
+        {id: number;data: DisposalRequest},
+        TContext
+      > => {
+      return useMutation(getAssetControllerDisposeMutationOptions(options), queryClient);
     }
-
-
-export const getAssetControllerDisposeQueryOptions = <TData = Awaited<ReturnType<typeof assetControllerDispose>>, TError = AssetControllerDispose4xx>(id: number,
-    disposalRequest: DisposalRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerDispose>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getAssetControllerDisposeQueryKey(id,disposalRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof assetControllerDispose>>> = ({ signal }) => assetControllerDispose(id,disposalRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof assetControllerDispose>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type AssetControllerDisposeQueryResult = NonNullable<Awaited<ReturnType<typeof assetControllerDispose>>>
-export type AssetControllerDisposeQueryError = AssetControllerDispose4xx
-
-
-export function useAssetControllerDispose<TData = Awaited<ReturnType<typeof assetControllerDispose>>, TError = AssetControllerDispose4xx>(
- id: number,
-    disposalRequest: DisposalRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerDispose>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof assetControllerDispose>>,
-          TError,
-          Awaited<ReturnType<typeof assetControllerDispose>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAssetControllerDispose<TData = Awaited<ReturnType<typeof assetControllerDispose>>, TError = AssetControllerDispose4xx>(
- id: number,
-    disposalRequest: DisposalRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerDispose>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof assetControllerDispose>>,
-          TError,
-          Awaited<ReturnType<typeof assetControllerDispose>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAssetControllerDispose<TData = Awaited<ReturnType<typeof assetControllerDispose>>, TError = AssetControllerDispose4xx>(
- id: number,
-    disposalRequest: DisposalRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerDispose>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useAssetControllerDispose<TData = Awaited<ReturnType<typeof assetControllerDispose>>, TError = AssetControllerDispose4xx>(
- id: number,
-    disposalRequest: DisposalRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerDispose>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getAssetControllerDisposeQueryOptions(id,disposalRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const assetControllerRename = (
+    export const assetControllerRename = (
     id: number,
     nameRequest: NameRequest,
  signal?: AbortSignal
@@ -886,84 +752,48 @@ export const assetControllerRename = (
 
 
 
-export const getAssetControllerRenameQueryKey = (id: number,
-    nameRequest?: NameRequest,) => {
-    return [
-    'PATCH', `/api/assets/${id}/name`, nameRequest
-    ] as const;
+export const getAssetControllerRenameMutationOptions = <TError = AssetControllerRename4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assetControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof assetControllerRename>>, TError,{id: number;data: NameRequest}, TContext> => {
+
+const mutationKey = ['assetControllerRename'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assetControllerRename>>, {id: number;data: NameRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  assetControllerRename(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssetControllerRenameMutationResult = NonNullable<Awaited<ReturnType<typeof assetControllerRename>>>
+    export type AssetControllerRenameMutationBody = NameRequest
+    export type AssetControllerRenameMutationError = AssetControllerRename4xx
+
+    export const useAssetControllerRename = <TError = AssetControllerRename4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assetControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof assetControllerRename>>,
+        TError,
+        {id: number;data: NameRequest},
+        TContext
+      > => {
+      return useMutation(getAssetControllerRenameMutationOptions(options), queryClient);
     }
-
-
-export const getAssetControllerRenameQueryOptions = <TData = Awaited<ReturnType<typeof assetControllerRename>>, TError = AssetControllerRename4xx>(id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerRename>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getAssetControllerRenameQueryKey(id,nameRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof assetControllerRename>>> = ({ signal }) => assetControllerRename(id,nameRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof assetControllerRename>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type AssetControllerRenameQueryResult = NonNullable<Awaited<ReturnType<typeof assetControllerRename>>>
-export type AssetControllerRenameQueryError = AssetControllerRename4xx
-
-
-export function useAssetControllerRename<TData = Awaited<ReturnType<typeof assetControllerRename>>, TError = AssetControllerRename4xx>(
- id: number,
-    nameRequest: NameRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerRename>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof assetControllerRename>>,
-          TError,
-          Awaited<ReturnType<typeof assetControllerRename>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAssetControllerRename<TData = Awaited<ReturnType<typeof assetControllerRename>>, TError = AssetControllerRename4xx>(
- id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerRename>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof assetControllerRename>>,
-          TError,
-          Awaited<ReturnType<typeof assetControllerRename>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAssetControllerRename<TData = Awaited<ReturnType<typeof assetControllerRename>>, TError = AssetControllerRename4xx>(
- id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerRename>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useAssetControllerRename<TData = Awaited<ReturnType<typeof assetControllerRename>>, TError = AssetControllerRename4xx>(
- id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerRename>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getAssetControllerRenameQueryOptions(id,nameRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const assetControllerReinstate = (
+    export const assetControllerReinstate = (
     id: number,
  signal?: AbortSignal
 ) => {
@@ -978,74 +808,44 @@ export const assetControllerReinstate = (
 
 
 
-export const getAssetControllerReinstateQueryKey = (id: number,) => {
-    return [
-    'POST', `/api/assets/${id}/reinstatement`
-    ] as const;
+export const getAssetControllerReinstateMutationOptions = <TError = AssetControllerReinstate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assetControllerReinstate>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof assetControllerReinstate>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['assetControllerReinstate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assetControllerReinstate>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  assetControllerReinstate(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssetControllerReinstateMutationResult = NonNullable<Awaited<ReturnType<typeof assetControllerReinstate>>>
+
+    export type AssetControllerReinstateMutationError = AssetControllerReinstate4xx
+
+    export const useAssetControllerReinstate = <TError = AssetControllerReinstate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assetControllerReinstate>>, TError,{id: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof assetControllerReinstate>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAssetControllerReinstateMutationOptions(options), queryClient);
     }
-
-
-export const getAssetControllerReinstateQueryOptions = <TData = Awaited<ReturnType<typeof assetControllerReinstate>>, TError = AssetControllerReinstate4xx>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerReinstate>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getAssetControllerReinstateQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof assetControllerReinstate>>> = ({ signal }) => assetControllerReinstate(id, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof assetControllerReinstate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type AssetControllerReinstateQueryResult = NonNullable<Awaited<ReturnType<typeof assetControllerReinstate>>>
-export type AssetControllerReinstateQueryError = AssetControllerReinstate4xx
-
-
-export function useAssetControllerReinstate<TData = Awaited<ReturnType<typeof assetControllerReinstate>>, TError = AssetControllerReinstate4xx>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerReinstate>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof assetControllerReinstate>>,
-          TError,
-          Awaited<ReturnType<typeof assetControllerReinstate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAssetControllerReinstate<TData = Awaited<ReturnType<typeof assetControllerReinstate>>, TError = AssetControllerReinstate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerReinstate>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof assetControllerReinstate>>,
-          TError,
-          Awaited<ReturnType<typeof assetControllerReinstate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAssetControllerReinstate<TData = Awaited<ReturnType<typeof assetControllerReinstate>>, TError = AssetControllerReinstate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerReinstate>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useAssetControllerReinstate<TData = Awaited<ReturnType<typeof assetControllerReinstate>>, TError = AssetControllerReinstate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assetControllerReinstate>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getAssetControllerReinstateQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-

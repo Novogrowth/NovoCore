@@ -8,16 +8,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -415,74 +419,44 @@ export const emailOutboxControllerRetry = (
 
 
 
-export const getEmailOutboxControllerRetryQueryKey = (id: number,) => {
-    return [
-    'POST', `/api/email/outbox/${id}/retry`
-    ] as const;
+export const getEmailOutboxControllerRetryMutationOptions = <TError = EmailOutboxControllerRetry4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof emailOutboxControllerRetry>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof emailOutboxControllerRetry>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['emailOutboxControllerRetry'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof emailOutboxControllerRetry>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  emailOutboxControllerRetry(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EmailOutboxControllerRetryMutationResult = NonNullable<Awaited<ReturnType<typeof emailOutboxControllerRetry>>>
+
+    export type EmailOutboxControllerRetryMutationError = EmailOutboxControllerRetry4xx
+
+    export const useEmailOutboxControllerRetry = <TError = EmailOutboxControllerRetry4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof emailOutboxControllerRetry>>, TError,{id: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof emailOutboxControllerRetry>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getEmailOutboxControllerRetryMutationOptions(options), queryClient);
     }
-
-
-export const getEmailOutboxControllerRetryQueryOptions = <TData = Awaited<ReturnType<typeof emailOutboxControllerRetry>>, TError = EmailOutboxControllerRetry4xx>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof emailOutboxControllerRetry>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getEmailOutboxControllerRetryQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof emailOutboxControllerRetry>>> = ({ signal }) => emailOutboxControllerRetry(id, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof emailOutboxControllerRetry>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type EmailOutboxControllerRetryQueryResult = NonNullable<Awaited<ReturnType<typeof emailOutboxControllerRetry>>>
-export type EmailOutboxControllerRetryQueryError = EmailOutboxControllerRetry4xx
-
-
-export function useEmailOutboxControllerRetry<TData = Awaited<ReturnType<typeof emailOutboxControllerRetry>>, TError = EmailOutboxControllerRetry4xx>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof emailOutboxControllerRetry>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof emailOutboxControllerRetry>>,
-          TError,
-          Awaited<ReturnType<typeof emailOutboxControllerRetry>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useEmailOutboxControllerRetry<TData = Awaited<ReturnType<typeof emailOutboxControllerRetry>>, TError = EmailOutboxControllerRetry4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof emailOutboxControllerRetry>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof emailOutboxControllerRetry>>,
-          TError,
-          Awaited<ReturnType<typeof emailOutboxControllerRetry>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useEmailOutboxControllerRetry<TData = Awaited<ReturnType<typeof emailOutboxControllerRetry>>, TError = EmailOutboxControllerRetry4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof emailOutboxControllerRetry>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useEmailOutboxControllerRetry<TData = Awaited<ReturnType<typeof emailOutboxControllerRetry>>, TError = EmailOutboxControllerRetry4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof emailOutboxControllerRetry>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getEmailOutboxControllerRetryQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-

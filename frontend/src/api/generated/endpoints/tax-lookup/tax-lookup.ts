@@ -8,16 +8,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -256,78 +260,48 @@ export const taxLookupControllerCreateVatClass = (
 
 
 
-export const getTaxLookupControllerCreateVatClassQueryKey = (newVatClass?: NewVatClass,) => {
-    return [
-    'POST', `/api/vat-classes`, newVatClass
-    ] as const;
+export const getTaxLookupControllerCreateVatClassMutationOptions = <TError = TaxLookupControllerCreateVatClass4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>, TError,{data: NewVatClass}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>, TError,{data: NewVatClass}, TContext> => {
+
+const mutationKey = ['taxLookupControllerCreateVatClass'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>, {data: NewVatClass}> = (props) => {
+          const {data} = props ?? {};
+
+          return  taxLookupControllerCreateVatClass(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TaxLookupControllerCreateVatClassMutationResult = NonNullable<Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>>
+    export type TaxLookupControllerCreateVatClassMutationBody = NewVatClass
+    export type TaxLookupControllerCreateVatClassMutationError = TaxLookupControllerCreateVatClass4xx
+
+    export const useTaxLookupControllerCreateVatClass = <TError = TaxLookupControllerCreateVatClass4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>, TError,{data: NewVatClass}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>,
+        TError,
+        {data: NewVatClass},
+        TContext
+      > => {
+      return useMutation(getTaxLookupControllerCreateVatClassMutationOptions(options), queryClient);
     }
-
-
-export const getTaxLookupControllerCreateVatClassQueryOptions = <TData = Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>, TError = TaxLookupControllerCreateVatClass4xx>(newVatClass: NewVatClass, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getTaxLookupControllerCreateVatClassQueryKey(newVatClass);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>> = ({ signal }) => taxLookupControllerCreateVatClass(newVatClass, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type TaxLookupControllerCreateVatClassQueryResult = NonNullable<Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>>
-export type TaxLookupControllerCreateVatClassQueryError = TaxLookupControllerCreateVatClass4xx
-
-
-export function useTaxLookupControllerCreateVatClass<TData = Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>, TError = TaxLookupControllerCreateVatClass4xx>(
- newVatClass: NewVatClass, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>,
-          TError,
-          Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useTaxLookupControllerCreateVatClass<TData = Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>, TError = TaxLookupControllerCreateVatClass4xx>(
- newVatClass: NewVatClass, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>,
-          TError,
-          Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useTaxLookupControllerCreateVatClass<TData = Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>, TError = TaxLookupControllerCreateVatClass4xx>(
- newVatClass: NewVatClass, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useTaxLookupControllerCreateVatClass<TData = Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>, TError = TaxLookupControllerCreateVatClass4xx>(
- newVatClass: NewVatClass, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerCreateVatClass>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getTaxLookupControllerCreateVatClassQueryOptions(newVatClass,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const taxLookupControllerVatClass = (
+    export const taxLookupControllerVatClass = (
     id: number,
  signal?: AbortSignal
 ) => {
@@ -428,78 +402,48 @@ export const taxLookupControllerDeactivateVatClass = (
 
 
 
-export const getTaxLookupControllerDeactivateVatClassQueryKey = (id: number,) => {
-    return [
-    'POST', `/api/vat-classes/${id}/deactivate`
-    ] as const;
+export const getTaxLookupControllerDeactivateVatClassMutationOptions = <TError = TaxLookupControllerDeactivateVatClass4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['taxLookupControllerDeactivateVatClass'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  taxLookupControllerDeactivateVatClass(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TaxLookupControllerDeactivateVatClassMutationResult = NonNullable<Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>>
+
+    export type TaxLookupControllerDeactivateVatClassMutationError = TaxLookupControllerDeactivateVatClass4xx
+
+    export const useTaxLookupControllerDeactivateVatClass = <TError = TaxLookupControllerDeactivateVatClass4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>, TError,{id: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getTaxLookupControllerDeactivateVatClassMutationOptions(options), queryClient);
     }
-
-
-export const getTaxLookupControllerDeactivateVatClassQueryOptions = <TData = Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>, TError = TaxLookupControllerDeactivateVatClass4xx>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getTaxLookupControllerDeactivateVatClassQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>> = ({ signal }) => taxLookupControllerDeactivateVatClass(id, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type TaxLookupControllerDeactivateVatClassQueryResult = NonNullable<Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>>
-export type TaxLookupControllerDeactivateVatClassQueryError = TaxLookupControllerDeactivateVatClass4xx
-
-
-export function useTaxLookupControllerDeactivateVatClass<TData = Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>, TError = TaxLookupControllerDeactivateVatClass4xx>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>,
-          TError,
-          Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useTaxLookupControllerDeactivateVatClass<TData = Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>, TError = TaxLookupControllerDeactivateVatClass4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>,
-          TError,
-          Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useTaxLookupControllerDeactivateVatClass<TData = Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>, TError = TaxLookupControllerDeactivateVatClass4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useTaxLookupControllerDeactivateVatClass<TData = Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>, TError = TaxLookupControllerDeactivateVatClass4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerDeactivateVatClass>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getTaxLookupControllerDeactivateVatClassQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const taxLookupControllerDescribeVatClass = (
+    export const taxLookupControllerDescribeVatClass = (
     id: number,
     descriptionRequest: DescriptionRequest,
  signal?: AbortSignal
@@ -517,84 +461,48 @@ export const taxLookupControllerDescribeVatClass = (
 
 
 
-export const getTaxLookupControllerDescribeVatClassQueryKey = (id: number,
-    descriptionRequest?: DescriptionRequest,) => {
-    return [
-    'PATCH', `/api/vat-classes/${id}/description`, descriptionRequest
-    ] as const;
+export const getTaxLookupControllerDescribeVatClassMutationOptions = <TError = TaxLookupControllerDescribeVatClass4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>, TError,{id: number;data: DescriptionRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>, TError,{id: number;data: DescriptionRequest}, TContext> => {
+
+const mutationKey = ['taxLookupControllerDescribeVatClass'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>, {id: number;data: DescriptionRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  taxLookupControllerDescribeVatClass(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TaxLookupControllerDescribeVatClassMutationResult = NonNullable<Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>>
+    export type TaxLookupControllerDescribeVatClassMutationBody = DescriptionRequest
+    export type TaxLookupControllerDescribeVatClassMutationError = TaxLookupControllerDescribeVatClass4xx
+
+    export const useTaxLookupControllerDescribeVatClass = <TError = TaxLookupControllerDescribeVatClass4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>, TError,{id: number;data: DescriptionRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>,
+        TError,
+        {id: number;data: DescriptionRequest},
+        TContext
+      > => {
+      return useMutation(getTaxLookupControllerDescribeVatClassMutationOptions(options), queryClient);
     }
-
-
-export const getTaxLookupControllerDescribeVatClassQueryOptions = <TData = Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>, TError = TaxLookupControllerDescribeVatClass4xx>(id: number,
-    descriptionRequest: DescriptionRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getTaxLookupControllerDescribeVatClassQueryKey(id,descriptionRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>> = ({ signal }) => taxLookupControllerDescribeVatClass(id,descriptionRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type TaxLookupControllerDescribeVatClassQueryResult = NonNullable<Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>>
-export type TaxLookupControllerDescribeVatClassQueryError = TaxLookupControllerDescribeVatClass4xx
-
-
-export function useTaxLookupControllerDescribeVatClass<TData = Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>, TError = TaxLookupControllerDescribeVatClass4xx>(
- id: number,
-    descriptionRequest: DescriptionRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>,
-          TError,
-          Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useTaxLookupControllerDescribeVatClass<TData = Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>, TError = TaxLookupControllerDescribeVatClass4xx>(
- id: number,
-    descriptionRequest: DescriptionRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>,
-          TError,
-          Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useTaxLookupControllerDescribeVatClass<TData = Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>, TError = TaxLookupControllerDescribeVatClass4xx>(
- id: number,
-    descriptionRequest: DescriptionRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useTaxLookupControllerDescribeVatClass<TData = Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>, TError = TaxLookupControllerDescribeVatClass4xx>(
- id: number,
-    descriptionRequest: DescriptionRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerDescribeVatClass>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getTaxLookupControllerDescribeVatClassQueryOptions(id,descriptionRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const taxLookupControllerReactivateVatClass = (
+    export const taxLookupControllerReactivateVatClass = (
     id: number,
  signal?: AbortSignal
 ) => {
@@ -609,78 +517,48 @@ export const taxLookupControllerReactivateVatClass = (
 
 
 
-export const getTaxLookupControllerReactivateVatClassQueryKey = (id: number,) => {
-    return [
-    'POST', `/api/vat-classes/${id}/reactivate`
-    ] as const;
+export const getTaxLookupControllerReactivateVatClassMutationOptions = <TError = TaxLookupControllerReactivateVatClass4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['taxLookupControllerReactivateVatClass'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  taxLookupControllerReactivateVatClass(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TaxLookupControllerReactivateVatClassMutationResult = NonNullable<Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>>
+
+    export type TaxLookupControllerReactivateVatClassMutationError = TaxLookupControllerReactivateVatClass4xx
+
+    export const useTaxLookupControllerReactivateVatClass = <TError = TaxLookupControllerReactivateVatClass4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>, TError,{id: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getTaxLookupControllerReactivateVatClassMutationOptions(options), queryClient);
     }
-
-
-export const getTaxLookupControllerReactivateVatClassQueryOptions = <TData = Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>, TError = TaxLookupControllerReactivateVatClass4xx>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getTaxLookupControllerReactivateVatClassQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>> = ({ signal }) => taxLookupControllerReactivateVatClass(id, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type TaxLookupControllerReactivateVatClassQueryResult = NonNullable<Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>>
-export type TaxLookupControllerReactivateVatClassQueryError = TaxLookupControllerReactivateVatClass4xx
-
-
-export function useTaxLookupControllerReactivateVatClass<TData = Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>, TError = TaxLookupControllerReactivateVatClass4xx>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>,
-          TError,
-          Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useTaxLookupControllerReactivateVatClass<TData = Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>, TError = TaxLookupControllerReactivateVatClass4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>,
-          TError,
-          Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useTaxLookupControllerReactivateVatClass<TData = Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>, TError = TaxLookupControllerReactivateVatClass4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useTaxLookupControllerReactivateVatClass<TData = Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>, TError = TaxLookupControllerReactivateVatClass4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerReactivateVatClass>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getTaxLookupControllerReactivateVatClassQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const taxLookupControllerClearReducedCounterpart = (
+    export const taxLookupControllerClearReducedCounterpart = (
     id: number,
  signal?: AbortSignal
 ) => {
@@ -695,78 +573,48 @@ export const taxLookupControllerClearReducedCounterpart = (
 
 
 
-export const getTaxLookupControllerClearReducedCounterpartQueryKey = (id: number,) => {
-    return [
-    'DELETE', `/api/vat-classes/${id}/reduced-counterpart`
-    ] as const;
+export const getTaxLookupControllerClearReducedCounterpartMutationOptions = <TError = TaxLookupControllerClearReducedCounterpart4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['taxLookupControllerClearReducedCounterpart'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  taxLookupControllerClearReducedCounterpart(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TaxLookupControllerClearReducedCounterpartMutationResult = NonNullable<Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>>
+
+    export type TaxLookupControllerClearReducedCounterpartMutationError = TaxLookupControllerClearReducedCounterpart4xx
+
+    export const useTaxLookupControllerClearReducedCounterpart = <TError = TaxLookupControllerClearReducedCounterpart4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>, TError,{id: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getTaxLookupControllerClearReducedCounterpartMutationOptions(options), queryClient);
     }
-
-
-export const getTaxLookupControllerClearReducedCounterpartQueryOptions = <TData = Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>, TError = TaxLookupControllerClearReducedCounterpart4xx>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getTaxLookupControllerClearReducedCounterpartQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>> = ({ signal }) => taxLookupControllerClearReducedCounterpart(id, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type TaxLookupControllerClearReducedCounterpartQueryResult = NonNullable<Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>>
-export type TaxLookupControllerClearReducedCounterpartQueryError = TaxLookupControllerClearReducedCounterpart4xx
-
-
-export function useTaxLookupControllerClearReducedCounterpart<TData = Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>, TError = TaxLookupControllerClearReducedCounterpart4xx>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>,
-          TError,
-          Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useTaxLookupControllerClearReducedCounterpart<TData = Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>, TError = TaxLookupControllerClearReducedCounterpart4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>,
-          TError,
-          Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useTaxLookupControllerClearReducedCounterpart<TData = Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>, TError = TaxLookupControllerClearReducedCounterpart4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useTaxLookupControllerClearReducedCounterpart<TData = Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>, TError = TaxLookupControllerClearReducedCounterpart4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerClearReducedCounterpart>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getTaxLookupControllerClearReducedCounterpartQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const taxLookupControllerMapReducedCounterpart = (
+    export const taxLookupControllerMapReducedCounterpart = (
     id: number,
     reducedCounterpartRequest: ReducedCounterpartRequest,
  signal?: AbortSignal
@@ -784,84 +632,48 @@ export const taxLookupControllerMapReducedCounterpart = (
 
 
 
-export const getTaxLookupControllerMapReducedCounterpartQueryKey = (id: number,
-    reducedCounterpartRequest?: ReducedCounterpartRequest,) => {
-    return [
-    'PUT', `/api/vat-classes/${id}/reduced-counterpart`, reducedCounterpartRequest
-    ] as const;
+export const getTaxLookupControllerMapReducedCounterpartMutationOptions = <TError = TaxLookupControllerMapReducedCounterpart4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>, TError,{id: number;data: ReducedCounterpartRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>, TError,{id: number;data: ReducedCounterpartRequest}, TContext> => {
+
+const mutationKey = ['taxLookupControllerMapReducedCounterpart'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>, {id: number;data: ReducedCounterpartRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  taxLookupControllerMapReducedCounterpart(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TaxLookupControllerMapReducedCounterpartMutationResult = NonNullable<Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>>
+    export type TaxLookupControllerMapReducedCounterpartMutationBody = ReducedCounterpartRequest
+    export type TaxLookupControllerMapReducedCounterpartMutationError = TaxLookupControllerMapReducedCounterpart4xx
+
+    export const useTaxLookupControllerMapReducedCounterpart = <TError = TaxLookupControllerMapReducedCounterpart4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>, TError,{id: number;data: ReducedCounterpartRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>,
+        TError,
+        {id: number;data: ReducedCounterpartRequest},
+        TContext
+      > => {
+      return useMutation(getTaxLookupControllerMapReducedCounterpartMutationOptions(options), queryClient);
     }
-
-
-export const getTaxLookupControllerMapReducedCounterpartQueryOptions = <TData = Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>, TError = TaxLookupControllerMapReducedCounterpart4xx>(id: number,
-    reducedCounterpartRequest: ReducedCounterpartRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getTaxLookupControllerMapReducedCounterpartQueryKey(id,reducedCounterpartRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>> = ({ signal }) => taxLookupControllerMapReducedCounterpart(id,reducedCounterpartRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type TaxLookupControllerMapReducedCounterpartQueryResult = NonNullable<Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>>
-export type TaxLookupControllerMapReducedCounterpartQueryError = TaxLookupControllerMapReducedCounterpart4xx
-
-
-export function useTaxLookupControllerMapReducedCounterpart<TData = Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>, TError = TaxLookupControllerMapReducedCounterpart4xx>(
- id: number,
-    reducedCounterpartRequest: ReducedCounterpartRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>,
-          TError,
-          Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useTaxLookupControllerMapReducedCounterpart<TData = Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>, TError = TaxLookupControllerMapReducedCounterpart4xx>(
- id: number,
-    reducedCounterpartRequest: ReducedCounterpartRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>,
-          TError,
-          Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useTaxLookupControllerMapReducedCounterpart<TData = Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>, TError = TaxLookupControllerMapReducedCounterpart4xx>(
- id: number,
-    reducedCounterpartRequest: ReducedCounterpartRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useTaxLookupControllerMapReducedCounterpart<TData = Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>, TError = TaxLookupControllerMapReducedCounterpart4xx>(
- id: number,
-    reducedCounterpartRequest: ReducedCounterpartRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof taxLookupControllerMapReducedCounterpart>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getTaxLookupControllerMapReducedCounterpartQueryOptions(id,reducedCounterpartRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const taxLookupControllerExemptionReasons = (
+    export const taxLookupControllerExemptionReasons = (
     params?: TaxLookupControllerExemptionReasonsParams,
  signal?: AbortSignal
 ) => {

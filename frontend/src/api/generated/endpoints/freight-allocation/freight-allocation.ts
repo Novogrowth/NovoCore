@@ -8,16 +8,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -162,78 +166,48 @@ export const freightAllocationControllerAllocate = (
 
 
 
-export const getFreightAllocationControllerAllocateQueryKey = (newFreightAllocation?: NewFreightAllocation,) => {
-    return [
-    'POST', `/api/freight-allocations`, newFreightAllocation
-    ] as const;
+export const getFreightAllocationControllerAllocateMutationOptions = <TError = FreightAllocationControllerAllocate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof freightAllocationControllerAllocate>>, TError,{data: NewFreightAllocation}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof freightAllocationControllerAllocate>>, TError,{data: NewFreightAllocation}, TContext> => {
+
+const mutationKey = ['freightAllocationControllerAllocate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof freightAllocationControllerAllocate>>, {data: NewFreightAllocation}> = (props) => {
+          const {data} = props ?? {};
+
+          return  freightAllocationControllerAllocate(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type FreightAllocationControllerAllocateMutationResult = NonNullable<Awaited<ReturnType<typeof freightAllocationControllerAllocate>>>
+    export type FreightAllocationControllerAllocateMutationBody = NewFreightAllocation
+    export type FreightAllocationControllerAllocateMutationError = FreightAllocationControllerAllocate4xx
+
+    export const useFreightAllocationControllerAllocate = <TError = FreightAllocationControllerAllocate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof freightAllocationControllerAllocate>>, TError,{data: NewFreightAllocation}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof freightAllocationControllerAllocate>>,
+        TError,
+        {data: NewFreightAllocation},
+        TContext
+      > => {
+      return useMutation(getFreightAllocationControllerAllocateMutationOptions(options), queryClient);
     }
-
-
-export const getFreightAllocationControllerAllocateQueryOptions = <TData = Awaited<ReturnType<typeof freightAllocationControllerAllocate>>, TError = FreightAllocationControllerAllocate4xx>(newFreightAllocation: NewFreightAllocation, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof freightAllocationControllerAllocate>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getFreightAllocationControllerAllocateQueryKey(newFreightAllocation);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof freightAllocationControllerAllocate>>> = ({ signal }) => freightAllocationControllerAllocate(newFreightAllocation, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof freightAllocationControllerAllocate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type FreightAllocationControllerAllocateQueryResult = NonNullable<Awaited<ReturnType<typeof freightAllocationControllerAllocate>>>
-export type FreightAllocationControllerAllocateQueryError = FreightAllocationControllerAllocate4xx
-
-
-export function useFreightAllocationControllerAllocate<TData = Awaited<ReturnType<typeof freightAllocationControllerAllocate>>, TError = FreightAllocationControllerAllocate4xx>(
- newFreightAllocation: NewFreightAllocation, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof freightAllocationControllerAllocate>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof freightAllocationControllerAllocate>>,
-          TError,
-          Awaited<ReturnType<typeof freightAllocationControllerAllocate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useFreightAllocationControllerAllocate<TData = Awaited<ReturnType<typeof freightAllocationControllerAllocate>>, TError = FreightAllocationControllerAllocate4xx>(
- newFreightAllocation: NewFreightAllocation, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof freightAllocationControllerAllocate>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof freightAllocationControllerAllocate>>,
-          TError,
-          Awaited<ReturnType<typeof freightAllocationControllerAllocate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useFreightAllocationControllerAllocate<TData = Awaited<ReturnType<typeof freightAllocationControllerAllocate>>, TError = FreightAllocationControllerAllocate4xx>(
- newFreightAllocation: NewFreightAllocation, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof freightAllocationControllerAllocate>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useFreightAllocationControllerAllocate<TData = Awaited<ReturnType<typeof freightAllocationControllerAllocate>>, TError = FreightAllocationControllerAllocate4xx>(
- newFreightAllocation: NewFreightAllocation, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof freightAllocationControllerAllocate>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getFreightAllocationControllerAllocateQueryOptions(newFreightAllocation,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const freightAllocationControllerAllocation = (
+    export const freightAllocationControllerAllocation = (
     id: number,
  signal?: AbortSignal
 ) => {
@@ -337,84 +311,48 @@ export const freightAllocationControllerReverse = (
 
 
 
-export const getFreightAllocationControllerReverseQueryKey = (id: number,
-    reversalCommand?: ReversalCommand,) => {
-    return [
-    'POST', `/api/freight-allocations/${id}/reversal`, reversalCommand
-    ] as const;
+export const getFreightAllocationControllerReverseMutationOptions = <TError = FreightAllocationControllerReverse4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof freightAllocationControllerReverse>>, TError,{id: number;data: ReversalCommand}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof freightAllocationControllerReverse>>, TError,{id: number;data: ReversalCommand}, TContext> => {
+
+const mutationKey = ['freightAllocationControllerReverse'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof freightAllocationControllerReverse>>, {id: number;data: ReversalCommand}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  freightAllocationControllerReverse(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type FreightAllocationControllerReverseMutationResult = NonNullable<Awaited<ReturnType<typeof freightAllocationControllerReverse>>>
+    export type FreightAllocationControllerReverseMutationBody = ReversalCommand
+    export type FreightAllocationControllerReverseMutationError = FreightAllocationControllerReverse4xx
+
+    export const useFreightAllocationControllerReverse = <TError = FreightAllocationControllerReverse4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof freightAllocationControllerReverse>>, TError,{id: number;data: ReversalCommand}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof freightAllocationControllerReverse>>,
+        TError,
+        {id: number;data: ReversalCommand},
+        TContext
+      > => {
+      return useMutation(getFreightAllocationControllerReverseMutationOptions(options), queryClient);
     }
-
-
-export const getFreightAllocationControllerReverseQueryOptions = <TData = Awaited<ReturnType<typeof freightAllocationControllerReverse>>, TError = FreightAllocationControllerReverse4xx>(id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof freightAllocationControllerReverse>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getFreightAllocationControllerReverseQueryKey(id,reversalCommand);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof freightAllocationControllerReverse>>> = ({ signal }) => freightAllocationControllerReverse(id,reversalCommand, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof freightAllocationControllerReverse>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type FreightAllocationControllerReverseQueryResult = NonNullable<Awaited<ReturnType<typeof freightAllocationControllerReverse>>>
-export type FreightAllocationControllerReverseQueryError = FreightAllocationControllerReverse4xx
-
-
-export function useFreightAllocationControllerReverse<TData = Awaited<ReturnType<typeof freightAllocationControllerReverse>>, TError = FreightAllocationControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof freightAllocationControllerReverse>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof freightAllocationControllerReverse>>,
-          TError,
-          Awaited<ReturnType<typeof freightAllocationControllerReverse>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useFreightAllocationControllerReverse<TData = Awaited<ReturnType<typeof freightAllocationControllerReverse>>, TError = FreightAllocationControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof freightAllocationControllerReverse>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof freightAllocationControllerReverse>>,
-          TError,
-          Awaited<ReturnType<typeof freightAllocationControllerReverse>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useFreightAllocationControllerReverse<TData = Awaited<ReturnType<typeof freightAllocationControllerReverse>>, TError = FreightAllocationControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof freightAllocationControllerReverse>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useFreightAllocationControllerReverse<TData = Awaited<ReturnType<typeof freightAllocationControllerReverse>>, TError = FreightAllocationControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof freightAllocationControllerReverse>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getFreightAllocationControllerReverseQueryOptions(id,reversalCommand,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const freightAllocationControllerAwaitingAllocation = (
+    export const freightAllocationControllerAwaitingAllocation = (
 
  signal?: AbortSignal
 ) => {

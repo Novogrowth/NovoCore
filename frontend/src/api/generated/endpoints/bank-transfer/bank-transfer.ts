@@ -8,16 +8,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -158,78 +162,48 @@ export const bankTransferControllerRecord = (
 
 
 
-export const getBankTransferControllerRecordQueryKey = (newBankTransfer?: NewBankTransfer,) => {
-    return [
-    'POST', `/api/bank-transfers`, newBankTransfer
-    ] as const;
+export const getBankTransferControllerRecordMutationOptions = <TError = BankTransferControllerRecord4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bankTransferControllerRecord>>, TError,{data: NewBankTransfer}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof bankTransferControllerRecord>>, TError,{data: NewBankTransfer}, TContext> => {
+
+const mutationKey = ['bankTransferControllerRecord'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bankTransferControllerRecord>>, {data: NewBankTransfer}> = (props) => {
+          const {data} = props ?? {};
+
+          return  bankTransferControllerRecord(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BankTransferControllerRecordMutationResult = NonNullable<Awaited<ReturnType<typeof bankTransferControllerRecord>>>
+    export type BankTransferControllerRecordMutationBody = NewBankTransfer
+    export type BankTransferControllerRecordMutationError = BankTransferControllerRecord4xx
+
+    export const useBankTransferControllerRecord = <TError = BankTransferControllerRecord4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bankTransferControllerRecord>>, TError,{data: NewBankTransfer}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof bankTransferControllerRecord>>,
+        TError,
+        {data: NewBankTransfer},
+        TContext
+      > => {
+      return useMutation(getBankTransferControllerRecordMutationOptions(options), queryClient);
     }
-
-
-export const getBankTransferControllerRecordQueryOptions = <TData = Awaited<ReturnType<typeof bankTransferControllerRecord>>, TError = BankTransferControllerRecord4xx>(newBankTransfer: NewBankTransfer, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bankTransferControllerRecord>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getBankTransferControllerRecordQueryKey(newBankTransfer);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof bankTransferControllerRecord>>> = ({ signal }) => bankTransferControllerRecord(newBankTransfer, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof bankTransferControllerRecord>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type BankTransferControllerRecordQueryResult = NonNullable<Awaited<ReturnType<typeof bankTransferControllerRecord>>>
-export type BankTransferControllerRecordQueryError = BankTransferControllerRecord4xx
-
-
-export function useBankTransferControllerRecord<TData = Awaited<ReturnType<typeof bankTransferControllerRecord>>, TError = BankTransferControllerRecord4xx>(
- newBankTransfer: NewBankTransfer, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof bankTransferControllerRecord>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof bankTransferControllerRecord>>,
-          TError,
-          Awaited<ReturnType<typeof bankTransferControllerRecord>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useBankTransferControllerRecord<TData = Awaited<ReturnType<typeof bankTransferControllerRecord>>, TError = BankTransferControllerRecord4xx>(
- newBankTransfer: NewBankTransfer, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bankTransferControllerRecord>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof bankTransferControllerRecord>>,
-          TError,
-          Awaited<ReturnType<typeof bankTransferControllerRecord>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useBankTransferControllerRecord<TData = Awaited<ReturnType<typeof bankTransferControllerRecord>>, TError = BankTransferControllerRecord4xx>(
- newBankTransfer: NewBankTransfer, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bankTransferControllerRecord>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useBankTransferControllerRecord<TData = Awaited<ReturnType<typeof bankTransferControllerRecord>>, TError = BankTransferControllerRecord4xx>(
- newBankTransfer: NewBankTransfer, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bankTransferControllerRecord>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getBankTransferControllerRecordQueryOptions(newBankTransfer,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const bankTransferControllerTransfer = (
+    export const bankTransferControllerTransfer = (
     id: number,
  signal?: AbortSignal
 ) => {
@@ -333,80 +307,44 @@ export const bankTransferControllerReverse = (
 
 
 
-export const getBankTransferControllerReverseQueryKey = (id: number,
-    reversalCommand?: ReversalCommand,) => {
-    return [
-    'POST', `/api/bank-transfers/${id}/reversal`, reversalCommand
-    ] as const;
+export const getBankTransferControllerReverseMutationOptions = <TError = BankTransferControllerReverse4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bankTransferControllerReverse>>, TError,{id: number;data: ReversalCommand}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof bankTransferControllerReverse>>, TError,{id: number;data: ReversalCommand}, TContext> => {
+
+const mutationKey = ['bankTransferControllerReverse'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bankTransferControllerReverse>>, {id: number;data: ReversalCommand}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  bankTransferControllerReverse(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BankTransferControllerReverseMutationResult = NonNullable<Awaited<ReturnType<typeof bankTransferControllerReverse>>>
+    export type BankTransferControllerReverseMutationBody = ReversalCommand
+    export type BankTransferControllerReverseMutationError = BankTransferControllerReverse4xx
+
+    export const useBankTransferControllerReverse = <TError = BankTransferControllerReverse4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bankTransferControllerReverse>>, TError,{id: number;data: ReversalCommand}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof bankTransferControllerReverse>>,
+        TError,
+        {id: number;data: ReversalCommand},
+        TContext
+      > => {
+      return useMutation(getBankTransferControllerReverseMutationOptions(options), queryClient);
     }
-
-
-export const getBankTransferControllerReverseQueryOptions = <TData = Awaited<ReturnType<typeof bankTransferControllerReverse>>, TError = BankTransferControllerReverse4xx>(id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bankTransferControllerReverse>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getBankTransferControllerReverseQueryKey(id,reversalCommand);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof bankTransferControllerReverse>>> = ({ signal }) => bankTransferControllerReverse(id,reversalCommand, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof bankTransferControllerReverse>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type BankTransferControllerReverseQueryResult = NonNullable<Awaited<ReturnType<typeof bankTransferControllerReverse>>>
-export type BankTransferControllerReverseQueryError = BankTransferControllerReverse4xx
-
-
-export function useBankTransferControllerReverse<TData = Awaited<ReturnType<typeof bankTransferControllerReverse>>, TError = BankTransferControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof bankTransferControllerReverse>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof bankTransferControllerReverse>>,
-          TError,
-          Awaited<ReturnType<typeof bankTransferControllerReverse>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useBankTransferControllerReverse<TData = Awaited<ReturnType<typeof bankTransferControllerReverse>>, TError = BankTransferControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bankTransferControllerReverse>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof bankTransferControllerReverse>>,
-          TError,
-          Awaited<ReturnType<typeof bankTransferControllerReverse>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useBankTransferControllerReverse<TData = Awaited<ReturnType<typeof bankTransferControllerReverse>>, TError = BankTransferControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bankTransferControllerReverse>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useBankTransferControllerReverse<TData = Awaited<ReturnType<typeof bankTransferControllerReverse>>, TError = BankTransferControllerReverse4xx>(
- id: number,
-    reversalCommand: ReversalCommand, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bankTransferControllerReverse>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getBankTransferControllerReverseQueryOptions(id,reversalCommand,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-

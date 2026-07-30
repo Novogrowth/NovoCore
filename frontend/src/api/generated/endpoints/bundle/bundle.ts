@@ -8,16 +8,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -241,78 +245,48 @@ export const bundleControllerDissolve = (
 
 
 
-export const getBundleControllerDissolveQueryKey = (id: number,) => {
-    return [
-    'DELETE', `/api/products/${id}/components`
-    ] as const;
+export const getBundleControllerDissolveMutationOptions = <TError = BundleControllerDissolve4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bundleControllerDissolve>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof bundleControllerDissolve>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['bundleControllerDissolve'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bundleControllerDissolve>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  bundleControllerDissolve(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BundleControllerDissolveMutationResult = NonNullable<Awaited<ReturnType<typeof bundleControllerDissolve>>>
+
+    export type BundleControllerDissolveMutationError = BundleControllerDissolve4xx
+
+    export const useBundleControllerDissolve = <TError = BundleControllerDissolve4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bundleControllerDissolve>>, TError,{id: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof bundleControllerDissolve>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getBundleControllerDissolveMutationOptions(options), queryClient);
     }
-
-
-export const getBundleControllerDissolveQueryOptions = <TData = Awaited<ReturnType<typeof bundleControllerDissolve>>, TError = BundleControllerDissolve4xx>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bundleControllerDissolve>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getBundleControllerDissolveQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof bundleControllerDissolve>>> = ({ signal }) => bundleControllerDissolve(id, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof bundleControllerDissolve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type BundleControllerDissolveQueryResult = NonNullable<Awaited<ReturnType<typeof bundleControllerDissolve>>>
-export type BundleControllerDissolveQueryError = BundleControllerDissolve4xx
-
-
-export function useBundleControllerDissolve<TData = Awaited<ReturnType<typeof bundleControllerDissolve>>, TError = BundleControllerDissolve4xx>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof bundleControllerDissolve>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof bundleControllerDissolve>>,
-          TError,
-          Awaited<ReturnType<typeof bundleControllerDissolve>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useBundleControllerDissolve<TData = Awaited<ReturnType<typeof bundleControllerDissolve>>, TError = BundleControllerDissolve4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bundleControllerDissolve>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof bundleControllerDissolve>>,
-          TError,
-          Awaited<ReturnType<typeof bundleControllerDissolve>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useBundleControllerDissolve<TData = Awaited<ReturnType<typeof bundleControllerDissolve>>, TError = BundleControllerDissolve4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bundleControllerDissolve>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useBundleControllerDissolve<TData = Awaited<ReturnType<typeof bundleControllerDissolve>>, TError = BundleControllerDissolve4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bundleControllerDissolve>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getBundleControllerDissolveQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const bundleControllerComponents = (
+    export const bundleControllerComponents = (
     id: number,
  signal?: AbortSignal
 ) => {
@@ -416,84 +390,48 @@ export const bundleControllerDefine = (
 
 
 
-export const getBundleControllerDefineQueryKey = (id: number,
-    componentsRequest?: ComponentsRequest,) => {
-    return [
-    'PUT', `/api/products/${id}/components`, componentsRequest
-    ] as const;
+export const getBundleControllerDefineMutationOptions = <TError = BundleControllerDefine4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bundleControllerDefine>>, TError,{id: number;data: ComponentsRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof bundleControllerDefine>>, TError,{id: number;data: ComponentsRequest}, TContext> => {
+
+const mutationKey = ['bundleControllerDefine'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bundleControllerDefine>>, {id: number;data: ComponentsRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  bundleControllerDefine(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BundleControllerDefineMutationResult = NonNullable<Awaited<ReturnType<typeof bundleControllerDefine>>>
+    export type BundleControllerDefineMutationBody = ComponentsRequest
+    export type BundleControllerDefineMutationError = BundleControllerDefine4xx
+
+    export const useBundleControllerDefine = <TError = BundleControllerDefine4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bundleControllerDefine>>, TError,{id: number;data: ComponentsRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof bundleControllerDefine>>,
+        TError,
+        {id: number;data: ComponentsRequest},
+        TContext
+      > => {
+      return useMutation(getBundleControllerDefineMutationOptions(options), queryClient);
     }
-
-
-export const getBundleControllerDefineQueryOptions = <TData = Awaited<ReturnType<typeof bundleControllerDefine>>, TError = BundleControllerDefine4xx>(id: number,
-    componentsRequest: ComponentsRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bundleControllerDefine>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getBundleControllerDefineQueryKey(id,componentsRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof bundleControllerDefine>>> = ({ signal }) => bundleControllerDefine(id,componentsRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof bundleControllerDefine>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type BundleControllerDefineQueryResult = NonNullable<Awaited<ReturnType<typeof bundleControllerDefine>>>
-export type BundleControllerDefineQueryError = BundleControllerDefine4xx
-
-
-export function useBundleControllerDefine<TData = Awaited<ReturnType<typeof bundleControllerDefine>>, TError = BundleControllerDefine4xx>(
- id: number,
-    componentsRequest: ComponentsRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof bundleControllerDefine>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof bundleControllerDefine>>,
-          TError,
-          Awaited<ReturnType<typeof bundleControllerDefine>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useBundleControllerDefine<TData = Awaited<ReturnType<typeof bundleControllerDefine>>, TError = BundleControllerDefine4xx>(
- id: number,
-    componentsRequest: ComponentsRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bundleControllerDefine>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof bundleControllerDefine>>,
-          TError,
-          Awaited<ReturnType<typeof bundleControllerDefine>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useBundleControllerDefine<TData = Awaited<ReturnType<typeof bundleControllerDefine>>, TError = BundleControllerDefine4xx>(
- id: number,
-    componentsRequest: ComponentsRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bundleControllerDefine>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useBundleControllerDefine<TData = Awaited<ReturnType<typeof bundleControllerDefine>>, TError = BundleControllerDefine4xx>(
- id: number,
-    componentsRequest: ComponentsRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bundleControllerDefine>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getBundleControllerDefineQueryOptions(id,componentsRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const bundleControllerInBundles = (
+    export const bundleControllerInBundles = (
     id: number,
  signal?: AbortSignal
 ) => {

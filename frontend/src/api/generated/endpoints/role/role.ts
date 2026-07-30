@@ -8,16 +8,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -168,78 +172,48 @@ export const roleControllerCreate = (
 
 
 
-export const getRoleControllerCreateQueryKey = (newRole?: NewRole,) => {
-    return [
-    'POST', `/api/roles`, newRole
-    ] as const;
+export const getRoleControllerCreateMutationOptions = <TError = RoleControllerCreate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof roleControllerCreate>>, TError,{data: NewRole}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof roleControllerCreate>>, TError,{data: NewRole}, TContext> => {
+
+const mutationKey = ['roleControllerCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof roleControllerCreate>>, {data: NewRole}> = (props) => {
+          const {data} = props ?? {};
+
+          return  roleControllerCreate(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RoleControllerCreateMutationResult = NonNullable<Awaited<ReturnType<typeof roleControllerCreate>>>
+    export type RoleControllerCreateMutationBody = NewRole
+    export type RoleControllerCreateMutationError = RoleControllerCreate4xx
+
+    export const useRoleControllerCreate = <TError = RoleControllerCreate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof roleControllerCreate>>, TError,{data: NewRole}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof roleControllerCreate>>,
+        TError,
+        {data: NewRole},
+        TContext
+      > => {
+      return useMutation(getRoleControllerCreateMutationOptions(options), queryClient);
     }
-
-
-export const getRoleControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof roleControllerCreate>>, TError = RoleControllerCreate4xx>(newRole: NewRole, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerCreate>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getRoleControllerCreateQueryKey(newRole);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof roleControllerCreate>>> = ({ signal }) => roleControllerCreate(newRole, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof roleControllerCreate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type RoleControllerCreateQueryResult = NonNullable<Awaited<ReturnType<typeof roleControllerCreate>>>
-export type RoleControllerCreateQueryError = RoleControllerCreate4xx
-
-
-export function useRoleControllerCreate<TData = Awaited<ReturnType<typeof roleControllerCreate>>, TError = RoleControllerCreate4xx>(
- newRole: NewRole, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerCreate>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof roleControllerCreate>>,
-          TError,
-          Awaited<ReturnType<typeof roleControllerCreate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useRoleControllerCreate<TData = Awaited<ReturnType<typeof roleControllerCreate>>, TError = RoleControllerCreate4xx>(
- newRole: NewRole, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerCreate>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof roleControllerCreate>>,
-          TError,
-          Awaited<ReturnType<typeof roleControllerCreate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useRoleControllerCreate<TData = Awaited<ReturnType<typeof roleControllerCreate>>, TError = RoleControllerCreate4xx>(
- newRole: NewRole, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerCreate>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useRoleControllerCreate<TData = Awaited<ReturnType<typeof roleControllerCreate>>, TError = RoleControllerCreate4xx>(
- newRole: NewRole, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerCreate>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getRoleControllerCreateQueryOptions(newRole,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const roleControllerRole = (
+    export const roleControllerRole = (
     id: number,
  signal?: AbortSignal
 ) => {
@@ -340,78 +314,48 @@ export const roleControllerDeactivate = (
 
 
 
-export const getRoleControllerDeactivateQueryKey = (id: number,) => {
-    return [
-    'POST', `/api/roles/${id}/deactivate`
-    ] as const;
+export const getRoleControllerDeactivateMutationOptions = <TError = RoleControllerDeactivate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof roleControllerDeactivate>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof roleControllerDeactivate>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['roleControllerDeactivate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof roleControllerDeactivate>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  roleControllerDeactivate(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RoleControllerDeactivateMutationResult = NonNullable<Awaited<ReturnType<typeof roleControllerDeactivate>>>
+
+    export type RoleControllerDeactivateMutationError = RoleControllerDeactivate4xx
+
+    export const useRoleControllerDeactivate = <TError = RoleControllerDeactivate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof roleControllerDeactivate>>, TError,{id: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof roleControllerDeactivate>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRoleControllerDeactivateMutationOptions(options), queryClient);
     }
-
-
-export const getRoleControllerDeactivateQueryOptions = <TData = Awaited<ReturnType<typeof roleControllerDeactivate>>, TError = RoleControllerDeactivate4xx>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerDeactivate>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getRoleControllerDeactivateQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof roleControllerDeactivate>>> = ({ signal }) => roleControllerDeactivate(id, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof roleControllerDeactivate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type RoleControllerDeactivateQueryResult = NonNullable<Awaited<ReturnType<typeof roleControllerDeactivate>>>
-export type RoleControllerDeactivateQueryError = RoleControllerDeactivate4xx
-
-
-export function useRoleControllerDeactivate<TData = Awaited<ReturnType<typeof roleControllerDeactivate>>, TError = RoleControllerDeactivate4xx>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerDeactivate>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof roleControllerDeactivate>>,
-          TError,
-          Awaited<ReturnType<typeof roleControllerDeactivate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useRoleControllerDeactivate<TData = Awaited<ReturnType<typeof roleControllerDeactivate>>, TError = RoleControllerDeactivate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerDeactivate>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof roleControllerDeactivate>>,
-          TError,
-          Awaited<ReturnType<typeof roleControllerDeactivate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useRoleControllerDeactivate<TData = Awaited<ReturnType<typeof roleControllerDeactivate>>, TError = RoleControllerDeactivate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerDeactivate>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useRoleControllerDeactivate<TData = Awaited<ReturnType<typeof roleControllerDeactivate>>, TError = RoleControllerDeactivate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerDeactivate>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getRoleControllerDeactivateQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const roleControllerRestrictField = (
+    export const roleControllerRestrictField = (
     id: number,
     field: ProtectedField,
     fieldRestrictionRequest: FieldRestrictionRequest,
@@ -430,90 +374,48 @@ export const roleControllerRestrictField = (
 
 
 
-export const getRoleControllerRestrictFieldQueryKey = (id: number,
-    field: ProtectedField,
-    fieldRestrictionRequest?: FieldRestrictionRequest,) => {
-    return [
-    'PUT', `/api/roles/${id}/field-restrictions/${field}`, fieldRestrictionRequest
-    ] as const;
+export const getRoleControllerRestrictFieldMutationOptions = <TError = RoleControllerRestrictField4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof roleControllerRestrictField>>, TError,{id: number;field: ProtectedField;data: FieldRestrictionRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof roleControllerRestrictField>>, TError,{id: number;field: ProtectedField;data: FieldRestrictionRequest}, TContext> => {
+
+const mutationKey = ['roleControllerRestrictField'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof roleControllerRestrictField>>, {id: number;field: ProtectedField;data: FieldRestrictionRequest}> = (props) => {
+          const {id,field,data} = props ?? {};
+
+          return  roleControllerRestrictField(id,field,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RoleControllerRestrictFieldMutationResult = NonNullable<Awaited<ReturnType<typeof roleControllerRestrictField>>>
+    export type RoleControllerRestrictFieldMutationBody = FieldRestrictionRequest
+    export type RoleControllerRestrictFieldMutationError = RoleControllerRestrictField4xx
+
+    export const useRoleControllerRestrictField = <TError = RoleControllerRestrictField4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof roleControllerRestrictField>>, TError,{id: number;field: ProtectedField;data: FieldRestrictionRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof roleControllerRestrictField>>,
+        TError,
+        {id: number;field: ProtectedField;data: FieldRestrictionRequest},
+        TContext
+      > => {
+      return useMutation(getRoleControllerRestrictFieldMutationOptions(options), queryClient);
     }
-
-
-export const getRoleControllerRestrictFieldQueryOptions = <TData = Awaited<ReturnType<typeof roleControllerRestrictField>>, TError = RoleControllerRestrictField4xx>(id: number,
-    field: ProtectedField,
-    fieldRestrictionRequest: FieldRestrictionRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerRestrictField>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getRoleControllerRestrictFieldQueryKey(id,field,fieldRestrictionRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof roleControllerRestrictField>>> = ({ signal }) => roleControllerRestrictField(id,field,fieldRestrictionRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && field !== null && field !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof roleControllerRestrictField>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type RoleControllerRestrictFieldQueryResult = NonNullable<Awaited<ReturnType<typeof roleControllerRestrictField>>>
-export type RoleControllerRestrictFieldQueryError = RoleControllerRestrictField4xx
-
-
-export function useRoleControllerRestrictField<TData = Awaited<ReturnType<typeof roleControllerRestrictField>>, TError = RoleControllerRestrictField4xx>(
- id: number,
-    field: ProtectedField,
-    fieldRestrictionRequest: FieldRestrictionRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerRestrictField>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof roleControllerRestrictField>>,
-          TError,
-          Awaited<ReturnType<typeof roleControllerRestrictField>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useRoleControllerRestrictField<TData = Awaited<ReturnType<typeof roleControllerRestrictField>>, TError = RoleControllerRestrictField4xx>(
- id: number,
-    field: ProtectedField,
-    fieldRestrictionRequest: FieldRestrictionRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerRestrictField>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof roleControllerRestrictField>>,
-          TError,
-          Awaited<ReturnType<typeof roleControllerRestrictField>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useRoleControllerRestrictField<TData = Awaited<ReturnType<typeof roleControllerRestrictField>>, TError = RoleControllerRestrictField4xx>(
- id: number,
-    field: ProtectedField,
-    fieldRestrictionRequest: FieldRestrictionRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerRestrictField>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useRoleControllerRestrictField<TData = Awaited<ReturnType<typeof roleControllerRestrictField>>, TError = RoleControllerRestrictField4xx>(
- id: number,
-    field: ProtectedField,
-    fieldRestrictionRequest: FieldRestrictionRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerRestrictField>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getRoleControllerRestrictFieldQueryOptions(id,field,fieldRestrictionRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const roleControllerGrant = (
+    export const roleControllerGrant = (
     id: number,
     section: Section,
     grantRequest: GrantRequest,
@@ -532,90 +434,48 @@ export const roleControllerGrant = (
 
 
 
-export const getRoleControllerGrantQueryKey = (id: number,
-    section: Section,
-    grantRequest?: GrantRequest,) => {
-    return [
-    'PUT', `/api/roles/${id}/grants/${section}`, grantRequest
-    ] as const;
+export const getRoleControllerGrantMutationOptions = <TError = RoleControllerGrant4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof roleControllerGrant>>, TError,{id: number;section: Section;data: GrantRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof roleControllerGrant>>, TError,{id: number;section: Section;data: GrantRequest}, TContext> => {
+
+const mutationKey = ['roleControllerGrant'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof roleControllerGrant>>, {id: number;section: Section;data: GrantRequest}> = (props) => {
+          const {id,section,data} = props ?? {};
+
+          return  roleControllerGrant(id,section,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RoleControllerGrantMutationResult = NonNullable<Awaited<ReturnType<typeof roleControllerGrant>>>
+    export type RoleControllerGrantMutationBody = GrantRequest
+    export type RoleControllerGrantMutationError = RoleControllerGrant4xx
+
+    export const useRoleControllerGrant = <TError = RoleControllerGrant4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof roleControllerGrant>>, TError,{id: number;section: Section;data: GrantRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof roleControllerGrant>>,
+        TError,
+        {id: number;section: Section;data: GrantRequest},
+        TContext
+      > => {
+      return useMutation(getRoleControllerGrantMutationOptions(options), queryClient);
     }
-
-
-export const getRoleControllerGrantQueryOptions = <TData = Awaited<ReturnType<typeof roleControllerGrant>>, TError = RoleControllerGrant4xx>(id: number,
-    section: Section,
-    grantRequest: GrantRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerGrant>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getRoleControllerGrantQueryKey(id,section,grantRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof roleControllerGrant>>> = ({ signal }) => roleControllerGrant(id,section,grantRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && section !== null && section !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof roleControllerGrant>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type RoleControllerGrantQueryResult = NonNullable<Awaited<ReturnType<typeof roleControllerGrant>>>
-export type RoleControllerGrantQueryError = RoleControllerGrant4xx
-
-
-export function useRoleControllerGrant<TData = Awaited<ReturnType<typeof roleControllerGrant>>, TError = RoleControllerGrant4xx>(
- id: number,
-    section: Section,
-    grantRequest: GrantRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerGrant>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof roleControllerGrant>>,
-          TError,
-          Awaited<ReturnType<typeof roleControllerGrant>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useRoleControllerGrant<TData = Awaited<ReturnType<typeof roleControllerGrant>>, TError = RoleControllerGrant4xx>(
- id: number,
-    section: Section,
-    grantRequest: GrantRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerGrant>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof roleControllerGrant>>,
-          TError,
-          Awaited<ReturnType<typeof roleControllerGrant>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useRoleControllerGrant<TData = Awaited<ReturnType<typeof roleControllerGrant>>, TError = RoleControllerGrant4xx>(
- id: number,
-    section: Section,
-    grantRequest: GrantRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerGrant>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useRoleControllerGrant<TData = Awaited<ReturnType<typeof roleControllerGrant>>, TError = RoleControllerGrant4xx>(
- id: number,
-    section: Section,
-    grantRequest: GrantRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerGrant>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getRoleControllerGrantQueryOptions(id,section,grantRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const roleControllerRename = (
+    export const roleControllerRename = (
     id: number,
     nameRequest: NameRequest,
  signal?: AbortSignal
@@ -633,84 +493,48 @@ export const roleControllerRename = (
 
 
 
-export const getRoleControllerRenameQueryKey = (id: number,
-    nameRequest?: NameRequest,) => {
-    return [
-    'PATCH', `/api/roles/${id}/name`, nameRequest
-    ] as const;
+export const getRoleControllerRenameMutationOptions = <TError = RoleControllerRename4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof roleControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof roleControllerRename>>, TError,{id: number;data: NameRequest}, TContext> => {
+
+const mutationKey = ['roleControllerRename'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof roleControllerRename>>, {id: number;data: NameRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  roleControllerRename(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RoleControllerRenameMutationResult = NonNullable<Awaited<ReturnType<typeof roleControllerRename>>>
+    export type RoleControllerRenameMutationBody = NameRequest
+    export type RoleControllerRenameMutationError = RoleControllerRename4xx
+
+    export const useRoleControllerRename = <TError = RoleControllerRename4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof roleControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof roleControllerRename>>,
+        TError,
+        {id: number;data: NameRequest},
+        TContext
+      > => {
+      return useMutation(getRoleControllerRenameMutationOptions(options), queryClient);
     }
-
-
-export const getRoleControllerRenameQueryOptions = <TData = Awaited<ReturnType<typeof roleControllerRename>>, TError = RoleControllerRename4xx>(id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerRename>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getRoleControllerRenameQueryKey(id,nameRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof roleControllerRename>>> = ({ signal }) => roleControllerRename(id,nameRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof roleControllerRename>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type RoleControllerRenameQueryResult = NonNullable<Awaited<ReturnType<typeof roleControllerRename>>>
-export type RoleControllerRenameQueryError = RoleControllerRename4xx
-
-
-export function useRoleControllerRename<TData = Awaited<ReturnType<typeof roleControllerRename>>, TError = RoleControllerRename4xx>(
- id: number,
-    nameRequest: NameRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerRename>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof roleControllerRename>>,
-          TError,
-          Awaited<ReturnType<typeof roleControllerRename>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useRoleControllerRename<TData = Awaited<ReturnType<typeof roleControllerRename>>, TError = RoleControllerRename4xx>(
- id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerRename>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof roleControllerRename>>,
-          TError,
-          Awaited<ReturnType<typeof roleControllerRename>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useRoleControllerRename<TData = Awaited<ReturnType<typeof roleControllerRename>>, TError = RoleControllerRename4xx>(
- id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerRename>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useRoleControllerRename<TData = Awaited<ReturnType<typeof roleControllerRename>>, TError = RoleControllerRename4xx>(
- id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerRename>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getRoleControllerRenameQueryOptions(id,nameRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const roleControllerReactivate = (
+    export const roleControllerReactivate = (
     id: number,
  signal?: AbortSignal
 ) => {
@@ -725,78 +549,48 @@ export const roleControllerReactivate = (
 
 
 
-export const getRoleControllerReactivateQueryKey = (id: number,) => {
-    return [
-    'POST', `/api/roles/${id}/reactivate`
-    ] as const;
+export const getRoleControllerReactivateMutationOptions = <TError = RoleControllerReactivate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof roleControllerReactivate>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof roleControllerReactivate>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['roleControllerReactivate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof roleControllerReactivate>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  roleControllerReactivate(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RoleControllerReactivateMutationResult = NonNullable<Awaited<ReturnType<typeof roleControllerReactivate>>>
+
+    export type RoleControllerReactivateMutationError = RoleControllerReactivate4xx
+
+    export const useRoleControllerReactivate = <TError = RoleControllerReactivate4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof roleControllerReactivate>>, TError,{id: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof roleControllerReactivate>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRoleControllerReactivateMutationOptions(options), queryClient);
     }
-
-
-export const getRoleControllerReactivateQueryOptions = <TData = Awaited<ReturnType<typeof roleControllerReactivate>>, TError = RoleControllerReactivate4xx>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerReactivate>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getRoleControllerReactivateQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof roleControllerReactivate>>> = ({ signal }) => roleControllerReactivate(id, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof roleControllerReactivate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type RoleControllerReactivateQueryResult = NonNullable<Awaited<ReturnType<typeof roleControllerReactivate>>>
-export type RoleControllerReactivateQueryError = RoleControllerReactivate4xx
-
-
-export function useRoleControllerReactivate<TData = Awaited<ReturnType<typeof roleControllerReactivate>>, TError = RoleControllerReactivate4xx>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerReactivate>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof roleControllerReactivate>>,
-          TError,
-          Awaited<ReturnType<typeof roleControllerReactivate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useRoleControllerReactivate<TData = Awaited<ReturnType<typeof roleControllerReactivate>>, TError = RoleControllerReactivate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerReactivate>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof roleControllerReactivate>>,
-          TError,
-          Awaited<ReturnType<typeof roleControllerReactivate>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useRoleControllerReactivate<TData = Awaited<ReturnType<typeof roleControllerReactivate>>, TError = RoleControllerReactivate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerReactivate>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useRoleControllerReactivate<TData = Awaited<ReturnType<typeof roleControllerReactivate>>, TError = RoleControllerReactivate4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof roleControllerReactivate>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getRoleControllerReactivateQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const roleControllerHolders = (
+    export const roleControllerHolders = (
     id: number,
  signal?: AbortSignal
 ) => {

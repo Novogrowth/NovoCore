@@ -8,16 +8,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -170,78 +174,48 @@ export const chartOfAccountsControllerCreateGroup = (
 
 
 
-export const getChartOfAccountsControllerCreateGroupQueryKey = (nameRequest?: NameRequest,) => {
-    return [
-    'POST', `/api/account-groups`, nameRequest
-    ] as const;
+export const getChartOfAccountsControllerCreateGroupMutationOptions = <TError = ChartOfAccountsControllerCreateGroup4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError,{data: NameRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError,{data: NameRequest}, TContext> => {
+
+const mutationKey = ['chartOfAccountsControllerCreateGroup'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, {data: NameRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  chartOfAccountsControllerCreateGroup(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChartOfAccountsControllerCreateGroupMutationResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>>
+    export type ChartOfAccountsControllerCreateGroupMutationBody = NameRequest
+    export type ChartOfAccountsControllerCreateGroupMutationError = ChartOfAccountsControllerCreateGroup4xx
+
+    export const useChartOfAccountsControllerCreateGroup = <TError = ChartOfAccountsControllerCreateGroup4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError,{data: NameRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>,
+        TError,
+        {data: NameRequest},
+        TContext
+      > => {
+      return useMutation(getChartOfAccountsControllerCreateGroupMutationOptions(options), queryClient);
     }
-
-
-export const getChartOfAccountsControllerCreateGroupQueryOptions = <TData = Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError = ChartOfAccountsControllerCreateGroup4xx>(nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getChartOfAccountsControllerCreateGroupQueryKey(nameRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>> = ({ signal }) => chartOfAccountsControllerCreateGroup(nameRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ChartOfAccountsControllerCreateGroupQueryResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>>
-export type ChartOfAccountsControllerCreateGroupQueryError = ChartOfAccountsControllerCreateGroup4xx
-
-
-export function useChartOfAccountsControllerCreateGroup<TData = Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError = ChartOfAccountsControllerCreateGroup4xx>(
- nameRequest: NameRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>,
-          TError,
-          Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useChartOfAccountsControllerCreateGroup<TData = Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError = ChartOfAccountsControllerCreateGroup4xx>(
- nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>,
-          TError,
-          Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useChartOfAccountsControllerCreateGroup<TData = Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError = ChartOfAccountsControllerCreateGroup4xx>(
- nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useChartOfAccountsControllerCreateGroup<TData = Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError = ChartOfAccountsControllerCreateGroup4xx>(
- nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getChartOfAccountsControllerCreateGroupQueryOptions(nameRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const chartOfAccountsControllerReorderGroups = (
+    export const chartOfAccountsControllerReorderGroups = (
     orderRequest: OrderRequest,
  signal?: AbortSignal
 ) => {
@@ -258,78 +232,48 @@ export const chartOfAccountsControllerReorderGroups = (
 
 
 
-export const getChartOfAccountsControllerReorderGroupsQueryKey = (orderRequest?: OrderRequest,) => {
-    return [
-    'PUT', `/api/account-groups/order`, orderRequest
-    ] as const;
+export const getChartOfAccountsControllerReorderGroupsMutationOptions = <TError = ChartOfAccountsControllerReorderGroups4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>, TError,{data: OrderRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>, TError,{data: OrderRequest}, TContext> => {
+
+const mutationKey = ['chartOfAccountsControllerReorderGroups'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>, {data: OrderRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  chartOfAccountsControllerReorderGroups(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChartOfAccountsControllerReorderGroupsMutationResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>>
+    export type ChartOfAccountsControllerReorderGroupsMutationBody = OrderRequest
+    export type ChartOfAccountsControllerReorderGroupsMutationError = ChartOfAccountsControllerReorderGroups4xx
+
+    export const useChartOfAccountsControllerReorderGroups = <TError = ChartOfAccountsControllerReorderGroups4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>, TError,{data: OrderRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>,
+        TError,
+        {data: OrderRequest},
+        TContext
+      > => {
+      return useMutation(getChartOfAccountsControllerReorderGroupsMutationOptions(options), queryClient);
     }
-
-
-export const getChartOfAccountsControllerReorderGroupsQueryOptions = <TData = Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>, TError = ChartOfAccountsControllerReorderGroups4xx>(orderRequest: OrderRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getChartOfAccountsControllerReorderGroupsQueryKey(orderRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>> = ({ signal }) => chartOfAccountsControllerReorderGroups(orderRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ChartOfAccountsControllerReorderGroupsQueryResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>>
-export type ChartOfAccountsControllerReorderGroupsQueryError = ChartOfAccountsControllerReorderGroups4xx
-
-
-export function useChartOfAccountsControllerReorderGroups<TData = Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>, TError = ChartOfAccountsControllerReorderGroups4xx>(
- orderRequest: OrderRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>,
-          TError,
-          Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useChartOfAccountsControllerReorderGroups<TData = Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>, TError = ChartOfAccountsControllerReorderGroups4xx>(
- orderRequest: OrderRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>,
-          TError,
-          Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useChartOfAccountsControllerReorderGroups<TData = Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>, TError = ChartOfAccountsControllerReorderGroups4xx>(
- orderRequest: OrderRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useChartOfAccountsControllerReorderGroups<TData = Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>, TError = ChartOfAccountsControllerReorderGroups4xx>(
- orderRequest: OrderRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReorderGroups>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getChartOfAccountsControllerReorderGroupsQueryOptions(orderRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const chartOfAccountsControllerReorderAccounts = (
+    export const chartOfAccountsControllerReorderAccounts = (
     groupId: number,
     orderRequest: OrderRequest,
  signal?: AbortSignal
@@ -347,84 +291,48 @@ export const chartOfAccountsControllerReorderAccounts = (
 
 
 
-export const getChartOfAccountsControllerReorderAccountsQueryKey = (groupId: number,
-    orderRequest?: OrderRequest,) => {
-    return [
-    'PUT', `/api/account-groups/${groupId}/account-order`, orderRequest
-    ] as const;
+export const getChartOfAccountsControllerReorderAccountsMutationOptions = <TError = ChartOfAccountsControllerReorderAccounts4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>, TError,{groupId: number;data: OrderRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>, TError,{groupId: number;data: OrderRequest}, TContext> => {
+
+const mutationKey = ['chartOfAccountsControllerReorderAccounts'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>, {groupId: number;data: OrderRequest}> = (props) => {
+          const {groupId,data} = props ?? {};
+
+          return  chartOfAccountsControllerReorderAccounts(groupId,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChartOfAccountsControllerReorderAccountsMutationResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>>
+    export type ChartOfAccountsControllerReorderAccountsMutationBody = OrderRequest
+    export type ChartOfAccountsControllerReorderAccountsMutationError = ChartOfAccountsControllerReorderAccounts4xx
+
+    export const useChartOfAccountsControllerReorderAccounts = <TError = ChartOfAccountsControllerReorderAccounts4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>, TError,{groupId: number;data: OrderRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>,
+        TError,
+        {groupId: number;data: OrderRequest},
+        TContext
+      > => {
+      return useMutation(getChartOfAccountsControllerReorderAccountsMutationOptions(options), queryClient);
     }
-
-
-export const getChartOfAccountsControllerReorderAccountsQueryOptions = <TData = Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>, TError = ChartOfAccountsControllerReorderAccounts4xx>(groupId: number,
-    orderRequest: OrderRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getChartOfAccountsControllerReorderAccountsQueryKey(groupId,orderRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>> = ({ signal }) => chartOfAccountsControllerReorderAccounts(groupId,orderRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: groupId !== null && groupId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ChartOfAccountsControllerReorderAccountsQueryResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>>
-export type ChartOfAccountsControllerReorderAccountsQueryError = ChartOfAccountsControllerReorderAccounts4xx
-
-
-export function useChartOfAccountsControllerReorderAccounts<TData = Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>, TError = ChartOfAccountsControllerReorderAccounts4xx>(
- groupId: number,
-    orderRequest: OrderRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>,
-          TError,
-          Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useChartOfAccountsControllerReorderAccounts<TData = Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>, TError = ChartOfAccountsControllerReorderAccounts4xx>(
- groupId: number,
-    orderRequest: OrderRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>,
-          TError,
-          Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useChartOfAccountsControllerReorderAccounts<TData = Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>, TError = ChartOfAccountsControllerReorderAccounts4xx>(
- groupId: number,
-    orderRequest: OrderRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useChartOfAccountsControllerReorderAccounts<TData = Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>, TError = ChartOfAccountsControllerReorderAccounts4xx>(
- groupId: number,
-    orderRequest: OrderRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReorderAccounts>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getChartOfAccountsControllerReorderAccountsQueryOptions(groupId,orderRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const chartOfAccountsControllerRenameGroup = (
+    export const chartOfAccountsControllerRenameGroup = (
     id: number,
     nameRequest: NameRequest,
  signal?: AbortSignal
@@ -442,84 +350,48 @@ export const chartOfAccountsControllerRenameGroup = (
 
 
 
-export const getChartOfAccountsControllerRenameGroupQueryKey = (id: number,
-    nameRequest?: NameRequest,) => {
-    return [
-    'PATCH', `/api/account-groups/${id}/name`, nameRequest
-    ] as const;
+export const getChartOfAccountsControllerRenameGroupMutationOptions = <TError = ChartOfAccountsControllerRenameGroup4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError,{id: number;data: NameRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError,{id: number;data: NameRequest}, TContext> => {
+
+const mutationKey = ['chartOfAccountsControllerRenameGroup'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, {id: number;data: NameRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  chartOfAccountsControllerRenameGroup(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChartOfAccountsControllerRenameGroupMutationResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>>
+    export type ChartOfAccountsControllerRenameGroupMutationBody = NameRequest
+    export type ChartOfAccountsControllerRenameGroupMutationError = ChartOfAccountsControllerRenameGroup4xx
+
+    export const useChartOfAccountsControllerRenameGroup = <TError = ChartOfAccountsControllerRenameGroup4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError,{id: number;data: NameRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>,
+        TError,
+        {id: number;data: NameRequest},
+        TContext
+      > => {
+      return useMutation(getChartOfAccountsControllerRenameGroupMutationOptions(options), queryClient);
     }
-
-
-export const getChartOfAccountsControllerRenameGroupQueryOptions = <TData = Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError = ChartOfAccountsControllerRenameGroup4xx>(id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getChartOfAccountsControllerRenameGroupQueryKey(id,nameRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>> = ({ signal }) => chartOfAccountsControllerRenameGroup(id,nameRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ChartOfAccountsControllerRenameGroupQueryResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>>
-export type ChartOfAccountsControllerRenameGroupQueryError = ChartOfAccountsControllerRenameGroup4xx
-
-
-export function useChartOfAccountsControllerRenameGroup<TData = Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError = ChartOfAccountsControllerRenameGroup4xx>(
- id: number,
-    nameRequest: NameRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>,
-          TError,
-          Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useChartOfAccountsControllerRenameGroup<TData = Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError = ChartOfAccountsControllerRenameGroup4xx>(
- id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>,
-          TError,
-          Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useChartOfAccountsControllerRenameGroup<TData = Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError = ChartOfAccountsControllerRenameGroup4xx>(
- id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useChartOfAccountsControllerRenameGroup<TData = Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError = ChartOfAccountsControllerRenameGroup4xx>(
- id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getChartOfAccountsControllerRenameGroupQueryOptions(id,nameRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const chartOfAccountsControllerAccounts = (
+    export const chartOfAccountsControllerAccounts = (
     params?: ChartOfAccountsControllerAccountsParams,
  signal?: AbortSignal
 ) => {
@@ -623,78 +495,48 @@ export const chartOfAccountsControllerCreateAccount = (
 
 
 
-export const getChartOfAccountsControllerCreateAccountQueryKey = (newAccount?: NewAccount,) => {
-    return [
-    'POST', `/api/accounts`, newAccount
-    ] as const;
+export const getChartOfAccountsControllerCreateAccountMutationOptions = <TError = ChartOfAccountsControllerCreateAccount4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>, TError,{data: NewAccount}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>, TError,{data: NewAccount}, TContext> => {
+
+const mutationKey = ['chartOfAccountsControllerCreateAccount'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>, {data: NewAccount}> = (props) => {
+          const {data} = props ?? {};
+
+          return  chartOfAccountsControllerCreateAccount(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChartOfAccountsControllerCreateAccountMutationResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>>
+    export type ChartOfAccountsControllerCreateAccountMutationBody = NewAccount
+    export type ChartOfAccountsControllerCreateAccountMutationError = ChartOfAccountsControllerCreateAccount4xx
+
+    export const useChartOfAccountsControllerCreateAccount = <TError = ChartOfAccountsControllerCreateAccount4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>, TError,{data: NewAccount}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>,
+        TError,
+        {data: NewAccount},
+        TContext
+      > => {
+      return useMutation(getChartOfAccountsControllerCreateAccountMutationOptions(options), queryClient);
     }
-
-
-export const getChartOfAccountsControllerCreateAccountQueryOptions = <TData = Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>, TError = ChartOfAccountsControllerCreateAccount4xx>(newAccount: NewAccount, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getChartOfAccountsControllerCreateAccountQueryKey(newAccount);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>> = ({ signal }) => chartOfAccountsControllerCreateAccount(newAccount, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ChartOfAccountsControllerCreateAccountQueryResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>>
-export type ChartOfAccountsControllerCreateAccountQueryError = ChartOfAccountsControllerCreateAccount4xx
-
-
-export function useChartOfAccountsControllerCreateAccount<TData = Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>, TError = ChartOfAccountsControllerCreateAccount4xx>(
- newAccount: NewAccount, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>,
-          TError,
-          Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useChartOfAccountsControllerCreateAccount<TData = Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>, TError = ChartOfAccountsControllerCreateAccount4xx>(
- newAccount: NewAccount, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>,
-          TError,
-          Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useChartOfAccountsControllerCreateAccount<TData = Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>, TError = ChartOfAccountsControllerCreateAccount4xx>(
- newAccount: NewAccount, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useChartOfAccountsControllerCreateAccount<TData = Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>, TError = ChartOfAccountsControllerCreateAccount4xx>(
- newAccount: NewAccount, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateAccount>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getChartOfAccountsControllerCreateAccountQueryOptions(newAccount,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const chartOfAccountsControllerSettlementTargets = (
+    export const chartOfAccountsControllerSettlementTargets = (
 
  signal?: AbortSignal
 ) => {
@@ -881,78 +723,48 @@ export const chartOfAccountsControllerDeactivateAccount = (
 
 
 
-export const getChartOfAccountsControllerDeactivateAccountQueryKey = (id: number,) => {
-    return [
-    'POST', `/api/accounts/${id}/deactivate`
-    ] as const;
+export const getChartOfAccountsControllerDeactivateAccountMutationOptions = <TError = ChartOfAccountsControllerDeactivateAccount4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['chartOfAccountsControllerDeactivateAccount'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  chartOfAccountsControllerDeactivateAccount(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChartOfAccountsControllerDeactivateAccountMutationResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>>
+
+    export type ChartOfAccountsControllerDeactivateAccountMutationError = ChartOfAccountsControllerDeactivateAccount4xx
+
+    export const useChartOfAccountsControllerDeactivateAccount = <TError = ChartOfAccountsControllerDeactivateAccount4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>, TError,{id: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getChartOfAccountsControllerDeactivateAccountMutationOptions(options), queryClient);
     }
-
-
-export const getChartOfAccountsControllerDeactivateAccountQueryOptions = <TData = Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>, TError = ChartOfAccountsControllerDeactivateAccount4xx>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getChartOfAccountsControllerDeactivateAccountQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>> = ({ signal }) => chartOfAccountsControllerDeactivateAccount(id, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ChartOfAccountsControllerDeactivateAccountQueryResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>>
-export type ChartOfAccountsControllerDeactivateAccountQueryError = ChartOfAccountsControllerDeactivateAccount4xx
-
-
-export function useChartOfAccountsControllerDeactivateAccount<TData = Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>, TError = ChartOfAccountsControllerDeactivateAccount4xx>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>,
-          TError,
-          Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useChartOfAccountsControllerDeactivateAccount<TData = Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>, TError = ChartOfAccountsControllerDeactivateAccount4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>,
-          TError,
-          Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useChartOfAccountsControllerDeactivateAccount<TData = Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>, TError = ChartOfAccountsControllerDeactivateAccount4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useChartOfAccountsControllerDeactivateAccount<TData = Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>, TError = ChartOfAccountsControllerDeactivateAccount4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerDeactivateAccount>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getChartOfAccountsControllerDeactivateAccountQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const chartOfAccountsControllerRenameAccount = (
+    export const chartOfAccountsControllerRenameAccount = (
     id: number,
     nameRequest: NameRequest,
  signal?: AbortSignal
@@ -970,84 +782,48 @@ export const chartOfAccountsControllerRenameAccount = (
 
 
 
-export const getChartOfAccountsControllerRenameAccountQueryKey = (id: number,
-    nameRequest?: NameRequest,) => {
-    return [
-    'PATCH', `/api/accounts/${id}/name`, nameRequest
-    ] as const;
+export const getChartOfAccountsControllerRenameAccountMutationOptions = <TError = ChartOfAccountsControllerRenameAccount4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError,{id: number;data: NameRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError,{id: number;data: NameRequest}, TContext> => {
+
+const mutationKey = ['chartOfAccountsControllerRenameAccount'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, {id: number;data: NameRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  chartOfAccountsControllerRenameAccount(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChartOfAccountsControllerRenameAccountMutationResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>>
+    export type ChartOfAccountsControllerRenameAccountMutationBody = NameRequest
+    export type ChartOfAccountsControllerRenameAccountMutationError = ChartOfAccountsControllerRenameAccount4xx
+
+    export const useChartOfAccountsControllerRenameAccount = <TError = ChartOfAccountsControllerRenameAccount4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError,{id: number;data: NameRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>,
+        TError,
+        {id: number;data: NameRequest},
+        TContext
+      > => {
+      return useMutation(getChartOfAccountsControllerRenameAccountMutationOptions(options), queryClient);
     }
-
-
-export const getChartOfAccountsControllerRenameAccountQueryOptions = <TData = Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError = ChartOfAccountsControllerRenameAccount4xx>(id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getChartOfAccountsControllerRenameAccountQueryKey(id,nameRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>> = ({ signal }) => chartOfAccountsControllerRenameAccount(id,nameRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ChartOfAccountsControllerRenameAccountQueryResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>>
-export type ChartOfAccountsControllerRenameAccountQueryError = ChartOfAccountsControllerRenameAccount4xx
-
-
-export function useChartOfAccountsControllerRenameAccount<TData = Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError = ChartOfAccountsControllerRenameAccount4xx>(
- id: number,
-    nameRequest: NameRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>,
-          TError,
-          Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useChartOfAccountsControllerRenameAccount<TData = Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError = ChartOfAccountsControllerRenameAccount4xx>(
- id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>,
-          TError,
-          Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useChartOfAccountsControllerRenameAccount<TData = Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError = ChartOfAccountsControllerRenameAccount4xx>(
- id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useChartOfAccountsControllerRenameAccount<TData = Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError = ChartOfAccountsControllerRenameAccount4xx>(
- id: number,
-    nameRequest: NameRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getChartOfAccountsControllerRenameAccountQueryOptions(id,nameRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const chartOfAccountsControllerReactivateAccount = (
+    export const chartOfAccountsControllerReactivateAccount = (
     id: number,
  signal?: AbortSignal
 ) => {
@@ -1062,78 +838,48 @@ export const chartOfAccountsControllerReactivateAccount = (
 
 
 
-export const getChartOfAccountsControllerReactivateAccountQueryKey = (id: number,) => {
-    return [
-    'POST', `/api/accounts/${id}/reactivate`
-    ] as const;
+export const getChartOfAccountsControllerReactivateAccountMutationOptions = <TError = ChartOfAccountsControllerReactivateAccount4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['chartOfAccountsControllerReactivateAccount'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  chartOfAccountsControllerReactivateAccount(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChartOfAccountsControllerReactivateAccountMutationResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>>
+
+    export type ChartOfAccountsControllerReactivateAccountMutationError = ChartOfAccountsControllerReactivateAccount4xx
+
+    export const useChartOfAccountsControllerReactivateAccount = <TError = ChartOfAccountsControllerReactivateAccount4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>, TError,{id: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getChartOfAccountsControllerReactivateAccountMutationOptions(options), queryClient);
     }
-
-
-export const getChartOfAccountsControllerReactivateAccountQueryOptions = <TData = Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>, TError = ChartOfAccountsControllerReactivateAccount4xx>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getChartOfAccountsControllerReactivateAccountQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>> = ({ signal }) => chartOfAccountsControllerReactivateAccount(id, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ChartOfAccountsControllerReactivateAccountQueryResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>>
-export type ChartOfAccountsControllerReactivateAccountQueryError = ChartOfAccountsControllerReactivateAccount4xx
-
-
-export function useChartOfAccountsControllerReactivateAccount<TData = Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>, TError = ChartOfAccountsControllerReactivateAccount4xx>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>,
-          TError,
-          Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useChartOfAccountsControllerReactivateAccount<TData = Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>, TError = ChartOfAccountsControllerReactivateAccount4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>,
-          TError,
-          Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useChartOfAccountsControllerReactivateAccount<TData = Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>, TError = ChartOfAccountsControllerReactivateAccount4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useChartOfAccountsControllerReactivateAccount<TData = Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>, TError = ChartOfAccountsControllerReactivateAccount4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerReactivateAccount>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getChartOfAccountsControllerReactivateAccountQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const chartOfAccountsControllerChart = (
+    export const chartOfAccountsControllerChart = (
 
  signal?: AbortSignal
 ) => {

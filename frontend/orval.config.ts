@@ -106,7 +106,21 @@ export default defineConfig({
           name: 'apiMutator',
         },
         query: {
-          useQuery: true,
+          /*
+           * ⚠️ `useQuery: true` was set here and it is NOT a harmless default.
+           *
+           * It forces EVERY operation to be generated as a query — including all 66 POST, PUT,
+           * PATCH and DELETE routes. A component that merely rendered `useProductControllerRename`
+           * would have sent the PATCH on mount, and again on every refetch, invalidation and window
+           * focus: writes executed as reads, repeatedly, by rendering.
+           *
+           * Nothing caught it during the foundations pass because nothing consumed a write hook
+           * yet — the first screen to attempt one is what found it. Left to orval's own rule now:
+           * GET becomes a query, everything else becomes a mutation.
+           *
+           * `product-detail.test.tsx` asserts a render sends no write, so this cannot come back
+           * silently.
+           */
           signal: true,
         },
       },

@@ -8,16 +8,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -152,74 +156,44 @@ export const meControllerChangeLanguage = (
 
 
 
-export const getMeControllerChangeLanguageQueryKey = (languageRequest?: LanguageRequest,) => {
-    return [
-    'PATCH', `/api/me/language`, languageRequest
-    ] as const;
+export const getMeControllerChangeLanguageMutationOptions = <TError = MeControllerChangeLanguage4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof meControllerChangeLanguage>>, TError,{data: LanguageRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof meControllerChangeLanguage>>, TError,{data: LanguageRequest}, TContext> => {
+
+const mutationKey = ['meControllerChangeLanguage'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof meControllerChangeLanguage>>, {data: LanguageRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  meControllerChangeLanguage(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MeControllerChangeLanguageMutationResult = NonNullable<Awaited<ReturnType<typeof meControllerChangeLanguage>>>
+    export type MeControllerChangeLanguageMutationBody = LanguageRequest
+    export type MeControllerChangeLanguageMutationError = MeControllerChangeLanguage4xx
+
+    export const useMeControllerChangeLanguage = <TError = MeControllerChangeLanguage4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof meControllerChangeLanguage>>, TError,{data: LanguageRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof meControllerChangeLanguage>>,
+        TError,
+        {data: LanguageRequest},
+        TContext
+      > => {
+      return useMutation(getMeControllerChangeLanguageMutationOptions(options), queryClient);
     }
-
-
-export const getMeControllerChangeLanguageQueryOptions = <TData = Awaited<ReturnType<typeof meControllerChangeLanguage>>, TError = MeControllerChangeLanguage4xx>(languageRequest: LanguageRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof meControllerChangeLanguage>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getMeControllerChangeLanguageQueryKey(languageRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof meControllerChangeLanguage>>> = ({ signal }) => meControllerChangeLanguage(languageRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof meControllerChangeLanguage>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type MeControllerChangeLanguageQueryResult = NonNullable<Awaited<ReturnType<typeof meControllerChangeLanguage>>>
-export type MeControllerChangeLanguageQueryError = MeControllerChangeLanguage4xx
-
-
-export function useMeControllerChangeLanguage<TData = Awaited<ReturnType<typeof meControllerChangeLanguage>>, TError = MeControllerChangeLanguage4xx>(
- languageRequest: LanguageRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof meControllerChangeLanguage>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof meControllerChangeLanguage>>,
-          TError,
-          Awaited<ReturnType<typeof meControllerChangeLanguage>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useMeControllerChangeLanguage<TData = Awaited<ReturnType<typeof meControllerChangeLanguage>>, TError = MeControllerChangeLanguage4xx>(
- languageRequest: LanguageRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof meControllerChangeLanguage>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof meControllerChangeLanguage>>,
-          TError,
-          Awaited<ReturnType<typeof meControllerChangeLanguage>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useMeControllerChangeLanguage<TData = Awaited<ReturnType<typeof meControllerChangeLanguage>>, TError = MeControllerChangeLanguage4xx>(
- languageRequest: LanguageRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof meControllerChangeLanguage>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useMeControllerChangeLanguage<TData = Awaited<ReturnType<typeof meControllerChangeLanguage>>, TError = MeControllerChangeLanguage4xx>(
- languageRequest: LanguageRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof meControllerChangeLanguage>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getMeControllerChangeLanguageQueryOptions(languageRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-

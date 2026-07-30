@@ -8,16 +8,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -610,84 +614,48 @@ export const inventoryControllerMoveLot = (
 
 
 
-export const getInventoryControllerMoveLotQueryKey = (id: number,
-    locationRequest?: LocationRequest,) => {
-    return [
-    'POST', `/api/inventory/lots/${id}/location`, locationRequest
-    ] as const;
+export const getInventoryControllerMoveLotMutationOptions = <TError = InventoryControllerMoveLot4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerMoveLot>>, TError,{id: number;data: LocationRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerMoveLot>>, TError,{id: number;data: LocationRequest}, TContext> => {
+
+const mutationKey = ['inventoryControllerMoveLot'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof inventoryControllerMoveLot>>, {id: number;data: LocationRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  inventoryControllerMoveLot(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InventoryControllerMoveLotMutationResult = NonNullable<Awaited<ReturnType<typeof inventoryControllerMoveLot>>>
+    export type InventoryControllerMoveLotMutationBody = LocationRequest
+    export type InventoryControllerMoveLotMutationError = InventoryControllerMoveLot4xx
+
+    export const useInventoryControllerMoveLot = <TError = InventoryControllerMoveLot4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerMoveLot>>, TError,{id: number;data: LocationRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof inventoryControllerMoveLot>>,
+        TError,
+        {id: number;data: LocationRequest},
+        TContext
+      > => {
+      return useMutation(getInventoryControllerMoveLotMutationOptions(options), queryClient);
     }
-
-
-export const getInventoryControllerMoveLotQueryOptions = <TData = Awaited<ReturnType<typeof inventoryControllerMoveLot>>, TError = InventoryControllerMoveLot4xx>(id: number,
-    locationRequest: LocationRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerMoveLot>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getInventoryControllerMoveLotQueryKey(id,locationRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof inventoryControllerMoveLot>>> = ({ signal }) => inventoryControllerMoveLot(id,locationRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerMoveLot>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type InventoryControllerMoveLotQueryResult = NonNullable<Awaited<ReturnType<typeof inventoryControllerMoveLot>>>
-export type InventoryControllerMoveLotQueryError = InventoryControllerMoveLot4xx
-
-
-export function useInventoryControllerMoveLot<TData = Awaited<ReturnType<typeof inventoryControllerMoveLot>>, TError = InventoryControllerMoveLot4xx>(
- id: number,
-    locationRequest: LocationRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerMoveLot>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof inventoryControllerMoveLot>>,
-          TError,
-          Awaited<ReturnType<typeof inventoryControllerMoveLot>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useInventoryControllerMoveLot<TData = Awaited<ReturnType<typeof inventoryControllerMoveLot>>, TError = InventoryControllerMoveLot4xx>(
- id: number,
-    locationRequest: LocationRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerMoveLot>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof inventoryControllerMoveLot>>,
-          TError,
-          Awaited<ReturnType<typeof inventoryControllerMoveLot>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useInventoryControllerMoveLot<TData = Awaited<ReturnType<typeof inventoryControllerMoveLot>>, TError = InventoryControllerMoveLot4xx>(
- id: number,
-    locationRequest: LocationRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerMoveLot>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useInventoryControllerMoveLot<TData = Awaited<ReturnType<typeof inventoryControllerMoveLot>>, TError = InventoryControllerMoveLot4xx>(
- id: number,
-    locationRequest: LocationRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerMoveLot>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getInventoryControllerMoveLotQueryOptions(id,locationRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const inventoryControllerUnitsOfLot = (
+    export const inventoryControllerUnitsOfLot = (
     id: number,
  signal?: AbortSignal
 ) => {
@@ -878,84 +846,48 @@ export const inventoryControllerMoveUnit = (
 
 
 
-export const getInventoryControllerMoveUnitQueryKey = (id: number,
-    locationRequest?: LocationRequest,) => {
-    return [
-    'POST', `/api/inventory/units/${id}/location`, locationRequest
-    ] as const;
+export const getInventoryControllerMoveUnitMutationOptions = <TError = InventoryControllerMoveUnit4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerMoveUnit>>, TError,{id: number;data: LocationRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerMoveUnit>>, TError,{id: number;data: LocationRequest}, TContext> => {
+
+const mutationKey = ['inventoryControllerMoveUnit'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof inventoryControllerMoveUnit>>, {id: number;data: LocationRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  inventoryControllerMoveUnit(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InventoryControllerMoveUnitMutationResult = NonNullable<Awaited<ReturnType<typeof inventoryControllerMoveUnit>>>
+    export type InventoryControllerMoveUnitMutationBody = LocationRequest
+    export type InventoryControllerMoveUnitMutationError = InventoryControllerMoveUnit4xx
+
+    export const useInventoryControllerMoveUnit = <TError = InventoryControllerMoveUnit4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerMoveUnit>>, TError,{id: number;data: LocationRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof inventoryControllerMoveUnit>>,
+        TError,
+        {id: number;data: LocationRequest},
+        TContext
+      > => {
+      return useMutation(getInventoryControllerMoveUnitMutationOptions(options), queryClient);
     }
-
-
-export const getInventoryControllerMoveUnitQueryOptions = <TData = Awaited<ReturnType<typeof inventoryControllerMoveUnit>>, TError = InventoryControllerMoveUnit4xx>(id: number,
-    locationRequest: LocationRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerMoveUnit>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getInventoryControllerMoveUnitQueryKey(id,locationRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof inventoryControllerMoveUnit>>> = ({ signal }) => inventoryControllerMoveUnit(id,locationRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerMoveUnit>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type InventoryControllerMoveUnitQueryResult = NonNullable<Awaited<ReturnType<typeof inventoryControllerMoveUnit>>>
-export type InventoryControllerMoveUnitQueryError = InventoryControllerMoveUnit4xx
-
-
-export function useInventoryControllerMoveUnit<TData = Awaited<ReturnType<typeof inventoryControllerMoveUnit>>, TError = InventoryControllerMoveUnit4xx>(
- id: number,
-    locationRequest: LocationRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerMoveUnit>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof inventoryControllerMoveUnit>>,
-          TError,
-          Awaited<ReturnType<typeof inventoryControllerMoveUnit>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useInventoryControllerMoveUnit<TData = Awaited<ReturnType<typeof inventoryControllerMoveUnit>>, TError = InventoryControllerMoveUnit4xx>(
- id: number,
-    locationRequest: LocationRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerMoveUnit>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof inventoryControllerMoveUnit>>,
-          TError,
-          Awaited<ReturnType<typeof inventoryControllerMoveUnit>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useInventoryControllerMoveUnit<TData = Awaited<ReturnType<typeof inventoryControllerMoveUnit>>, TError = InventoryControllerMoveUnit4xx>(
- id: number,
-    locationRequest: LocationRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerMoveUnit>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useInventoryControllerMoveUnit<TData = Awaited<ReturnType<typeof inventoryControllerMoveUnit>>, TError = InventoryControllerMoveUnit4xx>(
- id: number,
-    locationRequest: LocationRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerMoveUnit>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getInventoryControllerMoveUnitQueryOptions(id,locationRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const inventoryControllerWriteOffs = (
+    export const inventoryControllerWriteOffs = (
     params?: InventoryControllerWriteOffsParams,
  signal?: AbortSignal
 ) => {
@@ -1059,78 +991,48 @@ export const inventoryControllerWriteOffPost = (
 
 
 
-export const getInventoryControllerWriteOffPostQueryKey = (newStockWriteOff?: NewStockWriteOff,) => {
-    return [
-    'POST', `/api/inventory/write-offs`, newStockWriteOff
-    ] as const;
+export const getInventoryControllerWriteOffPostMutationOptions = <TError = InventoryControllerWriteOffPost4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>, TError,{data: NewStockWriteOff}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>, TError,{data: NewStockWriteOff}, TContext> => {
+
+const mutationKey = ['inventoryControllerWriteOffPost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>, {data: NewStockWriteOff}> = (props) => {
+          const {data} = props ?? {};
+
+          return  inventoryControllerWriteOffPost(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InventoryControllerWriteOffPostMutationResult = NonNullable<Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>>
+    export type InventoryControllerWriteOffPostMutationBody = NewStockWriteOff
+    export type InventoryControllerWriteOffPostMutationError = InventoryControllerWriteOffPost4xx
+
+    export const useInventoryControllerWriteOffPost = <TError = InventoryControllerWriteOffPost4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>, TError,{data: NewStockWriteOff}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>,
+        TError,
+        {data: NewStockWriteOff},
+        TContext
+      > => {
+      return useMutation(getInventoryControllerWriteOffPostMutationOptions(options), queryClient);
     }
-
-
-export const getInventoryControllerWriteOffPostQueryOptions = <TData = Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>, TError = InventoryControllerWriteOffPost4xx>(newStockWriteOff: NewStockWriteOff, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getInventoryControllerWriteOffPostQueryKey(newStockWriteOff);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>> = ({ signal }) => inventoryControllerWriteOffPost(newStockWriteOff, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type InventoryControllerWriteOffPostQueryResult = NonNullable<Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>>
-export type InventoryControllerWriteOffPostQueryError = InventoryControllerWriteOffPost4xx
-
-
-export function useInventoryControllerWriteOffPost<TData = Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>, TError = InventoryControllerWriteOffPost4xx>(
- newStockWriteOff: NewStockWriteOff, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>,
-          TError,
-          Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useInventoryControllerWriteOffPost<TData = Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>, TError = InventoryControllerWriteOffPost4xx>(
- newStockWriteOff: NewStockWriteOff, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>,
-          TError,
-          Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useInventoryControllerWriteOffPost<TData = Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>, TError = InventoryControllerWriteOffPost4xx>(
- newStockWriteOff: NewStockWriteOff, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useInventoryControllerWriteOffPost<TData = Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>, TError = InventoryControllerWriteOffPost4xx>(
- newStockWriteOff: NewStockWriteOff, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getInventoryControllerWriteOffPostQueryOptions(newStockWriteOff,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const inventoryControllerWriteOffGet = (
+    export const inventoryControllerWriteOffGet = (
     id: number,
  signal?: AbortSignal
 ) => {
@@ -1234,80 +1136,44 @@ export const inventoryControllerReverseWriteOff = (
 
 
 
-export const getInventoryControllerReverseWriteOffQueryKey = (id: number,
-    writeOffReversalRequest?: WriteOffReversalRequest,) => {
-    return [
-    'POST', `/api/inventory/write-offs/${id}/reversal`, writeOffReversalRequest
-    ] as const;
+export const getInventoryControllerReverseWriteOffMutationOptions = <TError = InventoryControllerReverseWriteOff4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>, TError,{id: number;data: WriteOffReversalRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>, TError,{id: number;data: WriteOffReversalRequest}, TContext> => {
+
+const mutationKey = ['inventoryControllerReverseWriteOff'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>, {id: number;data: WriteOffReversalRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  inventoryControllerReverseWriteOff(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InventoryControllerReverseWriteOffMutationResult = NonNullable<Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>>
+    export type InventoryControllerReverseWriteOffMutationBody = WriteOffReversalRequest
+    export type InventoryControllerReverseWriteOffMutationError = InventoryControllerReverseWriteOff4xx
+
+    export const useInventoryControllerReverseWriteOff = <TError = InventoryControllerReverseWriteOff4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>, TError,{id: number;data: WriteOffReversalRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>,
+        TError,
+        {id: number;data: WriteOffReversalRequest},
+        TContext
+      > => {
+      return useMutation(getInventoryControllerReverseWriteOffMutationOptions(options), queryClient);
     }
-
-
-export const getInventoryControllerReverseWriteOffQueryOptions = <TData = Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>, TError = InventoryControllerReverseWriteOff4xx>(id: number,
-    writeOffReversalRequest: WriteOffReversalRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getInventoryControllerReverseWriteOffQueryKey(id,writeOffReversalRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>> = ({ signal }) => inventoryControllerReverseWriteOff(id,writeOffReversalRequest, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type InventoryControllerReverseWriteOffQueryResult = NonNullable<Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>>
-export type InventoryControllerReverseWriteOffQueryError = InventoryControllerReverseWriteOff4xx
-
-
-export function useInventoryControllerReverseWriteOff<TData = Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>, TError = InventoryControllerReverseWriteOff4xx>(
- id: number,
-    writeOffReversalRequest: WriteOffReversalRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>,
-          TError,
-          Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useInventoryControllerReverseWriteOff<TData = Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>, TError = InventoryControllerReverseWriteOff4xx>(
- id: number,
-    writeOffReversalRequest: WriteOffReversalRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>,
-          TError,
-          Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useInventoryControllerReverseWriteOff<TData = Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>, TError = InventoryControllerReverseWriteOff4xx>(
- id: number,
-    writeOffReversalRequest: WriteOffReversalRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useInventoryControllerReverseWriteOff<TData = Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>, TError = InventoryControllerReverseWriteOff4xx>(
- id: number,
-    writeOffReversalRequest: WriteOffReversalRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerReverseWriteOff>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getInventoryControllerReverseWriteOffQueryOptions(id,writeOffReversalRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
