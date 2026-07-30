@@ -53,13 +53,17 @@ directly rather than trusting the line count: **0 removed, 37 added, 174 total.*
 **Finish tier-A paging across the remaining five services.** The contract is settled and proven on
 sales invoices; what is left is the same shape applied again, with no decision outstanding:
 
-| Service | Routes | Sort enum to add |
-|---|---|---|
-| `PurchaseInvoiceService` | `GET /api/purchase-invoices` | invoice date, supplier number, recorded-at |
-| `GoodsReceiptService` | `GET /api/goods-receipts` | receipt date, recorded-at |
-| `SettlementService` | `GET /api/settlements` | settlement date, recorded-at |
-| `InventoryService` | `GET /api/inventory/lots`, `/consumptions` | acquisition date, recorded-at |
-| `EmailSender` | `GET /api/email/outbox` | queued-at, status |
+| Service | Routes | Sort enum to add | Note |
+|---|---|---|---|
+| `PurchaseInvoiceService` | `GET /api/purchase-invoices` | invoice date, supplier number, recorded-at | |
+| `GoodsReceiptService` | `GET /api/goods-receipts` | receipt date, recorded-at | |
+| `SettlementService` | `GET /api/settlements` | settlement date, recorded-at | |
+| `InventoryService` | `GET /api/inventory/lots`, `/consumptions` | acquisition date, recorded-at | **⚠️ read check 3** |
+| `EmailSender` | `GET /api/email/outbox` | queued-at, status | **⚠️ read check 3** |
+
+⚠️ **The two rows flagged above page rows that carry a collection** — a lot reaches its serialized
+units, an outbox message reaches its attachments — so **check 3 below is about them specifically**,
+and the reason it gives is not the one you have probably read elsewhere.
 
 **The recipe, in order, per service:** a `…Sort` enum in `core-api` next to its service interface →
 a `page…` method on the interface taking `PageRequest` and returning `PageResponse` → a `Page<E>`
@@ -67,32 +71,49 @@ finder on the repository with **no `OrderBy` in the method name** (the ordering 
 `Pageable`) → a `SORTABLE` map plus a natural order in the impl, calling `SpringPaging` → the route
 gaining `page`/`size`/`sort`/`direction` through `Paging.of`.
 
-**Two things to check for each**, both of which bit on sales invoices:
+### Four checks per service — 1 and 2 bit on sales invoices, 3 and 4 in step 16b
 
-1. **Every sort key must be a real column.** `GROSS_TOTAL` was removed from `SalesInvoiceSort`
-   because an invoice's gross is summed in Java from its lines. The same trap exists on purchase
-   invoices, goods receipts and settlements — check before adding the constant, not after.
-2. **Regenerate the spec at the end and read the diff.** It should be additions only; a deletion
-   means a response shape changed rather than gained a field.
+**1. Every sort key must be a real column.** `GROSS_TOTAL` was removed from `SalesInvoiceSort`
+because an invoice's gross is summed in Java from its lines. The same trap exists on purchase
+invoices, goods receipts and settlements — check before adding the constant, not after.
 
-Then `mvn verify -Dnovocore.openapi.write=true`, commit the spec with the change.
+**2. Regenerate the spec at the end and read the diff.** It should be additions only; a deletion
+means a response shape changed rather than gained a field.
 
-**A third thing to check, learned in 16b.** Two of the five services page a list whose rows carry a
-collection (`GET /api/inventory/lots` reaches a lot's units; the outbox reaches a message's
-attachments). Do **not** reach for a `join fetch` there, and do not repeat the reason 16b first gave
-for that: `HHH000104` — Hibernate paging a fetched collection in memory — is **Hibernate 5
-behaviour**. On 7 the limit is applied in SQL and the collections load separately, so the real cost
-is an **N+1 per page**, measured at 5 entities/0 collection loads without a fetch against 15/5 with
-one. Still worth avoiding, and worth stating accurately.
-`JournalEndpointIT.aPageLoadsOnlyItsOwnRows` is the pattern to copy: assert entity **and** collection
-load counts from Hibernate's `Statistics`, and check `isStatisticsEnabled()` first — the earlier
-version of that test measured nothing and passed against a deliberately introduced fetch.
+**3. ⚠️ Do not `join fetch` a collection to page it — and the usual reason for that is wrong.**
+Applies to **`InventoryService` (lots → serialized units)** and **`EmailSender` (outbox messages →
+attachments)**, the two rows flagged in the table above.
 
-**And a fourth**, if any of these gains an optional filter: a JPQL `(:param is null or …)` **does not
-work on PostgreSQL** — a bare parameter in `? IS NULL` gives the driver nothing to infer from and the
-statement is refused outright (`could not determine data type of parameter $1`). Use a
-`Specification`, as `JournalEntrySpecifications` does; casting each parameter also works and leaves
-dead conditions in every plan.
+> The received wisdom is `HHH000104` — Hibernate cannot apply a limit to a query with a fetched
+> collection, so it loads the whole result set and pages in memory. **That is Hibernate 5
+> behaviour**, and step 16b repeated it in four javadocs before measuring it. On **Hibernate 7** the
+> limit *is* applied in SQL and the collections load separately. Measured, for a five-row page of
+> twenty-five entries:
+>
+> ```
+> without a collection fetch:  5 entities loaded,  0 collection loads
+> with one:                   15 entities loaded,  5 collection loads
+> ```
+>
+> So the real cost is an **N+1 per page**, not an out-of-memory. Still worth avoiding — and worth
+> stating accurately, because a justification that turns out to be false is how a good decision gets
+> reversed by whoever checks it.
+
+**Copy `JournalEndpointIT.aPageLoadsOnlyItsOwnRows`**: assert entity **and** collection load counts
+from Hibernate's `Statistics`, and assert `isStatisticsEnabled()` **first**. The earlier version of
+that test measured nothing — it asserted "0 is less than 25" and passed against every possible
+implementation, including a deliberately introduced fetch. A single-valued `@ManyToOne` fetch is
+fine and is not what this is about; see `JournalEntrySpecifications.linesOfAccount`, which fetches
+one and documents why the count query must not.
+
+**4. ⚠️ A JPQL `(:param is null or …)` does not work on PostgreSQL** — relevant the moment any of
+these gains an optional filter. A bare parameter in `? IS NULL` gives the driver nothing to infer a
+type from and the statement is refused outright: `could not determine data type of parameter $1`. It
+fails for *every* request, not only the ones omitting the filter. Use a `Specification`, as
+`JournalEntrySpecifications` does; casting each parameter also works and leaves dead conditions in
+every plan.
+
+**Then** `mvn verify -Dnovocore.openapi.write=true`, and commit the spec with the change.
 
 Step 15 added 113 in total (1039 → 1152), and the count understates the change twice over:
 `WholeScenarioIT`'s 21 invariant tests were **replaced** by 12 shared ones fed to a `@TestFactory`,
