@@ -45,6 +45,37 @@ A `@Transactional` method calling another on the same class with default propaga
 
 A related trap with the same shape: a method that is *not* transactional returning JPA entities with lazy associations, which then blow up on first access at the caller. Materialise plain data inside the transaction instead — `EmailOutbox.claimDue` and `BackupJournal.artefactToRemove` both state this requirement rather than leaving it to be discovered.
 
+### Named anti-pattern: a verification that answers its own request
+
+**Standing practice: when the question is "will the backend accept this", the backend has to answer
+it.** A mock, a stub, an intercepted request or a fixture cannot, because it returns whatever it was
+told to return. This is not advice about test *coverage* — screen tests over a mock server are
+correct and stay. It is about what a given check is *evidence for*.
+
+**It has already produced a confident, wrong entry in `PROGRESS.md`.** The Products create form was
+cleared as working by a headless-browser check that **intercepted `POST /api/products` and answered
+it with a fabricated `201`** — deliberately, to avoid writing to the development database. The check
+captured the payload, the payload read correctly, and the screen navigated to the new product. Every
+observation was true. None of it was evidence for the claim, because the backend never saw the
+request: **creating a product failed for every user, every time**, and the owner reproduced it in
+about a minute by filling the form and pressing the button. The close-out had recorded the opposite,
+and had filed the underlying symptom as an unreproduced backend edge case.
+
+**The objection this exists to answer is a real one** — a verification must not litter a curated
+database with test rows. It does not need to:
+
+- **Get the refusal from the server.** Submit against a value the domain already refuses — an
+  existing SKU answers `422 "already exists"` **only if the body parsed** — which distinguishes a
+  parser rejection from a domain one, exercises the whole path, and creates nothing.
+- **Then, once, do it for real** and remove the row, saying in the report what residue is left
+  (a sequence advanced, an append-only audit entry) rather than implying none.
+
+**What a mock server structurally cannot see**, and therefore what no screen test can be used to
+claim: whether a body satisfies the *real* contract. The worked example is exactly that — the spec
+declares required fields on 2 of 185 schemas, so every generated request type is fully optional and
+none of them means it; the form was written correctly against a contract that was wrong, and the
+only thing that could ever have said so was the server.
+
 ### Named anti-pattern: a client's mistake raised as a programming error
 
 **An exception type that means "our code is wrong" must never be used to tell a caller that *their* request is wrong.** The two are handled differently on purpose — `WebExceptionHandler` returns a validation message because an operator who cannot see why a document was refused cannot fix it, and *withholds* the message from a programming error because it describes internal state. Signal a client mistake with the wrong type and the message is correctly discarded: the caller gets `400 "Bad request."`, or a `500` in Boot's legacy body shape, and in both cases a response that looks deliberate.

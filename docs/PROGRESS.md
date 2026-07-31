@@ -4138,14 +4138,27 @@ was verified back to 8 products, all active, one user.
 
 ### ⚠️ Queued for the next BACKEND session — three standalone items
 
-Each is small, each was raised by frontend work, and none of them is frontend work to fix. They are
-listed oldest first; nothing here blocks F1.
+Each was raised by frontend work and none of them is frontend work to fix. Nothing here blocks F1.
 
-| # | Item | Raised |
-|---|---|---|
-| 1 | `InventoryController_writeOff` — one `operationId` on two operations | 2026-07-30 |
-| 2 | **A primitive `boolean` on a body record is mandatory while the spec calls it optional** — broke product creation outright; the frontend carries a workaround | 2026-07-31 |
-| 3 | No SKU **search** endpoint — the products lookup is exact-match only | 2026-07-31 |
+**Take item 2 first, and inside it the spec half before the serialisation half.** The owner set this
+priority explicitly on 2026-07-31, and the reason is not that item 2 is the newest or that it caused
+the loudest failure. It is that **it is the only one of the three likely to have silent siblings.**
+Items 1 and 3 are each a single known thing in a known place. Item 2's spec half is a property of
+**71 request-bodied operations at once**: `required` is declared on 2 schemas out of 185, so every
+generated request type is fully optional and no client can tell a mandatory field from an optional
+one anywhere on the surface. `serialTracked` is simply the first one a screen happened to omit.
+There is no way to know how many others are waiting without making the spec say what it means — and
+each one that is waiting will present exactly as this one did: a `400` naming no field, on a route
+whose own contract said the request was valid.
+
+| # | Item | Priority | Raised |
+|---|---|---|---|
+| 2 | **A primitive `boolean` on a body record is mandatory while the spec calls it optional** — broke product creation outright; the frontend carries a workaround | **First. The spec half before the serialisation half** | 2026-07-31 |
+| 1 | `InventoryController_writeOff` — one `operationId` on two operations | After 2 | 2026-07-30 |
+| 3 | No SKU **search** endpoint — the products lookup is exact-match only | After 2; needs an owner decision first | 2026-07-31 |
+
+*(Numbering is kept as originally assigned so existing references still resolve; the order of the
+rows is the order to work in.)*
 
 ---
 
@@ -4266,7 +4279,39 @@ project has for that claim: a full trading quarter, built by nothing but HTTP re
 twelve universal invariants — and still does after being dumped, restored into a fresh database and
 swept again.
 
-### ➡️ Step 16, the frontend — under way. **Next up: F1, Suppliers.**
+### ➡️ Step 16, the frontend — under way. **Current: F1, Suppliers.**
+
+#### 📋 F1 scope, read off the API surface (2026-07-31). **Two items need an owner decision before they are built — marked ❓.**
+
+The `SUPPLIERS` section has 11 routes. Seven are screen work; two are deliberately **not** in F1.
+
+| # | Sub-part | Routes | Verdict |
+|---|---|---|---|
+| 1 | `useVatExemptionReasons` lookup, gated on `TAX_AND_CHARGES` exactly as `useVatClasses` is | `GET /api/vat-exemption-reasons` | Open |
+| 2 | Suppliers list — columns, active-only filter, `DataTable` | `GET /api/suppliers` | Open |
+| 3 | Supplier detail — name, VAT number | `PATCH …/name`, `…/vat-number` | Open |
+| 4 | Contact details — **one editor, two fields**, because the route takes `email` and `phone` together | `PATCH …/contact-details` | Open |
+| 5 | ❓ VAT status **and** exemption reason — one route, two coupled values | `PATCH …/vat-status` | **Needs a decision** |
+| 6 | Deactivate / reactivate, with `Refusal` | `POST …/deactivate`, `…/reactivate` | Open |
+| 7 | ❓ Create form | `POST /api/suppliers` | **Needs a decision — not named in the roadmap line** |
+| 8 | Wire `/suppliers` and `/suppliers/:id` into `routes.tsx`; the nav node already exists | — | Open |
+| 9 | Tests, including the three standing guards this pass added | — | Open |
+| 10 | EN + EL strings | — | Open |
+| — | `GET /api/suppliers/match-suggestions` | — | **Out of scope.** It serves the never-silently-guess matching flow (brief rule 7), which belongs to the import/reconciliation work, not to a master-data screen |
+| — | `GET /api/suppliers/by-vat-number/{vatNumber}` | — | **Out of scope.** A lookup for the AADE/VIES adapter (step 28), not a screen |
+
+**What the API decides for us, so it is not re-litigated per field.** `VatStatus` carries two flags
+and they are not symmetrical: `INTRA_EU_B2B` **requires a VAT number**; `EXEMPT` **requires an
+exemption reason**; `DOMESTIC`, `NON_EU_EXPORT` and `OTHER` require neither.
+`SupplierServiceImpl` enforces both and refuses with a message, so the screen's job is to avoid
+offering a combination that will be refused — not to re-implement the rule.
+
+**One thing checked rather than assumed, given what F0's follow-up just cost:** `NewSupplier` is a
+record of `String`s, an enum and a `Long` — **no primitives**, so it does not carry the
+absent-field-is-null trap that broke product creation. Its compact constructor requires `name` and
+`vatStatus`. **This is exactly the check `CLAUDE.md`'s new "a verification that answers its own
+request" section says to make against the server rather than a mock**, and it should be made that
+way before F1's create form is called done, whichever way the ❓ below is decided.
 
 Frontend work is tracked step by step in **`docs/novocore-frontend-roadmap.md`**, which is the file
 to read for what comes next. **F0 is done** (see its section above): the development database now

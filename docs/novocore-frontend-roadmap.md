@@ -27,7 +27,7 @@ candidate causes per symptom).
 |-----:|------------------------------------------------------------------------------------------------------------------------------------|------:|-------:|---------------|
 |   F0 | Restore dev data — build and run step 15c, the seed pass that was approved and never written ᶠ⁰                                    |     — |    0.9 | 🟢 Done        |
 |      | *(not a step)* Products bugfix pass — the render loop, and two defects it hid ᵇᶠ                                                   |     — |        | 🟢 Done        |
-|   F1 | Suppliers — list, detail, per-field PATCH (Products' pattern, reused)                                                              |     — |        | 🟡 **Current** |
+|   F1 | Suppliers — list, detail, per-field PATCH (Products' pattern, reused) ᶠ¹                                                           |     — |        | 🟡 **Current** |
 |   F2 | Customers — same pattern, plus VAT status and the protected retail-customer record                                                 |     — |        | 🔴 Not started |
 |   F3 | Users & Roles — real admin screen: create roles, grant sections, manage accounts                                                   |     — |        | 🔴 Not started |
 |   F4 | Settings — general config, Reference Data (VAT classes, UoM), Adapters/Modules toggle grids (read-only placeholders)               |     — |        | 🔴 Not started |
@@ -137,6 +137,13 @@ response delay to fail at all, is in `PROGRESS.md` under *Products — the wedge
   against eight `TEST-PRODUCT-*` SKUs matches nothing. Queued as a backend item; the choice between
   a real search endpoint and clearer labelling is the owner's, and **the frontend should not change
   until it is made.**
+
+**ᶠ¹ F1 is scoped and two sub-parts are waiting on the owner.** The checklist is in `PROGRESS.md`
+under *F1 scope, read off the API surface* — ten sub-parts, plus two routes deliberately excluded
+(`match-suggestions` belongs to the matching flow, `by-vat-number` to the AADE/VIES adapter). The two
+open questions are whether **VAT status and its exemption reason** are edited as one control or two,
+and whether F1 includes a **create form** — the roadmap line above names list, detail and per-field
+PATCH, and does not mention creating a supplier.
 
 **F5 carries more weight than its position implies.** It's not just the next screen — it
 decides the entire document-creation interaction pattern (multi-line entry, running
