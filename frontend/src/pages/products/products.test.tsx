@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { AccessLevel, ProtectedField, Section, type Me, type ProductView } from '@/api/generated/model'
 import { AppQueryProvider } from '@/auth/query-client'
@@ -142,6 +142,40 @@ describe('the product list', () => {
     expect(await screen.findByText('Coffee Importers SA')).toBeInTheDocument()
   })
 
+  it('refetches without the filter when active-only is unticked, and survives it', async () => {
+    /*
+     * The interaction that wedged the browser. Changing this filter changes the query key, so the
+     * query holds no data while it refetches — and that was the state the table re-rendered itself
+     * out of, permanently, in both Chrome and Firefox.
+     *
+     * The guard against the loop itself is `data-table-loop.test.tsx`, which needs a response that
+     * does not arrive inside a microtask to reproduce it. This one asserts the plain thing the
+     * operator wanted: unticking the box shows the inactive products.
+     */
+    const retired: ProductView = {
+      ...espresso,
+      id: 42,
+      sku: 'OLD-001',
+      name: 'Discontinued blend',
+      active: false,
+    }
+    server.use(
+      http.get('http://localhost/api/products', ({ request }) => {
+        const active = new URL(request.url).searchParams.get('active')
+        return HttpResponse.json({ items: active === 'true' ? [espresso] : [espresso, retired] })
+      }),
+    )
+
+    const user = userEvent.setup()
+    renderList()
+    await screen.findByText('ESP-001')
+    expect(screen.queryByText('OLD-001')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('checkbox'))
+
+    expect(await screen.findByText('OLD-001')).toBeInTheDocument()
+  })
+
   it('never asks for reference data the role has no grant for', async () => {
     me = orderStaff
     renderList()
@@ -211,6 +245,82 @@ describe('the product detail', () => {
     // it would leave the old value on screen as though the change had been accepted.
     expect(await screen.findByRole('alert')).toHaveTextContent('A product name cannot be blank.')
     expect(screen.getByLabelText('Name')).toHaveValue('Espresso blend 1kg XL')
+  })
+
+  it('shows the backend’s reason when a deactivation is refused', async () => {
+    /*
+     * The defect: `deactivate.mutate` was given an `onSuccess` and nothing else, so a refusal
+     * rendered nothing whatsoever and the button read as dead. The backend's message is complete
+     * and actionable — it names the bundle and says what to do — and it was being thrown away on
+     * this side. Real response, from the running stack, on the seeded data.
+     */
+    server.use(
+      http.post('http://localhost/api/products/41/deactivate', () =>
+        HttpResponse.json(
+          {
+            status: 422,
+            title: 'Unprocessable Content',
+            detail:
+              "Product 'ESP-001' is a component of active bundle(s) TEST-PRODUCT-KIT-01, which " +
+              'could not be assembled without it. Dissolve or re-define the bundle first, or ' +
+              'deactivate it too.',
+          },
+          { status: 422, headers: { 'content-type': 'application/problem+json' } },
+        ),
+      ),
+    )
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const user = userEvent.setup()
+
+    try {
+      renderDetail()
+      await screen.findByRole('heading', { name: 'Espresso blend 1kg' })
+      await user.click(screen.getByRole('button', { name: 'Deactivate' }))
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        /component of active bundle\(s\) TEST-PRODUCT-KIT-01/,
+      )
+      // And the product is still shown as active, because it is.
+      expect(screen.queryByText('Inactive')).not.toBeInTheDocument()
+    } finally {
+      confirm.mockRestore()
+    }
+  })
+
+  it('says something even when the refusal carries no detail', async () => {
+    // A 403 carries no `detail` by design — step 14 made a permission refusal say nothing — and
+    // reading `error.detail` directly rendered an empty alert, which is the same silence.
+    server.use(
+      http.post('http://localhost/api/products/41/deactivate', () =>
+        new HttpResponse(null, { status: 403 }),
+      ),
+    )
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const user = userEvent.setup()
+
+    try {
+      renderDetail()
+      await screen.findByRole('heading', { name: 'Espresso blend 1kg' })
+      await user.click(screen.getByRole('button', { name: 'Deactivate' }))
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('The change was refused.')
+    } finally {
+      confirm.mockRestore()
+    }
+  })
+
+  it('shows the unit by name while editing it, not by id', async () => {
+    // Base UI's `Select.Value` renders `String(value)` unless the root is given the options, so
+    // this read "1" — the id — on a screen whose whole job is to be readable.
+    const user = userEvent.setup()
+    renderDetail()
+    await screen.findByRole('heading', { name: 'Espresso blend 1kg' })
+
+    // Name, EAN, Selling price, Unit — the fields in the order the card lays them out.
+    await user.click(screen.getAllByRole('button', { name: 'Edit' })[3]!)
+
+    expect(screen.getByLabelText('Unit')).toHaveTextContent('Kilogram')
+    expect(screen.getByLabelText('Unit')).not.toHaveTextContent('1')
   })
 
   it('offers no editing at all to a view-only role', async () => {

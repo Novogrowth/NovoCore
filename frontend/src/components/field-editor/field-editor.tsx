@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { ApiError } from '@/api/http'
-import { CheckIcon, WarningCircleIcon } from '@/components/icons'
+import { CheckIcon } from '@/components/icons'
+import { Refusal } from '@/components/refusal'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
@@ -19,10 +19,9 @@ import { cn } from '@/lib/utils'
  * states the backend has no transaction to prevent: three succeed, one is refused, three never run,
  * and the operator is left to work out which. One field at a time cannot produce that state.
  *
- * **A refusal belongs to the field that caused it.** The message is the backend's own `detail`,
- * which explains itself for a validation refusal and deliberately says nothing for a permission
- * refusal. ⚠️ Those messages are English even in the Greek UI — the backend localises nothing
- * (Q47(b)) and there are no error codes to translate from.
+ * **A refusal belongs to the field that caused it**, and is shown by the same `Refusal` every other
+ * refused write in the application uses — it is not a property of field editing, and a second copy
+ * of it here is how one of them ends up silently dropping the message.
  */
 
 export interface FieldEditorProps<T> {
@@ -57,7 +56,9 @@ export function FieldEditor<T>({
   const [draft, setDraft] = useState<T>(value)
   const [saving, setSaving] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
-  const [error, setError] = useState<string | undefined>()
+  // The error itself, not a message built from it: turning one into the other is `Refusal`'s job
+  // and is stated in exactly one place.
+  const [error, setError] = useState<unknown>()
 
   const start = () => {
     setDraft(value)
@@ -85,11 +86,7 @@ export function FieldEditor<T>({
        * input and leave the old value on screen as though nothing had happened — which is how
        * somebody comes to believe a change was saved when it was refused.
        */
-      setError(
-        caught instanceof ApiError
-          ? (caught.detail ?? t('field.refused'))
-          : t('field.unreachable'),
-      )
+      setError(caught)
     } finally {
       setSaving(false)
     }
@@ -117,7 +114,7 @@ export function FieldEditor<T>({
   }
 
   return (
-    <div className={cn('border-b py-2', error && 'border-destructive')}>
+    <div className={cn('border-b py-2', error !== undefined && 'border-destructive')}>
       <div className="flex items-baseline justify-between gap-4">
         <Label htmlFor={id} className="text-muted-foreground w-48 shrink-0 text-sm">
           {label}
@@ -132,12 +129,7 @@ export function FieldEditor<T>({
           </Button>
         </div>
       </div>
-      {error && (
-        <p role="alert" className="text-destructive mt-1 flex items-start gap-1 pl-52 text-sm">
-          <WarningCircleIcon aria-hidden className="mt-0.5 shrink-0" />
-          {error}
-        </p>
-      )}
+      <Refusal error={error} className="mt-1 pl-52" />
     </div>
   )
 }

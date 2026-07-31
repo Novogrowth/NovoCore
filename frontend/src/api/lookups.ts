@@ -86,3 +86,20 @@ export function nameFor<T extends { id?: number }>(
   const found = lookup.items.find((item) => item.id === id)
   return found ? (name(found) ?? `#${id}`) : `#${id}`
 }
+
+/**
+ * The same reference data, shaped for a select.
+ *
+ * The value is the id as text because that is what a `<select>` carries; the label falls back to
+ * `#id` on the same reasoning as {@link nameFor} — a row with no name is still a row somebody can
+ * quote to whoever can see it, and an empty option is one nobody can choose deliberately. An item
+ * with no id at all is dropped rather than given a value of `"undefined"`.
+ */
+export function idOptions<T extends { id?: number }>(
+  items: readonly T[],
+  label: (item: T) => string | undefined,
+): { value: string; label: string }[] {
+  return items
+    .filter((item) => item.id !== undefined)
+    .map((item) => ({ value: String(item.id), label: label(item) ?? `#${item.id}` }))
+}

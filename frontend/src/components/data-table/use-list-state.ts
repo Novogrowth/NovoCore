@@ -46,15 +46,39 @@ export function useListState(route: string, initial?: Partial<ListState>): ListS
     ...(initial?.direction ? { direction: initial.direction } : {}),
   })
 
-  const setPage = useCallback((page: number) => setState((s) => ({ ...s, page })), [])
+  /*
+   * ⚠️ **Every setter here returns the SAME state object when nothing changed, and must.**
+   *
+   * React bails out of a re-render only when the next state is `Object.is`-equal to the current
+   * one, so `setState((s) => ({ ...s, page }))` re-renders unconditionally — including when it was
+   * asked to set the page it is already on. That is not hypothetical: `useReactTable` calls
+   * `resetPageIndex()` whenever it rebuilds its row model, which reaches `setPage(0)` on a table
+   * already showing page 0. With an unconditional setter that render is the input to the next
+   * rebuild, and the tab hangs.
+   *
+   * `list-state-loop.test.tsx` drives the real table through a filter change and fails on the
+   * render count, against either half of this.
+   */
+  const setPage = useCallback(
+    (page: number) => setState((s) => (s.page === page ? s : { ...s, page })),
+    [],
+  )
 
   // Changing the page size while on page 7 of 8 can land past the end of the data. Going back to
   // the first page is the only answer that is right for every dataset.
-  const setSize = useCallback((size: number) => setState((s) => ({ ...s, size, page: 0 })), [])
+  const setSize = useCallback(
+    (size: number) =>
+      setState((s) => (s.size === size && s.page === 0 ? s : { ...s, size, page: 0 })),
+    [],
+  )
 
   const setSort = useCallback(
     (sort: string | undefined, direction: 'ASC' | 'DESC' = 'ASC') => {
-      setState((s) => ({ ...s, sort, direction, page: 0 }))
+      setState((s) =>
+        s.sort === sort && s.direction === direction && s.page === 0
+          ? s
+          : { ...s, sort, direction, page: 0 },
+      )
     },
     [],
   )

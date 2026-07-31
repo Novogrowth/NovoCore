@@ -4,20 +4,14 @@ import { useNavigate } from 'react-router-dom'
 
 import { useProductControllerCreate } from '@/api/generated/endpoints/product/product'
 import { ProductType, type Money } from '@/api/generated/model'
-import { ApiError } from '@/api/http'
-import { useSuppliers, useUnitsOfMeasure, useVatClasses } from '@/api/lookups'
+import { idOptions, useSuppliers, useUnitsOfMeasure, useVatClasses } from '@/api/lookups'
 import { MoneyInput } from '@/components/decimal/decimal-input'
+import { OptionSelect } from '@/components/option-select'
+import { Refusal } from '@/components/refusal'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 
 /**
  * Creating a product.
@@ -79,7 +73,6 @@ export function ProductCreate() {
     )
   }
 
-  const refusal = create.error instanceof ApiError ? create.error.detail : undefined
 
   return (
     <Card className="max-w-2xl">
@@ -100,56 +93,35 @@ export function ProductCreate() {
 
             <div className="space-y-1">
               <Label htmlFor="type">{t('products.column.type')}</Label>
-              <Select value={type} onValueChange={(value) => setType(value as ProductType)}>
-                <SelectTrigger id="type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(ProductType).map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {tEnum(`ProductType.${value}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <OptionSelect
+                id="type"
+                options={Object.values(ProductType).map((value) => ({
+                  value,
+                  label: tEnum(`ProductType.${value}`),
+                }))}
+                value={type}
+                onValueChange={(value) => setType(value as ProductType)}
+              />
             </div>
 
             <div className="space-y-1">
               <Label htmlFor="unit">{t('products.column.unit')}</Label>
-              <Select
-                value={unitOfMeasureId === undefined ? '' : String(unitOfMeasureId)}
+              <OptionSelect
+                id="unit"
+                options={idOptions(units.items, (unit) => unit.name)}
+                value={unitOfMeasureId === undefined ? null : String(unitOfMeasureId)}
                 onValueChange={(value) => setUnitOfMeasureId(idFrom(value))}
-              >
-                <SelectTrigger id="unit">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {units.items.map((unit) => (
-                    <SelectItem key={unit.id} value={String(unit.id)}>
-                      {unit.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
 
             <div className="space-y-1">
               <Label htmlFor="vat-class">{t('products.column.vatClass')}</Label>
-              <Select
-                value={defaultVatClassId === undefined ? '' : String(defaultVatClassId)}
+              <OptionSelect
+                id="vat-class"
+                options={idOptions(vatClasses.items, (vatClass) => vatClass.description)}
+                value={defaultVatClassId === undefined ? null : String(defaultVatClassId)}
                 onValueChange={(value) => setDefaultVatClassId(idFrom(value))}
-              >
-                <SelectTrigger id="vat-class">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {vatClasses.items.map((vatClass) => (
-                    <SelectItem key={vatClass.id} value={String(vatClass.id)}>
-                      {vatClass.description}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
 
             <div className="space-y-1">
@@ -169,21 +141,12 @@ export function ProductCreate() {
               <>
                 <div className="space-y-1">
                   <Label htmlFor="supplier">{t('products.column.supplier')}</Label>
-                  <Select
-                    value={supplierId === undefined ? '' : String(supplierId)}
+                  <OptionSelect
+                    id="supplier"
+                    options={idOptions(suppliers.items, (supplier) => supplier.name)}
+                    value={supplierId === undefined ? null : String(supplierId)}
                     onValueChange={(value) => setSupplierId(idFrom(value))}
-                  >
-                    <SelectTrigger id="supplier">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {suppliers.items.map((supplier) => (
-                        <SelectItem key={supplier.id} value={String(supplier.id)}>
-                          {supplier.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="supplier-sku">{t('products.column.supplierSku')}</Label>
@@ -197,11 +160,9 @@ export function ProductCreate() {
             )}
           </div>
 
-          {refusal && (
-            <p role="alert" className="text-destructive text-sm">
-              {refusal}
-            </p>
-          )}
+          {/* Not `create.error.detail` directly: a 403 carries no detail by design and a network
+              failure is not an ApiError at all, and both used to render as nothing. */}
+          <Refusal error={create.error} />
 
           <div className="flex gap-2">
             <Button type="submit" disabled={!complete || create.isPending}>

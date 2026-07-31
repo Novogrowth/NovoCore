@@ -16,21 +16,16 @@ import {
   useProductControllerRename,
 } from '@/api/generated/endpoints/product/product'
 import { ProtectedField, Section, type Money, type ProductView } from '@/api/generated/model'
-import { nameFor, useSuppliers, useUnitsOfMeasure, useVatClasses } from '@/api/lookups'
+import { idOptions, nameFor, useSuppliers, useUnitsOfMeasure, useVatClasses } from '@/api/lookups'
 import { hiddenInResponse, usePermissions } from '@/auth/permissions'
 import { MoneyInput } from '@/components/decimal/decimal-input'
 import { FieldEditor, HiddenValue, UnsetValue } from '@/components/field-editor/field-editor'
+import { OptionSelect } from '@/components/option-select'
+import { Refusal } from '@/components/refusal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { formatMoney, formatUnitCost } from '@/lib/decimal'
 
 import { ProductBundlePanel, ProductStockPanel } from './product-panels'
@@ -113,6 +108,7 @@ export function ProductDetail() {
             <Button
               size="sm"
               variant="outline"
+              disabled={reactivate.isPending}
               onClick={() =>
                 reactivate.mutate({ id: productId }, { onSuccess: () => void query.refetch() })
               }
@@ -123,6 +119,7 @@ export function ProductDetail() {
             <Button
               size="sm"
               variant="outline"
+              disabled={deactivate.isPending}
               onClick={() => {
                 if (window.confirm(t('products.deactivateConfirm'))) {
                   deactivate.mutate({ id: productId }, { onSuccess: () => void query.refetch() })
@@ -133,6 +130,14 @@ export function ProductDetail() {
             </Button>
           ))}
       </div>
+
+      {/*
+       * Why the refusal is here and not beside the button: the backend refuses a deactivation for a
+       * reason that is a paragraph long — a product that is a component of an active bundle names
+       * the bundle and says what to do about it — and this was rendering nothing at all, so the
+       * button read as broken. `Refusal` is the same one every field editor below uses.
+       */}
+      <Refusal error={deactivate.error ?? reactivate.error} />
 
       <Card>
         <CardHeader>
@@ -223,21 +228,12 @@ export function ProductDetail() {
             }}
           >
             {(draft, setDraft) => (
-              <Select
-                value={draft === undefined ? '' : String(draft)}
+              <OptionSelect
+                aria-label={t('products.column.unit')}
+                options={idOptions(units.items, (unit) => unit.name)}
+                value={draft === undefined ? null : String(draft)}
                 onValueChange={(value) => setDraft(idFrom(value))}
-              >
-                <SelectTrigger aria-label={t('products.column.unit')}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {units.items.map((unit) => (
-                    <SelectItem key={unit.id} value={String(unit.id)}>
-                      {unit.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             )}
           </FieldEditor>
 
@@ -261,21 +257,12 @@ export function ProductDetail() {
             }}
           >
             {(draft, setDraft) => (
-              <Select
-                value={draft === undefined ? '' : String(draft)}
+              <OptionSelect
+                aria-label={t('products.column.vatClass')}
+                options={idOptions(vatClasses.items, (vatClass) => vatClass.description)}
+                value={draft === undefined ? null : String(draft)}
                 onValueChange={(value) => setDraft(idFrom(value))}
-              >
-                <SelectTrigger aria-label={t('products.column.vatClass')}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {vatClasses.items.map((vatClass) => (
-                    <SelectItem key={vatClass.id} value={String(vatClass.id)}>
-                      {vatClass.description}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             )}
           </FieldEditor>
 
@@ -299,21 +286,12 @@ export function ProductDetail() {
             }}
           >
             {(draft, setDraft) => (
-              <Select
-                value={draft === undefined ? '' : String(draft)}
+              <OptionSelect
+                aria-label={t('products.column.supplier')}
+                options={idOptions(suppliers.items, (supplier) => supplier.name)}
+                value={draft === undefined ? null : String(draft)}
                 onValueChange={(value) => setDraft(idFrom(value))}
-              >
-                <SelectTrigger aria-label={t('products.column.supplier')}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers.items.map((supplier) => (
-                    <SelectItem key={supplier.id} value={String(supplier.id)}>
-                      {supplier.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             )}
           </FieldEditor>
 

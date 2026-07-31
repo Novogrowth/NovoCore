@@ -37,12 +37,27 @@ export interface UnwrappedList<T> {
   serverPage: PageInfoLike | undefined
 }
 
+/**
+ * The empty result, shared.
+ *
+ * ⚠️ **This constant is load-bearing, and a `[]` literal in its place is a hang.** `useReactTable`
+ * memoises the core row model on the *identity* of `data`, and rebuilding it calls
+ * `_autoResetPageIndex()` — which sets the page, which re-renders, which would allocate another
+ * `[]`, which rebuilds it again. A fresh array here is an unterminating render loop, and because
+ * React flushes it in a microtask, the tab never regains the event loop: the in-flight request that
+ * would have ended it can never be delivered.
+ *
+ * Both places below that can be empty return this one array. See `list-response.test.ts`, which
+ * asserts the identity rather than the contents.
+ */
+const NO_ROWS: readonly never[] = []
+
 export function unwrapList<T>(data: TableData<T>): UnwrappedList<T> {
-  if (data === undefined) return { rows: [], serverPage: undefined }
+  if (data === undefined) return { rows: NO_ROWS, serverPage: undefined }
   if (Array.isArray(data)) return { rows: data, serverPage: undefined }
 
   const response = data as ListResponseLike<T>
-  return { rows: response.items ?? [], serverPage: response.page }
+  return { rows: response.items ?? NO_ROWS, serverPage: response.page }
 }
 
 /**

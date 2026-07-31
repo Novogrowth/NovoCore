@@ -2,15 +2,9 @@ import { useTranslation } from 'react-i18next'
 
 import { useLogout, useSession, useSessionExpiryHandler } from '@/auth/session'
 import { AppSidebar } from '@/components/app-sidebar'
+import { OptionSelect } from '@/components/option-select'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { LANGUAGES, resolveLanguage, type Language } from '@/i18n'
 import { useChangeLanguage, useLanguageSync } from '@/i18n/useLanguage'
@@ -81,22 +75,17 @@ function LanguageSelect({ current }: { current: Language }) {
   const changeLanguage = useChangeLanguage()
 
   return (
-    <Select
+    <OptionSelect
+      className="w-36"
+      aria-label={t('language.label')}
+      options={LANGUAGES.map((language) => ({
+        value: language,
+        label: t(`language.${language}`),
+      }))}
       value={current}
       onValueChange={(value) => changeLanguage.mutate(value as Language)}
       disabled={changeLanguage.isPending}
-    >
-      <SelectTrigger className="w-36" aria-label={t('language.label')}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {LANGUAGES.map((language) => (
-          <SelectItem key={language} value={language}>
-            {t(`language.${language}`)}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    />
   )
 }
 

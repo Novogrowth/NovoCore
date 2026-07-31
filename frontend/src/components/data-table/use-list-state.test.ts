@@ -80,4 +80,54 @@ describe('useListState', () => {
     const { result } = renderHook(() => useListState('GET /api/not-a-route'))
     expect(result.current.params).toEqual({})
   })
+
+  /**
+   * Setting what is already set must produce the same object, not an equal one.
+   *
+   * React bails out of a re-render only on `Object.is`, so a setter that always spreads into a new
+   * object re-renders unconditionally. `useReactTable` calls `resetPageIndex()` every time it
+   * rebuilds its row model, which reaches `setPage(0)` on a table already on page 0 — and that
+   * render is the input to the next rebuild. `data-table-loop.test.tsx` is the behavioural half;
+   * these three name the invariant so it is not read as a style preference and undone.
+   */
+  describe('a setter asked for the value it already holds', () => {
+    it('leaves the state object untouched — setPage', () => {
+      const { result } = renderHook(() => useListState('GET /api/sales-invoices'))
+      const before = result.current.state
+
+      act(() => result.current.setPage(0))
+
+      expect(result.current.state).toBe(before)
+    })
+
+    it('leaves the state object untouched — setSize', () => {
+      const { result } = renderHook(() => useListState('GET /api/sales-invoices'))
+      const before = result.current.state
+
+      act(() => result.current.setSize(25))
+
+      expect(result.current.state).toBe(before)
+    })
+
+    it('leaves the state object untouched — setSort', () => {
+      const { result } = renderHook(() =>
+        useListState('GET /api/journal-entries', { sort: 'ENTRY_DATE', direction: 'DESC' }),
+      )
+      const before = result.current.state
+
+      act(() => result.current.setSort('ENTRY_DATE', 'DESC'))
+
+      expect(result.current.state).toBe(before)
+    })
+
+    it('still changes the state when the value is genuinely different', () => {
+      const { result } = renderHook(() => useListState('GET /api/sales-invoices'))
+      const before = result.current.state
+
+      act(() => result.current.setPage(2))
+
+      expect(result.current.state).not.toBe(before)
+      expect(result.current.state.page).toBe(2)
+    })
+  })
 })
