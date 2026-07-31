@@ -114,6 +114,36 @@ final class TradingQuarter {
         return Map.copyOf(handles);
     }
 
+    /**
+     * The whole quarter, in order.
+     *
+     * <p><strong>The order is the content of this scenario</strong> (step 15's D2), so it lives here
+     * rather than in the drivers. There are two of them — {@code TradingQuarterOverHttpIT} under
+     * Failsafe and {@code LiveSeedTest} against a running server — and a sequence written out in both
+     * is the shape {@code CLAUDE.md}'s code-quality section names: the second copy is the one that
+     * stops being updated, and a seed pass silently missing March is a database that looks populated.
+     */
+    void happens() {
+        readTheLookups();
+
+        januarySetsUpTheCatalogue();
+        januaryInvoiceArrivesBeforeTheGoods();
+        januaryGoodsArriveBeforeTheInvoice();
+        januaryFirstSalesAndTheFreightInvoice();
+
+        februaryTheMachinesArrive();
+        februaryTheBundleAndAMachineSell();
+        februarySettlesAndLeavesACredit();
+
+        marchTheReturnsComeBack();
+        marchLosesSomeStock();
+        marchClosesTheQuarter();
+
+        quarterEndReview();
+        quarterEndCorrections();
+        quarterEndHousekeeping();
+    }
+
     // ===================================================================================
     // Lookups — every form needs these before anything can be created
     // ===================================================================================

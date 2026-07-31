@@ -279,25 +279,7 @@ class TradingQuarterOverHttpIT {
         ApiClient api = new ApiClient(rest);
         ApiClient.Session owner = api.logIn(OWNER_USERNAME, OWNER_PASSWORD);
         quarter = new TradingQuarter(owner);
-
-        quarter.readTheLookups();
-
-        quarter.januarySetsUpTheCatalogue();
-        quarter.januaryInvoiceArrivesBeforeTheGoods();
-        quarter.januaryGoodsArriveBeforeTheInvoice();
-        quarter.januaryFirstSalesAndTheFreightInvoice();
-
-        quarter.februaryTheMachinesArrive();
-        quarter.februaryTheBundleAndAMachineSell();
-        quarter.februarySettlesAndLeavesACredit();
-
-        quarter.marchTheReturnsComeBack();
-        quarter.marchLosesSomeStock();
-        quarter.marchClosesTheQuarter();
-
-        quarter.quarterEndReview();
-        quarter.quarterEndCorrections();
-        quarter.quarterEndHousekeeping();
+        quarter.happens();
     }
 
     // ===================================================================================
