@@ -56,6 +56,34 @@ export default tseslint.config(
       // typescript-eslint is here rather than a syntactic linter.
       '@typescript-eslint/no-floating-promises': 'error',
 
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              /*
+               * The `@phosphor-icons/react` barrel re-exports 1,512 icons under 3,045 names.
+               * Production tree-shakes it away; development does not. Vite pre-bundles a bare
+               * import of it into one chunk and serves the whole thing — measured at 16.78 MB
+               * decoded, 64% of everything the dev server sent for a single page, costing 436 ms
+               * of main-thread parse and execute unthrottled and 2.5 s at 6× CPU throttling.
+               *
+               * Nine icons were pulling all of it. `@/components/icons` imports each from its own
+               * `dist/csr/<Name>` entry point instead; add a line there for a new one.
+               *
+               * ⚠️ WHAT THIS RULE CANNOT SEE: a deep import written directly at a call site —
+               * `@phosphor-icons/react/dist/csr/Plus` — is not restricted, and is not a
+               * performance problem either. It is still worth sending through the icons module in
+               * review, so that the set of icons this product uses is countable in one file.
+               */
+              name: '@phosphor-icons/react',
+              message:
+                'Never import from the @phosphor-icons/react barrel: Vite dev does not tree-shake it and serves all 3,045 exports as one 16.78 MB module. Import from @/components/icons, which takes each icon from its own entry point.',
+            },
+          ],
+        },
+      ],
+
       'no-restricted-syntax': [
         'error',
         {

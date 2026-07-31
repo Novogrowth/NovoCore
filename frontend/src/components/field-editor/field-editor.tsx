@@ -1,8 +1,8 @@
-import { CheckIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { ApiError } from '@/api/http'
+import { CheckIcon, WarningCircleIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'

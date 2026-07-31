@@ -7,9 +7,9 @@ import {
   type OnChangeFn,
   type PaginationState,
 } from '@tanstack/react-table'
-import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react'
 import { useTranslation } from 'react-i18next'
 
+import { CaretLeftIcon, CaretRightIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
