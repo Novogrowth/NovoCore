@@ -28,8 +28,9 @@ candidate causes per symptom).
 |   F0 | Restore dev data — build and run step 15c, the seed pass that was approved and never written ᶠ⁰                                    |     — |    0.9 | 🟢 Done        |
 |      | *(not a step)* Products bugfix pass — the render loop, and two defects it hid ᵇᶠ                                                   |     — |        | 🟢 Done        |
 |   F1 | Suppliers — list, detail, create, per-field PATCH (Products' pattern, reused) ᶠ¹                                                   |     — |        | 🟢 Done        |
-|   F2 | Customers — same pattern, plus the VAT class override and the protected retail-customer record ᶠ²                                  |     — |        | 🟡 **Current** |
-|   F3 | Users & Roles — real admin screen: create roles, grant sections, manage accounts                                                   |     — |        | 🔴 Not started |
+|   F2 | Customers — same pattern, plus the protected retail-customer record ᶠ²                                                            |     — |        | 🟢 Done        |
+|      | *(deferred out of F2)* Customer VAT class override — its own follow-up ᶠ²ᵃ                                                          |     — |        | 🔴 Not started |
+|   F3 | Users & Roles — real admin screen: create roles, grant sections, manage accounts                                                   |     — |        | 🟡 **Current** |
 |   F4 | Settings — general config, Reference Data (VAT classes, UoM), Adapters/Modules toggle grids (read-only placeholders)               |     — |        | 🔴 Not started |
 |   F5 | Sales Invoice + Credit Note — first transactional-document screen; decides the create/preview/commit pattern                       |     — |        | 🔴 Not started |
 |   F6 | Purchase Invoice + Goods Receipt — same document pattern; no preview endpoint yet, decide whether to add one                       |     — |        | 🔴 Not started |
@@ -158,28 +159,38 @@ against a name the domain already holds, which returns `422` only if the body pa
 nothing, and once for real. That is now the standing rule in `CLAUDE.md`, and it is what the
 products create form was cleared by a stub without.
 
-**ᶠ² F2 — scoped off the API fresh, and the shared extraction is already done.**
-`lib/vat-status.ts` and `components/vat/vat-status-field.tsx` were lifted out of `pages/suppliers/`
-**before** anything Customers-specific was written, and Suppliers now runs on them with its 18 tests
-passing unchanged — which is the proof, rather than a claim that the move was equivalent. The shared
-strings moved out of the `suppliers.*` namespace at the same time: a shared component reading one
-screen's strings is the same coupling, one layer down.
+**ᶠ² F2 — done.** The shared extraction went first, as it had to: `lib/vat-status.ts` and
+`components/vat/vat-status-field.tsx` came out of `pages/suppliers/` **before** any Customers code
+existed, and Suppliers' 18 tests passed unchanged on them — which is the proof, rather than a claim
+that the move was equivalent.
 
-Reading the API fresh rather than assuming Suppliers' shape carried over was worth it twice:
+**The protected retail record shows its locked controls disabled with the reason, never hidden.**
+That needed `FieldEditor` to grow a state it did not have, and the distinction is worth keeping:
+`editable: false` (a VIEW grant — *not yours to edit*) gets **no affordance at all**, because a
+disabled button tells somebody to keep trying; `lockedReason` (*editable in general, fixed on this
+record*) gets a **disabled control with the reason**, because hiding it would leave an operator
+hunting for a setting every other customer has. A test holds both directions.
 
-- **The retail record refuses two edits with a bare `400 "Bad request."`**, discarding a complete
-  explanation, because they are thrown as `IllegalArgumentException` from the *domain* — where the
-  ArchUnit rule cannot look, and which the route sweep cannot reach because it sends empty bodies.
-  Queued as backend item 4. Deactivation and the `INTRA_EU_B2B` rule both answer `422` properly, so
-  reading one rule would have suggested they all did.
-- **`CustomerView` returns `systemRecord` and `mergeable`, and the spec declares neither**, so the
-  generated type has no idea they exist. The screen will use `systemKey !== undefined` instead,
-  which *is* in the spec — a workaround, and recorded as one.
+Reading the API fresh rather than adjusting Suppliers' shape was worth it three times:
 
-**Two decisions are open before the Customers screens are built**: how the protected retail record
-presents (hidden controls, disabled controls, or let the backend refuse), and whether the VAT class
-override belongs in F2 at all — it is a customer-only field with real accounting weight, and may
-deserve its own scrutiny rather than riding along.
+- **The retail record's rules are only partly refused well.** Deactivation and the `INTRA_EU_B2B`
+  rule answer `422` with full reasons; `EXEMPT` and setting a VAT number answer a bare `400`,
+  because those are thrown as `IllegalArgumentException` from the domain. Reading one rule would
+  have suggested they all worked. Backend item 4; the screen mirrors the reasons meanwhile, and says
+  it is a mirror.
+- **`CustomerView` returns `systemRecord` and `mergeable`, and the spec declares neither.** The
+  screen uses `systemKey !== undefined`, which *is* in the spec.
+- **Customers do not reject duplicate names; suppliers do.** F1's trick for exercising create
+  without writing — submit an existing name, get `422` only if the body parsed — answered `201` here
+  and created a row. Found by trying it. F2's creation proof is therefore a real create in each
+  browser with the rows removed after.
+
+**ᶠ²ᵃ The customer VAT class override is deferred, deliberately and with a test holding it.**
+`vatClassOverrideId` and `PATCH …/vat-class-override` exist and are customer-only; *"this customer is
+always taxed at this class regardless of the product"* carries real accounting weight and needs the
+`TAX_AND_CHARGES` gating worked through. A test asserts the field is **absent** from the detail
+screen, so adding it later is a deliberate act with a test to update rather than something that
+drifts in with a copied screen. Not scheduled against a step — it is the owner's to place.
 
 **F5 carries more weight than its position implies.** It's not just the next screen — it
 decides the entire document-creation interaction pattern (multi-line entry, running

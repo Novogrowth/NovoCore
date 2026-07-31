@@ -4323,76 +4323,66 @@ swept again.
 
 ### ➡️ Step 16, the frontend — under way. **Current: F2, Customers.**
 
-#### 📋 F2 scope, read off the API fresh (2026-07-31). **The shared extraction is done; two findings need decisions.**
+#### 📋 F2, Customers — done (2026-07-31, `b406b27`’s successor). Both decisions taken before building
 
-**The extraction happened first, before anything Customers-specific.** `vat-status-rules.ts` moved to
-`lib/vat-status.ts` and the coupled editor became `components/vat/vat-status-field.tsx`; Suppliers
-was rewired onto it and **its 18 tests still pass unchanged**, which is what proves the extraction
-rather than a claim that it is equivalent. The shared i18n keys moved out of the `suppliers.*`
-namespace to `vatStatus.*` at the same time — a shared component reading a screen's strings is the
-same coupling one layer down.
+**The shared extraction happened first**, before anything Customers-specific: `lib/vat-status.ts`
+and `components/vat/vat-status-field.tsx` came out of `pages/suppliers/`, Suppliers was rewired onto
+them, and **its 18 tests passed unchanged** — which is what proves the move rather than a claim that
+it is equivalent.
 
-**Read fresh, not assumed from Suppliers.** Customers has 14 routes to Suppliers' 11 and the shapes
-are *nearly* the same, which is exactly the situation that rewards checking. Three real differences:
+**The two open questions, decided by the owner and then built as decided:**
 
-| | Suppliers | Customers |
+1. **The protected retail record shows its locked controls disabled, with the domain's real
+   explanation — never hidden, never left to produce a bare `400`.**
+2. **The VAT class override is deferred** to its own follow-up, with its own scrutiny once the
+   `TAX_AND_CHARGES` gating and the accounting implications are worked through. F2 is
+   name / contact / VAT status / deactivate.
+
+| # | Sub-part | Verdict |
 |---|---|---|
-| VAT class override | — | `vatClassOverrideId` + `PATCH …/vat-class-override`, whose body is `{vatClassId}` and whose **null clears it** (`"vatClassId": "(cleared)"` in the audit record) |
-| Structural record | — | `systemKey: RETAIL_WALK_IN` — one row, protected |
-| Everything else | name, vat-number, vat-status, contact-details, deactivate/reactivate, create | identical route-for-route, same request bodies |
+| 1 | Extract `lib/vat-status.ts` and `components/vat/vat-status-field.tsx` first | **Done** — Suppliers' tests pass unchanged on them |
+| 2 | `FieldEditor` grows a **locked** state | **Done** — and see the distinction below, which is the part worth keeping |
+| 3 | Customers list, with the structural record marked | **Done** — a badge, so it is known before it is opened |
+| 4 | Customer detail — name, VAT number, contact, VAT status | **Done** |
+| 5 | Deactivate / reactivate with `Refusal` | **Done** |
+| 6 | The retail record's three locks | **Done** — verified in Chrome **and** Firefox against the live record |
+| 7 | Create form, no VAT class override | **Done, proved against the real backend** |
+| 8 | Routes, EN + EL strings | **Done** — 22 keys each |
+| 9 | Tests | **Done** — 12 new; 194 total |
+| 10 | VAT class override | **Explicitly deferred**, recorded in `novocore-frontend-roadmap.md` as its own follow-up. A test asserts the field is **absent**, so adding it is a deliberate act with a test to update rather than something that drifts in with a copied screen |
 
-**`NewCustomer` was checked for the primitive trap: it has none** — `String`s, an enum and two
-`Long`s, with `name` and `vatStatus` required by the compact constructor. As with `NewSupplier`,
-that reading is **not** the evidence; creation must be proved against the server before F2 is called
-done.
+##### The distinction `FieldEditor` now draws, which is the reusable part
 
-##### ⚠️ Finding 1 — the retail record refuses two edits with `400 "Bad request."` and no message
+`editable: false` and `lockedReason` are **not** the same thing and must not be collapsed:
 
-Probed against the running stack rather than read, on customer 1 (`Πελάτης Λιανικής`):
+- **`editable: false`** — "not yours to edit", from a VIEW grant. **No affordance at all.** A
+  disabled button here tells somebody to keep trying at something their role will never allow.
+- **`lockedReason`** — "editable in general, fixed on *this record*". **Shown, disabled, with the
+  reason.** Hiding it would leave an operator hunting for a setting that exists on every other
+  customer.
 
-| Attempt | Answer |
-|---|---|
-| deactivate | **`422`** with the full reason — *"is a structural record (RETAIL_WALK_IN)… every till sale with no identified buyer is recorded against it"* |
-| `vatStatus: INTRA_EU_B2B` | **`422`** with the full reason |
-| **`vatStatus: EXEMPT`** | **`400 "Bad request."`** — nothing else |
-| **`vatNumber: "EL…"`** | **`400 "Bad request."`** — nothing else |
+`editable: false` still wins, and a test asserts it: a VIEW role sees no buttons **and** none of the
+lock explanations, because why this record is special is not information a read-only role needs in
+place of the edit it cannot do anyway.
 
-The server log shows why, and the messages that are being thrown away are excellent:
+##### Two things reading the API fresh caught that copy-and-adjust would not
 
-```
-java.lang.IllegalArgumentException: Customer 'Πελάτης Λιανικής' carries system key RETAIL_WALK_IN
-and is EXEMPT. A system record's VAT treatment is fixed at DOMESTIC: it is not one identifiable
-party, so it cannot make a claim about a party's status.
-```
+- **The retail record's own rules are only *partly* refused well.** Deactivation and the
+  `INTRA_EU_B2B` rule answer `422` with full reasons; setting `EXEMPT` or a VAT number answers
+  `400 "Bad request."` and nothing, because those are thrown as `IllegalArgumentException` from the
+  domain. **Reading one rule would have suggested they all worked.** This is why the screen carries
+  the explanations itself — a mirror, recorded as one, to be reconsidered when backend item 4 lands.
+- **Customers do not reject duplicate names; suppliers do.** F1's clean trick — create against an
+  existing name, get `422` if the body parsed, write nothing — **does not work here**: it answered
+  `201` and created a row. Found by trying it, and the two rows it created were deleted. So F2's
+  creation proof is a real create in each browser, with the rows removed after.
 
-**This is the fourth instance of `CLAUDE.md`'s named anti-pattern — a client's mistake raised as a
-programming error** — and it is the one none of the three guards can reach. `Customer` is in the
-**domain**, so `WebAuthorizationRulesTest` (scoped to `..core.web..`) structurally cannot see it;
-and `PermissionSweepIT` sends **empty** bodies, while this needs a well-formed body that is wrong
-only in the domain's terms. It is precisely the residual `CLAUDE.md` names: *"a wrong but non-empty
-value."* The remedy is the one the same file already uses two methods away — `InvalidCustomerException`,
-which is what `deactivate` throws to produce its good `422`. **Queued as backend item 4.**
+**Residue, stated rather than implied:** `customer_id_seq` is at 9 where the fixture uses 1–5, and
+the audit log holds the create and delete entries plus two renames of the retail record (probed and
+reverted through the API), being append-only by trigger. The fixture is back to 5 customers, one
+user.
 
-##### ⚠️ Finding 2 — `CustomerView` returns two fields the spec does not declare
-
-The live response carries `"mergeable": false` and `"systemRecord": true`. **Neither is in the
-spec**, so neither is on the generated TypeScript type, and no screen can read them. Another face of
-backend item 2: the spec does not describe the surface.
-
-**The frontend workaround is honest and needs no decision:** `systemKey` *is* in the spec, so
-`systemKey !== undefined` is the test for "this is a structural record". Worth stating that this is
-a workaround rather than the intended API.
-
-##### The two decisions F2 needs
-
-1. **❓ How the retail record presents.** Its name is editable (a rename to *"Renamed by probe"*
-   succeeded and was reverted), but its VAT treatment is fixed and it cannot be deactivated. Options
-   are: hide those controls entirely; show them disabled with an explanation; or leave them and let
-   the backend refuse — which today means a bare `400` for two of them.
-2. **❓ Whether the VAT class override is in F2 at all.** It is a customer-only field, it needs the
-   `TAX_AND_CHARGES`-gated VAT class lookup that Products already uses, and *"this customer is
-   always taxed at this class regardless of the product"* is a rule with real accounting weight. It
-   may deserve its own scrutiny rather than riding along.
+---
 
 ---
 

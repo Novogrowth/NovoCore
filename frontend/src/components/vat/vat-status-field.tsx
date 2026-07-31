@@ -38,6 +38,8 @@ export interface VatStatusFieldProps {
   vatNumber: string | undefined
   exemptionReasons: Lookup<{ id?: number; description?: string }>
   editable: boolean
+  /** Passed straight through: a record whose VAT treatment is fixed says so, disabled, not hidden. */
+  lockedReason?: string
   onSave: (value: VatStatusValue) => Promise<unknown>
 }
 
@@ -46,6 +48,7 @@ export function VatStatusField({
   vatNumber,
   exemptionReasons,
   editable,
+  lockedReason,
   onSave,
 }: VatStatusFieldProps) {
   const { t } = useTranslation('common')
@@ -72,6 +75,7 @@ export function VatStatusField({
       // Changing the status needs the reason list to choose from, and that list lives under
       // TAX_AND_CHARGES. Without it the field is read-only rather than pretending otherwise.
       editable={editable && exemptionReasons.permitted}
+      {...(lockedReason !== undefined ? { lockedReason } : {})}
       isValid={(draft) =>
         (!NEEDS_EXEMPTION_REASON.has(draft.vatStatus) ||
           draft.vatExemptionReasonId !== undefined) &&

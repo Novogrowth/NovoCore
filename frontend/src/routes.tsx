@@ -9,6 +9,9 @@ import { NoAccess, NotFound, ScreenPlaceholder } from '@/pages/placeholder'
 import { ProductCreate } from '@/pages/products/product-create'
 import { ProductDetail } from '@/pages/products/product-detail'
 import { ProductsList } from '@/pages/products/products-list'
+import { CustomerCreate } from '@/pages/customers/customer-create'
+import { CustomerDetail } from '@/pages/customers/customer-detail'
+import { CustomersList } from '@/pages/customers/customers-list'
 import { AdaptersGrid, ModulesGrid } from '@/pages/registry-grid'
 import { SupplierCreate } from '@/pages/suppliers/supplier-create'
 import { SupplierDetail } from '@/pages/suppliers/supplier-detail'
@@ -27,6 +30,7 @@ import { SuppliersList } from '@/pages/suppliers/suppliers-list'
 const SCREENS: Record<string, () => ReactElement> = {
   '/products': ProductsList,
   '/suppliers': SuppliersList,
+  '/customers': CustomersList,
   '/settings/adapters': AdaptersGrid,
   '/settings/modules': ModulesGrid,
 }
@@ -47,6 +51,8 @@ const CHILD_ROUTES: { path: string; owner: string; element: () => ReactElement }
   { path: '/products/:id', owner: 'products', element: ProductDetail },
   { path: '/suppliers/new', owner: 'suppliers', element: SupplierCreate },
   { path: '/suppliers/:id', owner: 'suppliers', element: SupplierDetail },
+  { path: '/customers/new', owner: 'customers', element: CustomerCreate },
+  { path: '/customers/:id', owner: 'customers', element: CustomerDetail },
 ]
 
 function RouteElement({ node, screen }: { node: NavNode; screen?: () => ReactElement }) {

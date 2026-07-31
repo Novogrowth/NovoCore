@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { CheckIcon } from '@/components/icons'
+import { CheckIcon, WarningCircleIcon } from '@/components/icons'
 import { Refusal } from '@/components/refusal'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -36,6 +36,21 @@ export interface FieldEditorProps<T> {
   onSave: (value: T) => Promise<unknown>
   /** False for a VIEW grant: the field renders with no edit affordance at all. */
   editable: boolean
+  /**
+   * Why this field cannot be changed **on this record**, however editable the section is.
+   *
+   * ⚠️ **Deliberately not the same thing as `editable: false`, and the difference is the point.**
+   * A VIEW grant means "this is not yours to edit" and gets **no affordance at all** — a disabled
+   * button that produces a 403 tells somebody to keep trying. A locked field means "this is
+   * editable in general and fixed on this record", which is a fact about the data that the operator
+   * cannot discover by looking: the shared retail customer's VAT treatment is fixed at `DOMESTIC`
+   * by a CHECK constraint, and hiding the control would leave someone hunting for a setting that
+   * exists everywhere else.
+   *
+   * So the control is shown, disabled, with this reason beside it. `editable: false` still wins:
+   * a role that may not edit is told nothing about why the record is special.
+   */
+  lockedReason?: string
   /** Refuses a save that cannot succeed — an empty required value, an uninterpretable amount. */
   isValid?: (value: T) => boolean
   id?: string
@@ -48,6 +63,7 @@ export function FieldEditor<T>({
   children,
   onSave,
   editable,
+  lockedReason,
   isValid,
   id,
 }: FieldEditorProps<T>) {
@@ -93,22 +109,34 @@ export function FieldEditor<T>({
   }
 
   if (!editing) {
+    const locked = editable && lockedReason !== undefined
+
     return (
-      <div className="flex items-baseline justify-between gap-4 border-b py-2">
-        <Label className="text-muted-foreground w-48 shrink-0 text-sm">{label}</Label>
-        <div className="flex flex-1 items-baseline gap-2">
-          <span className="flex-1 text-sm">{display}</span>
-          {justSaved && (
-            <span className="text-muted-foreground flex items-center gap-1 text-xs">
-              <CheckIcon aria-hidden /> {t('field.saved')}
-            </span>
-          )}
-          {editable && (
-            <Button variant="ghost" size="sm" onClick={start}>
-              {t('field.edit')}
-            </Button>
-          )}
+      <div className="border-b py-2">
+        <div className="flex items-baseline justify-between gap-4">
+          <Label className="text-muted-foreground w-48 shrink-0 text-sm">{label}</Label>
+          <div className="flex flex-1 items-baseline gap-2">
+            <span className="flex-1 text-sm">{display}</span>
+            {justSaved && (
+              <span className="text-muted-foreground flex items-center gap-1 text-xs">
+                <CheckIcon aria-hidden /> {t('field.saved')}
+              </span>
+            )}
+            {editable && (
+              // Shown and disabled rather than absent: the field is editable on every other record
+              // of this kind, and a control that vanishes reads as a bug rather than as a rule.
+              <Button variant="ghost" size="sm" onClick={start} disabled={locked}>
+                {t('field.edit')}
+              </Button>
+            )}
+          </div>
         </div>
+        {locked && (
+          <p className="text-muted-foreground mt-1 flex items-start gap-1 pl-52 text-sm">
+            <WarningCircleIcon aria-hidden className="mt-0.5 shrink-0" />
+            {lockedReason}
+          </p>
+        )}
       </div>
     )
   }
