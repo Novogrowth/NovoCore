@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-import { NEEDS_EXEMPTION_REASON, NEEDS_VAT_NUMBER } from './vat-status-rules'
+import { NEEDS_EXEMPTION_REASON, NEEDS_VAT_NUMBER } from '@/lib/vat-status'
 
 /**
  * Creating a supplier.
@@ -118,7 +118,7 @@ export function SupplierCreate() {
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="supplier-vat-status">{t('suppliers.column.vatStatus')}</Label>
+              <Label htmlFor="supplier-vat-status">{t('vatStatus.label')}</Label>
               <OptionSelect
                 id="supplier-vat-status"
                 options={Object.values(VatStatus).map((status) => ({
@@ -140,7 +140,7 @@ export function SupplierCreate() {
             {needsReason && (
               <div className="space-y-1">
                 <Label htmlFor="supplier-exemption-reason">
-                  {t('suppliers.column.exemptionReason')}
+                  {t('vatStatus.exemptionReason')}
                 </Label>
                 <OptionSelect
                   id="supplier-exemption-reason"
@@ -157,7 +157,7 @@ export function SupplierCreate() {
           {/* Said in the form, because a disabled button explains nothing on its own. */}
           {needsVatNumber && vatNumber.trim() === '' && (
             <p className="text-muted-foreground text-sm">
-              {t('suppliers.vatStatus.vatNumberRequiredToCreate')}
+              {t('vatStatus.vatNumberRequiredToCreate')}
             </p>
           )}
 

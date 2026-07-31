@@ -9,7 +9,7 @@ import { VatStatus } from '@/api/generated/model'
  * a combination the backend will refuse and reports the refusal afterwards, which is worse — the
  * operator has already chosen by then.
  *
- * `vat-status-rules.test.ts` pins both sets against the spec's enum, so a value **added** to
+ * `vat-status.test.ts` pins both sets against the spec's enum, so a value **added** to
  * `VatStatus` fails here rather than silently defaulting to "requires nothing". It cannot catch a
  * change to what an existing value requires; that would need the flags on the wire, which is a
  * backend change and is noted in `PROGRESS.md`.

@@ -4154,6 +4154,7 @@ whose own contract said the request was valid.
 | # | Item | Priority | Raised |
 |---|---|---|---|
 | 2 | **A primitive `boolean` on a body record is mandatory while the spec calls it optional** — broke product creation outright; the frontend carries a workaround | **First. The spec half before the serialisation half** | 2026-07-31 |
+| 4 | **The retail customer's own VAT rules are raised as `IllegalArgumentException`**, so two routes answer `400 "Bad request."` and discard a complete explanation | With 2 — same family, and the guards structurally cannot reach it | 2026-07-31 |
 | 1 | `InventoryController_writeOff` — one `operationId` on two operations | After 2 | 2026-07-30 |
 | 3 | No SKU **search** endpoint — the products lookup is exact-match only | After 2; needs an owner decision first | 2026-07-31 |
 
@@ -4255,6 +4256,47 @@ field simply left out, refused by the parser, on a route whose own spec said the
 
 ---
 
+#### 4. **The retail customer's own rules are thrown as `IllegalArgumentException`, so the caller is told nothing.**
+
+`Customer` refuses two edits to the `RETAIL_WALK_IN` record with messages that are complete,
+specific and exactly what an operator needs:
+
+```
+Customer 'Πελάτης Λιανικής' carries system key RETAIL_WALK_IN and is EXEMPT. A system record's
+VAT treatment is fixed at DOMESTIC: it is not one identifiable party, so it cannot make a claim
+about a party's status.
+
+Customer 'Πελάτης Λιανικής' carries system key RETAIL_WALK_IN and a VAT number. A shared
+anonymous record cannot hold one party's ΑΦΜ.
+```
+
+Both are `IllegalArgumentException`, so `WebExceptionHandler` correctly discards them — that type
+means *our* code is wrong — and the caller gets `400 "Bad request."`. Measured against the running
+stack: `PATCH /api/customers/1/vat-status` with `EXEMPT` and `PATCH /api/customers/1/vat-number`.
+
+**Two neighbouring behaviours in the same class are already right**, which is what makes this a slip
+rather than a design: `deactivate` throws `InvalidCustomerException` and answers `422` with its
+reason, and so does the `INTRA_EU_B2B`-without-a-VAT-number rule. The remedy is to use the same type.
+
+**Why no existing guard catches it, and this is the interesting part.** `CLAUDE.md` lists three
+layers and states the residual; this sits exactly in it.
+
+- `WebAuthorizationRulesTest` is scoped to `..core.web..`. `Customer` is in the **domain**, so the
+  rule structurally cannot look there.
+- `PermissionSweepIT.noRouteRefusesWithoutSayingWhy` sends **no body**. This needs a body that is
+  well-formed and wrong only in the domain's terms.
+- `noRouteFailsOnAnEmptyBody` looks for `5xx`. This is a `400`.
+
+So the fix has two parts, and the second is the one that matters: change the type, then **give the
+sweep a case that carries a valid body a domain rule refuses** — otherwise the fifth instance is
+found the same way this one was, by someone poking at it by hand.
+
+**Found while reading the Customers API for F2**, by probing the server rather than reading the
+service — the `INTRA_EU_B2B` path answers correctly, so reading one rule would have suggested they
+all did.
+
+---
+
 #### 3. **There is no SKU search — `GET /api/products?sku=` is an exact lookup.**
 
 `ProductController.products` routes `sku` to `findBySkuFor`, which returns nought or one product.
@@ -4279,7 +4321,82 @@ project has for that claim: a full trading quarter, built by nothing but HTTP re
 twelve universal invariants — and still does after being dumped, restored into a fresh database and
 swept again.
 
-### ➡️ Step 16, the frontend — under way. **Current: F1, Suppliers.**
+### ➡️ Step 16, the frontend — under way. **Current: F2, Customers.**
+
+#### 📋 F2 scope, read off the API fresh (2026-07-31). **The shared extraction is done; two findings need decisions.**
+
+**The extraction happened first, before anything Customers-specific.** `vat-status-rules.ts` moved to
+`lib/vat-status.ts` and the coupled editor became `components/vat/vat-status-field.tsx`; Suppliers
+was rewired onto it and **its 18 tests still pass unchanged**, which is what proves the extraction
+rather than a claim that it is equivalent. The shared i18n keys moved out of the `suppliers.*`
+namespace to `vatStatus.*` at the same time — a shared component reading a screen's strings is the
+same coupling one layer down.
+
+**Read fresh, not assumed from Suppliers.** Customers has 14 routes to Suppliers' 11 and the shapes
+are *nearly* the same, which is exactly the situation that rewards checking. Three real differences:
+
+| | Suppliers | Customers |
+|---|---|---|
+| VAT class override | — | `vatClassOverrideId` + `PATCH …/vat-class-override`, whose body is `{vatClassId}` and whose **null clears it** (`"vatClassId": "(cleared)"` in the audit record) |
+| Structural record | — | `systemKey: RETAIL_WALK_IN` — one row, protected |
+| Everything else | name, vat-number, vat-status, contact-details, deactivate/reactivate, create | identical route-for-route, same request bodies |
+
+**`NewCustomer` was checked for the primitive trap: it has none** — `String`s, an enum and two
+`Long`s, with `name` and `vatStatus` required by the compact constructor. As with `NewSupplier`,
+that reading is **not** the evidence; creation must be proved against the server before F2 is called
+done.
+
+##### ⚠️ Finding 1 — the retail record refuses two edits with `400 "Bad request."` and no message
+
+Probed against the running stack rather than read, on customer 1 (`Πελάτης Λιανικής`):
+
+| Attempt | Answer |
+|---|---|
+| deactivate | **`422`** with the full reason — *"is a structural record (RETAIL_WALK_IN)… every till sale with no identified buyer is recorded against it"* |
+| `vatStatus: INTRA_EU_B2B` | **`422`** with the full reason |
+| **`vatStatus: EXEMPT`** | **`400 "Bad request."`** — nothing else |
+| **`vatNumber: "EL…"`** | **`400 "Bad request."`** — nothing else |
+
+The server log shows why, and the messages that are being thrown away are excellent:
+
+```
+java.lang.IllegalArgumentException: Customer 'Πελάτης Λιανικής' carries system key RETAIL_WALK_IN
+and is EXEMPT. A system record's VAT treatment is fixed at DOMESTIC: it is not one identifiable
+party, so it cannot make a claim about a party's status.
+```
+
+**This is the fourth instance of `CLAUDE.md`'s named anti-pattern — a client's mistake raised as a
+programming error** — and it is the one none of the three guards can reach. `Customer` is in the
+**domain**, so `WebAuthorizationRulesTest` (scoped to `..core.web..`) structurally cannot see it;
+and `PermissionSweepIT` sends **empty** bodies, while this needs a well-formed body that is wrong
+only in the domain's terms. It is precisely the residual `CLAUDE.md` names: *"a wrong but non-empty
+value."* The remedy is the one the same file already uses two methods away — `InvalidCustomerException`,
+which is what `deactivate` throws to produce its good `422`. **Queued as backend item 4.**
+
+##### ⚠️ Finding 2 — `CustomerView` returns two fields the spec does not declare
+
+The live response carries `"mergeable": false` and `"systemRecord": true`. **Neither is in the
+spec**, so neither is on the generated TypeScript type, and no screen can read them. Another face of
+backend item 2: the spec does not describe the surface.
+
+**The frontend workaround is honest and needs no decision:** `systemKey` *is* in the spec, so
+`systemKey !== undefined` is the test for "this is a structural record". Worth stating that this is
+a workaround rather than the intended API.
+
+##### The two decisions F2 needs
+
+1. **❓ How the retail record presents.** Its name is editable (a rename to *"Renamed by probe"*
+   succeeded and was reverted), but its VAT treatment is fixed and it cannot be deactivated. Options
+   are: hide those controls entirely; show them disabled with an explanation; or leave them and let
+   the backend refuse — which today means a bare `400` for two of them.
+2. **❓ Whether the VAT class override is in F2 at all.** It is a customer-only field, it needs the
+   `TAX_AND_CHARGES`-gated VAT class lookup that Products already uses, and *"this customer is
+   always taxed at this class regardless of the product"* is a rule with real accounting weight. It
+   may deserve its own scrutiny rather than riding along.
+
+---
+
+#### F1, Suppliers — done
 
 #### 📋 F1 scope, read off the API surface (2026-07-31). **Two items need an owner decision before they are built — marked ❓.**
 

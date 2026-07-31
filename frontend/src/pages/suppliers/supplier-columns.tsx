@@ -36,7 +36,7 @@ export function supplierColumns(t: TFunction): ColumnDef<SupplierView, unknown>[
     },
     {
       id: 'vatStatus',
-      header: t('suppliers.column.vatStatus'),
+      header: t('vatStatus.label'),
       cell: ({ row }) =>
         row.original.vatStatus ? (
           t(`VatStatus.${row.original.vatStatus}`, { ns: 'enums' })

@@ -112,14 +112,14 @@
   "suppliers.flag.inactive": "Inactive",
   "suppliers.column.name": "Name",
   "suppliers.column.vatNumber": "VAT number",
-  "suppliers.column.vatStatus": "VAT status",
-  "suppliers.column.exemptionReason": "Exemption reason",
   "suppliers.column.contact": "Contact",
   "suppliers.column.email": "Email",
   "suppliers.column.phone": "Phone",
   "suppliers.column.flags": "",
-  "suppliers.vatStatus.noReason": "no reason recorded",
-  "suppliers.vatStatus.reasonRequired": "This VAT status needs an exemption reason before it can be saved.",
-  "suppliers.vatStatus.vatNumberRequired": "This VAT status needs a VAT number. Set the VAT number above first — it is saved separately.",
-  "suppliers.vatStatus.vatNumberRequiredToCreate": "This VAT status needs a VAT number."
+  "vatStatus.label": "VAT status",
+  "vatStatus.exemptionReason": "Exemption reason",
+  "vatStatus.noReason": "no reason recorded",
+  "vatStatus.reasonRequired": "This VAT status needs an exemption reason before it can be saved.",
+  "vatStatus.vatNumberRequired": "This VAT status needs a VAT number. Set the VAT number above first — it is saved separately.",
+  "vatStatus.vatNumberRequiredToCreate": "This VAT status needs a VAT number."
 }

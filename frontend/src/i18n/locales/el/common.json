@@ -112,14 +112,14 @@
   "suppliers.flag.inactive": "Ανενεργός",
   "suppliers.column.name": "Επωνυμία",
   "suppliers.column.vatNumber": "Α.Φ.Μ.",
-  "suppliers.column.vatStatus": "Καθεστώς Φ.Π.Α.",
-  "suppliers.column.exemptionReason": "Αιτία απαλλαγής",
   "suppliers.column.contact": "Επικοινωνία",
   "suppliers.column.email": "Email",
   "suppliers.column.phone": "Τηλέφωνο",
   "suppliers.column.flags": "",
-  "suppliers.vatStatus.noReason": "χωρίς καταγεγραμμένη αιτία",
-  "suppliers.vatStatus.reasonRequired": "Αυτό το καθεστώς Φ.Π.Α. απαιτεί αιτία απαλλαγής για να αποθηκευτεί.",
-  "suppliers.vatStatus.vatNumberRequired": "Αυτό το καθεστώς Φ.Π.Α. απαιτεί Α.Φ.Μ. Καταχωρήστε πρώτα τον Α.Φ.Μ. παραπάνω — αποθηκεύεται ξεχωριστά.",
-  "suppliers.vatStatus.vatNumberRequiredToCreate": "Αυτό το καθεστώς Φ.Π.Α. απαιτεί Α.Φ.Μ."
+  "vatStatus.label": "Καθεστώς Φ.Π.Α.",
+  "vatStatus.exemptionReason": "Αιτία απαλλαγής",
+  "vatStatus.noReason": "χωρίς καταγεγραμμένη αιτία",
+  "vatStatus.reasonRequired": "Αυτό το καθεστώς Φ.Π.Α. απαιτεί αιτία απαλλαγής για να αποθηκευτεί.",
+  "vatStatus.vatNumberRequired": "Αυτό το καθεστώς Φ.Π.Α. απαιτεί Α.Φ.Μ. Καταχωρήστε πρώτα τον Α.Φ.Μ. παραπάνω — αποθηκεύεται ξεχωριστά.",
+  "vatStatus.vatNumberRequiredToCreate": "Αυτό το καθεστώς Φ.Π.Α. απαιτεί Α.Φ.Μ."
 }

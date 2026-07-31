@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { VatStatus } from '@/api/generated/model'
 
-import { NEEDS_EXEMPTION_REASON, NEEDS_VAT_NUMBER } from './vat-status-rules'
+import { NEEDS_EXEMPTION_REASON, NEEDS_VAT_NUMBER } from './vat-status'
 
 /**
  * The two rules mirrored from the backend enum, held to the enum itself.

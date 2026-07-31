@@ -28,7 +28,7 @@ candidate causes per symptom).
 |   F0 | Restore dev data — build and run step 15c, the seed pass that was approved and never written ᶠ⁰                                    |     — |    0.9 | 🟢 Done        |
 |      | *(not a step)* Products bugfix pass — the render loop, and two defects it hid ᵇᶠ                                                   |     — |        | 🟢 Done        |
 |   F1 | Suppliers — list, detail, create, per-field PATCH (Products' pattern, reused) ᶠ¹                                                   |     — |        | 🟢 Done        |
-|   F2 | Customers — same pattern, plus VAT status and the protected retail-customer record ᶠ²                                              |     — |        | 🟡 **Current** |
+|   F2 | Customers — same pattern, plus the VAT class override and the protected retail-customer record ᶠ²                                  |     — |        | 🟡 **Current** |
 |   F3 | Users & Roles — real admin screen: create roles, grant sections, manage accounts                                                   |     — |        | 🔴 Not started |
 |   F4 | Settings — general config, Reference Data (VAT classes, UoM), Adapters/Modules toggle grids (read-only placeholders)               |     — |        | 🔴 Not started |
 |   F5 | Sales Invoice + Credit Note — first transactional-document screen; decides the create/preview/commit pattern                       |     — |        | 🔴 Not started |
@@ -158,9 +158,28 @@ against a name the domain already holds, which returns `422` only if the body pa
 nothing, and once for real. That is now the standing rule in `CLAUDE.md`, and it is what the
 products create form was cleared by a stub without.
 
-**ᶠ² F2 is next and is not scoped yet.** Customers repeat the supplier shape and add two things of
-their own: a VAT class override, and a protected retail-customer record that must not be
-deactivated. Scope it off the API the way F1 was before building.
+**ᶠ² F2 — scoped off the API fresh, and the shared extraction is already done.**
+`lib/vat-status.ts` and `components/vat/vat-status-field.tsx` were lifted out of `pages/suppliers/`
+**before** anything Customers-specific was written, and Suppliers now runs on them with its 18 tests
+passing unchanged — which is the proof, rather than a claim that the move was equivalent. The shared
+strings moved out of the `suppliers.*` namespace at the same time: a shared component reading one
+screen's strings is the same coupling, one layer down.
+
+Reading the API fresh rather than assuming Suppliers' shape carried over was worth it twice:
+
+- **The retail record refuses two edits with a bare `400 "Bad request."`**, discarding a complete
+  explanation, because they are thrown as `IllegalArgumentException` from the *domain* — where the
+  ArchUnit rule cannot look, and which the route sweep cannot reach because it sends empty bodies.
+  Queued as backend item 4. Deactivation and the `INTRA_EU_B2B` rule both answer `422` properly, so
+  reading one rule would have suggested they all did.
+- **`CustomerView` returns `systemRecord` and `mergeable`, and the spec declares neither**, so the
+  generated type has no idea they exist. The screen will use `systemKey !== undefined` instead,
+  which *is* in the spec — a workaround, and recorded as one.
+
+**Two decisions are open before the Customers screens are built**: how the protected retail record
+presents (hidden controls, disabled controls, or let the backend refuse), and whether the VAT class
+override belongs in F2 at all — it is a customer-only field with real accounting weight, and may
+deserve its own scrutiny rather than riding along.
 
 **F5 carries more weight than its position implies.** It's not just the next screen — it
 decides the entire document-creation interaction pattern (multi-line entry, running
