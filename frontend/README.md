@@ -128,6 +128,31 @@ delivered.
 load-bearing** — answered instantly, `msw` resolves inside the same microtask checkpoint the reset
 is queued on, and the defect measures 3 renders instead of 84.
 
+### "Not yours to edit" and "fixed on this record" are different, and look different
+
+Two states that read alike and must not be collapsed. `FieldEditor` takes both:
+
+| | Means | Renders |
+|---|---|---|
+| `editable: false` | a VIEW grant — **not yours to edit** | **no affordance at all** |
+| `lockedReason` | **editable in general, fixed on _this_ record** | shown, **disabled**, with the reason |
+
+A disabled button for a VIEW role invites somebody to keep trying at something their role will never
+allow. A *hidden* control on the one record where a setting is fixed leaves an operator hunting for
+something every other record of that kind has. `editable: false` wins when both apply: why a record
+is special is not information a read-only role needs in place of an edit it cannot do anyway.
+
+**This is a standing pattern, not a Customers solution.** The category is "generally editable, fixed
+by rule on this instance", and it recurs: the shared retail customer (`systemKey` — VAT treatment
+fixed by CHECK, cannot be deactivated) is the first, and posted Sales and Purchase Invoices will be
+the next and much larger one. Reach for `lockedReason` there rather than inventing a second way.
+
+⚠️ **Where the reason text comes from matters.** Prefer the backend's own words. The retail record's
+locks are currently *mirrored* on the client because two of those routes throw
+`IllegalArgumentException` and the message is correctly discarded, leaving a bare `400` — a backend
+defect queued as item 4. A mirrored reason is a stopgap and should be labelled as one at the call
+site, because it can drift from the rule it describes.
+
 ### Refusals are shown by one component
 
 `<Refusal error={mutation.error} />`. Never `error.detail` at a call site: a `403` carries no

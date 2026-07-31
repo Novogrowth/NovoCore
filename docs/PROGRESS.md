@@ -4227,6 +4227,30 @@ are the same field:
 Both were confirmed to answer `400` to `{}`. The PATCH is not hit in practice only because the
 detail screen's editor always sends the field.
 
+**⚠️ This codebase already documented the defect and already applies the fix — on one route.**
+Found while probing F3's surface, and it changes what item 2 costs. `RoleController` declares:
+
+```java
+/**
+ * @param restricted boxed, not a primitive. An omitted field on a primitive boolean arrives as
+ *     false and would silently REMOVE a restriction the caller never mentioned — a wrong answer
+ *     that looks like a successful request, which is worse than the 400 this produces instead.
+ */
+record FieldRestrictionRequest(Boolean restricted) {
+    FieldRestrictionRequest { Required.field(restricted, "restricted"); }
+}
+```
+
+Probed against the running stack: `PUT /api/roles/{id}/field-restrictions/{field}` with `{}` answers
+**`400 "restricted" is required and was not supplied.`** — a plain 400 naming the field, in the
+ordinary refusal shape. That is exactly what `POST /api/products` should have said.
+
+So this is not a design question. **`serialTracked` is the same field type on the same surface with
+the pattern not applied**, in the two places named above. The javadoc even states the second failure
+mode, which is worse than the one we hit: had `FAIL_ON_NULL_FOR_PRIMITIVES` been off,
+`PATCH …/serial-tracking` with the field omitted would have silently turned serial tracking **off**
+and answered `200`. The 400 is the lucky outcome.
+
 **Three parts, and the second is the one that matters.**
 
 1. **Decide what a missing primitive should mean.** Almost certainly `Required.field`'s treatment —
@@ -4322,6 +4346,75 @@ twelve universal invariants — and still does after being dumped, restored into
 swept again.
 
 ### ➡️ Step 16, the frontend — under way. **Current: F2, Customers.**
+
+#### 📋 F3, Users & Roles — scoped, and the escalation guards proved against the real server
+
+**Not a party record, and not the master-data pattern stretched to fit.** 18 routes over two
+entities that reference each other, one of which (`Role`) is a *permission* document: a name plus a
+map of `Section → AccessLevel` plus a set of restricted fields. There is no `active`-filtered list
+of things with a VAT number here, and reaching for `supplier-detail.tsx` as a template would produce
+the wrong screen.
+
+| | |
+|---|---|
+| Roles | `GET/POST /api/roles`, `GET /api/roles/{id}`, `/name`, `/deactivate`, `/reactivate`, `/users`, **`PUT /grants/{section}`**, **`PUT /field-restrictions/{field}`** |
+| Users | `GET/POST /api/users`, `GET /api/users/{id}`, `/display-name`, **`/password`**, **`/role`**, `/deactivate`, `/reactivate` |
+| Reference | `GET /api/sections` — every section with an `available` flag |
+
+**Shapes worth noting before anything is drawn.** `RoleView.sectionGrants` is a **map**, not a list,
+so the natural control is a grid of sections × levels rather than a form of fields — and `GET
+/api/sections` exists precisely to enumerate the rows. `NewRole` takes only `name` and
+`description`: **a role cannot be created with grants, or with `fullAccess`**, so creating one and
+granting it are necessarily two steps and the screen must not pretend otherwise. `NewUser` carries a
+`rawPassword`, which is the first password field in this frontend and the first place a value must
+never be echoed back, logged, or put in a query key.
+
+##### ✅ The Step 16b escalation guards, exercised as a real limited-privilege account
+
+Not read from the service and not asserted through a mock. A role holding **`USERS_AND_ROLES:FULL`
+and nothing else** was created, an account put in it, and the compound path walked as that account:
+
+| # | Attempt | Answer |
+|---|---|---|
+| 1 | Widen its **own** role (`PRODUCTS:FULL`) | **`422`** — *"You cannot change the permissions of 'PROBE-ADMIN', which is your own role… Ask another administrator."* |
+| 2a | Create a **second** role | `201` — legitimate on its own, which is the point |
+| 2b | Grant that role **`JOURNAL:FULL`**, which the actor does not hold | **`422`** — *"…because your own role has NONE there. Access can only be passed on, never invented."* |
+| 3 | Grant that role `USERS_AND_ROLES:VIEW`, which the actor **does** hold | `200` — the guard is "no wider than you hold", not "nothing at all" |
+| 4 | Create an account in the **OWNER** role | **`422`** — *"…Otherwise administering users would be a route to unlimited access: create an account in a full-access role, then log in as it."* |
+| 5 | Move **itself** into the Owner role | **`422`** — *"You cannot change your own role…"* |
+
+**All four guards hold, and every refusal is a `422` carrying its own reason.** That is a direct
+input to the screen rather than a box ticked: F3 can surface these with the shared `Refusal` and say
+nothing itself — unlike the retail customer, where two rules answer a bare `400` and the client had
+to mirror the text. **Where a guard explains itself, the screen must not restate it**, or the two
+drift.
+
+Row 3 is the one worth keeping in view: it is what stops the screen implementing "an administrator
+may not grant anything", which would be wrong and would make the section unusable.
+
+##### Two things the fresh read caught
+
+- **`PUT …/field-restrictions/{field}` handles the missing-primitive case correctly**, and its
+  javadoc explains why boxed-plus-`Required.field` is the right shape. That is the fix backend
+  item 2 needs, already written down and already working one file away — recorded there, because it
+  turns that item from a design question into an application of an existing pattern.
+- **`GET /api/sections` reports `available` per section**, which is what lets a grant grid show
+  "granted but not built yet" honestly rather than offering a permission that leads nowhere.
+
+##### Open before the screens are built
+
+1. **❓ The grant grid's shape.** Sections × {NONE, VIEW, FULL} is a grid, and every cell the caller
+   cannot confer must be unavailable — which is `lockedReason` territory, per the standing pattern.
+   Whether that is a radio group per row, a select per row, or a three-state control is a component
+   choice `CLAUDE.md` says to ask about rather than pick.
+2. **❓ Setting a password.** `PATCH /api/users/{id}/password` is an administrator resetting somebody
+   else's. Confirm-field or not, and what is shown afterwards, is a decision about handling a
+   credential rather than a layout preference.
+
+**Nothing of F3 is built yet.** The probe's role, target role and account were deleted; `app_role` is
+back to 3 and `app_user` to 1.
+
+---
 
 #### 📋 F2, Customers — done (2026-07-31, `b406b27`’s successor). Both decisions taken before building
 
