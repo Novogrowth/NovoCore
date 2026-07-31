@@ -83,19 +83,28 @@ NovoCore is built in phases (see the brief's roadmap). **Only build what the cur
 
 Ask before implementing. Several entity field lists and mechanisms in the brief are explicitly marked as not finalized — building against them as if they were final risks real rework.
 
+## An approved proposal is a checklist, not a paragraph
+
+**When a proposal with more than one sub-part is approved, write the approval into `docs/PROGRESS.md` as an explicit checklist — one line per sub-part — at the moment it is approved.** Not as prose describing what was agreed. Prose is where a sub-part goes to be forgotten, because a summary of what *was* built reads as complete no matter what is missing from it.
+
+**This rule exists because it has already cost something.** Step 15's proposal had three commits in it — 15a, 15b and **15c, the seed pass that populates the live Compose database** — and the step was agreed at *full* scope, which included 15c. 15a and 15b landed. 15c did not. `PROGRESS.md` recorded "15a — the harness", "15b, completed", and **never mentioned 15c in either direction** — not delivered, not deferred, not cut. Nothing was wrong with any sentence in that close-out; it was accurate about everything it described. The gap was that it summarised what was built instead of reconciling against what was approved.
+
+The cost surfaced two steps later, in the frontend: the development database held nothing but Flyway's own seed, the first real screen correctly showed an empty table, and a session was spent proving the data had never existed rather than building anything. The seam 15c needed (`HttpTransport`) had been sitting in the repository the whole time with a javadoc naming the driver that was never written.
+
 ## Session close-out
 
-When the user says "close the session" (or clearly equivalent phrasing like "let's stop here" or "end session"), perform these five actions **in this order**, regardless of what step or task is in progress:
+When the user says "close the session" (or clearly equivalent phrasing like "let's stop here" or "end session"), perform these six actions **in this order**, regardless of what step or task is in progress:
 
-1. **Update `docs/PROGRESS.md`.** Record: which step(s) were worked on, what's now done and verified, what's still open or blocked (including any question numbers from the product brief), and the concrete next action for the following session. Overwrite stale status, don't just append.
-2. **Update `docs/novocore-context-primer.md`.** Reflect any changes to build status, resolved decisions, or open items so the primer stays accurate for a fresh chat session. Don't let it drift out of sync with what actually happened.
-3. **Update `docs/novocore-roadmap.md`.** Move any step that finished to 🟢 Done, mark the next one **Current**, and fill in the `Actual` hours and token columns for the work this session covered. **Measure, never estimate** — see below.
-4. **Commit, once, covering everything.** Stage and commit all outstanding changes — the session's work *and* the three documents above — in a single commit whose message summarizes what was done this session. If the work is incomplete or known-broken, say so explicitly in the message rather than implying it's finished.
-5. **Push to `origin`.** Always, without being asked. Then verify it landed (`git log --oneline origin/main -1` after a fetch) and confirm local and remote agree.
+1. **Reconcile every approved checklist this session touched.** For each sub-part of every proposal in play, state which of exactly three things it is: **done** (and how it was verified), **explicitly deferred** (with the reason, and where it is now recorded so it can be picked up), or **still open**. Reconcile against the *approved* list, not against memory of what was worked on — the failure mode this exists to catch is a sub-part nobody has thought about since it was approved, and a summary written from what was built cannot see it. **A sub-part with no verdict is a finding**, and says so in the close-out. If a proposal was approved this session and never written down as a checklist, write it down now, then reconcile against it.
+2. **Update `docs/PROGRESS.md`.** Record: which step(s) were worked on, what's now done and verified, what's still open or blocked (including any question numbers from the product brief), and the concrete next action for the following session. Overwrite stale status, don't just append. The reconciliation from step 1 goes here, as the checklist with its verdicts — not as a paragraph summarising them.
+3. **Update `docs/novocore-context-primer.md`.** Reflect any changes to build status, resolved decisions, or open items so the primer stays accurate for a fresh chat session. Don't let it drift out of sync with what actually happened.
+4. **Update `docs/novocore-roadmap.md`.** Move any step that finished to 🟢 Done, mark the next one **Current**, and fill in the `Actual` hours and token columns for the work this session covered. **Measure, never estimate** — see below. Frontend steps live in `docs/novocore-frontend-roadmap.md` and are updated the same way.
+5. **Commit, once, covering everything.** Stage and commit all outstanding changes — the session's work *and* the three documents above — in a single commit whose message summarizes what was done this session. If the work is incomplete or known-broken, say so explicitly in the message rather than implying it's finished.
+6. **Push to `origin`.** Always, without being asked. Then verify it landed (`git log --oneline origin/main -1` after a fetch) and confirm local and remote agree.
 
-Committing before pushing, and documenting before committing, is deliberate: the documentation updates are themselves changes, so committing first would leave them uncommitted and immediately stale — the exact drift step 2 exists to prevent.
+Reconciling before documenting, committing before pushing, and documenting before committing, is deliberate: the reconciliation is what the documentation has to record, and the documentation updates are themselves changes, so committing first would leave them uncommitted and immediately stale — the exact drift step 3 exists to prevent.
 
-Do all five before ending the session — don't ask for confirmation on whether to do them, only flag anything unusual you find while doing so (e.g., uncommitted changes you didn't expect, tests that were failing when you started).
+Do all six before ending the session — don't ask for confirmation on whether to do them, only flag anything unusual you find while doing so (e.g., uncommitted changes you didn't expect, tests that were failing when you started).
 
 **On the roadmap (step 3).** That file's `Actual` columns are worth something only because every figure in them was measured. The method is documented at the bottom of the file itself and must be followed rather than reinvented: session transcripts in `~/.claude/projects/`, windows bounded by each step's last commit, active time summed from inter-event gaps each capped at 5 minutes, tokens read from the `usage` field on assistant messages.
 

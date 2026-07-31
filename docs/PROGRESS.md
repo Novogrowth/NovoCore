@@ -3883,6 +3883,129 @@ recorded more. **Two pre-existing unreferenced scaffold assets remain**: `fronte
 and `frontend/src/assets/vite.svg`. Neither is imported anywhere. Left alone as out of scope.
 
 ---
+## F0 — done (2026-07-31). The dev database, and the approved commit nobody missed
+
+**The frontend was being built against a database that held nothing but Flyway's own seed.** Found
+during the icon investigation — zero rows in Products — and picked up here as F0 on the frontend
+roadmap. The roadmap offered two hypotheses: the seed pass never ran, or a volume reset wiped it.
+**Neither was quite right. The seed pass had never been written.**
+
+### What the record actually says
+
+Step 15's proposal (`docs/step-15-validation-proposal.md`) put the seeder in **D1 as option (c),
+recommended**, and scheduled it as its own commit, **15c**, explicitly cuttable. §10 lists the
+seeder among the things a *reduced* step 15 would cut, and this file records the step as **"Agreed
+at full scope, not the reduced version"** — so 15c was in.
+
+`908b226` is 15a. `d8c9e77`, `1421dfb` and `1a4b294` are 15b. **There is no 15c commit**, and the
+step-15 section above lists 15a and 15b as done and **never mentions 15c in either direction** —
+not delivered, not deferred, not cut. Nothing in that close-out is inaccurate about anything it
+describes. It summarised what was built instead of reconciling against what was approved, and a
+summary cannot see an absence.
+
+The seam is still sitting where 15a left it: `HttpTransport`'s javadoc has said since then that it
+exists so the scenario can run *"for the seed pass that populates the live Compose database"*, and
+it had exactly **one** implementation. `RouteCoverage:47` anticipates the same driver. This is the
+cost of prose over a checklist, and it is why `CLAUDE.md` now opens the close-out with a
+reconciliation step.
+
+### It was never wiped — four independent proofs
+
+| Evidence | What it rules out |
+|---|---|
+| `PG_VERSION` mtime **2026-07-27 16:13:22Z**, identical to the volume's `CreatedAt` | the data directory has never been re-initialised, so **no `docker compose down -v` has ever run on this stack** |
+| `flyway_schema_history` continuous in one volume — V1–V20 on 07-28 17:21, V21–V23 on 07-29 12:32, V24–V27 on 07-31 01:06 | a reset would have re-run V1 at the later date |
+| `audit_log`, append-only by trigger, unbroken ids 1–56 | nothing was deleted, and not one entry is a trading action |
+| **`pg_sequences.last_value` NULL — never called — for `product`, `supplier`, `journal_entry`, `sales_invoice`, `purchase_invoice`, `inventory_lot`, `asset`** | decisive: a high-water mark survives `DELETE`, `TRUNCATE` and rollback. **Not one such row had ever existed** |
+
+### What was built (`521a601`)
+
+- **`LiveHttpTransport`** — the second `HttpTransport`, real HTTPS at a base URL supplied from
+  outside. Caddy's internal CA is accepted (the concession `vite.config.ts` already makes on the
+  same hop); **hostname verification stays on**; errors are returned rather than thrown, so the
+  shared code above it does not change behaviour with the transport.
+- **`LiveSeedTest`** — the driver. No Spring context, no Testcontainers, disabled unless
+  `-Dnovocore.seed.base-url` is given. Credentials come from `NOVOCORE_SEED_USERNAME` /
+  `NOVOCORE_SEED_PASSWORD` in the environment, so no password reaches a command line, a build log
+  or a process list. Verifies with `ReadBackChecks.documents()` and `assertFiltersActuallyFilter()`,
+  and `JsonNumberSweep` runs over every response — **against this build of the application rather
+  than a test container**, which is the one thing this driver checks that the Failsafe one cannot.
+  It deliberately does **not** run `TradingQuarterOverHttpIT`'s backup check, which writes stub
+  Drive settings and would overwrite the commissioned credentials.
+- **`TradingQuarter.happens()`** — the fourteen-call sequence, extracted so the two drivers share it
+  instead of keeping a copy each.
+- **`docker/reset-trading-data.sql`** — a targeted reset. Keeps Settings, Users, Roles, the Flyway
+  lookups, the backup history and the audit log. **The audit log's absence from the `TRUNCATE` list
+  is load-bearing**: `TRUNCATE` does not fire row triggers, so naming it there would silently do the
+  one thing its append-only trigger forbids. **No `RESTART IDENTITY`**, because `audit_log` stores
+  entity ids as text and outlives the rows — recycling ids would make it quietly wrong.
+
+### ⚠️ `docker compose down -v` is expensive on this stack, and that is not obvious
+
+`docker/.env` holds **three** keys: the DB password, the site address, the backup encryption key.
+The **Google Drive client secrets and refresh tokens are not there** — they live in the `setting`
+table, put there once during commissioning, and `NOVOCORE_BOOTSTRAP_OWNER_*` are blank. So `down -v`
+destroys the commissioned Drive credentials *and* the Owner account, neither reproducible from
+`.env`, and the consent flow has to be re-run — including fresh destination folders, per the closed
+incident in the step 12 section. **Use `docker/reset-trading-data.sql`.**
+
+### Verified, and how
+
+The run was done by the owner in their own terminal so no credential entered this session. Then,
+against the database directly:
+
+| | |
+|---|---:|
+| Products / customers / suppliers / fixed assets | 8 / 5 / 3 / 2 |
+| Journal entries, lines | 48, 131 |
+| Sales invoices, purchase invoices, goods receipts, credit notes | 10 / 7 / 5 / 4 |
+| Inventory lots, serialised units, settlements, write-offs, freight allocations | 6 / 3 / 3 / 3 / 3 |
+| **Unbalanced entries** | **0** |
+| Total debits = total credits | **€20,372.46** |
+| Entry dates | 2026-01-05 → 2026-03-31, the quarter's own bounds |
+| Distinct posting sources | **9** — breadth, not one path repeated |
+
+Every party and product carries a `TEST-` prefix (step 15 §11 Q3). Account 71 is the one the
+narrative added, `created_by = 'kostas'` — which independently confirms the reset script's
+`created_by <> 'system'` discriminator picks out exactly the right row.
+
+**The API side was verified by the seed pass itself**, which is stronger than a `curl` would have
+been: eleven documents re-fetched over HTTP and compared against the literals sent, the filter
+checks run, and every response swept for a decimal that arrived as a JSON number.
+
+**All three refusals are now proven, not merely written.** No base URL → skipped, with its reason.
+No credentials → fails with its own message before any network call. **Already populated → refused
+on the owner's second run, naming the counts and the reset script** — the guard that could only be
+exercised once, taken while the taking was free. And a deliberately wrong password reached the live
+server and came back `401`, which is TLS, the CSRF bootstrap and the form post all working.
+`TradingQuarterOverHttpIT` is green on the extraction, 68 tests.
+
+### 📋 Reconciliation against what was approved
+
+The first application of `CLAUDE.md`'s new close-out step 1. Every sub-part agreed in this session,
+with a verdict — including the three that were **not** in the original approval and were added
+inside the step.
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| 1 | Confirm whether the seed pass ever ran against the live Compose DB | **Done** — it was never written; no 15c commit, and the close-out never mentioned it |
+| 2 | Check whether a volume reset wiped it | **Done** — ruled out four ways; the sequences had never been called |
+| 3 | Run the seed pass; confirm real data is visible | **Done** — run by the owner, verified above against the database |
+| 4 | `LiveHttpTransport` | **Done** — `521a601` |
+| 5 | `LiveSeedTest` | **Done** — `521a601`, all three refusals proven |
+| 6 | `docker/reset-trading-data.sql` | **Done** — `521a601`. *Not yet executed*: nothing has needed a reset. Its `created_by <> 'system'` discriminator is confirmed correct against the live row |
+| 7 | Correct the roadmap's fixture counts | **Done** — `novocore-frontend-roadmap.md`; the old "15 products, 12 customers, ~120 journal entries" was wrong on all three |
+| 8 | `CLAUDE.md` reconciliation step | **Done** — a new "an approved proposal is a checklist" section, and reconciliation is now close-out **step 1 of six** |
+| 9 | *(added)* `TradingQuarter.happens()` extraction | **Done** — the alternative was the same fourteen-call sequence in two drivers, which `CLAUDE.md` names as the shape that decays |
+| 10 | *(added)* `seed.ps1` runner | **Done, and deleted by the owner after use as designed.** Never committed |
+| 11 | *(added)* `/seed.ps1` in `.gitignore` | **Done** — it was **not** ignored, so the file holding the Owner password in plain text sat in the repository root where `git add -A` would have found it. The entry stays after the file's deletion, because the next person to need one will put it back |
+
+**Nothing from this session is deferred or open.** Two things are inherited rather than raised here:
+the `InventoryController_writeOff` duplicate `operationId` (still queued for a backend session, see
+below), and `frontend/README.md`'s two-process run instructions, which were written in an earlier
+session and left uncommitted — carried into this close-out rather than left to drift further.
+
+---
 ## Next action — read this first
 
 ### ⚠️ Queued for the next BACKEND session — one small standalone fix (raised 2026-07-30)
@@ -3917,13 +4040,19 @@ project has for that claim: a full trading quarter, built by nothing but HTTP re
 twelve universal invariants — and still does after being dumped, restored into a fresh database and
 swept again.
 
-### ➡️ Step 16, the frontend — under way, not next.
+### ➡️ Step 16, the frontend — under way. **Next up: F1, Suppliers.**
 
-**Foundations, Products and a brand pass have landed** (`94e17cd`, `56e3726`, `28c4119`, and this
-session). The paragraphs below were written before any of that and are kept because the reasoning
-still holds — with one correction: **the frontend now has a login screen, and a human has used a
-browser.** What has *not* happened is a human driving the ledger screens end to end; every
-frontend test still runs because a test asked it to.
+Frontend work is tracked step by step in **`docs/novocore-frontend-roadmap.md`**, which is the file
+to read for what comes next. **F0 is done** (see its section above): the development database now
+holds a real trading quarter — 8 products, 5 customers, 3 suppliers, 48 balanced journal entries —
+so **F1 onwards is the first frontend work in this project being built against data that exists.**
+Every screen before it was built against empty tables.
+
+**Foundations, Products, a brand pass and an icon fix have landed** (`94e17cd`, `56e3726`,
+`28c4119`, `92976fc`, `507864f`). The paragraphs below were written before any of that and are kept
+because the reasoning still holds — with one correction: **the frontend now has a login screen, and
+a human has used a browser.** What has *not* happened is a human driving the ledger screens end to
+end; every frontend test still runs because a test asked it to.
 
 **Step 15 earned its place ahead of step 16 nine times over.** Every one of the nine
 defects it found is one step 16 would otherwise have hit through a second layer, with two candidate

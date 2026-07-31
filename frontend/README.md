@@ -5,10 +5,22 @@ icons, Manrope). Talks to the backend in `../backend` through its committed Open
 
 ## Running it
 
+Local development needs **two processes**, and neither starts by itself — not on boot, not when you
+open the editor. Starting them is a two-command routine at the beginning of every session, not a
+one-time setup step:
+
 ```bash
-npm install
+# 1. the backend stack, from ../docker
+docker compose -f compose.yml -f compose.dev.yml up --build
+
+# 2. the dev server, from here — a separate process, in its own terminal
+npm install          # first time, or after a dependency change
 npm run dev          # http://127.0.0.1:5173
 ```
+
+Both keep running until you stop them, and both are gone after a reboot. `Firefox can't connect to
+the server at 127.0.0.1:5173` almost always means step 2 simply isn't running; a page that loads but
+fails every request means step 1 isn't.
 
 **Open `http://127.0.0.1:5173`, not `http://localhost:5173`.** This is not a preference:
 `docker/Caddyfile` sends `Strict-Transport-Security` for the site address `localhost`, so any
@@ -20,9 +32,6 @@ origin — so the backend's `Secure` session cookie is accepted.
 The dev server proxies `/api`, `/login` and `/logout` to `https://localhost` (Caddy → the app), so
 the browser sees one origin and cookies behave exactly as they do in production. Point it elsewhere
 with `VITE_API_TARGET`.
-
-The backend has to be up: `docker compose -f compose.yml -f compose.dev.yml up --build` from
-`../docker`.
 
 ## Commands
 
