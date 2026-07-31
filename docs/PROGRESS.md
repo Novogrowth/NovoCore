@@ -4056,9 +4056,34 @@ Reproduced in headless Chrome **and** Firefox against the running stack, on the 
 
 | Reported | Verdict |
 |---|---|
-| *"New product" button/route* | **Not broken.** Navigates in both engines, the form renders, and submitting posts a correct payload — `{"sku":…,"sellingPrice":{"amount":"9.99","currency":"EUR"}}` — and lands on the new product. It read as dead because the tab was wedged |
+| *"New product" button/route* | ⚠️ **Half wrong when first written — see the correction below.** The button and the route are fine; the tab being wedged is what made them read as dead. **But submitting was broken**, and this table originally said it worked |
 | *Deactivate / reactivate* | **Genuinely broken, separately.** The backend refuses deactivating a bundle component with `422` and a complete message; the screen rendered **nothing** |
 | *Double-clicking a row* | **Never implemented.** No `onDoubleClick` anywhere in `frontend/src`; only the SKU cell is a link |
+
+### ⚠️ Correction, same day: creating a product was broken, and the check that cleared it verified nothing
+
+The row above originally read *"Not broken… submitting posts a correct payload and lands on the new
+product."* **The owner disproved it in about a minute** by filling the form and pressing the button:
+`400 Malformed request body: Cannot map null into type boolean`.
+
+**The payload was correct. The verification was not.** The browser probe **intercepted the POST and
+answered it with a fabricated `201`** — deliberately, to avoid writing to the development database —
+so it inspected the body it had built, saw it read correctly, and watched the screen navigate to a
+stub of its own making. The backend never saw the request. Everything the check reported was true;
+none of it was evidence for the claim it was used to support.
+
+**The rule this earns, and it generalises past this bug: when the question is "will the backend
+accept this", the backend has to answer it.** Where a write must not persist, get the refusal from
+the *server* — an existing SKU answers `422 "already exists"` only if the body parsed, which
+separates "rejected by the parser" from "rejected by the domain" and creates nothing. That is how it
+was finally established, and it costs no more than stubbing did.
+
+The defect itself is a backend/spec one and is written up in full as item 2 under *Next action*:
+`serialTracked` is a primitive `boolean` on a record, Jackson passes an absent creator property as
+`null`, and the spec declares no required fields on any of 71 request bodies — so the generated type
+said optional and the form was written correctly against a contract that was wrong. **The frontend
+now sends the field explicitly** (`product-create.tsx`), pinned by `spec-hygiene.test.ts`, and a
+screen test asserts it is on the wire — proven to fail against the code that shipped.
 
 ### 📋 Reconciliation against what was approved
 
@@ -4072,7 +4097,7 @@ Reproduced in headless Chrome **and** Firefox against the running stack, on the 
 | 6 | *(added)* The create form's own swallowed errors | **Done** — it read `error.detail` directly, so a `403` (no detail, by design) and an unreachable server rendered nothing. Approved after the fact |
 | 7 | *(added)* The language select showed `en`, not `English` | **Done** — same root cause, app-wide rather than Products-only. Approved after the fact |
 | 8 | Row double-click | **Explicitly deferred** — an open design decision, not a fix: whether a row should have a default action at all, and whether it is "open detail" when the SKU link already does that. Recorded in `novocore-frontend-roadmap.md` |
-| 9 | The unexplained `Cannot map null into type boolean` log line | **Explicitly deferred** — queued as backend item 2 under *Next action*, with everything now known about it |
+| 9 | The `Cannot map null into type boolean` log line | ⚠️ **Deferred, then reopened and half-fixed the same day.** It was not an unexplained edge case: it is `POST /api/products` failing for every user because `serialTracked` is absent. **Frontend workaround shipped**; the backend/spec half stays queued as item 2 |
 | 10 | *(found, not fixed)* The SKU filter is an exact lookup | **Explicitly deferred** — queued as backend item 3; the product decision is the owner's |
 
 ### ⚠️ The regression test needed a delay, and this is the part worth remembering
@@ -4119,7 +4144,7 @@ listed oldest first; nothing here blocks F1.
 | # | Item | Raised |
 |---|---|---|
 | 1 | `InventoryController_writeOff` — one `operationId` on two operations | 2026-07-30 |
-| 2 | `PermissionSweepIT`'s empty-body check cannot see an explicit `null` on a primitive | 2026-07-31 |
+| 2 | **A primitive `boolean` on a body record is mandatory while the spec calls it optional** — broke product creation outright; the frontend carries a workaround | 2026-07-31 |
 | 3 | No SKU **search** endpoint — the products lookup is exact-match only | 2026-07-31 |
 
 ---
@@ -4145,39 +4170,75 @@ confirm green.
 
 ---
 
-#### 2. **An explicit `null` on a primitive `boolean` answers `400 "Unreadable request body."`, and no sweep can see it.**
+#### 2. **A primitive `boolean` on a request-body record is mandatory, the spec says it is optional, and omitting it is a `400`. This broke product creation for every user.**
 
-`CLAUDE.md`'s named anti-pattern — *a client's mistake raised as a programming error* — lists three
-layers of guard and then states the residual in as many words: *"a **wrong but non-empty** value…
-those reach the handler and are only as good as the message written for them."* This is an instance
-of exactly that residual, and it is worth closing because it is mechanical rather than a judgement
-call.
+> ⚠️ **This item was rewritten on 2026-07-31 after the owner reproduced it live.** The previous
+> version described it as an unreproduced edge case involving an *explicit* `null`, and recorded
+> that "the current frontend sends `null` for neither field". **That was wrong, and the way it was
+> got wrong is the lesson.** The browser check that cleared the create form **intercepted the POST
+> and answered it with a fake `201`.** It captured the payload, the payload read correctly, and the
+> screen navigated — to a stub. The real backend never saw that request. A verification that
+> answers its own request verifies nothing, and it produced a confident, wrong sentence in this
+> file. The rule it earns: **when the question is "does the backend accept this", the backend has
+> to answer.**
 
-`PermissionSweepIT.noRouteFailsOnAnEmptyBody` sends `{}`. Jackson maps an **absent** primitive to
-`false`, so the route answers normally and the sweep is satisfied. Send `{"serialTracked": null}`
-and deserialisation fails before any handler runs, and the caller is told only *"Unreadable request
-body."* — no field name, nothing to act on.
+**What actually happens**, measured against the running stack with `curl`, three bodies differing in
+one field, all using an existing SKU so nothing could be created either way:
 
-**The whole surface has exactly two such bodies**, established by grep over all 174 routes rather
-than assumed, and both are the same field:
+| Body | Answer |
+|---|---|
+| `serialTracked` **absent** — exactly what the create form sent | **`400` "Malformed request body: Cannot map `null` into type `boolean`"** |
+| `"serialTracked": false` | `422` "A product with SKU … already exists" — i.e. it **parsed** and reached the domain |
+| `"serialTracked": null` | the same `400` |
+
+**An absent field and an explicit null are the same thing here**, which is the part that makes this
+more than an edge case. `NewProduct` is a Java **record**, so Jackson deserialises through the
+canonical constructor and hands an absent creator property in as `null`;
+`FAIL_ON_NULL_FOR_PRIMITIVES` — on, in this application — then refuses it. Nothing reaches a
+handler, so nothing in the domain can produce a better message, and the caller is told only that
+its body was malformed, with **no field named.**
+
+**And the spec says the field is optional.** `NewProduct` declares no `required` list — nor does any
+other request body. Of 185 schemas, **exactly two declare a required field: `Money` and
+`UnitCost`**, across 71 operations that take a body. So the generated TypeScript is
+`serialTracked?: boolean`, `product-create.tsx` was written correctly against the published
+contract, and **product creation failed for every user, every time.**
+
+**The whole surface has exactly two such bodies**, established by grep over all 174 routes, and both
+are the same field:
 
 - `NewProduct.serialTracked` — `POST /api/products`
 - `ProductController.SerialTrackingRequest.serialTracked` — `PATCH /api/products/{id}/serial-tracking`
 
-**Two parts, and the second is the one that matters.** Decide what a null primitive should mean —
-almost certainly `Required.field`'s treatment, naming the field — and then extend the sweep to send
-an explicit `null` per body field, so the next primitive added anywhere is covered without anyone
-remembering this note.
+Both were confirmed to answer `400` to `{}`. The PATCH is not hit in practice only because the
+detail screen's editor always sends the field.
 
-**Why it is queued rather than fixed now, and what is actually known.** It was found as an
-unexplained log line while diagnosing the Products wedge, and **it has never been reproduced**: two
-occurrences ever, `2026-07-30T22:19:50Z` and `2026-07-31T10:43:22Z`, both predating the fix session,
-and none since — including through a full valid create POST, deactivations, filter toggles and
-select interactions driven in both browsers. **The current frontend sends no `null` for either
-field**: the create form omits `serialTracked` entirely, and the detail editor's draft is
-`product.serialTracked ?? false`. So this is a real gap in the guard with an unidentified trigger,
-not a known frontend defect — recorded rather than closed because a log line nobody can explain is
-how a defect gets attributed to the wrong layer twice.
+**Three parts, and the second is the one that matters.**
+
+1. **Decide what a missing primitive should mean.** Almost certainly `Required.field`'s treatment —
+   name the field — or a boxed `Boolean` with a stated default, which is a domain decision rather
+   than a serialisation one.
+2. **Make the spec say what a body requires.** This is the general defect and the one that will bite
+   again: a client cannot distinguish mandatory from optional on any of 71 bodies. Until it does,
+   every generated request type is a suggestion.
+3. **Extend the sweep.** `PermissionSweepIT.noRouteFailsOnAnEmptyBody` sends `{}` and asserts only
+   that the answer is not `5xx` — a `400` satisfies it. It should send `{}` **and** an explicit
+   `null` per field, and require the answer to name what was missing.
+
+**The frontend carries a workaround in the meantime** (`3458ee6`'s follow-up): `product-create.tsx`
+sends `serialTracked: false` explicitly, with the reason at the call site, pinned by
+`spec-hygiene.test.ts`, which asserts that only `Money` and `UnitCost` declare required fields and
+**fails the moment that changes in either direction** — so whoever fixes the spec is sent back to the
+workaround rather than leaving it to rot.
+
+**How it was found, and why it was nearly missed twice.** It first appeared as an unexplained log
+line while diagnosing the Products wedge, and the browser check that was supposed to clear the
+create form **stubbed the POST with a fake `201`** — so it verified the payload against nobody and
+reported the form as working. The owner reproduced it in about a minute by filling the form and
+pressing the button. `CLAUDE.md`'s named anti-pattern — *a client's mistake raised as a programming
+error* — lists three guards and then states the residual in as many words: *"a wrong but non-empty
+value… only as good as the message written for them."* **This was not even that. It is a body with a
+field simply left out, refused by the parser, on a route whose own spec said the request was valid.**
 
 ---
 

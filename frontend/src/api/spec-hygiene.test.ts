@@ -74,4 +74,36 @@ describe('the committed OpenAPI spec', () => {
       'if this is now empty, the backend fixed it — delete the de-duplication block in orval.config.ts and this test',
     ).toEqual(['InventoryController_writeOff'])
   })
+
+  it('declares required fields on nothing but Money and UnitCost, which is why a body can be refused for a field the types call optional', () => {
+    /*
+     * **The spec does not say what a request body requires.** 185 schemas, 71 operations with a
+     * body, and `required` appears on exactly two value objects. So every generated request type
+     * is `Partial`-shaped, and a call site cannot tell a mandatory field from an optional one on
+     * any write route in the application.
+     *
+     * That is not cosmetic, and it has already cost a screen. `NewProduct.serialTracked` is
+     * generated as `serialTracked?: boolean` and is mandatory in fact: it is a primitive `boolean`
+     * on a Java record, Jackson hands an absent creator property to the constructor as null, and
+     * `FAIL_ON_NULL_FOR_PRIMITIVES` refuses it. **Product creation failed for every user, every
+     * time**, with `400 "Malformed request body: Cannot map null into type boolean"` — a message
+     * naming no field, from a route the spec said the request satisfied. `product-create.tsx`
+     * sends the field explicitly until this is fixed.
+     *
+     * Written to fail in BOTH directions, like the collision above:
+     *   - a schema starts declaring `required` → the backend is describing its bodies, so go back
+     *     to the workarounds and the generated types and decide what is now knowable;
+     *   - one of these two stops   → a value object quietly became optional, and `Money` without a
+     *     currency is the defect ADR 0005 exists to prevent.
+     */
+    const declaring = Object.entries(spec.components.schemas as Record<string, { required?: string[] }>)
+      .filter(([, schema]) => (schema.required?.length ?? 0) > 0)
+      .map(([name]) => name)
+      .sort()
+
+    expect(
+      declaring,
+      'the set of schemas declaring required fields changed — see the comment above before updating this list',
+    ).toEqual(['Money', 'UnitCost'])
+  })
 })

@@ -10,6 +10,7 @@ import { AppQueryProvider } from '@/auth/query-client'
 import i18n from '@/i18n'
 import { trackRequests } from '@/test/requests'
 
+import { ProductCreate } from './product-create'
 import { ProductDetail } from './product-detail'
 import { ProductsList } from './products-list'
 
@@ -112,6 +113,26 @@ function renderList() {
   )
 }
 
+/** Opens a select by its label and takes the first thing in it. */
+async function chooseFirstOption(user: ReturnType<typeof userEvent.setup>, label: string) {
+  await user.click(screen.getByLabelText(label))
+  const options = await screen.findAllByRole('option')
+  await user.click(options[0]!)
+}
+
+function renderCreate() {
+  return render(
+    <AppQueryProvider>
+      <MemoryRouter initialEntries={['/products/new']}>
+        <Routes>
+          <Route path="/products/new" element={<ProductCreate />} />
+          <Route path="/products/:id" element={<p>created</p>} />
+        </Routes>
+      </MemoryRouter>
+    </AppQueryProvider>,
+  )
+}
+
 function renderDetail() {
   return render(
     <AppQueryProvider>
@@ -190,6 +211,50 @@ describe('the product list', () => {
     expect(requests.called('GET', '/api/suppliers')).toBe(false)
     expect(requests.called('GET', '/api/vat-classes')).toBe(false)
     expect(screen.getByText('#7')).toBeInTheDocument()
+  })
+})
+
+describe('creating a product', () => {
+  it('sends serialTracked, which the generated type calls optional and the backend requires', async () => {
+    /*
+     * **Creating a product failed for every user, every time, and no test could see it.**
+     *
+     * `NewProduct.serialTracked` is a primitive `boolean` on a Java record. Jackson hands an
+     * absent creator property to the constructor as null, `FAIL_ON_NULL_FOR_PRIMITIVES` refuses
+     * it, and the route answers `400 "Malformed request body: Cannot map null into type boolean"`
+     * before any handler runs. The spec declares no required fields, so the generated type says
+     * `serialTracked?: boolean` and the form was written correctly against a contract that was
+     * wrong.
+     *
+     * ⚠️ **A mock server cannot catch this**, which is exactly how it survived a browser check: a
+     * handler answers whatever body it is given. What this test can do — and what makes it fail
+     * against the code that shipped — is assert the field is on the wire. The contract half is
+     * pinned in `spec-hygiene.test.ts`.
+     */
+    let body: Record<string, unknown> | undefined
+    server.use(
+      http.post('http://localhost/api/products', async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>
+        return HttpResponse.json({ ...espresso, id: 99 }, { status: 201 })
+      }),
+    )
+
+    const user = userEvent.setup()
+    renderCreate()
+    await screen.findByRole('button', { name: 'New product' })
+
+    await user.type(screen.getByLabelText('SKU'), 'NEW-001')
+    await user.type(screen.getByLabelText('Name'), 'New blend')
+    await user.type(screen.getByLabelText('Selling price'), '9.99')
+    await chooseFirstOption(user, 'Unit')
+    await chooseFirstOption(user, 'VAT class')
+
+    await user.click(screen.getByRole('button', { name: 'New product' }))
+
+    await waitFor(() => expect(body).toBeDefined())
+    // Present, and false — not merely present.
+    expect(Object.hasOwn(body!, 'serialTracked')).toBe(true)
+    expect(body!.serialTracked).toBe(false)
   })
 })
 

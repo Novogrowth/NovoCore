@@ -153,6 +153,22 @@ way everywhere: `Unit: 4`, `Type: GOODS`, and `en` for the language. `OptionSele
 once and renders both the `items` prop and the items from it, so the two cannot disagree and the
 trap cannot be reset by the next screen.
 
+### The spec says nothing is required, and that is not true
+
+`required` appears on two schemas out of 185 — `Money` and `UnitCost` — across 71 operations that
+take a request body. So **every generated request type is fully optional and none of them means
+it.** A field the types call optional can still be mandatory, and you find out as a `400`.
+
+The known case: `NewProduct.serialTracked` is a primitive `boolean` on a Java record, Jackson hands
+an **absent** creator property to the canonical constructor as `null`, and
+`FAIL_ON_NULL_FOR_PRIMITIVES` refuses it — so omitting the field and sending `null` fail
+identically, before any handler runs, with a message naming no field. It broke product creation for
+every user. `product-create.tsx` sends it explicitly; `spec-hygiene.test.ts` pins the set of schemas
+declaring required fields and fails in both directions, so fixing the spec sends someone back here.
+
+**Until the spec declares its bodies, a screen test cannot tell you a write works.** A mock server
+answers whatever it is given.
+
 ### Money is a string, everywhere
 
 `Money`, `UnitCost`, `Quantity` and `Rate` are strings on the wire. `<input type="number">` is

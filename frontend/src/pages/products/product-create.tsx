@@ -64,6 +64,26 @@ export function ProductCreate() {
           sellingPrice,
           ...(supplierId !== undefined ? { supplierId } : {}),
           ...(supplierSku.trim() ? { supplierSku: supplierSku.trim() } : {}),
+          /*
+           * ⚠️ **Sent explicitly, and creating a product fails outright without it.**
+           *
+           * The generated type says `serialTracked?: boolean`, because the spec declares no
+           * required fields on `NewProduct` — on any request body, in fact. It is not optional:
+           * `NewProduct.serialTracked` is a primitive `boolean` on a Java record, and Jackson
+           * passes an **absent** creator property to the constructor as null, which
+           * `FAIL_ON_NULL_FOR_PRIMITIVES` then refuses. Omitting it answers
+           * `400 "Malformed request body: Cannot map null into type boolean"` — every time, for
+           * every user, before any handler runs.
+           *
+           * `false` is not a default invented here: this form has no serial-tracking control, so
+           * false is the only value it can honestly claim. A product is made serial-tracked
+           * afterwards, on its detail screen.
+           *
+           * This is a workaround for a backend/spec defect, pinned by `spec-hygiene.test.ts` and
+           * queued in PROGRESS.md. When the spec starts declaring what a body requires, come back
+           * and decide whether this belongs in the form as a control instead.
+           */
+          serialTracked: false,
         },
       },
       {
