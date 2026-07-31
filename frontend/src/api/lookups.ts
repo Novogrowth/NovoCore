@@ -1,5 +1,8 @@
 import { useSupplierControllerSuppliers } from '@/api/generated/endpoints/supplier/supplier'
-import { useTaxLookupControllerVatClasses } from '@/api/generated/endpoints/tax-lookup/tax-lookup'
+import {
+  useTaxLookupControllerExemptionReasons,
+  useTaxLookupControllerVatClasses,
+} from '@/api/generated/endpoints/tax-lookup/tax-lookup'
 import { useUnitOfMeasureControllerUnitsOfMeasure } from '@/api/generated/endpoints/unit-of-measure/unit-of-measure'
 import { Section } from '@/api/generated/model'
 import { usePermissions } from '@/auth/permissions'
@@ -49,6 +52,25 @@ export function useVatClasses(): Lookup<{ id?: number; description?: string }> {
   const permitted = permissions.canView(Section.TAX_AND_CHARGES)
 
   const query = useTaxLookupControllerVatClasses(
+    { active: true },
+    { query: { enabled: permitted, staleTime: 5 * 60_000 } },
+  )
+
+  return { items: query.data?.items ?? [], permitted, isLoading: query.isLoading }
+}
+
+/**
+ * VAT exemption reasons — the AADE articles a supply can be outside VAT under.
+ *
+ * Governed by `TAX_AND_CHARGES`, like VAT classes and for the same reason: a party's exemption
+ * article is tax reference data, not a property of the party's own section. So a role holding
+ * `SUPPLIERS` alone sees the id rather than the article, and cannot change it.
+ */
+export function useVatExemptionReasons(): Lookup<{ id?: number; description?: string }> {
+  const permissions = usePermissions()
+  const permitted = permissions.canView(Section.TAX_AND_CHARGES)
+
+  const query = useTaxLookupControllerExemptionReasons(
     { active: true },
     { query: { enabled: permitted, staleTime: 5 * 60_000 } },
   )

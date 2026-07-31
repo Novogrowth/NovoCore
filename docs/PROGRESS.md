@@ -4285,18 +4285,22 @@ swept again.
 
 The `SUPPLIERS` section has 11 routes. Seven are screen work; two are deliberately **not** in F1.
 
+**Both ❓ were decided by the owner on 2026-07-31, before any of it was built:** VAT status and its
+exemption reason are **one editor with the reason revealed only when the chosen status requires it**,
+and **the create form is in F1**.
+
 | # | Sub-part | Routes | Verdict |
 |---|---|---|---|
-| 1 | `useVatExemptionReasons` lookup, gated on `TAX_AND_CHARGES` exactly as `useVatClasses` is | `GET /api/vat-exemption-reasons` | Open |
-| 2 | Suppliers list — columns, active-only filter, `DataTable` | `GET /api/suppliers` | Open |
-| 3 | Supplier detail — name, VAT number | `PATCH …/name`, `…/vat-number` | Open |
-| 4 | Contact details — **one editor, two fields**, because the route takes `email` and `phone` together | `PATCH …/contact-details` | Open |
-| 5 | ❓ VAT status **and** exemption reason — one route, two coupled values | `PATCH …/vat-status` | **Needs a decision** |
-| 6 | Deactivate / reactivate, with `Refusal` | `POST …/deactivate`, `…/reactivate` | Open |
-| 7 | ❓ Create form | `POST /api/suppliers` | **Needs a decision — not named in the roadmap line** |
-| 8 | Wire `/suppliers` and `/suppliers/:id` into `routes.tsx`; the nav node already exists | — | Open |
-| 9 | Tests, including the three standing guards this pass added | — | Open |
-| 10 | EN + EL strings | — | Open |
+| 1 | `useVatExemptionReasons` lookup, gated on `TAX_AND_CHARGES` exactly as `useVatClasses` is | `GET /api/vat-exemption-reasons` | **Done** — `api/lookups.ts`; a role without the grant is proven not to request it |
+| 2 | Suppliers list — columns, active-only filter, `DataTable` | `GET /api/suppliers` | **Done** — 3 seeded suppliers render in both browsers |
+| 3 | Supplier detail — name, VAT number | `PATCH …/name`, `…/vat-number` | **Done** |
+| 4 | Contact details — **one editor, two fields**, because the route takes `email` and `phone` together | `PATCH …/contact-details` | **Done** — one request asserted |
+| 5 | VAT status **and** exemption reason — decided: one editor, reason revealed on demand | `PATCH …/vat-status` | **Done** — see the rules note below |
+| 6 | Deactivate / reactivate, with `Refusal` | `POST …/deactivate`, `…/reactivate` | **Done** — refusal surfaced from the start, not added after |
+| 7 | Create form — decided: in F1 | `POST /api/suppliers` | **Done, and proved against the real backend** |
+| 8 | Wire `/suppliers`, `/suppliers/new` and `/suppliers/:id` into `routes.tsx` | — | **Done** — the nav node already existed |
+| 9 | Tests, including the three standing guards this pass added | — | **Done** — 18 new tests; 182 total |
+| 10 | EN + EL strings | — | **Done** — 21 keys each |
 | — | `GET /api/suppliers/match-suggestions` | — | **Out of scope.** It serves the never-silently-guess matching flow (brief rule 7), which belongs to the import/reconciliation work, not to a master-data screen |
 | — | `GET /api/suppliers/by-vat-number/{vatNumber}` | — | **Out of scope.** A lookup for the AADE/VIES adapter (step 28), not a screen |
 
@@ -4306,12 +4310,44 @@ exemption reason**; `DOMESTIC`, `NON_EU_EXPORT` and `OTHER` require neither.
 `SupplierServiceImpl` enforces both and refuses with a message, so the screen's job is to avoid
 offering a combination that will be refused — not to re-implement the rule.
 
+⚠️ **Those two flags are not on the wire, so `vat-status-rules.ts` mirrors them and can drift.**
+`VatStatus` is serialised as a bare string enum: a client is told the five values and nothing about
+what each requires. `vat-status-rules.test.ts` pins what *can* be pinned — every value is accounted
+for, so a **sixth status added on the backend fails a test** here rather than silently defaulting to
+"requires nothing". What it cannot catch is a change to what an **existing** value requires; that
+needs the flags in the spec, and is worth folding into backend item 2, which is already about the
+spec not saying what it means.
+
+**A note for F2, which is Customers and has the same VAT fields.** `PATCH /api/customers/{id}/vat-status`
+exists with the same shape, so `vat-status-rules.ts` and the coupled editor should be **moved up out
+of `pages/suppliers/` rather than copied** the moment F2 needs them. Copying is how the two screens
+end up disagreeing about what `EXEMPT` requires.
+
 **One thing checked rather than assumed, given what F0's follow-up just cost:** `NewSupplier` is a
 record of `String`s, an enum and a `Long` — **no primitives**, so it does not carry the
 absent-field-is-null trap that broke product creation. Its compact constructor requires `name` and
-`vatStatus`. **This is exactly the check `CLAUDE.md`'s new "a verification that answers its own
-request" section says to make against the server rather than a mock**, and it should be made that
-way before F1's create form is called done, whichever way the ❓ below is decided.
+`vatStatus`.
+
+**And then checked again against the server, because that is now the rule.** Reading the record was
+not treated as evidence. Creating a supplier was driven in **Chrome and Firefox, with nothing
+intercepted**, twice and in this order:
+
+1. **Against a name the domain already holds** — `422 "A supplier named 'TEST-SUPPLIER-01 Roaster'
+   already exists."`, rendered on screen. A `422` is only reachable if the body **parsed**, so this
+   proves the whole path and writes nothing. Had `NewSupplier` carried the primitive trap, this
+   would have been the `400` that products gave.
+2. **Once for real** — body `{"name":"TEST-PROBE-SUPPLIER-01","vatStatus":"DOMESTIC"}`, `201`, and
+   the screen landed on the new supplier.
+
+Both probe rows were then deleted. **Residue, stated rather than implied:** `supplier_id_seq` is at
+5 where the fixture uses 1–3, and the audit log holds the create and delete entries, which is
+append-only by trigger and correctly cannot be removed. The fixture is back to 3 suppliers.
+
+**A defect in the verification itself was caught by the same rule.** The first version of the probe
+checked "the body parsed" as `status !== 400` — which **passed when no request had been made at
+all**, because submit was disabled and `status` was `undefined`. That is the identical failure the
+`CLAUDE.md` rule was written about, one turn later, in the tool written to enforce it. The check now
+asserts a request was made before asserting anything about its answer.
 
 Frontend work is tracked step by step in **`docs/novocore-frontend-roadmap.md`**, which is the file
 to read for what comes next. **F0 is done** (see its section above): the development database now

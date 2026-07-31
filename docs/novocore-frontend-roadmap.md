@@ -27,8 +27,8 @@ candidate causes per symptom).
 |-----:|------------------------------------------------------------------------------------------------------------------------------------|------:|-------:|---------------|
 |   F0 | Restore dev data — build and run step 15c, the seed pass that was approved and never written ᶠ⁰                                    |     — |    0.9 | 🟢 Done        |
 |      | *(not a step)* Products bugfix pass — the render loop, and two defects it hid ᵇᶠ                                                   |     — |        | 🟢 Done        |
-|   F1 | Suppliers — list, detail, per-field PATCH (Products' pattern, reused) ᶠ¹                                                           |     — |        | 🟡 **Current** |
-|   F2 | Customers — same pattern, plus VAT status and the protected retail-customer record                                                 |     — |        | 🔴 Not started |
+|   F1 | Suppliers — list, detail, create, per-field PATCH (Products' pattern, reused) ᶠ¹                                                   |     — |        | 🟢 Done        |
+|   F2 | Customers — same pattern, plus VAT status and the protected retail-customer record ᶠ²                                              |     — |        | 🟡 **Current** |
 |   F3 | Users & Roles — real admin screen: create roles, grant sections, manage accounts                                                   |     — |        | 🔴 Not started |
 |   F4 | Settings — general config, Reference Data (VAT classes, UoM), Adapters/Modules toggle grids (read-only placeholders)               |     — |        | 🔴 Not started |
 |   F5 | Sales Invoice + Credit Note — first transactional-document screen; decides the create/preview/commit pattern                       |     — |        | 🔴 Not started |
@@ -138,12 +138,29 @@ response delay to fail at all, is in `PROGRESS.md` under *Products — the wedge
   a real search endpoint and clearer labelling is the owner's, and **the frontend should not change
   until it is made.**
 
-**ᶠ¹ F1 is scoped and two sub-parts are waiting on the owner.** The checklist is in `PROGRESS.md`
-under *F1 scope, read off the API surface* — ten sub-parts, plus two routes deliberately excluded
-(`match-suggestions` belongs to the matching flow, `by-vat-number` to the AADE/VIES adapter). The two
-open questions are whether **VAT status and its exemption reason** are edited as one control or two,
-and whether F1 includes a **create form** — the roadmap line above names list, detail and per-field
-PATCH, and does not mention creating a supplier.
+**ᶠ¹ F1 — done, all ten sub-parts, with both open questions decided before anything was built.**
+The owner chose: VAT status and its exemption reason are **one editor**, with the reason revealed
+only when the chosen status requires it; and the **create form is in F1**, which the roadmap line
+above now says. Two routes are deliberately excluded — `match-suggestions` belongs to the
+never-silently-guess matching flow, `by-vat-number` to the AADE/VIES adapter (step 28). Checklist
+with verdicts in `PROGRESS.md`.
+
+**Its hours are blank on the same rule as the bugfix row**: F1 was built inside a session that also
+carried that pass and its follow-up, with no commit boundary the measurement method can use.
+
+**Two things F1 establishes that F2 inherits.** First, `VatStatus`'s two flags — `INTRA_EU_B2B`
+needs a VAT number, `EXEMPT` needs an exemption reason — are **not on the wire**, so
+`vat-status-rules.ts` mirrors them from `VatStatus.java` and a test pins that every value is
+accounted for. **F2 must move that file up rather than copy it**: customers have the same VAT fields
+and the same route shape, and two copies is how the two screens come to disagree about what `EXEMPT`
+requires. Second, creation was proved **against the real backend in both browsers**, twice — once
+against a name the domain already holds, which returns `422` only if the body parsed and writes
+nothing, and once for real. That is now the standing rule in `CLAUDE.md`, and it is what the
+products create form was cleared by a stub without.
+
+**ᶠ² F2 is next and is not scoped yet.** Customers repeat the supplier shape and add two things of
+their own: a VAT class override, and a protected retail-customer record that must not be
+deactivated. Scope it off the API the way F1 was before building.
 
 **F5 carries more weight than its position implies.** It's not just the next screen — it
 decides the entire document-creation interaction pattern (multi-line entry, running

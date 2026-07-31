@@ -10,6 +10,9 @@ import { ProductCreate } from '@/pages/products/product-create'
 import { ProductDetail } from '@/pages/products/product-detail'
 import { ProductsList } from '@/pages/products/products-list'
 import { AdaptersGrid, ModulesGrid } from '@/pages/registry-grid'
+import { SupplierCreate } from '@/pages/suppliers/supplier-create'
+import { SupplierDetail } from '@/pages/suppliers/supplier-detail'
+import { SuppliersList } from '@/pages/suppliers/suppliers-list'
 
 /**
  * The routes, derived from the navigation tree rather than listed again.
@@ -23,6 +26,7 @@ import { AdaptersGrid, ModulesGrid } from '@/pages/registry-grid'
 /** Routes with a real screen behind them. Everything else in the tree is a placeholder. */
 const SCREENS: Record<string, () => ReactElement> = {
   '/products': ProductsList,
+  '/suppliers': SuppliersList,
   '/settings/adapters': AdaptersGrid,
   '/settings/modules': ModulesGrid,
 }
@@ -41,6 +45,8 @@ const SCREENS: Record<string, () => ReactElement> = {
 const CHILD_ROUTES: { path: string; owner: string; element: () => ReactElement }[] = [
   { path: '/products/new', owner: 'products', element: ProductCreate },
   { path: '/products/:id', owner: 'products', element: ProductDetail },
+  { path: '/suppliers/new', owner: 'suppliers', element: SupplierCreate },
+  { path: '/suppliers/:id', owner: 'suppliers', element: SupplierDetail },
 ]
 
 function RouteElement({ node, screen }: { node: NavNode; screen?: () => ReactElement }) {
