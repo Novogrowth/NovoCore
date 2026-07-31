@@ -26,6 +26,7 @@ candidate causes per symptom).
 | Step | What                                                                                                                               |  Est. | Actual | Status        |
 |-----:|------------------------------------------------------------------------------------------------------------------------------------|------:|-------:|---------------|
 |   F0 | Restore dev data — build and run step 15c, the seed pass that was approved and never written ᶠ⁰                                    |     — |    0.9 | 🟢 Done        |
+|      | *(not a step)* Products bugfix pass — the render loop, and two defects it hid ᵇᶠ                                                   |     — |        | 🟢 Done        |
 |   F1 | Suppliers — list, detail, per-field PATCH (Products' pattern, reused)                                                              |     — |        | 🟡 **Current** |
 |   F2 | Customers — same pattern, plus VAT status and the protected retail-customer record                                                 |     — |        | 🔴 Not started |
 |   F3 | Users & Roles — real admin screen: create roles, grant sections, manage accounts                                                   |     — |        | 🔴 Not started |
@@ -63,6 +64,13 @@ setup, the write-mutation-safety guard) and the Products screen (list, detail, c
 deactivate/reactivate, inline per-field editing) are complete — see `novocore-roadmap.md`
 rows for Step 16/16a/16b-adjacent frontend work and its own measured figures. This file
 starts fresh from the next unbuilt piece of work.
+
+⚠️ **"Complete" there meant "built and unit-tested", and the bugfix row above is what that
+distinction cost.** Every one of those foundations was exercised only against an empty table and a
+one-row fixture, and both defects that survived — a table that re-rendered itself whenever a filter
+changed, and a select that displayed the raw id — are invisible at that size. **F1 onwards should
+assume the same is true of anything it reuses**: the pattern being reused has been proven correct on
+one row, which is not the same as proven correct.
 
 **ᶠ⁰ F0 — done, and the answer was the less comfortable of the two.** The database was
 not wiped; the seed pass **had never been written**. Step 15's proposal scheduled it as
@@ -102,6 +110,33 @@ in. Recorded as **0.9**. Two caveats, both of which make it an "at least": the w
 includes 0.24 h of the *preceding* session's tail, which ran on after its own commit, and —
 as with every row in either roadmap — the close-out that follows is not yet in the
 transcript when the figure is computed. This session's own share was 0.69 h and 154k out.
+
+**ᵇᶠ The Products bugfix pass (2026-07-31, `3458ee6`) is deliberately not numbered.** It is not a
+roadmap step and it did not start F1 — **F1 is still the next piece of work.** It is given a row so
+the sequence of what actually happened can be read off this table, and its hours are **left blank**
+rather than estimated, on the same rule as every other figure here: it spans a diagnosis session and
+a fix session with no commit boundary between them that the measurement method can use, and no
+figure that cannot be measured gets a plausible one written into this column.
+
+What it was: a re-render loop in `DataTable` — a freshly allocated `[]` while a query held no data,
+feeding `useReactTable`'s auto-reset, feeding a `useListState` setter that allocated a new state
+object for a no-op change. Any change to a list screen's filter wedged the tab permanently, which is
+why three unrelated-looking interactions all appeared dead at once. **It was latent since `DataTable`
+was written and is unrelated to F0** — an empty response wedges identically — but F0 is what gave
+anyone a reason to touch a filter. Full write-up, including why the regression test needed a
+response delay to fail at all, is in `PROGRESS.md` under *Products — the wedge*.
+
+**Two things it leaves open, both decisions rather than work:**
+
+- **Row double-click.** It was reported as broken; it had never been built. Whether a table row
+  should have a default action at all — and whether that action is "open detail", when the SKU cell
+  is already a link to exactly that — is a design decision for every list screen from F1 on, not a
+  Products fix. **Deliberately left unbuilt pending that decision**, so F1 does not copy an answer
+  nobody made.
+- **The SKU filter box is an exact lookup**, because `GET /api/products?sku=` is. Typing `TEST`
+  against eight `TEST-PRODUCT-*` SKUs matches nothing. Queued as a backend item; the choice between
+  a real search endpoint and clearer labelling is the owner's, and **the frontend should not change
+  until it is made.**
 
 **F5 carries more weight than its position implies.** It's not just the next screen — it
 decides the entire document-creation interaction pattern (multi-line entry, running

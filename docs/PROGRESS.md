@@ -4006,11 +4006,125 @@ below), and `frontend/README.md`'s two-process run instructions, which were writ
 session and left uncommitted — carried into this close-out rather than left to drift further.
 
 ---
+## Products — the wedge (2026-07-31, `3458ee6`). Not a roadmap step
+
+**A bugfix pass between F0 and F1, on the screen F0 had just given data to. F1 has not started.**
+
+Reported as two things: Firefox's *"this page is slowing down"* warning recurring, and three
+interactions on Products dead — the *new product* button, deactivate/reactivate, and double-clicking
+a row. The reasonable guess, stated in the request, was a re-render loop tied to row data, since
+everything appeared the moment there were rows.
+
+**The guess was wrong in its cause and right in its instinct.** There is a re-render loop. It has
+nothing to do with rows: with `GET /api/products` rewritten to `{"items":[]}` — the exact response
+every check before F0 saw — it wedges identically. It has been latent since `DataTable` was written.
+What F0 changed is that somebody finally had a reason to use a filter.
+
+### The loop, in the order it happens
+
+1. Changing a filter changes the query key, so the query holds **no data** while it refetches.
+2. `unwrapList` answered that with a **freshly allocated `[]`** — a new identity every render.
+3. `useReactTable` memoises its core row model on `[table.options.data]`, so it rebuilt every render,
+   and rebuilding calls `_autoResetPageIndex()` (`table-core` `index.esm.js:2973`).
+4. That queues `resetPageIndex()` → `setPageIndex(0)` → `DataTable`'s `onPaginationChange`.
+5. Which calls `list.setPage(0)` on a table **already on page 0** — and `setState((s) => ({ ...s,
+   page }))` returns a new object regardless, so React cannot bail out.
+6. Re-render, back to 2.
+
+**React flushes that cycle in a microtask, so the tab does not get slow — it stops.** The event loop
+never runs again, so the in-flight response that would have ended it can never be delivered, and
+every click and keystroke after it is discarded. **That is the whole explanation for the three dead
+interactions**: the page was already wedged when they were tried.
+
+### How it was established, since two of the three symptoms turned out to be something else
+
+Reproduced in headless Chrome **and** Firefox against the running stack, on the seeded data.
+
+- **Nothing is wrong at rest.** 10 s idle on `/products`: 0 API requests, 0 long tasks, 0 DOM
+  mutations, 601 animation frames, 18,843 of 18,848 CPU samples `(idle)`. So: not row rendering.
+- **Bisected by interaction**, asking the page to evaluate `1` after each. Hover — fine. Click a
+  blank area — fine. **Untick "active only" — no answer in 8 s**, and every mouse and key event
+  after that times out at the protocol layer. Typing in the SKU filter does it too.
+- **Profiled** by first interrupting with `Runtime.terminateExecution`, which was *accepted* — so the
+  main thread was executing script, not blocked on I/O. `processRootScheduleInMicrotask →
+  performSyncWorkOnRoot → commitRoot`, repeating, with `data-table.tsx:87` — the
+  `onPaginationChange` closure — among the application frames.
+- **Each half proven separately** by patching one line at a time against the live dev server: either
+  a stable empty array *or* a setter that returns the same object stops it.
+
+### What the three reported interactions actually were
+
+| Reported | Verdict |
+|---|---|
+| *"New product" button/route* | **Not broken.** Navigates in both engines, the form renders, and submitting posts a correct payload — `{"sku":…,"sellingPrice":{"amount":"9.99","currency":"EUR"}}` — and lands on the new product. It read as dead because the tab was wedged |
+| *Deactivate / reactivate* | **Genuinely broken, separately.** The backend refuses deactivating a bundle component with `422` and a complete message; the screen rendered **nothing** |
+| *Double-clicking a row* | **Never implemented.** No `onDoubleClick` anywhere in `frontend/src`; only the SKU cell is a link |
+
+### 📋 Reconciliation against what was approved
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| 1 | Render loop — the stable-array half | **Done** — one module-level `NO_ROWS` in `list-response.ts`, returned by both empty paths |
+| 2 | Render loop — the no-op-when-equal setter half | **Done** — `setPage`, `setSize` **and** `setSort` in `use-list-state.ts`; all three, because `resetPageSize` reaches `setSize` by the same route |
+| 3 | A regression test that toggles a filter and fails on a render-count explosion | **Done** — `data-table-loop.test.tsx`, and see the note below on what it took to make it fail |
+| 4 | Surface the swallowed deactivate refusal | **Done** — shared `Refusal` component, used by the detail screen and `FieldEditor` alike |
+| 5 | Select labels — show the resolved label, not the raw value/id | **Done** — `OptionSelect`, all eight call sites |
+| 6 | *(added)* The create form's own swallowed errors | **Done** — it read `error.detail` directly, so a `403` (no detail, by design) and an unreachable server rendered nothing. Approved after the fact |
+| 7 | *(added)* The language select showed `en`, not `English` | **Done** — same root cause, app-wide rather than Products-only. Approved after the fact |
+| 8 | Row double-click | **Explicitly deferred** — an open design decision, not a fix: whether a row should have a default action at all, and whether it is "open detail" when the SKU link already does that. Recorded in `novocore-frontend-roadmap.md` |
+| 9 | The unexplained `Cannot map null into type boolean` log line | **Explicitly deferred** — queued as backend item 2 under *Next action*, with everything now known about it |
+| 10 | *(found, not fixed)* The SKU filter is an exact lookup | **Explicitly deferred** — queued as backend item 3; the product decision is the owner's |
+
+### ⚠️ The regression test needed a delay, and this is the part worth remembering
+
+**The first version of the test passed against the fully reverted code.** Answered instantly, `msw`
+resolves inside the same microtask checkpoint the auto-reset is queued on, so the query holds no
+data for exactly **one** render and the cycle never closes — measured at **3 renders with the defect
+entirely present.** With `delay(50)` — which a real network makes unavoidable — the same code
+renders **84 times against 4 when fixed.**
+
+Two more properties of that test are deliberate and should survive editing:
+
+- **The counter throws.** A test that merely counted would **hang**, not fail: the loop starves the
+  timers `waitFor` runs on. Throwing unwinds to an error boundary and gives the event loop back.
+- **The screen under test is a stand-in, not Products.** Every list screen is built from
+  `useListState` + `DataTable`, so the guard belongs to the pieces.
+
+**Proven four ways**, each by reverting and re-running: both fixes in place → 15 pass; stable array
+reverted → 1 fails; setters reverted → 3 fail; **both reverted → the render-budget test fails**,
+*"the table re-rendered itself in a loop: rendered 28 times for one filter change"*. The behavioural
+test only fails when **both** are gone, because either alone breaks the cycle — which is exactly why
+each invariant is also stated on its own where it can fail by itself.
+
+### Verification
+
+12 checks in **both** Chrome and Firefox against the seeded data — unticking the filter, re-ticking
+it and typing in the SKU box all responsive in 1–3 ms where each previously wedged the tab
+permanently; the refusal now on screen naming the bundle; `Goods`, `Kilogram` and `English` where
+`GOODS`, `4` and `en` used to be. **162 tests, 18 files**, typecheck, lint (0 errors, the same 2
+pre-existing warnings as `HEAD`), knip and the production build all clean.
+
+**No database change.** A temporary full-access account was created to drive the browser and
+deleted; one product deactivated during the first run was reactivated through the API; the database
+was verified back to 8 products, all active, one user.
+
+---
 ## Next action — read this first
 
-### ⚠️ Queued for the next BACKEND session — one small standalone fix (raised 2026-07-30)
+### ⚠️ Queued for the next BACKEND session — three standalone items
 
-**`InventoryController_writeOff` is the `operationId` of two operations, which OpenAPI forbids.**
+Each is small, each was raised by frontend work, and none of them is frontend work to fix. They are
+listed oldest first; nothing here blocks F1.
+
+| # | Item | Raised |
+|---|---|---|
+| 1 | `InventoryController_writeOff` — one `operationId` on two operations | 2026-07-30 |
+| 2 | `PermissionSweepIT`'s empty-body check cannot see an explicit `null` on a primitive | 2026-07-31 |
+| 3 | No SKU **search** endpoint — the products lookup is exact-match only | 2026-07-31 |
+
+---
+
+#### 1. **`InventoryController_writeOff` is the `operationId` of two operations, which OpenAPI forbids.**
 `POST /api/inventory/write-offs` and `GET /api/inventory/write-offs/{id}` are two Java methods of
 the same name, and `OpenApiSpecIT` derives the id as `Controller_method`, so it emitted an invalid
 spec without complaining. Found by step 16 generating a TypeScript client from it: the output did
@@ -4031,6 +4145,57 @@ confirm green.
 
 ---
 
+#### 2. **An explicit `null` on a primitive `boolean` answers `400 "Unreadable request body."`, and no sweep can see it.**
+
+`CLAUDE.md`'s named anti-pattern — *a client's mistake raised as a programming error* — lists three
+layers of guard and then states the residual in as many words: *"a **wrong but non-empty** value…
+those reach the handler and are only as good as the message written for them."* This is an instance
+of exactly that residual, and it is worth closing because it is mechanical rather than a judgement
+call.
+
+`PermissionSweepIT.noRouteFailsOnAnEmptyBody` sends `{}`. Jackson maps an **absent** primitive to
+`false`, so the route answers normally and the sweep is satisfied. Send `{"serialTracked": null}`
+and deserialisation fails before any handler runs, and the caller is told only *"Unreadable request
+body."* — no field name, nothing to act on.
+
+**The whole surface has exactly two such bodies**, established by grep over all 174 routes rather
+than assumed, and both are the same field:
+
+- `NewProduct.serialTracked` — `POST /api/products`
+- `ProductController.SerialTrackingRequest.serialTracked` — `PATCH /api/products/{id}/serial-tracking`
+
+**Two parts, and the second is the one that matters.** Decide what a null primitive should mean —
+almost certainly `Required.field`'s treatment, naming the field — and then extend the sweep to send
+an explicit `null` per body field, so the next primitive added anywhere is covered without anyone
+remembering this note.
+
+**Why it is queued rather than fixed now, and what is actually known.** It was found as an
+unexplained log line while diagnosing the Products wedge, and **it has never been reproduced**: two
+occurrences ever, `2026-07-30T22:19:50Z` and `2026-07-31T10:43:22Z`, both predating the fix session,
+and none since — including through a full valid create POST, deactivations, filter toggles and
+select interactions driven in both browsers. **The current frontend sends no `null` for either
+field**: the create form omits `serialTracked` entirely, and the detail editor's draft is
+`product.serialTracked ?? false`. So this is a real gap in the guard with an unidentified trigger,
+not a known frontend defect — recorded rather than closed because a log line nobody can explain is
+how a defect gets attributed to the wrong layer twice.
+
+---
+
+#### 3. **There is no SKU search — `GET /api/products?sku=` is an exact lookup.**
+
+`ProductController.products` routes `sku` to `findBySkuFor`, which returns nought or one product.
+The Products screen has a filter box wired to it, so typing `TEST` against eight `TEST-PRODUCT-*`
+SKUs matches nothing. The placeholder says *"Exact SKU"*, so the screen is not lying — but a box a
+person types into that only matches in full reads as broken, and this is the first session where
+there was enough data for anyone to notice.
+
+**The product decision is open and is the owner's**: either add a real search (prefix or contains,
+over SKU and probably name) and make the box fuzzy, or keep exact matching and relabel the control
+so it cannot be mistaken for a search. **Do not change the frontend until that is decided** — the
+current screen is a faithful rendering of the endpoint that exists.
+
+---
+
 **Steps 0–16b are complete, committed and pushed. `mvn clean verify` is green at 1326 tests, 0
 skipped, across 174 routes. Step 16, the frontend, is in progress** — see *Step 16 — the frontend*
 above for what has landed.
@@ -4047,6 +4212,13 @@ to read for what comes next. **F0 is done** (see its section above): the develop
 holds a real trading quarter — 8 products, 5 customers, 3 suppliers, 48 balanced journal entries —
 so **F1 onwards is the first frontend work in this project being built against data that exists.**
 Every screen before it was built against empty tables.
+
+**A bugfix pass on Products came between F0 and F1 (2026-07-31, `3458ee6`). It is not a roadmap
+step and F1 has not started.** It is written up under *Products — the wedge* below. Read the short
+version: a render loop in `DataTable` made the tab unresponsive the instant any list filter changed,
+which is why three unrelated-looking interactions all appeared dead at once. It had been latent
+since `DataTable` was written and is unrelated to F0 — an empty response wedges identically — but
+F0 is what gave anyone a reason to use a filter.
 
 **Foundations, Products, a brand pass and an icon fix have landed** (`94e17cd`, `56e3726`,
 `28c4119`, `92976fc`, `507864f`). The paragraphs below were written before any of that and are kept

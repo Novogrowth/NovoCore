@@ -109,6 +109,50 @@ test never set up — which is the case a per-handler counter structurally canno
 
 This is the standing pattern for **every** screen from Products on, not a Products-specific check.
 
+### A list screen's filter state must never allocate
+
+`useListState`'s setters return the **same state object** when nothing changed, and `unwrapList`
+returns the **same empty array** every time. Both look like micro-optimisations and neither is: with
+either one gone, changing a filter puts the tab into an unterminating render loop.
+
+The cycle is worth knowing, because any table built on `useReactTable` can re-enter it. A filter
+change is a query-key change, so the query holds no data while it refetches; a fresh `[]` for that
+state is a new `data` identity every render; `useReactTable` memoises its core row model on that
+identity, and rebuilding it calls `_autoResetPageIndex()`, which reaches `setPage(0)` on a table
+already on page 0. React bails out only on `Object.is`, so a setter that spreads into a new object
+re-renders regardless — and that render allocates the next `[]`. **React flushes it in a microtask,
+so the page does not get slow, it stops**: the response that would have ended the loop can never be
+delivered.
+
+`data-table-loop.test.tsx` guards it with a render budget. **Its 50 ms response delay is
+load-bearing** — answered instantly, `msw` resolves inside the same microtask checkpoint the reset
+is queued on, and the defect measures 3 renders instead of 84.
+
+### Refusals are shown by one component
+
+`<Refusal error={mutation.error} />`. Never `error.detail` at a call site: a `403` carries no
+`detail` by design — a permission refusal deliberately says nothing — and an unreachable server
+throws a `TypeError` that is not an `ApiError` at all, so reading `detail` directly renders **an
+empty alert** for both. `Refusal` renders nothing when there is no error, so no call site needs a
+conditional of its own.
+
+Every mutation a screen fires needs one. Deactivating a product shipped with an `onSuccess` and
+nothing else, so a `422` explaining exactly what was wrong produced no visible change and the button
+read as dead.
+
+### Selects are built from an option list, never from children alone
+
+Use `OptionSelect` with `options`, and build them from reference data with `idOptions` from
+`src/api/lookups.ts`. The primitives in `components/ui/select.tsx` remain for anything that needs
+custom item rendering — **and anything reaching for them owes `items` to `Select.Root`.**
+
+⚠️ **Base UI's `Select.Value` resolves its label by looking the value up in the root's `items`, and
+silently renders `String(value)` when there are none.** Nothing warns, and the popup — built from the
+same list — still shows the right words, so it is only wrong on the closed trigger. It shipped that
+way everywhere: `Unit: 4`, `Type: GOODS`, and `en` for the language. `OptionSelect` takes the list
+once and renders both the `items` prop and the items from it, so the two cannot disagree and the
+trap cannot be reset by the next screen.
+
 ### Money is a string, everywhere
 
 `Money`, `UnitCost`, `Quantity` and `Rate` are strings on the wire. `<input type="number">` is
