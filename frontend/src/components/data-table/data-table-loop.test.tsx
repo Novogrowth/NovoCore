@@ -13,6 +13,7 @@ import '@/i18n'
 
 import { DataTable } from './data-table'
 import { unwrapList } from './list-response'
+import { sortableHeader } from './sortable-header'
 import { useListState } from './use-list-state'
 
 /**
@@ -64,7 +65,10 @@ interface Row {
 
 const columns: ColumnDef<Row, unknown>[] = [
   { accessorKey: 'id', header: 'Id' },
-  { accessorKey: 'name', header: 'Name' },
+  // Sortable, because sorting adds state to the very render path this file guards: a click sets
+  // the table's sorting state *and* resets the page, and `getSortedRowModel`'s memo reaches
+  // `_autoResetPageIndex()` — the same reset that closed the original cycle.
+  { accessorKey: 'name', header: sortableHeader('Name') },
 ]
 
 /** Active-only answers with one row and everything with another, so a refetch is visible. */
@@ -205,6 +209,42 @@ describe('a table over a query whose parameters change', () => {
 
     await toggleFilter(user)
     await waitFor(() => expect(caught ?? screen.queryByText('Nothing to show.')).toBeTruthy())
+
+    expect(caught?.message, 'the table re-rendered itself in a loop').toBeUndefined()
+    expect(renders).toBeLessThan(RENDER_BUDGET)
+  })
+
+  it('settles when a column is sorted, which touches the same reset', async () => {
+    /*
+     * Sorting reaches the cycle by a different door and could close it the same way. A click sets
+     * the table's sorting state and calls `setPage(0)`; rebuilding the sorted row model calls
+     * `_autoResetPageIndex()`, which reaches `setPage(0)` again. Both of those land on the
+     * no-op-when-equal setter, and this is what says so — the query key does not change here, so a
+     * loop would have nothing to wait for and would wedge outright.
+     */
+    const user = userEvent.setup()
+    renderTable()
+    await screen.findByText('Active row')
+
+    renders = 0
+    await user.click(screen.getByRole('button', { name: 'Sort by Name, A to Z' }))
+    await waitFor(() => expect(caught ?? screen.queryByText('Active row')).toBeTruthy())
+
+    expect(caught?.message, 'the table re-rendered itself in a loop').toBeUndefined()
+    expect(renders).toBeLessThan(RENDER_BUDGET)
+  })
+
+  it('settles when a sort is cleared back to the natural order', async () => {
+    const user = userEvent.setup()
+    renderTable()
+    await screen.findByText('Active row')
+
+    await user.click(screen.getByRole('button', { name: 'Sort by Name, A to Z' }))
+    await user.click(screen.getByRole('button', { name: 'Sort by Name, Z to A' }))
+
+    renders = 0
+    await user.click(screen.getByRole('button', { name: 'Stop sorting by Name' }))
+    await waitFor(() => expect(caught ?? screen.queryByText('Active row')).toBeTruthy())
 
     expect(caught?.message, 'the table re-rendered itself in a loop').toBeUndefined()
     expect(renders).toBeLessThan(RENDER_BUDGET)

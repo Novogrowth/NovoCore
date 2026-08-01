@@ -33,6 +33,14 @@ export interface ListStateHandle {
    */
   params: Record<string, string | number>
   serverPaged: boolean
+  /**
+   * The `sort` values this endpoint accepts, from the generated capability map. Empty when it does
+   * not sort on the server.
+   *
+   * Exposed because a **server-paged** table must not offer a sort the server cannot perform — see
+   * `canSortColumn` in `./sorting.ts` for what goes wrong if it does.
+   */
+  serverSorts: readonly string[]
 }
 
 export function useListState(route: string, initial?: Partial<ListState>): ListStateHandle {
@@ -95,5 +103,5 @@ export function useListState(route: string, initial?: Partial<ListState>): ListS
     return query
   }, [serverPaged, state, allowedSorts])
 
-  return { state, setPage, setSize, setSort, params, serverPaged }
+  return { state, setPage, setSize, setSort, params, serverPaged, serverSorts: allowedSorts }
 }

@@ -71,19 +71,128 @@ there, and several of them were earned expensively) → `docs/novocore-frontend-
 | | State |
 |---|---|
 | **Substring search (S1)** | ✅ **Complete and live-verified.** Nothing outstanding |
-| **Sorting** | 🔴 **NEXT, and not yet started.** Not scoped, not designed, no proposal written. See below |
-| **F4 — Settings** | 🟡 The next *screen* step, after sorting |
+| **Sorting (S2)** | ✅ **Built, green, and verified against the running stack.** Client-side, on all five list screens. See below |
+| **F4 — Settings** | 🟡 **NEXT.** The next *screen* step |
 | `Supplier.code` / `Supplier.alias` / `Customer.code` | 📌 Queued, scoped, blocks part of six rows of the search target list |
 | `Product.category` | 📌 Queued as **its own proposal**, requirement recorded, deliberately not started |
+| **Test-environment parity — enforcement** | ⚖️ **HELD, awaiting the owner's decision. Do not act on it in either direction.** See immediately below |
 
-### 🔴 Sorting — next, and deliberately not started
+### ⚖️ Held for the owner — does test-environment parity become a queue item with teeth?
 
-**Nothing has been built, scoped or designed for it, and this note is not a design.** It is recorded
-so a fresh session knows sorting is the next piece of work and does not mistake silence for
-completeness — the failure that cost this project step 15c.
+**Raised by the owner at S2's kickoff, 2026-08-01, and deliberately parked. Nothing has been built,
+queued, or removed on account of it, and nothing should be until the decision comes back.** It is
+recorded here only so it cannot be lost — which is the exact failure mode step 15c cost this project.
 
-What already exists and should be read before proposing anything, because sorting is **half-built in
-one place and absent everywhere else**:
+**The question.** `CLAUDE.md`'s named anti-pattern *"a test environment configured unlike the real
+one"* ends by naming four knobs the real deployment sets that the test environment does **not**
+currently pin or assert: **timezone**, **`DateStyle`**, **PostgreSQL major version**, and **Java
+default locale/charset**. Locale and encoding are pinned and asserted (`PostgresTestContainer­
+Configuration` passes `compose.yml`'s `POSTGRES_INITDB_ARGS`; `TextSearchIT` asserts
+`datcollate = 'C'`). The other four are the same shape and are not.
+
+**The two options, as the owner framed them:**
+
+1. **Its own backend queue item, with an enforcement mechanism** — pin each knob in the test
+   container and assert the pin, so removing one fails the build the way the collation pin now does.
+2. **Stays a `CLAUDE.md` note** — a thing a reviewer is told to watch for, with no build-time teeth.
+
+**What is worth knowing when the decision is made**, and it is the argument the S1 finding already
+paid for: the collation divergence was **invisible to the entire test suite, before and after**. The
+suite was green describing a database nobody runs, and only the live check caught it. That is
+evidence about this *class* of defect rather than about collation specifically — which is the case
+for option 1. The case for option 2 is that four assertions nobody can attribute to a real observed
+failure is how a build gains checks that get deleted the first time one is inconvenient.
+
+⚠️ **S2 did not touch this**, and S2's own collation work deliberately leans on the *asserted* half:
+`collation.test.ts` asserts `Intl.Collator('el')` resolved to `el` rather than to a root-locale
+fallback — which is the **Java-default-locale knob's JavaScript twin**, and is the fifth instance of
+the same shape. Whichever way the decision goes, that assertion stays; it is not a down payment on
+option 1 and should not be read as one.
+
+## Step S2 — **sortable columns** on the five list screens. Approved 2026-08-01
+
+**The approved checklist**, written down at approval per `CLAUDE.md` and reconciled against here.
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| 1 | **Settle the collation question first, before any sorting code** | ✅ **Done, and answered from the live database rather than from reasoning.** See below |
+| 2 | One shared ordering mechanism, not per-screen comparators | ✅ **Done** — `src/lib/collation.ts`: `compareText`, `compareDecimal`, `compareMoney`. Nothing else in the app compares text |
+| 3 | Sortable columns on Products, Suppliers, Customers, Users, Roles | ✅ **Done** — every column except the composite Flags/Grants ones, which say in code why they cannot be ordered |
+| 4 | Use the existing `DataTable` abstraction and the tier-A paging groundwork | ✅ **Done** — `DataTable` + `useListState`; the handle gained `serverSorts`, nothing else changed shape |
+| 5 | State which side sorts, and why | ✅ **Client-side.** All five endpoints return their rows whole, so a browser sort sorts the *list*, not a page. Backend sorting for these five is not built and is not the queued tier-A item either — that item covers five *other* services |
+| 6 | Confirm against the real running backend | ✅ **Done on three legs, one leg outstanding.** See below |
+
+### S2's first question, answered — what `ORDER BY` does today, and what fixes it
+
+Measured on the running stack (PostgreSQL **17.10**, `datcollate = C`, `datlocprovider = c`), not
+inferred. **This is live behaviour, not a risk sorting would have introduced**: all five list
+endpoints already order in the database — `findAllByOrderByNameAsc()` on Customers, Suppliers and
+Roles, `findAllByOrderBySkuAsc()` on Products, and `Sort.by(asc("name"))` in S1's search paths.
+
+**`ORDER BY name` is byte order.** Latin: every uppercase ASCII word before every lowercase one
+(`Zebra` < `apple`), and accented Latin above all of ASCII so it lands *after* everything
+(`Ácme` after `zebra`). Greek: the whole block sits above Latin-1, so **every Greek name sorts after
+every Latin name**; inside Greek, capitals precede lowercase (`Ωμέγα` < `αθήνα`), and precomposed
+accented capitals sit *below* their plain forms (`Ά` U+0386 < `Α` U+0391, so `Άλφα` < `Αθήνα`).
+
+⚠️ **`pg_c_utf8` does NOT fix ordering, and it is the obvious thing to reach for.** S1 introduced
+`lower(… COLLATE pg_c_utf8)` so Greek capitals fold, which makes it very easy to conclude the
+collation question is settled. It is not: `pg_c_utf8` changes **case mapping**, not **sort order**,
+and its `ORDER BY` output is character-for-character identical to `C`'s. Verified side by side.
+
+**The fix is ICU**, which is present and complete on `postgres:17-alpine` — `icu-libs 78.1` with
+`icu-data-full`, 908 collations registered. **Decided 2026-08-01: `el-GR-x-icu`, Greek block first,
+fixed.** Not `und-x-icu` (Latin first) and **not** following the account's language — a list whose
+row order changes when somebody switches UI language is worse than one that does not. These are a
+Greek company's records read by Greek operators.
+
+**The two halves were checked against each other rather than assumed.** PostgreSQL 17.10 / ICU 78.1
+under `el-GR-x-icu` and Node 24 / ICU 78.3 under `Intl.Collator('el')` return **byte-identical**
+orderings of a 16-string mixed sample. That sample and PostgreSQL's exact output are pinned in
+`collation.test.ts`, so the frontend carries a record of what the database will do and a change that
+looks harmless fails loudly.
+
+⚠️ **On `CLAUDE.md`'s rejection of ICU** — that was about an *indexed expression*
+(`novocore_searchable`, `IMMUTABLE`, 17 GIN indexes on it), where a meaning that shifts on upgrade
+would be silently wrong. **`ORDER BY … COLLATE` with no index carries none of that**: the sort is
+computed per query, and an ICU bump reorders edge cases cosmetically. The risk returns only with a
+btree index on `(name COLLATE "el-GR-x-icu")` — and even then PostgreSQL records `collversion`
+(`153.136.48` here) and **warns loudly**, the opposite of the silent failure the rule was written
+against. **Decision: no collation index now.** Add one when a table gets large, and note the
+`REINDEX` obligation next to the existing trigram one.
+
+⚠️ **Numeric ordering is deliberately off.** `{ numeric: true }` would put `TEST-PRODUCT-2` before
+`TEST-PRODUCT-10`, which is what a person wants — but stock `el-GR-x-icu` does not do it, so
+enabling it would buy niceness at the cost of the two halves disagreeing. Matching it server-side
+needs `CREATE COLLATION … locale = 'el-GR-u-kn-true'`, a backend decision and a migration.
+
+### What S2 verified against the running stack, and the one leg that is not done
+
+1. ✅ **The collation behaviour above** — every claim measured against the live PostgreSQL.
+2. ✅ **The premise that these five do not sort on the server** — answered by the **running
+   container's own bytecode**, not by the committed spec, because the image was built seven minutes
+   *before* the last backend commit and PROGRESS.md already records what a stale container costs.
+   The constant pools of the deployed controllers read: Customer/Product/Supplier/User/Role →
+   `active search`; Journal/Sales → `page size sort direction`. **The check discriminates**, which
+   is what makes it evidence.
+3. ✅ **The real rows, through the shipped comparator** — the live customer list moves
+   `Πελάτης Λιανικής` from last to first, which is the whole point.
+4. ⏳ **A browser clicking a header against the live stack has NOT been done.** It needs the Owner
+   password, which is deliberately not in this repo — the same leg S1 needed and the owner ran
+   personally. **269 frontend tests cover the wiring; none of them is evidence that the screen works
+   in a browser**, per the standing rule. This is the one open item on S2.
+
+### ⚠️ S2's finding — the first sort direction depended on which row was at the top
+
+Found by a test, and it is not cosmetic. Left alone, TanStack chooses a column's first sort
+direction with `getAutoSortDir()`, which reads **the value in row zero**: a string starts ascending,
+anything else starts descending. So the direction of a user's first click depended on which record
+happened to be first at that moment, and a column whose first row was empty would flip direction
+when the data changed — with no rule anybody could infer from the screen. The header's accessible
+label follows the direction, so the control would announce a different action from one load to the
+next. Fixed with a table-level `sortDescFirst: false`; a test names all three columns.
+
+### What already existed, and still does — for whoever adds *server-side* sorting
 
 - **A server-side sorting contract exists and is proven on sales invoices**: a `…Sort` enum in
   `core-api`, `PageRequest`/`PageResponse`, `SpringPaging.pageableFor` mapping a *logical* name to an
@@ -91,21 +200,21 @@ one place and absent everywhere else**:
   string ever reaches a query**. ⚠️ **Every ordering ends with the id** — a sort on a non-unique
   column leaves rows tied and PostgreSQL may return ties in a different order per query, so
   successive pages could show one row twice and skip another.
-- **The frontend already reads it**: `useListState` has `setSort`, and `serverSorts(route)` comes
-  from the generated capability map — so a screen starts sorting on the server the moment the
-  backend declares it, with no component change.
-- **The queued tier-A paging item is the same work.** Five services (purchase invoices, goods
-  receipts, settlements, inventory, email outbox) are listed further down with their sort enums and
-  **four checks that were expensive to learn**, two of them counter-intuitive. Whoever scopes
-  sorting should start from that section rather than from scratch.
-- ⚠️ **Sorting interacts with locale, exactly as search did.** This database is `--locale=C`, so
-  `ORDER BY name` is **byte order**: uppercase before lowercase, and Greek after all Latin. That is
-  deterministic across machines, which is why it was chosen — but it is *not* alphabetical to a human
-  reading a customer list. **Whether a user-facing sort should use a collation
-  (`ORDER BY name COLLATE …`) is an open question and is the first thing to settle**, and S1's
-  finding is the reason to settle it deliberately rather than discover it.
+- **The frontend reads it**: `useListState` has `setSort` and now `serverSorts`, both from the
+  generated capability map — so a screen starts sorting on the server the moment the backend
+  declares it, with no component change.
+- ⚠️ **`DataTable` now refuses to client-sort a server-paged list**, and this is the guard to know
+  about: sorting one page of many and presenting it as the order of the whole table is convincing
+  and wrong. A column on a server-paged endpoint is sortable **only** if it carries a `meta.sortKey`
+  the endpoint declares; otherwise its header renders as plain text. **None of the five column files
+  carries a `sortKey` yet**, because no backend enum exists to name — so the day one of these gains
+  paging, its sort controls *disappear* until somebody adds the keys. That is the safe failure and
+  it is loud, but it is a real obligation and it is written here rather than left to be discovered.
+- **The queued tier-A paging item is adjacent work, not this work.** Five *different* services
+  (purchase invoices, goods receipts, settlements, inventory, email outbox) are listed further down
+  with their sort enums and **four checks that were expensive to learn**.
 
-**Where things stand, for sorting and then for F4:**
+**Where things stand, for F4:**
 
 - **F0–F3 and S1 are done.** Products, Suppliers, Customers, Users & Roles, then substring search
   across all five. **238 frontend tests, 26 files; 1360 backend tests, `mvn clean verify` exit 0.**

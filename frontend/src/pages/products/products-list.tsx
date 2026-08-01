@@ -65,7 +65,7 @@ export function ProductsList() {
   const bundles = useBundleControllerAllBundles({ query: { enabled: tab === 'bundles' } })
 
   const query = tab === 'products' ? products : bundles
-  const columns = productColumns(t, i18n.language, suppliers)
+  const columns = productColumns(t, i18n.language, suppliers, permissions)
 
   return (
     <div className="space-y-4">

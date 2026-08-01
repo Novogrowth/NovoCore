@@ -2,9 +2,13 @@
 
 **Legend:** 🟢 Done · 🟡 **Current** = in progress · 🔴 Not started
 
-⚠️ **Nothing is 🟡 as of S1's close-out — no step is half-finished.** **S2 (sorting) is next**, then
-F4. F4 was marked Current before S1 and S2 were inserted ahead of it; it is not started and no work
-of it exists.
+⚠️ **Nothing is 🟡 as of S2's close-out — no step is half-finished.** **F4 (Settings) is next.**
+S1 and S2 were both inserted ahead of F4 and are both done; no work of F4 exists.
+
+⚠️ **S2 carries one open verification, and it is not a status of 🟡.** Its browser leg against the
+live stack needs the Owner password, which is deliberately not in this repo — the same leg S1
+needed and the owner ran personally. Everything buildable is built, green and verified; see
+`PROGRESS.md`.
 
 **Hours** — `Est.` is a planning estimate where one exists; most rows here don't have one
 yet, matching how steps 16a/16b were treated on the backend roadmap (no estimate invented
@@ -36,8 +40,8 @@ candidate causes per symptom).
 |      | *(deferred out of F2)* Customer VAT class override — its own follow-up ᶠ²ᵃ                                                          |     — |        | 🔴 Not started |
 |   F3 | Users & Roles — real admin screen: create roles, grant sections, manage accounts ᶠ³                                                |     — |    0.9 | 🟢 Done        |
 |   S1 | *(standalone, not folded into F4)* Substring search — `pg_trgm` + `unaccent`, one shared mechanism, wired to all five built screens ˢ¹ |     — |    1.8 | 🟢 Done        |
-|   S2 | *(standalone)* **Sorting** — not scoped, not designed; the server-side contract exists and is proven on sales invoices ˢ²                 |     — |        | 🔴 **Next**    |
-|   F4 | Settings — general config, Reference Data (VAT classes, UoM), Adapters/Modules toggle grids (read-only placeholders)               |     — |        | 🔴 Not started |
+|   S2 | *(standalone)* **Sorting** — sortable columns on all five list screens, one collator, client-side ˢ²                                |     — |    0.7 | 🟢 Done        |
+|   F4 | Settings — general config, Reference Data (VAT classes, UoM), Adapters/Modules toggle grids (read-only placeholders)               |     — |        | 🔴 **Next**    |
 |   F5 | Sales Invoice + Credit Note — first transactional-document screen; decides the create/preview/commit pattern                       |     — |        | 🔴 Not started |
 |   F6 | Purchase Invoice + Goods Receipt — same document pattern; no preview endpoint yet, decide whether to add one                       |     — |        | 🔴 Not started |
 |   F7 | Receipts, Payments, Bank Transfers — editable-in-place variant of the document pattern, plus settlement/allocation UI              |     — |        | 🔴 Not started |
@@ -305,14 +309,38 @@ session** rather than slicing through one. **821 events, 1.81 h active against 3
 the previous session's tail, which the window rule includes. As with every row here it **excludes its
 own close-out**, which is not in the transcript when the figure is computed — read it as "at least".
 
-**ˢ² S2, sorting — next, and deliberately not started.** No proposal, no design, no code. It is given
-a row so the sequence can be read off this table and so silence is not mistaken for completeness.
-⚠️ **It is not a green field**: the server-side contract exists and is proven on sales invoices, the
-frontend already consumes it through the generated capability map, and the queued tier-A paging item
-on five services is the same work with four checks already learned. ⚠️ **And it inherits S1's
-lesson** — under this database's `--locale=C`, `ORDER BY name` is byte order, not alphabetical to a
-human. Whether a user-facing sort carries an explicit collation is the first thing to settle. The
-full note is in `PROGRESS.md`.
+**ˢ² S2, sorting — done.** Sortable columns on Products, Suppliers, Customers, Users and Roles, on
+the existing `DataTable`. **Client-side**, and that is a finding rather than a shortcut: the running
+container's own bytecode says those five controllers accept `active search` and nothing else, so
+every row is already in the browser and a client sort sorts the *list*, not a page.
+
+**The collation question was settled before any sorting code was written, from the live database.**
+`ORDER BY` under `--locale=C` is **byte order** — `Zebra` before `apple`, `Ácme` after `zebra`, and
+every Greek name after every Latin one with `Ωμέγα` ahead of `αθήνα`. ⚠️ **That is live behaviour,
+not something sorting introduced**: all five endpoints already order in the database. ⚠️ **And
+`pg_c_utf8` does not fix it** — S1's collation changes case *mapping*, not sort *order*, and its
+`ORDER BY` output is character-for-character identical to `C`'s. The answer is `el-GR-x-icu`, Greek
+block first, fixed rather than following the account language; `Intl.Collator('el')` matches it
+byte-for-byte and `collation.test.ts` pins PostgreSQL's literal output so the two cannot drift.
+
+**One real defect found by a test:** TanStack picked a column's first sort direction from the value
+in **row zero**, so the direction of a user's first click depended on which record happened to be on
+top — and the header's accessible label followed it. Fixed with `sortDescFirst: false`.
+
+**269 frontend tests, 27 files** (from 238/26); lint 0 errors, build and offline check clean.
+
+**Measured, per the method in `novocore-roadmap.md`** — window `d7708da` (S1's close-out) to this
+session's commit. **397 events, 0.69 h active against 0.78 h wall clock, 216k out, 35.1M in.
+Recorded as 0.7.** 392 of the 397 are this session; the remaining 5 are the previous session's tail,
+which the window rule includes. As with every row here it **excludes its own close-out**, so read it
+as "at least".
+
+⚠️ **What S2 leaves for whoever adds server-side sorting.** `DataTable` now refuses to client-sort a
+server-paged list — sorting one page of many and presenting it as the order of the whole table is
+convincing and wrong — so a column there is sortable only if its `meta.sortKey` is one the endpoint
+declares. **None of the five column files carries a `sortKey` yet**, because no backend enum exists
+to name one. The day one of these gains paging, its sort controls *disappear* until somebody adds
+them. That is the safe failure and it is loud, but it is a real obligation.
 
 **F5 carries more weight than its position implies.** It's not just the next screen — it
 decides the entire document-creation interaction pattern (multi-line entry, running

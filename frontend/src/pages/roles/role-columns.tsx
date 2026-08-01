@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next'
 import { Link } from 'react-router-dom'
 
 import { AccessLevel, type RoleView } from '@/api/generated/model'
+import { sortableHeader } from '@/components/data-table/sortable-header'
 import { UnsetValue } from '@/components/field-editor/field-editor'
 import { Badge } from '@/components/ui/badge'
 
@@ -21,7 +22,7 @@ export function roleColumns(t: TFunction): ColumnDef<RoleView, unknown>[] {
   return [
     {
       accessorKey: 'name',
-      header: t('roles.column.name'),
+      header: sortableHeader(t('roles.column.name')),
       cell: ({ row }) => (
         <Link to={`/roles/${row.original.id}`} className="font-medium hover:underline">
           {row.original.name}
@@ -30,12 +31,22 @@ export function roleColumns(t: TFunction): ColumnDef<RoleView, unknown>[] {
     },
     {
       id: 'description',
-      header: t('roles.column.description'),
+      accessorFn: (role) => role.description,
+      header: sortableHeader(t('roles.column.description')),
       cell: ({ row }) => row.original.description ?? <UnsetValue />,
     },
     {
       id: 'grants',
       header: t('roles.column.grants'),
+      /*
+       * Not sortable, and this is the interesting one on this screen.
+       *
+       * The cell renders three different kinds of thing — "everything", "nothing", and a count —
+       * so there is no single value to order by. Ordering by the count alone would put the two
+       * most privileged roles in the system at the bottom with a count of zero, which is exactly
+       * the trap this column's own javadoc warns about, arriving through a different door.
+       */
+      enableSorting: false,
       cell: ({ row }) => {
         if (row.original.fullAccess === true) return t('roles.everything')
         const granted = Object.values(row.original.sectionGrants ?? {}).filter(
@@ -47,6 +58,7 @@ export function roleColumns(t: TFunction): ColumnDef<RoleView, unknown>[] {
     {
       id: 'flags',
       header: t('roles.column.flags'),
+      enableSorting: false,
       cell: ({ row }) => (
         <div className="flex gap-1">
           {row.original.systemRole === true && (

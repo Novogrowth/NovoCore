@@ -342,6 +342,77 @@ object; an unpaged one omits it. Which endpoints *accept* `page`/`size` is gener
 `src/api/generated/paging.ts` — 3 of 56 today — so when the backend pages one more, the next
 `npm run api:generate` switches every table over it with no component change.
 
+### Text is ordered by one collator, and the database will agree with it
+
+`src/lib/collation.ts`. Never `a.localeCompare(b)` at a call site and never a bare `[].sort()`.
+
+**The default is wrong in a way that looks like data being wrong.** `[].sort()` compares UTF-16 code
+units and PostgreSQL under this deployment's `--locale=C` compares bytes — the same wrongness. Every
+uppercase word before every lowercase one, accented words after all unaccented ones, and **every
+Greek name after every Latin one**, with `Ωμέγα` ahead of `αθήνα` because capitals hold the lower
+code points. On the live seed that put `Πελάτης Λιανικής` below all five `TEST-CUSTOMER-*` rows.
+
+⚠️ **`pg_c_utf8` does not fix ordering, and it is the obvious thing to reach for.** S1 introduced
+`lower(… COLLATE pg_c_utf8)` so Greek capitals fold; it changes **case mapping**, not **sort
+order**, and its `ORDER BY` output is character-for-character identical to `C`'s. Measured.
+
+**The order is `Intl.Collator('el')` — Greek block first, then Latin, fixed.** Not the account's
+language: a list whose row order changes when somebody switches UI language is worse than one that
+does not. And it is deliberately **the same order the database will produce** when these endpoints
+start sorting on the server — PostgreSQL's `el-GR-x-icu` and this return byte-identical results, and
+`collation.test.ts` pins PostgreSQL's actual output as the expectation so the two cannot drift.
+
+Two things that file also settles: **numeric ordering is off** (`TEST-PRODUCT-10` before
+`TEST-PRODUCT-2`) because stock `el-GR-x-icu` does not do it and a nicer browser order is not worth
+the two halves disagreeing; and **a wire decimal is never compared as text** — `"9.00"` sorts above
+`"1234.56"` under any text comparator, so money uses `compareMoney`, which groups by currency before
+comparing amounts rather than stating a conversion nobody performed.
+
+⚠️ **`collation.test.ts` asserts the resolved locale is `el`.** On a small-icu runtime
+`Intl.Collator('el')` silently falls back to the root locale, every comparison stays locale-aware,
+and only the Greek-first reordering — the actual decision — disappears. That is the same shape as
+the test database configured unlike the real one, so the pin is asserted rather than assumed.
+
+### A sortable column, and the one case where a header must not be one
+
+`sortableHeader(label)` in `components/data-table/sortable-header.tsx`, plus `meta.sortKey` when the
+endpoint has a matching backend constant. Ascending → descending → **unsorted**; the third state is
+not a courtesy, because every list has a natural order the backend chose and without it there is no
+way back to the one the screen opened in.
+
+**A column that cannot sort renders as plain text, not as a disabled button** — the `FieldEditor`
+distinction above, one control along. Both states come out of the same helper, so a column cannot
+end up with an affordance that does nothing.
+
+⚠️ **The case that matters: a server-paged list must not sort in the browser.** Sorting the
+twenty-five rows in hand and presenting them as the order of four thousand produces a table that
+looks entirely convincing and answers a different question. So on a server-paged endpoint a column
+is sortable **only** if its `meta.sortKey` is one the endpoint declares, and it sorts through the
+request. `canSortColumn` states this once. Today every list takes the other branch — all five
+endpoints return their rows whole, confirmed against the running container's own bytecode — but the
+branch is built and tested because the day it starts applying is the day the backend adds paging,
+and nothing on this side would change to mark the occasion. **None of the five column files carries
+a `sortKey` yet**, so when one of them gains paging its sort controls disappear until somebody adds
+them. Safe, loud, and a real obligation.
+
+Two defaults live on `DataTable` rather than on each column, because forgetting one on a single
+column is a table that is quietly wrong in one place: **`sortUndefined: 'last'`** in both directions
+(a descending sort opening on a screen of blanks reads as broken), and **`sortDescFirst: false`**.
+That second one is a fix, not a preference — TanStack otherwise picks a column's first direction
+from **the value in row zero**, so the direction of a user's first click depended on which record
+happened to be at the top, and the header's accessible label followed it.
+
+**Sort by what the cell shows.** Enum columns order by their translated label, not the constant;
+lookup columns by the name, not the id. A consequence worth knowing rather than discovering: those
+columns reorder when the language changes, which is correct — an alphabetical list is alphabetical
+in the alphabet being read.
+
+**A column whose value the role cannot see does not sort.** `enableSorting: notHidden(field)` on
+Products' price and supplier columns. Client-side the values are absent so nothing could leak today,
+and the control would merely shuffle nothing — but it is S1's disclosure finding one control along
+(ordering compares against every other row at once), and that half starts applying the moment these
+lists sort on the server.
+
 ### knip's entry list
 
 `src/auth`, `src/nav`, `src/components/decimal`, `src/components/data-table`, `src/i18n` and

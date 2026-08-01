@@ -6,17 +6,20 @@ import { describe, expect, it, vi } from 'vitest'
 import '@/i18n'
 
 import { DataTable } from './data-table'
-import { isServerPaged, unwrapList } from './list-response'
+import { isServerPaged, serverSorts, unwrapList } from './list-response'
+import { sortableHeader } from './sortable-header'
+import { canSortColumn, moneySorting } from './sorting'
 import type { ListStateHandle } from './use-list-state'
 
 /** What a screen passes down from `useListState` when the server does the paging. */
-const listHandle = (page: number): ListStateHandle => ({
+const listHandle = (page: number, sorts: readonly string[] = []): ListStateHandle => ({
   state: { page, size: 25 },
   setPage: vi.fn(),
   setSize: vi.fn(),
   setSort: vi.fn(),
   params: { page, size: 25 },
   serverPaged: true,
+  serverSorts: sorts,
 })
 
 interface Row {
@@ -169,5 +172,211 @@ describe('DataTable', () => {
 
     expect(screen.getByText('Page 1 of 8')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /next/i })).not.toBeInTheDocument()
+  })
+})
+
+/* ------------------------------------------------------------------------------------------- *
+ * Sorting
+ * ------------------------------------------------------------------------------------------- */
+
+interface Party {
+  id: number
+  name: string
+  phone?: string
+  balance?: { amount: string; currency: string }
+}
+
+/** Deliberately in an order no correct sort produces, so a passing assertion means work happened. */
+const PARTIES: Party[] = [
+  { id: 1, name: 'Zebra BV', phone: '210 111', balance: { amount: '9.00', currency: 'EUR' } },
+  { id: 2, name: 'Ωμέγα ΑΕ', balance: { amount: '1234.56', currency: 'EUR' } },
+  { id: 3, name: 'apple corp', phone: '210 222', balance: { amount: '90.00', currency: 'EUR' } },
+  { id: 4, name: 'Άλφα Τεχνική', phone: '210 333' },
+]
+
+const partyColumns: ColumnDef<Party, unknown>[] = [
+  { accessorKey: 'name', header: sortableHeader('Name'), meta: { sortKey: 'NAME' } },
+  { accessorKey: 'phone', header: sortableHeader('Phone') },
+  {
+    id: 'balance',
+    accessorFn: (party) => party.balance,
+    sortingFn: moneySorting,
+    header: sortableHeader('Balance'),
+  },
+  { id: 'flags', header: 'Flags', enableSorting: false },
+]
+
+/** The rendered order of the name column, which is the first cell of each row. */
+const renderedNames = () =>
+  screen
+    .getAllByRole('row')
+    .slice(1)
+    .map((row) => row.querySelector('td')?.textContent ?? '')
+
+describe('who is allowed to sort a column', () => {
+  it('lets a browser-paged table sort anything the screen marked sortable', () => {
+    // Every row is in hand, so sorting them here sorts the list.
+    expect(canSortColumn('NAME', false, [])).toBe(true)
+    expect(canSortColumn(undefined, false, [])).toBe(true)
+  })
+
+  it('refuses a server-paged column the endpoint cannot order by', () => {
+    // ⚠️ The case worth having a test for: sorting one page of many and presenting the result as
+    // the order of the whole table. Convincing, and wrong.
+    expect(canSortColumn(undefined, true, ['ENTRY_DATE'])).toBe(false)
+    expect(canSortColumn('NAME', true, ['ENTRY_DATE'])).toBe(false)
+    expect(canSortColumn('ENTRY_DATE', true, ['ENTRY_DATE'])).toBe(true)
+  })
+
+  it('reads the same capability map the screens do', () => {
+    // Not a hand-written fixture: these are the values the generator wrote from the real spec.
+    expect(serverSorts('GET /api/journal-entries')).toContain('ENTRY_DATE')
+    expect(serverSorts('GET /api/customers')).toEqual([])
+  })
+})
+
+describe('sorting in the browser', () => {
+  it('orders text for a reader rather than by code unit', async () => {
+    const user = userEvent.setup()
+    render(<DataTable data={PARTIES} columns={partyColumns} />)
+
+    await user.click(screen.getByRole('button', { name: 'Sort by Name, A to Z' }))
+
+    // Greek block first, then Latin — and `apple` ahead of `Zebra`, which byte order reverses.
+    expect(renderedNames()).toEqual(['Άλφα Τεχνική', 'Ωμέγα ΑΕ', 'apple corp', 'Zebra BV'])
+  })
+
+  it('reverses on the second click and returns to the natural order on the third', async () => {
+    const user = userEvent.setup()
+    render(<DataTable data={PARTIES} columns={partyColumns} />)
+
+    await user.click(screen.getByRole('button', { name: 'Sort by Name, A to Z' }))
+    await user.click(screen.getByRole('button', { name: 'Sort by Name, Z to A' }))
+    expect(renderedNames()).toEqual(['Zebra BV', 'apple corp', 'Ωμέγα ΑΕ', 'Άλφα Τεχνική'])
+
+    // The third state is not a courtesy: without it there is no way back to the order the screen
+    // opened in, which is the one the backend chose.
+    await user.click(screen.getByRole('button', { name: 'Stop sorting by Name' }))
+    expect(renderedNames()).toEqual(PARTIES.map((party) => party.name))
+  })
+
+  it('keeps "not set" last in both directions', async () => {
+    const user = userEvent.setup()
+    render(<DataTable data={PARTIES} columns={partyColumns} />)
+
+    await user.click(screen.getByRole('button', { name: 'Sort by Phone, A to Z' }))
+    expect(renderedNames().at(-1)).toBe('Ωμέγα ΑΕ')
+
+    await user.click(screen.getByRole('button', { name: 'Sort by Phone, Z to A' }))
+    // A descending sort opening on a screen of blanks reads as a broken table.
+    expect(renderedNames().at(-1)).toBe('Ωμέγα ΑΕ')
+  })
+
+  it('orders money as a number, not as the string it arrived as', async () => {
+    const user = userEvent.setup()
+    render(<DataTable data={PARTIES} columns={partyColumns} />)
+
+    await user.click(screen.getByRole('button', { name: 'Sort by Balance, A to Z' }))
+    // Lexically "1234.56" < "9.00" < "90.00". Numerically it is this, and this is what money means.
+    expect(renderedNames()).toEqual(['Zebra BV', 'apple corp', 'Ωμέγα ΑΕ', 'Άλφα Τεχνική'])
+  })
+
+  it('starts every column ascending, whatever kind of value it holds', () => {
+    // ⚠️ Not cosmetic. TanStack's default reads row zero to choose the first direction — a string
+    // ascends, anything else descends — so Balance would open descending, and a column whose first
+    // row is empty would change direction when the data did. The header's label follows the
+    // direction, so the control would announce a different action from one load to the next.
+    render(<DataTable data={PARTIES} columns={partyColumns} />)
+
+    for (const column of ['Name', 'Phone', 'Balance']) {
+      expect(screen.getByRole('button', { name: `Sort by ${column}, A to Z` })).toBeInTheDocument()
+    }
+  })
+
+  it('offers no control on a column that says it does not sort', () => {
+    render(<DataTable data={PARTIES} columns={partyColumns} />)
+    expect(screen.queryByRole('button', { name: /Flags/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Flags' })).not.toHaveAttribute('aria-sort')
+  })
+
+  it('reports the sort state on the header cell, where a screen reader reads it', async () => {
+    const user = userEvent.setup()
+    render(<DataTable data={PARTIES} columns={partyColumns} />)
+
+    const nameHeader = () => screen.getByRole('columnheader', { name: /Name/ })
+    expect(nameHeader()).toHaveAttribute('aria-sort', 'none')
+
+    await user.click(screen.getByRole('button', { name: 'Sort by Name, A to Z' }))
+    expect(nameHeader()).toHaveAttribute('aria-sort', 'ascending')
+
+    await user.click(screen.getByRole('button', { name: 'Sort by Name, Z to A' }))
+    expect(nameHeader()).toHaveAttribute('aria-sort', 'descending')
+  })
+
+  it('goes back to the first page, so the reader sees what they just sorted', async () => {
+    const user = userEvent.setup()
+    const list: ListStateHandle = {
+      state: { page: 3, size: 25 },
+      setPage: vi.fn(),
+      setSize: vi.fn(),
+      setSort: vi.fn(),
+      params: {},
+      serverPaged: false,
+      serverSorts: [],
+    }
+    render(<DataTable data={PARTIES} columns={partyColumns} list={list} />)
+
+    await user.click(screen.getByRole('button', { name: 'Sort by Name, A to Z' }))
+    expect(list.setPage).toHaveBeenCalledWith(0)
+  })
+})
+
+describe('sorting when the server pages', () => {
+  const pagedResponse = {
+    items: PARTIES,
+    page: { page: 0, size: 25, totalElements: 200, totalPages: 8, hasNext: true },
+  }
+
+  it('asks the server rather than reordering the page it holds', async () => {
+    const user = userEvent.setup()
+    const list = listHandle(0, ['NAME'])
+    render(<DataTable data={pagedResponse} columns={partyColumns} list={list} />)
+
+    await user.click(screen.getByRole('button', { name: 'Sort by Name, A to Z' }))
+
+    expect(list.setSort).toHaveBeenCalledWith('NAME', 'ASC')
+    // ⚠️ And the rows on screen did NOT move. They are 4 rows out of 200; reordering them would
+    // produce a table that looks sorted and is not.
+    expect(renderedNames()).toEqual(PARTIES.map((party) => party.name))
+  })
+
+  it('sends the direction the second click asks for', async () => {
+    const user = userEvent.setup()
+    const list = listHandle(0, ['NAME'])
+    const { rerender } = render(<DataTable data={pagedResponse} columns={partyColumns} list={list} />)
+
+    // The screen would re-render with the sort now in its state; stand that in.
+    const sorted: ListStateHandle = { ...list, state: { page: 0, size: 25, sort: 'NAME', direction: 'ASC' } }
+    rerender(<DataTable data={pagedResponse} columns={partyColumns} list={sorted} />)
+
+    expect(screen.getByRole('columnheader', { name: /Name/ })).toHaveAttribute('aria-sort', 'ascending')
+
+    await user.click(screen.getByRole('button', { name: 'Sort by Name, Z to A' }))
+    expect(sorted.setSort).toHaveBeenCalledWith('NAME', 'DESC')
+  })
+
+  it('takes the control away entirely from a column the endpoint cannot order by', () => {
+    // Phone and Balance carry no `sortKey`, so the server has no way to order by them. They render
+    // as text rather than as a control that would silently sort one page out of eight.
+    render(<DataTable data={pagedResponse} columns={partyColumns} list={listHandle(0, ['NAME'])} />)
+
+    expect(screen.getByRole('button', { name: 'Sort by Name, A to Z' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Phone/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Balance/ })).not.toBeInTheDocument()
+  })
+
+  it('takes it away from every column when the endpoint declares no sorts at all', () => {
+    render(<DataTable data={pagedResponse} columns={partyColumns} list={listHandle(0)} />)
+    expect(screen.queryByRole('button', { name: /Sort by/ })).not.toBeInTheDocument()
   })
 })

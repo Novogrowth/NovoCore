@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next'
 import { Link } from 'react-router-dom'
 
 import type { UserView } from '@/api/generated/model'
+import { sortableHeader } from '@/components/data-table/sortable-header'
 import { UnsetValue } from '@/components/field-editor/field-editor'
 import { Badge } from '@/components/ui/badge'
 
@@ -16,7 +17,7 @@ export function userColumns(t: TFunction): ColumnDef<UserView, unknown>[] {
   return [
     {
       accessorKey: 'username',
-      header: t('users.column.username'),
+      header: sortableHeader(t('users.column.username')),
       cell: ({ row }) => (
         <Link to={`/users/${row.original.id}`} className="font-medium hover:underline">
           {row.original.username}
@@ -25,12 +26,16 @@ export function userColumns(t: TFunction): ColumnDef<UserView, unknown>[] {
     },
     {
       id: 'displayName',
-      header: t('users.column.displayName'),
+      accessorFn: (user) => user.displayName,
+      header: sortableHeader(t('users.column.displayName')),
       cell: ({ row }) => row.original.displayName ?? <UnsetValue />,
     },
     {
+      // By the role's name, not its id: the cell shows the name, and an id order would look
+      // random to anybody who cannot see it.
       id: 'role',
-      header: t('users.column.role'),
+      accessorFn: (user) => user.role?.name,
+      header: sortableHeader(t('users.column.role')),
       cell: ({ row }) =>
         row.original.role?.id !== undefined ? (
           <Link to={`/roles/${row.original.role.id}`} className="hover:underline">
@@ -43,6 +48,7 @@ export function userColumns(t: TFunction): ColumnDef<UserView, unknown>[] {
     {
       id: 'flags',
       header: t('users.column.flags'),
+      enableSorting: false,
       cell: ({ row }) => (
         <div className="flex gap-1">
           {row.original.active === false && (
