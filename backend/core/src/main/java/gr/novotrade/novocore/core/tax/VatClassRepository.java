@@ -3,6 +3,7 @@ package gr.novotrade.novocore.core.tax;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
 /**
@@ -12,7 +13,8 @@ import org.springframework.data.jpa.repository.Query;
  * <p>Note the absence of {@code findByRatePercent}. Two classes charge 4% with different legal
  * bases, so a rate does not identify a class and such a method would be right most of the time.
  */
-interface VatClassRepository extends JpaRepository<VatClass, Long> {
+interface VatClassRepository extends JpaRepository<VatClass, Long>,
+        JpaSpecificationExecutor<VatClass> {
 
     List<VatClass> findAllByOrderByRatePercentAscCodeAsc();
 

@@ -10,4 +10,5 @@
 
 export type TaxLookupControllerVatClassesParams = {
 active?: boolean;
+search?: string;
 };

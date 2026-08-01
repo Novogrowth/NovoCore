@@ -413,6 +413,83 @@ and the control would merely shuffle nothing — but it is S1's disclosure findi
 (ordering compares against every other row at once), and that half starts applying the moment these
 lists sort on the server.
 
+### A field can be unavailable in *four* ways, and only two of them are `FieldEditor` states
+
+The table under *"Not yours to edit" and "fixed on this record"* above is half the story. F4 needed
+the other half, because a settings screen and a reference-data screen are mostly made of fields
+nobody can change:
+
+| | Means | Renders |
+|---|---|---|
+| `editable: false` | a VIEW grant — **not yours to edit** | no affordance |
+| `lockedReason` | editable in general, **fixed on _this_ record** | shown, **disabled**, with the reason |
+| **no route exists** | **nobody can change it, on any installation** | **plain text with the reason — not a `FieldEditor` at all** |
+| **not built yet** | the route exists and the screen does not use it | plain text, and **a test asserting the absence** |
+
+⚠️ **The third is the one that gets built wrong**, and reaching for `editable: false` is the tempting
+mistake: in this application that string means *"your role may not"*, so using it for a VAT class's
+rate tells an administrator holding `TAX_AND_CHARGES:FULL` something false. A **disabled** control is
+worse again — it invites a hunt for the permission that unlocks it, and there is none. `RoleDetail`
+made this call first for a role's description; `VatClassDetail` (rate, code), `UnitDetail` (code) and
+`cash.payment.limit` all follow it.
+
+The fourth is a *deferral*, not a property of the data, and it owes a test. `reduced-counterpart` on
+VAT classes is the worked example: `PUT`/`DELETE` exist and F4 deliberately does not use them, so a
+test asserts no such control is rendered — which makes building it later a deliberate act with a test
+to update, rather than something that drifts in with a copied screen.
+
+### The Settings screens read one endpoint, and the key in the URL is not the key on the screen
+
+`GET /api/settings` returns the whole catalogue in one response, and the three pages each render a
+slice of it — one query, not three, or a save on one page leaves the other two stale.
+
+⚠️ **`PUT /api/settings/{key}` binds `{key}` to the ENUM CONSTANT** — `LEDGER_ROUNDING_THRESHOLD` —
+while the response body's own `key` field carries the **dotted** spelling, `ledger.rounding.threshold`.
+No converter is registered, so the dotted form is refused by Spring before any of our code runs. Both
+spellings live side by side in `pages/settings/settings-catalogue.ts` for exactly this reason.
+
+That file is a hand-written mirror of a backend enum, so `settings-catalogue.test.ts` asserts it
+covers `SettingsCatalog` **exactly** — a nineteenth key added on the backend otherwise lands on no
+page at all, unreachable, with nothing broken anywhere.
+
+⚠️ **`SettingsCatalog` is an allowlist, not a view of the table.** 33 rows exist, 18 are reachable;
+the whole `backup.*` namespace has no route. A screen expecting to see everything in the database
+would be wrong about what exists. And **there is no General page** — the 18 keys distribute 4/12/2
+across Documents & Rounding, Email/SMTP and Retention with nothing left over, so the nav item was
+dropped rather than shipped empty.
+
+### When a value's permitted set is not in the spec, read the enum — not the prose about it
+
+A setting's value is an opaque `string` in the OpenAPI document, so `smtp.transport-security` has no
+generated enum and `enum-labels.test.ts` cannot see it. The list has to be mirrored by hand in
+`settings-catalogue.ts`.
+
+⚠️ **`SettingType`'s javadoc named the accepted values as `NONE`, `STARTTLS` or `TLS`, and there is
+no `TLS` constant** — it is `IMPLICIT_TLS`, which is what the live stack runs on port 465. A select
+built from that sentence offers an option every save refuses. Corrected in the backend during F4, and
+now pinned from both ends: `settings-catalogue.test.ts` asserts the list, and
+`F4WriteContractIT.transportSecurityAcceptsOnlyRealConstants` makes **the real server** say which
+spelling is real.
+
+### A mock server still cannot tell you a write works — `F4WriteContractIT` is how F4 answered that
+
+Every F4 write is sent as **the literal JSON the screen builds** to a real Spring Boot server over
+real HTTP against real PostgreSQL, in `backend/app/src/test/…/F4WriteContractIT.java`. The bodies are
+written out as strings rather than constructed from the request records, because building one from
+`NewUnitOfMeasure` asks Jackson to agree with itself.
+
+**It immediately corrected a claim this README nearly shipped.** `NewUnitOfMeasure.fractionalQuantity­
+Allowed` is a primitive `boolean`, and the belief going in was that omitting it silently arrives as
+`false` — a unit that cannot be sold by the half with nobody having chosen that. **The server answers
+`400`**: `FAIL_ON_NULL_FOR_PRIMITIVES` refuses an *absent* primitive, not only an explicit null. The
+form's design did not change — the choice is still required rather than a checkbox — but the *reason*
+did, and it is a better one: an unticked checkbox does not omit the field, it sends `false`, which is
+**accepted**. The server can refuse an omission; only the screen can refuse a default nobody chose.
+
+⚠️ **What it does not close: the browser leg.** Driving these forms against the running Compose stack
+needs the Owner password, which is deliberately not in this repository — the same leg S1 and S2 needed
+and the owner ran personally.
+
 ### knip's entry list
 
 `src/auth`, `src/nav`, `src/components/decimal`, `src/components/data-table`, `src/i18n` and

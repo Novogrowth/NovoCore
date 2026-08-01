@@ -11,6 +11,8 @@ import gr.novotrade.novocore.core.api.product.NewProduct;
 import gr.novotrade.novocore.core.api.product.ProductService;
 import gr.novotrade.novocore.core.api.product.ProductType;
 import gr.novotrade.novocore.core.api.product.ProductView;
+import gr.novotrade.novocore.core.api.product.UnitOfMeasureService;
+import gr.novotrade.novocore.core.api.product.UnitOfMeasureView;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.NewRole;
 import gr.novotrade.novocore.core.api.security.ProtectedField;
@@ -21,6 +23,7 @@ import gr.novotrade.novocore.core.api.supplier.NewSupplier;
 import gr.novotrade.novocore.core.api.supplier.SupplierService;
 import gr.novotrade.novocore.core.api.supplier.SupplierView;
 import gr.novotrade.novocore.core.api.tax.VatClassService;
+import gr.novotrade.novocore.core.api.tax.VatClassView;
 import gr.novotrade.novocore.core.api.tax.VatStatus;
 import java.util.List;
 import java.util.Set;
@@ -54,6 +57,9 @@ class TextSearchIT extends AbstractCoreIntegrationTest {
 
     @Autowired
     private VatClassService vatClasses;
+
+    @Autowired
+    private UnitOfMeasureService unitsOfMeasure;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -162,6 +168,12 @@ class TextSearchIT extends AbstractCoreIntegrationTest {
         assertIndexed("customer", "name", "vat_number", "email", "phone");
         assertIndexed("app_user", "username", "display_name");
         assertIndexed("app_role", "name", "description");
+
+        // The two reference-data lists, adopted by F4 as rows 6 and 7 of the target list (V30).
+        // ⚠️ The label column is spelled differently on the two tables and they are not
+        // interchangeable — `vat_class.description` against `unit_of_measure.name`.
+        assertIndexed("vat_class", "code", "description");
+        assertIndexed("unit_of_measure", "code", "name");
     }
 
     /**
@@ -363,6 +375,46 @@ class TextSearchIT extends AbstractCoreIntegrationTest {
         assertThat(roles.search("picks and packs", false)).extracting(RoleView::id)
                 .as("the description is where 'which role lets somebody do X' is answered")
                 .contains(role.id());
+    }
+
+    @Test
+    @DisplayName("the two reference-data lists search their own columns, and not their rate")
+    void referenceData() {
+        // Rows 6 and 7 of the target list, adopted by F4. Both search against the SEEDED rows
+        // rather than rows this test creates: a VAT class cannot be deleted and creating one to
+        // search for it would leave it behind in every database the suite touches.
+
+        assertThat(vatClasses.search("1410", false)).extracting(VatClassView::code)
+                .as("the ΑΑΔΕ code is what an accountant reads off a Go screen")
+                .contains("1410");
+        assertThat(vatClasses.search("ΦΠΑ 24", false)).extracting(VatClassView::code)
+                .as("the description, accented and capitalised, folds the same way any other does")
+                .contains("1410");
+        assertThat(vatClasses.search("φπα 24", false)).extracting(VatClassView::code)
+                .as("⚠️ lowercase Greek — the exact case S1's collation defect made return nothing")
+                .contains("1410");
+
+        // ⚠️ The rate is NOT a searched column, and this is the assertion that keeps it that way.
+        // '24' appears in no code and no description of the 24% class except via '1410'/'ΦΠΑ 24%',
+        // so searching the number 17 must not surface the 17% class through its rate alone.
+        assertThat(vatClasses.search("17.000000", false))
+                .as("the rate is not searchable: eight distinct percentages across nine rows means "
+                        + "a rate does not identify a class")
+                .isEmpty();
+
+        assertThat(unitsOfMeasure.search("KILO", false)).extracting(UnitOfMeasureView::code)
+                .containsExactly("KILOGRAM");
+        assertThat(unitsOfMeasure.search("gram", false)).extracting(UnitOfMeasureView::code)
+                .as("a substring in the middle matches, and matches both units containing it")
+                .containsExactlyInAnyOrder("GRAM", "KILOGRAM");
+        assertThat(unitsOfMeasure.search("Millilitre", false))
+                .extracting(UnitOfMeasureView::code)
+                .as("the name is searched, not only the code")
+                .containsExactly("MILLILITRE");
+
+        assertThat(unitsOfMeasure.search(null, false))
+                .as("a null term is the unfiltered list, not the empty one")
+                .hasSameSizeAs(unitsOfMeasure.all());
     }
 
     // -------------------------------------------------------------------------------------------

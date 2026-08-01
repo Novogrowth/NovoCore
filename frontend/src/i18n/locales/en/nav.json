@@ -34,7 +34,6 @@
   "reports": "Reports",
   "system": "System",
   "settings": "Settings",
-  "settings.general": "General",
   "settings.email": "Email / SMTP",
   "settings.documents": "Documents & Rounding",
   "settings.vatClasses": "VAT Classes",

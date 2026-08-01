@@ -72,9 +72,13 @@ class TaxLookupController {
      * the service either.
      */
     @GetMapping(path = "/api/vat-classes", produces = MediaType.APPLICATION_JSON_VALUE)
-    ListResponse<VatClassView> vatClasses(@RequestParam(required = false) Boolean active) {
-        return ListResponse.of(
-                Boolean.TRUE.equals(active) ? vatClasses.active() : vatClasses.all());
+    ListResponse<VatClassView> vatClasses(@RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) String search) {
+        boolean activeOnly = Boolean.TRUE.equals(active);
+        if (search != null) {
+            return ListResponse.of(vatClasses.search(search, activeOnly));
+        }
+        return ListResponse.of(activeOnly ? vatClasses.active() : vatClasses.all());
     }
 
     @GetMapping(path = "/api/vat-classes/{id}", produces = MediaType.APPLICATION_JSON_VALUE)

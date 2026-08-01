@@ -96,7 +96,16 @@ public enum SettingType {
         }
     },
 
-    /** An {@link EmailTransportSecurity} name — {@code NONE}, {@code STARTTLS} or {@code TLS}. */
+    /**
+     * An {@link EmailTransportSecurity} name — {@code IMPLICIT_TLS}, {@code STARTTLS} or
+     * {@code NONE}.
+     *
+     * <p>⚠️ This list said {@code TLS} until F4, and no such constant exists. The value in use on
+     * the live stack is {@code IMPLICIT_TLS} — port 465, TLS from the first byte. The refusal
+     * message below is generated from {@code values()} and was always right; only this line was
+     * wrong, which is why nothing failed. Found while building the Settings screen, where a select
+     * built from this sentence would have offered an option the server refuses.
+     */
     TRANSPORT_SECURITY {
         @Override
         void check(String key, String value) {

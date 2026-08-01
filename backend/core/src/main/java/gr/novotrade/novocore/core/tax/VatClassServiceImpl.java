@@ -7,16 +7,29 @@ import gr.novotrade.novocore.core.api.tax.NewVatClass;
 import gr.novotrade.novocore.core.api.tax.VatClassNotFoundException;
 import gr.novotrade.novocore.core.api.tax.VatClassService;
 import gr.novotrade.novocore.core.api.tax.VatClassView;
+import gr.novotrade.novocore.core.support.Specifications;
+import gr.novotrade.novocore.core.support.TextSearch;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 class VatClassServiceImpl implements VatClassService {
+
+    /**
+     * Row 6 of the search target list — "Name / Code". Spelled as entity properties.
+     *
+     * <p>⚠️ The label column here is {@code description}; on {@code unit_of_measure} it is
+     * {@code name}. ⚠️ And {@code ratePercent} is deliberately absent: nine classes carry eight
+     * distinct percentages, so a rate does not identify a class — the same argument that keeps
+     * {@code findByRatePercent} off the repository.
+     */
+    private static final String[] SEARCHABLE = {"code", "description"};
 
     private static final String ENTITY_TYPE = "VatClass";
 
@@ -38,6 +51,23 @@ class VatClassServiceImpl implements VatClassService {
     @Transactional(readOnly = true)
     public List<VatClassView> active() {
         return toViews(repository.findByActiveTrueOrderByRatePercentAscCodeAsc());
+    }
+
+    /**
+     * Row 6 of the search target list: code and description.
+     *
+     * <p>The ordering is the one {@link #all()} uses — by rate, then code — not by the label. That
+     * is deliberate: a VAT class list read by rate is the order an accountant expects, and a search
+     * that reordered the rows it filtered would be answering a differently-shaped question from the
+     * unfiltered list it replaces.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<VatClassView> search(String term, boolean activeOnly) {
+        return toViews(repository.findAll(
+                Specifications.<VatClass>activeOnly(activeOnly)
+                        .and(TextSearch.matching(term, SEARCHABLE)),
+                Sort.by(Sort.Order.asc("ratePercent"), Sort.Order.asc("code"))));
     }
 
     @Override

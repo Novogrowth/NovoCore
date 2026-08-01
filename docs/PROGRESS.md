@@ -36,10 +36,12 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 16a | **Backend prerequisites for the frontend** — four items agreed before any step 16 work | **Done** — `/me`, preview endpoints, the OpenAPI spec + drift check, and the paging contract. Migration **V27**, plus **session eviction**, a defect found while building the first item. See below |
 | 16b | **Users & roles, journal listing, settings** — the three sections with no HTTP surface at all | **Done, committed** `452b3fd` — 37 routes, **no migration**. Three defects found and fixed, none of them in the code the step set out to write. See below |
 | S1 | **Substring search** — `pg_trgm` + `unaccent`, one shared mechanism, five screens | **Done** — migrations **V28** and **V29**, 17 GIN trigram indexes, `TextSearch` + `SearchFilter`, `?search=` on five routes. **Two findings**, one of which was invisible to the entire test suite until the test database was made to match the real one. See below |
-| 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress. F0–F3 and S1 done, F4 (Settings) is next.** Foundations `94e17cd`, Products `56e3726` + guards `28c4119` + brand pass, then the render-loop fix `3458ee6`, F0 (the seed pass), F1 Suppliers `b406b27`, F2 Customers `496c7be`, F3 Users & Roles `aea0e56`, then **S1, substring search**. **237 frontend tests, 26 files, green.** Per-step detail in `docs/novocore-frontend-roadmap.md`; decisions and what each step left behind in *Step 16 — the frontend* below |
+| F4 | **Settings** — three config pages, VAT classes and units of measure, plus search and sorting | **Done** — migration **V30**, 4 GIN trigram indexes, `?search=` on 2 more routes, **21 sub-parts all with verdicts**, and `F4WriteContractIT` (15 tests) which **corrected a premise the step was built on**. Two findings. See below |
+| 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress. F0–F4, S1 and S2 done; F5 is next.** Foundations `94e17cd`, Products `56e3726` + guards `28c4119` + brand pass, then the render-loop fix `3458ee6`, F0 (the seed pass), F1 Suppliers `b406b27`, F2 Customers `496c7be`, F3 Users & Roles `aea0e56`, then **S1** (search), **S2** (sorting) and **F4** (Settings). **307 frontend tests, 31 files, green.** Per-step detail in `docs/novocore-frontend-roadmap.md`; decisions and what each step left behind in *Step 16 — the frontend* below |
 
-**Tests: 1360 passing, 0 failing, 1 skipped, `mvn clean verify` exit 0. 175 routes.** Counted from a
-local run on this machine. The PostgreSQL 17 client tools are installed here, so `BackupIT`'s 16
+**Tests: 1376 passing, 0 failing, 1 skipped, `mvn clean verify` exit 0. 175 routes.** Counted from a
+local run on this machine. **F4 added 16** (1360 → 1376) and **no routes** — the two reference-data
+lists gained a *parameter*, not an operation, so the spec diff is **14 lines added and 0 removed**. The PostgreSQL 17 client tools are installed here, so `BackupIT`'s 16
 tests and the two backup legs run locally as well as on CI.
 
 ⚠️ **The 1 skip is `LiveSeedTest.seedTheLiveDatabase`, and it is deliberate**, not a regression: it
@@ -61,7 +63,7 @@ directly rather than trusting the line count: **0 removed, 37 added, 174 total.*
 
 ---
 
-## ▶ Next session — **sorting (S2)**, then F4. Search is closed and live-verified
+## ▶ Next session — **F5, Sales Invoice + Credit Note.** F4 is closed except for the owner's browser pass
 
 **Read, in this order:** `CLAUDE.md` → **`frontend/README.md`** (every frontend convention lives
 there, and several of them were earned expensively) → `docs/novocore-frontend-roadmap.md` for the step order → the *Step 16, the frontend* section below for F1–F3's decisions and what they left behind.
@@ -72,7 +74,9 @@ there, and several of them were earned expensively) → `docs/novocore-frontend-
 |---|---|
 | **Substring search (S1)** | ✅ **Complete and live-verified.** Nothing outstanding |
 | **Sorting (S2)** | ✅ **Built, green, and verified against the running stack.** Client-side, on all five list screens. See below |
-| **F4 — Settings** | 🟡 **NEXT.** The next *screen* step |
+| **F4 — Settings** | ✅ **Built, green, and its contract verified by the real backend.** ⏳ One open leg: **the owner's browser pass**, which needs the Owner password — as for S1 and S2 |
+| **F5 — Sales Invoice + Credit Note** | 🟡 **NEXT.** ⚠️ It decides the create/preview/commit pattern F6–F8 all reuse, so it is worth disproportionate scrutiny |
+| ⚠️ `Supplier.code` / `Supplier.alias` / `Customer.code` | 📌 **The argument for doing this BEFORE F5 is now stronger**, not weaker: it blocks part of six rows of the search target list, and rows 8–10 are exactly the document screens F5–F7 build |
 | `Supplier.code` / `Supplier.alias` / `Customer.code` | 📌 Queued, scoped, blocks part of six rows of the search target list |
 | `Product.category` | 📌 Queued as **its own proposal**, requirement recorded, deliberately not started |
 | **Test-environment parity — enforcement** | ⚖️ **HELD, awaiting the owner's decision. Do not act on it in either direction.** See immediately below |
@@ -108,6 +112,158 @@ failure is how a build gains checks that get deleted the first time one is incon
 fallback — which is the **Java-default-locale knob's JavaScript twin**, and is the fifth instance of
 the same shape. Whichever way the decision goes, that assertion stays; it is not a down payment on
 option 1 and should not be read as one.
+
+## Step F4 — **Settings**. Approved 2026-08-01, checklist written at approval
+
+**The approved checklist**, written down at the moment of approval per `CLAUDE.md` and reconciled
+against at close-out. **Four decisions were taken before any code**, and three of them corrected a
+precondition this step was scoped from — recorded below the table.
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| **Nav** | | |
+| 1 | **Drop `settings.general` from the nav tree** — no catalogue key lands on it | ✅ **Done** — removed from `nav/tree.ts` with the reason in place, and both locale files |
+| **Settings block — `SETTINGS` grant, 18 keys** | | |
+| 2 | One shared **typed** settings-field mechanism, per catalogue type, not three copies | ✅ **Done** — `settings-catalogue.ts` + `setting-row.tsx`, built on `FieldEditor`. One request per field, no batching |
+| 3 | `/settings/documents` — **Documents & Rounding**, 4 keys | ✅ **Done** |
+| 4 | `/settings/email` — **Email / SMTP**, 12 keys (8 `smtp.*` + 4 dispatch) | ✅ **Done** |
+| 5 | `/settings/retention` — **Retention**, 2 keys | ✅ **Done.** ⚠️ Nothing here governs **backup** retention — that is `backup.retention.*`, which has no route |
+| 6 | `cash.payment.limit` renders with **no edit affordance at all**, with the statutory reason | ✅ **Done**, and asserted from both ends — the screen renders no button, and `F4WriteContractIT` has the real server refuse the `PUT` |
+| 7 | `smtp.password` is **write-only**: configured/never-configured, set-new-value, never a value | ✅ **Done** — the two states are told apart by an empty value with no timestamps. A test asserts the redaction marker never reaches the screen either |
+| 8 | The block survives a **403** — `SETTINGS` is default-deny and no role holds it by grant | ✅ **Done** — `Refusal` on the query, tested |
+| **Reference data** | | |
+| 9 | `/settings/vat-classes` — list, add, deactivate, reactivate, **edit description** | ✅ **Done** — list, detail, create |
+| 10 | Rate and code render **read-only with no affordance** — not disabled | ✅ **Done.** A fourth unavailability state, now written up in `frontend/README.md` — *no route exists* is not `editable: false` and must not be a disabled control |
+| 11 | **Reduced-counterpart management (`PUT`/`DELETE`) deliberately deferred**, with a test asserting its absence | ✅ **Deferred as approved**, and the test exists. The mapping is *shown* read-only, as the counterpart's code rather than its id |
+| 12 | `/settings/units-of-measure` — list, add, deactivate, reactivate, rename, fractional toggle, myDATA code | ✅ **Done.** ⚠️ There is **no `GET /api/units-of-measure/{id}`**, so the detail page finds its row in the unfiltered list |
+| 13 | `mydataCode` is **settable once then frozen** → `lockedReason`, shown disabled with the reason | ✅ **Done** — the first `lockedReason` that is not about one special record, and the server's refusal of a second write is asserted |
+| 14 | The create form **always sends `fractionalQuantityAllowed`** — ~~a primitive with no backend guard~~ | ✅ **Done, and the premise was wrong.** See the correction below — the backend *does* refuse an omission. The required-choice design stands on a different and better argument |
+| 15 | `GET /api/units-of-measure/without-mydata-code` surfaced as a **standing to-do**, not a debug panel | ✅ **Done** — a banner above the list. All 8 seeded units are in it, asserted against the real server |
+| **Inherited habits — S1 and S2** | | |
+| 16 | **Search**, adopting target-list rows 6 and 7: `?search=` on both routes, migration **V30**, `SearchFilter` on both screens | ✅ **Done** — V30 with 4 GIN trigram indexes, `search()` on both services, `?search=` on both routes, `SearchFilter` on both screens. Live-verified: V30 is applied on the running stack |
+| 17 | **Sorting** — sortable columns on both reference lists, S2's collator | ✅ **Done** — every column except the composite flags ones. The rate sorts with `compareDecimal`, not as text |
+| 18 | Every screen test carries **"rendering sends no write"**; every mutation carries `<Refusal>` | ✅ **Done** — 6 such assertions across the three new test files |
+| **Verification** | | |
+| 19 | **Every write confirmed against the real running backend**, not the mock server | ⚠️ **Done for the contract, NOT for the browser.** `F4WriteContractIT` — 15 tests, real Boot server, real PostgreSQL, sending the screens' literal JSON — and **it found a wrong premise on its first run** (sub-part 14). The browser leg needs the Owner password and is the owner's, as for S1 and S2 |
+| **Corrections found before building** | | |
+| 20 | Correct this file's **"no island class is seeded"** claim, and record applicability as **decided** | ✅ **Done** — recorded above at F4's kickoff. Java Jives ships to reduced-VAT islands, so the seeded chain is applicable data |
+| 21 | Record the **`el-GR-x-icu` collation answer** — never applied as a Postgres collation | ✅ **Done** — measured five ways against the running stack, written up above |
+
+### ⚠️ F4's first finding — the real backend corrected a premise the step was built on
+
+**Found on the first run of `F4WriteContractIT`, and it is the whole argument for that file
+existing.** The step was scoped believing that `NewUnitOfMeasure.fractionalQuantityAllowed` — a
+primitive `boolean` — could be **omitted silently**: that Jackson would deserialise the absent field
+to `false`, creating a unit that forbids fractional quantities without anybody having chosen that,
+with no guard anywhere. That belief came from reading the record's compact constructor, which
+null-checks `code` and `name` and nothing else. It was reasonable and it was **wrong**.
+
+**The server answers `400`.** An absent creator property reaches the canonical constructor as `null`
+and `FAIL_ON_NULL_FOR_PRIMITIVES` — on in this application — refuses the body before any handler
+runs. It is the same mechanism that broke product creation through `NewProduct.serialTracked`, and
+the reason step 15's item-2 sweep now marks primitives required in the spec. **The guard exists; it
+is just not in the constructor.**
+
+⚠️ **The correction makes the screen's design better-argued rather than wrong.** The create form
+still makes the fractional choice **required** rather than offering a checkbox — but for a reason the
+server cannot enforce and only a screen can:
+
+| | Sent | Server |
+|---|---|---|
+| field omitted | — | **`400`**, naming no field |
+| unticked checkbox | `false` | **`201`** — a decision nobody made |
+
+**The second row is the one that needed a design answer**, and it is the row the original premise
+obscured. Both are now asserted against the real server (`omittingThePrimitiveIsRefused`,
+`anExplicitFalseIsAccepted`), and the wrong claim has been removed from three places it had already
+been written into: the create form's javadoc, its screen test, and `frontend/README.md`.
+
+**What this says about method, which is worth more than the fix:** the claim was carried from a
+careful reading of the source into three files before anything executed it. Reading is not running.
+
+### ⚠️ F4's second finding — a javadoc named a constant that does not exist
+
+`SettingType.TRANSPORT_SECURITY`'s javadoc listed the accepted values as *"`NONE`, `STARTTLS` or
+`TLS`"*. **There is no `TLS` constant** — `EmailTransportSecurity` has `IMPLICIT_TLS`, `STARTTLS` and
+`NONE`, and `IMPLICIT_TLS` is what the live stack runs on port 465.
+
+**Nothing in either repository could have caught it.** A setting's value is an opaque `string` in the
+OpenAPI document, so no enum is generated, `enum-labels.test.ts` cannot see it, and the frontend has
+to mirror the list by hand — from the prose, if nobody checks. The refusal message is built from
+`values()` and was always correct; only the sentence describing it was wrong. A select built from
+that sentence offers an option every save refuses.
+
+Fixed in `SettingType`, and now pinned from both ends: `settings-catalogue.test.ts` asserts the list
+and explicitly that `TLS` is not in it, and `F4WriteContractIT` has **the real server** accept
+`IMPLICIT_TLS` and refuse `TLS`.
+
+### The four decisions taken at F4's kickoff, and why three of them were corrections
+
+**1. `settings.general` is dropped.** The nav declared four settings pages; the 18 catalogued keys
+distribute 4 + 12 + 2 across the other three, leaving General with **zero**. A menu item with nothing
+on it is exactly the permanent placeholder step 16b existed to remove.
+
+**2. VAT Classes are not "add and deactivate only" — that precondition was wrong.** Seven routes
+exist: create, get, deactivate, **reactivate**, **`PATCH …/description`**, and **`PUT`/`DELETE
+…/reduced-counterpart`**. ⚠️ **The rate and the code genuinely have no route** and never will —
+confirmed three ways (controller javadoc, service interface, entity). **Decided: F4 builds add /
+deactivate / reactivate / edit description.** Reduced-counterpart management is deferred — it carries
+statutory weight and is its own decision. **There is no ΕΛΠ/myDATA field on a VAT class at all**; the
+`code` *is* the Prosvasis Go code and is the identity. myDATA codes live on `unit_of_measure` and
+`vat_exemption_reason`, which are different tables.
+
+**3. ⚠️ The island rates were already seeded, and this file said they were not.** `V5` seeds **nine**
+VAT classes carrying the ΑΑΔΕ codes — `0`, `1030`, `1040`, `1041`, `1060`, `1091`, `1131`, `1170`,
+`1410` — and the reduced-counterpart chain is **already populated**: 24→17, 13→9, 6→4 *(to `1041`,
+the art.31 variant, not `1040`)*, 4→3. The claim recorded here that "no island class is seeded
+pending the applicability decision" was **factually wrong about the live database**, and was found by
+reading the table rather than the doc.
+
+**Applicability is now decided, not open: Java Jives ships to reduced-VAT islands, so these rates are
+genuinely in use.** The mapping is intentional and applicable data, not incidental seed. ⚠️ **That
+does not un-defer sub-part 11** — the rates being applicable is a different question from whether a
+screen should manage the mapping, and the second is still the owner's to place.
+
+⚠️ **Never key a VAT class off its rate.** Nine rows, **eight distinct percentages** — 4% appears
+twice, as `1040` and as `1041` under a different legal basis. `VatClassService` deliberately offers no
+`findByRate`, and a rate-based picker would be correct most of the time, which is the worst outcome
+available.
+
+**4. F3's acceptance pass came back passed**, so F4 starts clean. All seven checks confirmed by the
+owner on 2026-08-01. The gate is closed.
+
+### ✅ The collation question, answered before building — `el-GR-x-icu` was never applied
+
+**Asked at F4's kickoff because S2's write-up could be read either way, and it needed a real answer on
+record rather than staying ambiguous. It is not a defect — S2 recorded the decision correctly — but
+the wording made it easy to conclude the database had been changed. It has not been.**
+
+**Measured against the running stack**, five ways, every one negative:
+
+| Check | Result |
+|---|---|
+| Database default collation | **`C`**, `datlocprovider = c` — libc, unchanged |
+| User-created collations in `public` | **none** — no `CREATE COLLATION` was ever run |
+| Columns with a non-default collation | **none** |
+| Indexes whose definition contains `COLLATE` | **none** |
+| `el-GR-x-icu` in any migration or Java source | **zero occurrences** — it appears only in docs, in `collation.ts` comments, and in `collation.test.ts` as a *pinned expectation string* |
+
+And the ordering half is unchanged in code: every list endpoint is still a plain
+`findAllByOrderByNameAsc()` / `…SkuAsc()` with no `COLLATE` clause, so **live `ORDER BY` is still byte
+order under `C`** — exactly what S2 measured and reported.
+
+**So `el-GR-x-icu` was used for exactly two things, and neither is a schema change:** as an *ad-hoc
+`psql` measurement* establishing what output the client collator must match, and as the *documented
+target* for whenever server-side sorting lands. `Intl.Collator('el')` is the only collator running in
+production today. This is consistent with S2's own **"Decision: no collation index now"** — the
+answer was always recorded, just not in a form that survived being re-read.
+
+⚠️ **The obligation this leaves.** The day these endpoints sort on the server, the backend must add
+`ORDER BY … COLLATE "el-GR-x-icu"` *and* `collation.test.ts`'s pinned output is what it has to match.
+`el-GR-x-icu` **is available** on the running image (3 `el*` ICU collations registered), so nothing
+needs installing — only using.
+
+---
 
 ## Step S2 — **sortable columns** on the five list screens. Approved 2026-08-01
 
@@ -250,10 +406,17 @@ next. Fixed with a table-level `sortDescFirst: false`; a test names all three co
   - **No Go-adapter dependency.** The classes are **seeded directly** with the current Greek
     statutory rates — **24% / 13% / 6%** — rather than imported from Prosvasis Go. F4 does not wait
     on, and must not be designed around, an adapter that is phases away.
-  - ⏳ **Island-rate applicability is NOT settled** and is the one open part: whether the reduced
-    island rates apply to this business has to be **verified against actual operations**, not
-    assumed from the fact that the rates exist in law. Until that is answered, no island class is
-    seeded — consistent with this schema's standing refusal to invent a fallback rate.
+  - ~~⏳ **Island-rate applicability is NOT settled**… Until that is answered, no island class is
+    seeded.~~ ✅ **BOTH HALVES OF THIS WERE WRONG, and F4 corrected them by reading the table.**
+    - **The island classes were already seeded**, and had been since **V5** — `1170` (17%), `1091`
+      (9%), `1041` (4%, αρ.31) and `1030` (3%) — with the reduced-counterpart chain **already
+      populated**: 24→17, 13→9, 6→4 *(to `1041`, not `1040`)*, 4→3.
+    - **Applicability is decided, not open.** Confirmed by the owner 2026-08-01: **Java Jives ships
+      to reduced-VAT islands**, so these rates are genuinely in use and the mapping is intentional
+      data rather than incidental seed.
+    - ⚠️ This does **not** un-defer the mapping-management UI. Applicability being resolved is a
+      different question from whether a screen should edit the mapping, and the second is still the
+      owner's to place — see F4 sub-part 11.
   - **Adding a class is always available.** The seed is a starting point, not a closed list.
   - **An existing class's rate can never be modified after creation** — the bullet above is the
     mechanism, this is the policy it enforces, and they are the same decision stated from both ends.

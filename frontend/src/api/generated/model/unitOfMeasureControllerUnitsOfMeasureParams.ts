@@ -10,4 +10,5 @@
 
 export type UnitOfMeasureControllerUnitsOfMeasureParams = {
 active?: boolean;
+search?: string;
 };

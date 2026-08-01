@@ -26,6 +26,19 @@ public interface UnitOfMeasureService {
     /** Active units only — what a unit picker should offer. */
     List<UnitOfMeasureView> active();
 
+    /**
+     * Units whose code or name contains {@code term}, ignoring case and accents.
+     *
+     * <p>Row 7 of the search target list. A blank or null term matches everything, so a call site
+     * passes an absent query parameter straight through without a conditional of its own.
+     *
+     * <p><strong>The myDATA code is deliberately not searched.</strong> It is NULL on every seeded
+     * unit — the verified ΑΑΔΕ list has not been supplied — so a box that searched it would match
+     * nothing on every installation that exists today. {@link #withoutMydataCode()} is the route
+     * that answers the question actually being asked about that column.
+     */
+    List<UnitOfMeasureView> search(String term, boolean activeOnly);
+
     Optional<UnitOfMeasureView> find(long id);
 
     /** @throws UnitOfMeasureNotFoundException if absent */

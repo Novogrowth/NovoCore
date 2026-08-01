@@ -28,6 +28,19 @@ public interface VatClassService {
     /** Active classes only — what a rate dropdown should offer. */
     List<VatClassView> active();
 
+    /**
+     * Classes whose code or description contains {@code term}, ignoring case and accents.
+     *
+     * <p>Row 6 of the search target list. A blank or null term matches everything, so a call site
+     * passes an absent query parameter straight through without a conditional of its own.
+     *
+     * <p><strong>The rate is not searchable</strong>, for the reason this interface already gives
+     * for the absence of a lookup by rate: two classes charge 4% under different legal bases, so a
+     * rate does not identify a class. Ordering is by rate then code — the order {@link #all()}
+     * returns — because that is the order an accountant reads this list in.
+     */
+    List<VatClassView> search(String term, boolean activeOnly);
+
     Optional<VatClassView> find(long id);
 
     /** @throws VatClassNotFoundException if absent */

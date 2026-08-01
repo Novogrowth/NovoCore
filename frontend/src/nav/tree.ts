@@ -288,13 +288,13 @@ export const NAV_TREE: readonly NavNode[] = [
         noApi: 'A heading.',
         children: [
           {
-            id: 'settings.general',
-            path: '/settings/general',
-            requires: view(Section.SETTINGS),
-            status: 'BUILT',
-            endpoint: 'GET /api/settings',
-          },
-          {
+            // ⚠️ There is deliberately no "General" item here, and it is not an omission.
+            //
+            // `SettingsCatalog` exposes 18 keys; four are rounding/cash/attachment, twelve are
+            // SMTP and email dispatch, two are email retention — and they land on the three pages
+            // below with NOTHING left over. A General page would have been an empty screen behind
+            // a permanent menu item, which is exactly what step 16b existed to remove. Dropped at
+            // F4's kickoff rather than shipped blank.
             id: 'settings.email',
             path: '/settings/email',
             requires: view(Section.SETTINGS),

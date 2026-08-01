@@ -13,6 +13,17 @@ import { CustomerCreate } from '@/pages/customers/customer-create'
 import { CustomerDetail } from '@/pages/customers/customer-detail'
 import { CustomersList } from '@/pages/customers/customers-list'
 import { AdaptersGrid, ModulesGrid } from '@/pages/registry-grid'
+import {
+  DocumentSettings,
+  EmailSettings,
+  RetentionSettings,
+} from '@/pages/settings/settings-page'
+import { UnitCreate } from '@/pages/units-of-measure/unit-create'
+import { UnitDetail } from '@/pages/units-of-measure/unit-detail'
+import { UnitsList } from '@/pages/units-of-measure/units-list'
+import { VatClassCreate } from '@/pages/vat-classes/vat-class-create'
+import { VatClassDetail } from '@/pages/vat-classes/vat-class-detail'
+import { VatClassesList } from '@/pages/vat-classes/vat-classes-list'
 import { RoleCreate } from '@/pages/roles/role-create'
 import { RoleDetail } from '@/pages/roles/role-detail'
 import { RolesList } from '@/pages/roles/roles-list'
@@ -41,6 +52,11 @@ const SCREENS: Record<string, () => ReactElement> = {
   '/roles': RolesList,
   '/settings/adapters': AdaptersGrid,
   '/settings/modules': ModulesGrid,
+  '/settings/documents': DocumentSettings,
+  '/settings/email': EmailSettings,
+  '/settings/retention': RetentionSettings,
+  '/settings/vat-classes': VatClassesList,
+  '/settings/units-of-measure': UnitsList,
 }
 
 /**
@@ -65,6 +81,13 @@ const CHILD_ROUTES: { path: string; owner: string; element: () => ReactElement }
   { path: '/users/:id', owner: 'users', element: UserDetail },
   { path: '/roles/new', owner: 'roles', element: RoleCreate },
   { path: '/roles/:id', owner: 'roles', element: RoleDetail },
+  // Reference data. `owner` is the nav node whose grant decides — `TAX_AND_CHARGES` for VAT
+  // classes and `PRODUCTS` for units of measure, neither of which is `SETTINGS` despite both
+  // living under the Settings heading.
+  { path: '/settings/vat-classes/new', owner: 'settings.vatClasses', element: VatClassCreate },
+  { path: '/settings/vat-classes/:id', owner: 'settings.vatClasses', element: VatClassDetail },
+  { path: '/settings/units-of-measure/new', owner: 'settings.unitsOfMeasure', element: UnitCreate },
+  { path: '/settings/units-of-measure/:id', owner: 'settings.unitsOfMeasure', element: UnitDetail },
 ]
 
 function RouteElement({ node, screen }: { node: NavNode; screen?: () => ReactElement }) {

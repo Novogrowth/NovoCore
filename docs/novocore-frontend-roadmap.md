@@ -2,13 +2,15 @@
 
 **Legend:** 🟢 Done · 🟡 **Current** = in progress · 🔴 Not started
 
-⚠️ **Nothing is 🟡 as of S2's close-out — no step is half-finished.** **F4 (Settings) is next.**
-S1 and S2 were both inserted ahead of F4 and are both done; no work of F4 exists.
+⚠️ **Nothing is 🟡 — no step is half-finished.** **F5 is next**, and it carries more weight than its
+row implies (see the note at the bottom).
 
-⚠️ **S2 carries one open verification, and it is not a status of 🟡.** Its browser leg against the
-live stack needs the Owner password, which is deliberately not in this repo — the same leg S1
-needed and the owner ran personally. Everything buildable is built, green and verified; see
-`PROGRESS.md`.
+⚠️ **S2 and F4 each carry one open verification, and neither is a status of 🟡.** Both are the
+*browser* leg against the live stack, which needs the Owner password — deliberately not in this repo,
+the same leg S1 needed and the owner ran personally. Everything buildable is built, green and
+verified. ⚠️ **F4's contract leg is closed by something stronger than a screen test**:
+`F4WriteContractIT` sends the screens' literal JSON bodies to a real Boot server over real HTTP, and
+**it corrected a premise the step was built on** on its first run. See `PROGRESS.md`.
 
 **Hours** — `Est.` is a planning estimate where one exists; most rows here don't have one
 yet, matching how steps 16a/16b were treated on the backend roadmap (no estimate invented
@@ -41,8 +43,8 @@ candidate causes per symptom).
 |   F3 | Users & Roles — real admin screen: create roles, grant sections, manage accounts ᶠ³                                                |     — |    0.9 | 🟢 Done        |
 |   S1 | *(standalone, not folded into F4)* Substring search — `pg_trgm` + `unaccent`, one shared mechanism, wired to all five built screens ˢ¹ |     — |    1.8 | 🟢 Done        |
 |   S2 | *(standalone)* **Sorting** — sortable columns on all five list screens, one collator, client-side ˢ²                                |     — |    0.7 | 🟢 Done        |
-|   F4 | Settings — general config, Reference Data (VAT classes, UoM), Adapters/Modules toggle grids (read-only placeholders)               |     — |        | 🔴 **Next**    |
-|   F5 | Sales Invoice + Credit Note — first transactional-document screen; decides the create/preview/commit pattern                       |     — |        | 🔴 Not started |
+|   F4 | Settings — three config pages, Reference Data (VAT classes, UoM), Adapters/Modules grids (already read-only) ᶠ⁴                     |     — |        | 🟢 Done        |
+|   F5 | Sales Invoice + Credit Note — first transactional-document screen; decides the create/preview/commit pattern                       |     — |        | 🔴 **Next**    |
 |   F6 | Purchase Invoice + Goods Receipt — same document pattern; no preview endpoint yet, decide whether to add one                       |     — |        | 🔴 Not started |
 |   F7 | Receipts, Payments, Bank Transfers — editable-in-place variant of the document pattern, plus settlement/allocation UI              |     — |        | 🔴 Not started |
 |   F8 | Freight Allocation, Journal (read-only), Write-offs — rounds out Finance on patterns already proven                                |     — |        | 🔴 Not started |
@@ -341,6 +343,38 @@ convincing and wrong — so a column there is sortable only if its `meta.sortKey
 declares. **None of the five column files carries a `sortKey` yet**, because no backend enum exists
 to name one. The day one of these gains paging, its sort controls *disappear* until somebody adds
 them. That is the safe failure and it is loud, but it is a real obligation.
+
+**ᶠ⁴ F4, Settings — done, all 21 sub-parts.** Three settings pages over one endpoint, VAT classes
+and units of measure as full list/detail/create screens, plus search (target list rows 6 and 7,
+migration **V30**) and sorting adopted from S1 and S2. **307 frontend tests, 31 files** (from
+269/27); **backend +15**, one new migration, one new IT.
+
+**Four decisions were taken before any code, and three of them were corrections to the preconditions
+the step was scoped from.** ⚠️ **VAT classes were never "add and deactivate only"** — seven routes
+exist, including `PATCH …/description` and the `reduced-counterpart` pair; the *rate* and the *code*
+genuinely have none and never will. ⚠️ **The island reduced rates were already seeded**, since V5,
+with the counterpart chain already populated — `PROGRESS.md` said the opposite, and the owner has
+since confirmed applicability is decided rather than open: **Java Jives ships to reduced-VAT
+islands**. ⚠️ **And "General" had no keys to put on it**, so the nav item was dropped rather than
+shipped empty.
+
+**Two findings, and the first is the one worth carrying forward.** `F4WriteContractIT` — the screens'
+literal JSON bodies, sent to a real Boot server over real HTTP — **corrected a premise the step was
+built on, on its first run**. The belief was that omitting the primitive `fractionalQuantityAllowed`
+arrives silently as `false`; the server answers `400`, because `FAIL_ON_NULL_FOR_PRIMITIVES` refuses
+an absent primitive and the guard simply is not in the constructor that had been read. The claim had
+already been written into three files before anything executed it. **Reading is not running.** The
+second: `SettingType`'s javadoc named a transport-security constant, `TLS`, that does not exist — and
+because a setting's value is an opaque string in the spec, nothing in either repository could have
+caught it.
+
+**F4 also adds a fourth way a field can be unavailable**, now written up in `frontend/README.md`:
+*no route exists on any installation* is neither `editable: false` (which means "not yours") nor a
+disabled control (which invites a hunt for the permission that unlocks it). Plain text with the
+reason. The rate and code on a VAT class, the code on a unit, and `cash.payment.limit` all use it.
+
+⚠️ **One verification is open and it is the owner's**: a browser driving these forms against the
+running stack. The contract question is closed by the IT above; the browser question is not.
 
 **F5 carries more weight than its position implies.** It's not just the next screen — it
 decides the entire document-creation interaction pattern (multi-line entry, running

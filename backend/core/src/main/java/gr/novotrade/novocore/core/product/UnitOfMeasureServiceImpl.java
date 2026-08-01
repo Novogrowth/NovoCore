@@ -6,15 +6,27 @@ import gr.novotrade.novocore.core.api.product.NewUnitOfMeasure;
 import gr.novotrade.novocore.core.api.product.UnitOfMeasureNotFoundException;
 import gr.novotrade.novocore.core.api.product.UnitOfMeasureService;
 import gr.novotrade.novocore.core.api.product.UnitOfMeasureView;
+import gr.novotrade.novocore.core.support.Specifications;
+import gr.novotrade.novocore.core.support.TextSearch;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 class UnitOfMeasureServiceImpl implements UnitOfMeasureService {
+
+    /**
+     * Row 7 of the search target list — "Name / Code". Spelled as entity properties.
+     *
+     * <p>⚠️ The label column here is {@code name}; on {@code vat_class} the same row of that table
+     * is called {@code description}. They are not interchangeable and the PATCH routes differ
+     * accordingly.
+     */
+    private static final String[] SEARCHABLE = {"code", "name"};
 
     private static final String ENTITY_TYPE = "UnitOfMeasure";
 
@@ -39,6 +51,19 @@ class UnitOfMeasureServiceImpl implements UnitOfMeasureService {
     @Transactional(readOnly = true)
     public List<UnitOfMeasureView> active() {
         return toViews(repository.findByActiveTrueOrderByCodeAsc());
+    }
+
+    /**
+     * Row 7 of the search target list: code and name. The myDATA code is not searched — see the
+     * interface, and V30 for why it has no index either.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<UnitOfMeasureView> search(String term, boolean activeOnly) {
+        return toViews(repository.findAll(
+                Specifications.<UnitOfMeasure>activeOnly(activeOnly)
+                        .and(TextSearch.matching(term, SEARCHABLE)),
+                Sort.by(Sort.Order.asc("code"))));
     }
 
     @Override

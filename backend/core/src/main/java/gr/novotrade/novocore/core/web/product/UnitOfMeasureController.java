@@ -44,10 +44,20 @@ class UnitOfMeasureController {
         this.unitsOfMeasure = unitsOfMeasure;
     }
 
+    /**
+     * <p>{@code search} matches the code and the name anywhere in the string, ignoring case and
+     * accents. It does <strong>not</strong> match the myDATA code: that column is NULL on every
+     * seeded unit, so searching it would match nothing on every installation that exists today —
+     * {@code /without-mydata-code} below is the route that asks the real question about it.
+     */
     @GetMapping(path = "/api/units-of-measure", produces = MediaType.APPLICATION_JSON_VALUE)
-    ListResponse<UnitOfMeasureView> unitsOfMeasure(@RequestParam(required = false) Boolean active) {
-        return ListResponse.of(
-                Boolean.TRUE.equals(active) ? unitsOfMeasure.active() : unitsOfMeasure.all());
+    ListResponse<UnitOfMeasureView> unitsOfMeasure(@RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) String search) {
+        boolean activeOnly = Boolean.TRUE.equals(active);
+        if (search != null) {
+            return ListResponse.of(unitsOfMeasure.search(search, activeOnly));
+        }
+        return ListResponse.of(activeOnly ? unitsOfMeasure.active() : unitsOfMeasure.all());
     }
 
     /**
