@@ -5,12 +5,17 @@
 ⚠️ **Nothing is 🟡 — no step is half-finished.** **F5 is next**, and it carries more weight than its
 row implies (see the note at the bottom).
 
-⚠️ **S2 and F4 each carry one open verification, and neither is a status of 🟡.** Both are the
-*browser* leg against the live stack, which needs the Owner password — deliberately not in this repo,
-the same leg S1 needed and the owner ran personally. Everything buildable is built, green and
-verified. ⚠️ **F4's contract leg is closed by something stronger than a screen test**:
-`F4WriteContractIT` sends the screens' literal JSON bodies to a real Boot server over real HTTP, and
-**it corrected a premise the step was built on** on its first run. See `PROGRESS.md`.
+✅ **Every step through F4 is verified on both legs, including the browser ones.** S1, S2 and F4 each
+needed a live browser check against the running stack — the Owner password is deliberately not in
+this repo — and **the owner ran all three personally**. Nothing is outstanding on any built step.
+
+⚠️ **F4's contract leg is closed by something stronger than a screen test**, and it is the pattern
+F5 onwards should copy: `F4WriteContractIT` sends the screens' literal JSON bodies to a real Boot
+server over real HTTP, and **it corrected a premise the step was built on** on its first run.
+
+📌 **One obligation is open and belongs to no step yet:** the database still sorts by bytes under
+locale `C` while the browser sorts by `Intl.Collator('el')`. Invisible only because no list pages on
+the server. **Whoever adds paging to a list screen owns it** — see `PROGRESS.md`.
 
 **Hours** — `Est.` is a planning estimate where one exists; most rows here don't have one
 yet, matching how steps 16a/16b were treated on the backend roadmap (no estimate invented
@@ -43,7 +48,7 @@ candidate causes per symptom).
 |   F3 | Users & Roles — real admin screen: create roles, grant sections, manage accounts ᶠ³                                                |     — |    0.9 | 🟢 Done        |
 |   S1 | *(standalone, not folded into F4)* Substring search — `pg_trgm` + `unaccent`, one shared mechanism, wired to all five built screens ˢ¹ |     — |    1.8 | 🟢 Done        |
 |   S2 | *(standalone)* **Sorting** — sortable columns on all five list screens, one collator, client-side ˢ²                                |     — |    0.7 | 🟢 Done        |
-|   F4 | Settings — three config pages, Reference Data (VAT classes, UoM), Adapters/Modules grids (already read-only) ᶠ⁴                     |     — |        | 🟢 Done        |
+|   F4 | Settings — three config pages, Reference Data (VAT classes, UoM), Adapters/Modules grids (already read-only) ᶠ⁴                     |     — |    1.0 | 🟢 Done        |
 |   F5 | Sales Invoice + Credit Note — first transactional-document screen; decides the create/preview/commit pattern                       |     — |        | 🔴 **Next**    |
 |   F6 | Purchase Invoice + Goods Receipt — same document pattern; no preview endpoint yet, decide whether to add one                       |     — |        | 🔴 Not started |
 |   F7 | Receipts, Payments, Bank Transfers — editable-in-place variant of the document pattern, plus settlement/allocation UI              |     — |        | 🔴 Not started |
@@ -337,6 +342,9 @@ Recorded as 0.7.** 392 of the 397 are this session; the remaining 5 are the prev
 which the window rule includes. As with every row here it **excludes its own close-out**, so read it
 as "at least".
 
+✅ **S2's open browser leg is closed** — the owner ran it personally on 2026-08-01, together with
+F4's. Nothing about S2 is outstanding.
+
 ⚠️ **What S2 leaves for whoever adds server-side sorting.** `DataTable` now refuses to client-sort a
 server-paged list — sorting one page of many and presenting it as the order of the whole table is
 convincing and wrong — so a column there is sortable only if its `meta.sortKey` is one the endpoint
@@ -344,10 +352,10 @@ declares. **None of the five column files carries a `sortKey` yet**, because no 
 to name one. The day one of these gains paging, its sort controls *disappear* until somebody adds
 them. That is the safe failure and it is loud, but it is a real obligation.
 
-**ᶠ⁴ F4, Settings — done, all 21 sub-parts.** Three settings pages over one endpoint, VAT classes
+**ᶠ⁴ F4, Settings — done, all 22 sub-parts** (21 approved up front, one added mid-step: the `SettingType` javadoc fix, given a row rather than a paragraph per `CLAUDE.md`). Three settings pages over one endpoint, VAT classes
 and units of measure as full list/detail/create screens, plus search (target list rows 6 and 7,
 migration **V30**) and sorting adopted from S1 and S2. **307 frontend tests, 31 files** (from
-269/27); **backend +15**, one new migration, one new IT.
+269/27); **backend 1376, +16**, one new migration, one new IT.
 
 **Four decisions were taken before any code, and three of them were corrections to the preconditions
 the step was scoped from.** ⚠️ **VAT classes were never "add and deactivate only"** — seven routes
@@ -373,8 +381,27 @@ caught it.
 disabled control (which invites a hunt for the permission that unlocks it). Plain text with the
 reason. The rate and code on a VAT class, the code on a unit, and `cash.payment.limit` all use it.
 
-⚠️ **One verification is open and it is the owner's**: a browser driving these forms against the
-running stack. The contract question is closed by the IT above; the browser question is not.
+✅ **Both verification legs are closed.** The contract leg by `F4WriteContractIT`; the **browser leg
+by the owner personally, on 2026-08-01**, against the running stack — as for S1 and S2. Nothing about
+F4 is outstanding.
+
+📌 **What F4 did NOT close, and must not be read as having closed:** `el-GR-x-icu` is still not
+applied to the database. F4 established *that* — measured five ways — and recording it was the
+sub-part. **The divergence is open**: the browser orders by `Intl.Collator('el')`, the database by
+bytes under locale `C`, and it is invisible only because no list pages on the server. **Whoever adds
+paging to a list screen owns it.** Full statement in `PROGRESS.md`.
+
+**Measured, per the method in `novocore-roadmap.md`** — window `a4324db` (S2's commit) to `c89c1c9`,
+commit-to-commit inside a single session, which is the clean case. **1200 events, 0.95 h active
+against 1.06 h wall clock, 605k out, 134.5M in. Recorded as 1.0.** 1188 of the 1200 events are this
+session; the remaining 12 are the previous session's tail, which the window rule includes. As with
+every row here it **excludes its own close-out**, which is not in the transcript when the figure is
+computed — read it as "at least".
+
+⚠️ **F4 is the largest `Out` figure of any frontend step so far** — 605k against S1's 359k and F3's
+259k — and the step was not proportionally larger. Most of the difference is the two documentation
+passes the findings earned and the contract IT, not screen code. Recorded without adjustment; it is
+data about what this kind of step costs, which is the only reason this column exists.
 
 **F5 carries more weight than its position implies.** It's not just the next screen — it
 decides the entire document-creation interaction pattern (multi-line entry, running

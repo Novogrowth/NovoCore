@@ -76,6 +76,42 @@ declares required fields on 2 of 185 schemas, so every generated request type is
 none of them means it; the form was written correctly against a contract that was wrong, and the
 only thing that could ever have said so was the server.
 
+### Named anti-pattern: a fact established by reading, then built upon
+
+**Reading source code tells you what one file says. It does not tell you what the system does.** The
+gap between those is where this one lives, and it is not carelessness — it opens precisely when the
+reading is *careful*, because a careful reading feels like a verified fact and gets written down as
+one.
+
+**The worked example, from F4.** `NewUnitOfMeasure.fractionalQuantityAllowed` is a primitive
+`boolean`. Its compact constructor null-checks `code` and `name` — and nothing else. Read that
+constructor and the conclusion is immediate and wrong: *omitting the field must be accepted, and must
+silently arrive as `false`, creating a unit that forbids fractional quantities with nobody having
+chosen that.* Every step of the reasoning is sound. The constructor really does check only two
+fields.
+
+**The server answers `400`.** `FAIL_ON_NULL_FOR_PRIMITIVES` refuses an absent primitive before the
+handler runs — the same mechanism that broke product creation through `NewProduct.serialTracked`, and
+the reason `OpenApiSchema` now marks primitives required. **The guard exists; it is one layer above
+the file that was read.** No amount of further reading *of that file* would have found it.
+
+⚠️ **What it cost, and why it is worth a named entry:** the claim was written into **three files** —
+a screen's javadoc, its test, and `frontend/README.md` — before anything executed it. It was
+corrected by the first run of a test that asked the real server. Had that test not existed, a false
+explanation would now be sitting in the README under a ⚠️, indistinguishable in tone from the ones
+that were paid for.
+
+**The tell is grammatical, and it is worth learning to hear:** *"there is no guard"*, *"nothing
+validates this"*, *"the backend cannot catch it"*. Every one of those is a claim about **the absence
+of behaviour across a whole system**, and no file contains that. A single file can only ever support
+*"this file does not do X."*
+
+**The remedy is not more reading.** It is to notice when a conclusion has crossed from *"this code
+says"* to *"the system does"*, and make the system say it: a test, a request, a query. This is the
+same rule as *"a verification that answers its own request"*, arriving from the other side — that one
+is about a check that cannot see the answer, this one is about a conclusion reached without asking.
+**Both reduce to: the thing that decides is the thing that must answer.**
+
 ### Named anti-pattern: a test environment configured unlike the real one
 
 **A test that runs against a differently-configured dependency is not testing the system; it is

@@ -486,9 +486,11 @@ form's design did not change — the choice is still required rather than a chec
 did, and it is a better one: an unticked checkbox does not omit the field, it sends `false`, which is
 **accepted**. The server can refuse an omission; only the screen can refuse a default nobody chose.
 
-⚠️ **What it does not close: the browser leg.** Driving these forms against the running Compose stack
-needs the Owner password, which is deliberately not in this repository — the same leg S1 and S2 needed
-and the owner ran personally.
+**The browser leg is a separate question, and it is answered separately.** Driving these forms
+against the running Compose stack needs the Owner password, which is deliberately not in this
+repository — so the owner runs it. For S1, S2 and F4 they did, on 2026-08-01. **Neither leg
+substitutes for the other**: the IT cannot tell you a control is reachable, and a browser pass cannot
+tell you which of 22 sub-parts was checked.
 
 ### knip's entry list
 

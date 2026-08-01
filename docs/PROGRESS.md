@@ -1,6 +1,6 @@
 # NovoCore — Build Progress
 
-*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-08-01 (S1's close-out — substring search).*
+*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-08-01 (F4's close-out — Settings).*
 
 *Close-out now also pushes to `origin` automatically (`CLAUDE.md`), so this file no longer tracks
 unpushed commits.*
@@ -36,7 +36,7 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 16a | **Backend prerequisites for the frontend** — four items agreed before any step 16 work | **Done** — `/me`, preview endpoints, the OpenAPI spec + drift check, and the paging contract. Migration **V27**, plus **session eviction**, a defect found while building the first item. See below |
 | 16b | **Users & roles, journal listing, settings** — the three sections with no HTTP surface at all | **Done, committed** `452b3fd` — 37 routes, **no migration**. Three defects found and fixed, none of them in the code the step set out to write. See below |
 | S1 | **Substring search** — `pg_trgm` + `unaccent`, one shared mechanism, five screens | **Done** — migrations **V28** and **V29**, 17 GIN trigram indexes, `TextSearch` + `SearchFilter`, `?search=` on five routes. **Two findings**, one of which was invisible to the entire test suite until the test database was made to match the real one. See below |
-| F4 | **Settings** — three config pages, VAT classes and units of measure, plus search and sorting | **Done** — migration **V30**, 4 GIN trigram indexes, `?search=` on 2 more routes, **21 sub-parts all with verdicts**, and `F4WriteContractIT` (15 tests) which **corrected a premise the step was built on**. Two findings. See below |
+| F4 | **Settings** — three config pages, VAT classes and units of measure, plus search and sorting | **Done** — migration **V30**, 4 GIN trigram indexes, `?search=` on 2 more routes, **22 sub-parts all with verdicts** (21 approved, 1 added mid-step), and `F4WriteContractIT` (15 tests) which **corrected a premise the step was built on**. Two findings. See below |
 | 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress. F0–F4, S1 and S2 done; F5 is next.** Foundations `94e17cd`, Products `56e3726` + guards `28c4119` + brand pass, then the render-loop fix `3458ee6`, F0 (the seed pass), F1 Suppliers `b406b27`, F2 Customers `496c7be`, F3 Users & Roles `aea0e56`, then **S1** (search), **S2** (sorting) and **F4** (Settings). **307 frontend tests, 31 files, green.** Per-step detail in `docs/novocore-frontend-roadmap.md`; decisions and what each step left behind in *Step 16 — the frontend* below |
 
 **Tests: 1376 passing, 0 failing, 1 skipped, `mvn clean verify` exit 0. 175 routes.** Counted from a
@@ -63,23 +63,27 @@ directly rather than trusting the line count: **0 removed, 37 added, 174 total.*
 
 ---
 
-## ▶ Next session — **F5, Sales Invoice + Credit Note.** F4 is closed except for the owner's browser pass
+## ▶ Next session — **F5, Sales Invoice + Credit Note.** F4 is complete and fully verified
 
 **Read, in this order:** `CLAUDE.md` → **`frontend/README.md`** (every frontend convention lives
-there, and several of them were earned expensively) → `docs/novocore-frontend-roadmap.md` for the step order → the *Step 16, the frontend* section below for F1–F3's decisions and what they left behind.
+there, and several of them were earned expensively) → `docs/novocore-frontend-roadmap.md` for the
+step order → the *Step 16, the frontend* section below for F1–F4's decisions and what they left
+behind.
+
+*Last updated: 2026-08-01, F4's close-out.*
 
 ### ▶▶ What is next, in one place
 
 | | State |
 |---|---|
 | **Substring search (S1)** | ✅ **Complete and live-verified.** Nothing outstanding |
-| **Sorting (S2)** | ✅ **Built, green, and verified against the running stack.** Client-side, on all five list screens. See below |
-| **F4 — Settings** | ✅ **Built, green, and its contract verified by the real backend.** ⏳ One open leg: **the owner's browser pass**, which needs the Owner password — as for S1 and S2 |
+| **Sorting (S2)** | ✅ **Complete and live-verified.** Client-side, on all five list screens; the browser leg was run by the owner on 2026-08-01. Nothing outstanding |
+| **F4 — Settings** | ✅ **COMPLETE.** All 22 sub-parts have verdicts, none is "still open". Contract verified by the real backend; **browser leg run personally by the owner on 2026-08-01**. Nothing outstanding |
 | **F5 — Sales Invoice + Credit Note** | 🟡 **NEXT.** ⚠️ It decides the create/preview/commit pattern F6–F8 all reuse, so it is worth disproportionate scrutiny |
 | ⚠️ `Supplier.code` / `Supplier.alias` / `Customer.code` | 📌 **The argument for doing this BEFORE F5 is now stronger**, not weaker: it blocks part of six rows of the search target list, and rows 8–10 are exactly the document screens F5–F7 build |
-| `Supplier.code` / `Supplier.alias` / `Customer.code` | 📌 Queued, scoped, blocks part of six rows of the search target list |
+| ⚠️ **Database sort order ≠ browser sort order** | 📌 **OPEN, and F4 did not close it.** F4 established *that* `el-GR-x-icu` was never applied; the database still orders by bytes under locale `C` while the browser orders by `Intl.Collator('el')`. Invisible only because no list pages on the server. **Whoever adds paging to a list screen owns this.** See the standing item below |
 | `Product.category` | 📌 Queued as **its own proposal**, requirement recorded, deliberately not started |
-| **Test-environment parity — enforcement** | ⚖️ **HELD, awaiting the owner's decision. Do not act on it in either direction.** See immediately below |
+| **Test-environment parity — enforcement** | ⚖️ **STILL HELD, awaiting the owner's decision.** Untouched by F4. Do not act on it in either direction |
 
 ### ⚖️ Held for the owner — does test-environment parity become a queue item with teeth?
 
@@ -144,10 +148,12 @@ precondition this step was scoped from — recorded below the table.
 | 17 | **Sorting** — sortable columns on both reference lists, S2's collator | ✅ **Done** — every column except the composite flags ones. The rate sorts with `compareDecimal`, not as text |
 | 18 | Every screen test carries **"rendering sends no write"**; every mutation carries `<Refusal>` | ✅ **Done** — 6 such assertions across the three new test files |
 | **Verification** | | |
-| 19 | **Every write confirmed against the real running backend**, not the mock server | ⚠️ **Done for the contract, NOT for the browser.** `F4WriteContractIT` — 15 tests, real Boot server, real PostgreSQL, sending the screens' literal JSON — and **it found a wrong premise on its first run** (sub-part 14). The browser leg needs the Owner password and is the owner's, as for S1 and S2 |
+| 19 | **Every write confirmed against the real running backend**, not the mock server | ✅ **Done, both legs.** *Contract:* `F4WriteContractIT` — 15 tests, real Boot server, real PostgreSQL, sending the screens' literal JSON — and **it found a wrong premise on its first run** (sub-part 14). *Browser:* **the owner ran it personally on 2026-08-01** against the running stack, as for S1 and S2. Nothing about F4's verification is outstanding |
 | **Corrections found before building** | | |
 | 20 | Correct this file's **"no island class is seeded"** claim, and record applicability as **decided** | ✅ **Done** — recorded above at F4's kickoff. Java Jives ships to reduced-VAT islands, so the seeded chain is applicable data |
-| 21 | Record the **`el-GR-x-icu` collation answer** — never applied as a Postgres collation | ✅ **Done** — measured five ways against the running stack, written up above |
+| 21 | Record the **`el-GR-x-icu` collation answer** — never applied as a Postgres collation | ✅ **Done** — measured five ways against the running stack, written up above. ⚠️ **Recording it is what was in scope; it is NOT resolved.** It stays an open obligation — see the standing item below |
+| **Added during the step** — per `CLAUDE.md`, a finding gets a row rather than a paragraph | | |
+| 22 | Fix **`SettingType`'s javadoc naming a transport-security constant that does not exist** | ✅ **Done** — the javadoc said `TLS`; `EmailTransportSecurity` has `IMPLICIT_TLS`. Corrected in `core-api`, and pinned from both ends: `settings-catalogue.test.ts` asserts `TLS` is not offered, and `F4WriteContractIT` has the real server accept `IMPLICIT_TLS` and refuse `TLS` |
 
 ### ⚠️ F4's first finding — the real backend corrected a premise the step was built on
 
@@ -258,10 +264,43 @@ target* for whenever server-side sorting lands. `Intl.Collator('el')` is the onl
 production today. This is consistent with S2's own **"Decision: no collation index now"** — the
 answer was always recorded, just not in a form that survived being re-read.
 
-⚠️ **The obligation this leaves.** The day these endpoints sort on the server, the backend must add
-`ORDER BY … COLLATE "el-GR-x-icu"` *and* `collation.test.ts`'s pinned output is what it has to match.
-`el-GR-x-icu` **is available** on the running image (3 `el*` ICU collations registered), so nothing
-needs installing — only using.
+### 📌 STANDING OPEN OBLIGATION — the database does not yet sort the way the browser does
+
+⚠️ **F4 answered the question; it did not fix the thing.** Recording the answer was the sub-part, and
+it is done. **The divergence itself is open and stays open**, and it must not be read as resolved
+because a session went and looked at it.
+
+**What is true today, on the running stack:**
+
+| | Orders by |
+|---|---|
+| The **browser**, on all five list screens (S2) | `Intl.Collator('el')` — Greek block first, accents and case handled |
+| The **database**, on every list endpoint | **byte order under locale `C`** — `Zebra` before `apple`, every Greek name after every Latin one |
+
+**These disagree, and today it does not show**, for one reason only: all five endpoints return their
+rows whole, so the browser re-sorts the entire list and the database's order is never what anybody
+sees. **That is a property of the data being small, not a property of the design.**
+
+⚠️ **The day any of these lists gains server-side paging, the disagreement becomes visible and
+wrong** — page 1 would hold the rows the *database* thinks come first, re-sorted by the *browser*
+into an order that is correct only within that page. This is the same shape as the guard `DataTable`
+already carries for sorting a server-paged list, arriving from the other direction.
+
+**What closing it requires**, none of which is built:
+
+1. `ORDER BY … COLLATE "el-GR-x-icu"` on the list queries. `el-GR-x-icu` **is available** on the
+   running image (3 `el*` ICU collations registered) so nothing needs installing — only using.
+2. `collation.test.ts`'s pinned PostgreSQL output is the expectation it has to match; that pin exists
+   precisely so the two halves cannot drift, and it is the reason this is a small job rather than a
+   research one.
+3. ⚠️ **Still no collation index**, per S2's decision — an index expression whose meaning changes on
+   an ICU upgrade is what `CLAUDE.md` rules out. Add one only when a table gets large, and record the
+   `REINDEX` obligation next to the existing trigram one. PostgreSQL records `collversion` and warns
+   loudly, which is the opposite of the silent failure the rule was written against.
+
+**It is not scheduled**, and deliberately so: it becomes necessary the moment server-side paging
+lands on one of these five, and that is the queued tier-A paging item's neighbour rather than this
+one's. **Whoever builds paging on a list screen owns this.**
 
 ---
 
@@ -276,7 +315,7 @@ needs installing — only using.
 | 3 | Sortable columns on Products, Suppliers, Customers, Users, Roles | ✅ **Done** — every column except the composite Flags/Grants ones, which say in code why they cannot be ordered |
 | 4 | Use the existing `DataTable` abstraction and the tier-A paging groundwork | ✅ **Done** — `DataTable` + `useListState`; the handle gained `serverSorts`, nothing else changed shape |
 | 5 | State which side sorts, and why | ✅ **Client-side.** All five endpoints return their rows whole, so a browser sort sorts the *list*, not a page. Backend sorting for these five is not built and is not the queued tier-A item either — that item covers five *other* services |
-| 6 | Confirm against the real running backend | ✅ **Done on three legs, one leg outstanding.** See below |
+| 6 | Confirm against the real running backend | ✅ **Done, all four legs** — the fourth (a browser against the live stack) was run by the owner on 2026-08-01. See below |
 
 ### S2's first question, answered — what `ORDER BY` does today, and what fixes it
 
@@ -322,7 +361,7 @@ against. **Decision: no collation index now.** Add one when a table gets large, 
 enabling it would buy niceness at the cost of the two halves disagreeing. Matching it server-side
 needs `CREATE COLLATION … locale = 'el-GR-u-kn-true'`, a backend decision and a migration.
 
-### What S2 verified against the running stack, and the one leg that is not done
+### What S2 verified against the running stack — all four legs, the last by the owner
 
 1. ✅ **The collation behaviour above** — every claim measured against the live PostgreSQL.
 2. ✅ **The premise that these five do not sort on the server** — answered by the **running
@@ -333,10 +372,10 @@ needs `CREATE COLLATION … locale = 'el-GR-u-kn-true'`, a backend decision and 
    is what makes it evidence.
 3. ✅ **The real rows, through the shipped comparator** — the live customer list moves
    `Πελάτης Λιανικής` from last to first, which is the whole point.
-4. ⏳ **A browser clicking a header against the live stack has NOT been done.** It needs the Owner
-   password, which is deliberately not in this repo — the same leg S1 needed and the owner ran
-   personally. **269 frontend tests cover the wiring; none of them is evidence that the screen works
-   in a browser**, per the standing rule. This is the one open item on S2.
+4. ✅ **A browser clicking a header against the live stack — DONE.** It needed the Owner password,
+   which is deliberately not in this repo, so **the owner ran it personally on 2026-08-01**, together
+   with F4's. Frontend tests cover the wiring; none of them is evidence that the screen works in a
+   browser, per the standing rule — this is that evidence. **Nothing about S2 is outstanding.**
 
 ### ⚠️ S2's finding — the first sort direction depended on which row was at the top
 
@@ -372,8 +411,9 @@ next. Fixed with a table-level `sortDescFirst: false`; a test names all three co
 
 **Where things stand, for F4:**
 
-- **F0–F3 and S1 are done.** Products, Suppliers, Customers, Users & Roles, then substring search
-  across all five. **238 frontend tests, 26 files; 1360 backend tests, `mvn clean verify` exit 0.**
+- **F0–F4, S1 and S2 are done.** Products, Suppliers, Customers, Users & Roles, then substring search
+  across all five, then S2 (sorting) and F4 (Settings). **307 frontend tests, 31 files; 1376 backend
+  tests, `mvn clean verify` exit 0.**
 - ✅ **S1 (search) is COMPLETE and LIVE-VERIFIED — nothing about it is outstanding.** The database
   half was proven directly during the step; the HTTP half needed the Owner password, and **the owner
   ran it personally on 2026-08-01**, confirming `/api/products?search=kit` and
@@ -1358,6 +1398,16 @@ were already on `origin`.
 | `2d37a68` | The generated API contract is LF in the working copy too |
 | `8c23e0b` | **Step 16a (4)** — the paging contract, and sales invoices as the worked tier-A example |
 | `452b3fd` | **Step 16b** — users & roles, the journal listing and settings: 37 routes, eviction on narrowing, the two anti-escalation rules, and the enum-refusal fix. No migration |
+| | **— the frontend, `/frontend/` — one row per step from here —** |
+| `94e17cd` | **Frontend foundations** — nav-as-data, permission gate, typed client, decimals, table abstraction, i18n, CSRF/proxy, the write-mutation guard |
+| `56e3726` + `28c4119` | **Products** — list, detail, create, per-field PATCH, plus the guards |
+| `3458ee6` | **The Products bugfix pass** — the `DataTable` render loop, and the two defects it hid. Not a numbered step |
+| `b406b27` | **F1** — Suppliers |
+| `496c7be` | **F2** — Customers, and the `editable: false` / `lockedReason` distinction |
+| `aea0e56` | **F3** — Users & Roles: the grant grid, and a password shown exactly once |
+| `3ea8782` | **S1** — substring search, `pg_trgm` + `unaccent`, migrations **V28** and **V29**. Two findings, one invisible to the whole suite |
+| `a4324db` | **S2** — sortable columns on five screens, one collator. The collation question settled from the live database |
+| `c89c1c9` | **F4** — Settings: three config pages, VAT classes, units of measure, search and sorting. Migration **V30**. `F4WriteContractIT` **corrected a premise the step was built on** |
 
 Interleaved with these are small docs-only commits (`e25fcee`, `a09428e`, `920044c`, `de16e58`,
 `b065901`, `8c27cb4`, `2c3fa8a`, `21b2231`, `d1111d0`, `610f785`, `836a4eb`) and this session's
