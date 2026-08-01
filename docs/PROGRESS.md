@@ -4136,7 +4136,7 @@ was verified back to 8 products, all active, one user.
 ---
 ## Next action — read this first
 
-### ⚠️ Queued for the next BACKEND session — five open items (item 2 is done)
+### ⚠️ Queued for the next BACKEND session — five open items (item 2 is done), plus one frontend proposal
 
 Each was raised by frontend work and none of them is frontend work to fix. Nothing here blocks the
 next frontend step.
@@ -4161,7 +4161,8 @@ whose own contract said the request was valid.
 | 5 | **A role's `description` can be set at creation and never changed** — `NewRole` takes one, no `PATCH …/description` exists. The screen renders it read-only and says why | Small; with 2 or after | 2026-08-01 |
 | 6 | **`NewUser` and `NewRole` guard body fields with `Objects.requireNonNull`** — the **fifth** confirmed instance of *"a client's mistake raised as a programming error"* (disguise 2, recurring). Answers `400`, not `500` — proven by an existing sweep | With 4 — same anti-pattern | 2026-08-01 |
 | 7 | **Box the 7 boolean primitives with `Required.field`**, so the refusal names the field instead of saying "Cannot map null into type boolean" | After 2, which is done. Not urgent — `tsc` now refuses a TS caller that omits one | 2026-08-01 |
-| 8 | **Declare the 28 compact-constructor requirements** — mandatory in fact, invisible to reflection. Needs a decision (an annotation) before it needs code | Last. This class has bitten nobody | 2026-08-01 |
+| 8 | **Declare the 28 compact-constructor requirements** — mandatory in fact, invisible to reflection. Needs a decision (an annotation) before it needs code. ⚠️ **Scope it to response records too** and it also closes fixture drift for free | Last. This class has bitten nobody | 2026-08-01 |
+| 9 | 📐 **PROPOSED, not approved — frontend only.** Consolidate the 19 hand-authored `Me` fixtures into `src/test/fixtures.ts`. A duplication fix, not a correctness one: the remaining drift hole is **measured at zero**, and the argument against building anything larger is written up below | Owner's call; small | 2026-08-01 |
 
 **Order to work in: 4 and 6 together** (one anti-pattern, and 4's part 2 is what stops a sixth
 instance arriving the same way), **then 1, then 7, then 3 when the owner decides it, then 8.**
@@ -4663,6 +4664,67 @@ obvious candidate and the one with a real cost — it is ~28 records and it puts
 of these fields is re-checked by the service with a message that names it, so the observed failure is
 an ordinary refusal an operator can act on — not the silent, field-less `400` that primitives
 produced. It is a completeness improvement, not a defect.
+
+**⚠️ One thing raises its value, and it is on the response side rather than the request side.**
+Response records guard reference-typed fields the same way — `CustomerView` and `SupplierView` have
+2 each, `UserView` 3, `RoleView` 6, and **90 records across the surface have at least one**. Those
+fields are *always present on the wire* and *optional in the generated TypeScript*, which is
+precisely the hole that let 19 test fixtures drift (see below). **If this item is built, scope the
+annotation to every record rather than to request bodies only** — the same one change then lets
+`tsc` enforce fixture completeness, which nothing else can do honestly.
+
+---
+
+#### 📐 Proposed, NOT approved — a note on fixture drift, and the argument against most of the obvious fixes
+
+**The question this answers:** item 2's sweep caught 19 test fixtures that had drifted from the real
+wire shape. Is anything catching that class going forward, or does it only resurface the next time a
+field becomes required?
+
+**What is now permanently caught, established by probing the type system rather than assuming:**
+
+| Drift shape | Caught? |
+|---|---|
+| A fixture omits a **primitive** (`Me.active`, `Role.id`) | ✅ **yes, on every typecheck** — this is what found the 19 |
+| A fixture carries a **field that does not exist** | ✅ yes — excess-property checking on object literals |
+| A fixture omits a **reference-typed field that is mandatory in fact** (`CustomerView.name`) | ❌ **no** |
+
+**So one hole remains — and it is measured at zero.** Every non-spread fixture in the suite already
+carries every reference-typed field its record's compact constructor requires; the three spread-built
+fixtures inherit from complete bases. **The 19 were not the visible half of a larger mess: they were
+the whole of it.** (First count of this said 18 more were hiding. That count was wrong — it read
+guard names from sibling code and treated spread-inherited keys as missing. Recorded because the
+corrected figure is what changed the recommendation.)
+
+**Which argues against most of what could be built here:**
+
+- **A frontend "drift test" should not be built.** It would need a source of truth for what the
+  server actually sends, and the frontend has none: fixtures, mock handlers and expectations are all
+  hand-authored, so a test comparing them to each other is the named anti-pattern — *a verification
+  that answers its own request*. The only honest source is the real server, which the frontend suite
+  cannot reach in CI.
+- **A backend "is the spec's optionality honest?" report would cry wolf.** It could compare declared-
+  optional response fields against what real routes emit — but a genuinely nullable field that simply
+  happens to be set in the fixture data (`Product.ean`) reads identically to a mandatory one. It
+  needs an allowlist, allowlists decay, and `CLAUDE.md` is explicit that a rule which cries wolf is
+  one somebody deletes.
+- **Generating fixtures from the spec is over-engineering** against a backlog of zero.
+
+**What is worth doing, and it is a duplication argument rather than a correctness one.** There are
+**19 hand-authored `Me` literals across 7 test files**, most of them a near-identical `owner` and
+`viewer` pair. That duplication is *why* one field being wrong meant editing 11 sites. A small
+`src/test/fixtures.ts` — `anOwner()`, `aViewerOf(section)`, and the `RoleView`/`UserView`
+equivalents — makes the next such fix one line, and makes a new screen test start from a complete
+shape instead of a plausible one.
+
+⚠️ **The tradeoff, stated because it is real:** this codebase values tests that read as evidence on
+their own, and an extracted fixture is an indirection away from that. The differences between these
+fixtures — which sections, at which level — are the *content* of each test and must stay at the call
+site. Only the invariant part (`id`, `username`, `active`, `restrictedFields`) should move.
+
+**The genuine closure is free if item 8 is built with response records in scope** — the annotation
+makes `name`, `sku`, `hiddenFields` and the rest required, and `tsc` then enforces the third row of
+the table above. That is a reason to widen item 8, not to add a mechanism beside it.
 
 ---
 
