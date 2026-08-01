@@ -4165,21 +4165,20 @@ was verified back to 8 products, all active, one user.
 ---
 ## Next action — read this first
 
-### ⚠️ Queued for the next session — five open backend items. Items 2 and 9 are DONE.
+### ⚠️ The follow-up queue — 9 items: **7 open, 2 done (2 and 9)**
 
-Each was raised by frontend work and none of them is frontend work to fix. Nothing here blocks the
-next frontend step.
+Each was raised by frontend work and none of the open ones is frontend work to fix. **Nothing here
+blocks F4** or any other frontend step.
 
-**Take item 2 first, and inside it the spec half before the serialisation half.** The owner set this
-priority explicitly on 2026-07-31, and the reason is not that item 2 is the newest or that it caused
-the loudest failure. It is that **it is the only one of the three likely to have silent siblings.**
-Items 1 and 3 are each a single known thing in a known place. Item 2's spec half is a property of
-**71 request-bodied operations at once**: `required` is declared on 2 schemas out of 185, so every
-generated request type is fully optional and no client can tell a mandatory field from an optional
-one anywhere on the surface. `serialTracked` is simply the first one a screen happened to omit.
-There is no way to know how many others are waiting without making the spec say what it means — and
-each one that is waiting will present exactly as this one did: a `400` naming no field, on a route
-whose own contract said the request was valid.
+> **Item 2 was the priority and it is now done** (2026-08-01), so the paragraph that used to stand
+> here — *"take item 2 first… `required` is declared on 2 schemas out of 185"* — has been removed
+> rather than left to mislead: that figure is now **78**, and the instruction has been carried out.
+> The reasoning behind it is preserved under item 2 itself, including the costed comparison, because
+> the estimate-versus-outcome is the only calibration data this decision produced.
+>
+> **What replaced the priority question:** items **7** and **8** carry what item 2 deliberately did
+> not close, and they are separate on purpose. Item 7 is a message-quality fix on 7 known fields;
+> item 8 needs a design decision before any code and is the one that closes fixture drift.
 
 | # | Item | Priority | Raised |
 |---|---|---|---|
@@ -4193,8 +4192,18 @@ whose own contract said the request was valid.
 | 8 | **Declare every compact-constructor requirement — requests AND responses** (scope widened and approved 2026-08-01). 90 records; 28 of them request bodies. Mandatory in fact, invisible to reflection; needs an annotation decision before it needs code. **This is what closes fixture drift** | Last of the backend three, and the highest-value of them on the response side | 2026-08-01 |
 | 9 | ✅ **DONE 2026-08-01, frontend.** Shared `Me` fixture in `src/test/fixtures.ts` — invariant fields only; `role` and `sections` stay at the call site | — | 2026-08-01 |
 
-**Order to work in: 4 and 6 together** (one anti-pattern, and 4's part 2 is what stops a sixth
-instance arriving the same way), **then 1, then 7, then 3 when the owner decides it, then 8.**
+**Order to work in — all seven open items, none omitted:**
+
+1. **4 and 6 together** — one anti-pattern, and 4's part 2 (give the sweep a case carrying a valid
+   body a domain rule refuses) is what stops a sixth instance arriving the way these two did.
+2. **5** — smallest of the lot, and it sits in the same files as 6, so doing it alongside costs
+   almost nothing.
+3. **1** — `operationId` collision; mechanical, and deleting the frontend workaround is part of it.
+4. **7** — box the 7 booleans. Not urgent: `tsc` now refuses a TypeScript caller that omits one.
+5. **3** — needs an owner decision first (search endpoint versus relabelling the box), so it cannot
+   be scheduled until that is made.
+6. **8** — last, and needs an annotation design decided before any code is written.
+
 Nothing here blocks F4 — items 2 and 9 are done, and F4 (Settings) touches exactly one primitive
 body, `POST /api/units-of-measure`, which the contract now declares.
 
@@ -4851,6 +4860,29 @@ drift.
 
 Row 3 is the one worth keeping in view: it is what stops the screen implementing "an administrator
 may not grant anything", which would be wrong and would make the section unusable.
+
+##### ⚠️ The grid trap: a full-access role holds everything with **no grant rows at all**
+
+**The single most important thing F3 leaves behind, and it is a design constraint rather than a
+defect that was found in running code.** `RoleView.sectionGrants` is **empty** for Owner and Admin:
+their access is the `fullAccess` flag, and they carry no `role_section_grant` rows whatsoever. So a
+grid built from the map alone renders **seventeen rows of `NONE` for the two most privileged roles in
+the system** — the screen stating the exact opposite of the truth about precisely the roles where
+being wrong matters most.
+
+**It never shipped that way.** The shape was known before the grid was written, from the same fact
+`RoleServiceImpl.refuseIfCallerCannotConferIt` already depends on (it reads through
+`RoleView.accessTo` rather than off the grant rows, "because a check reading them directly would
+conclude the Owner may grant nothing"). `role-grants.tsx` checks `fullAccess` first and renders every
+row as `FULL`; the rows themselves come from `GET /api/sections`, never from the record.
+
+**A test holds it in the failing direction** — it asserts every row reads `Full` for a full-access
+role, so removing the flag check goes red rather than silently redrawing Owner as having no access.
+Also written up in `frontend/README.md` under *"A grid of permissions is drawn from the catalogue,
+never from the record"*, which is the copy a future screen will find.
+
+⚠️ **The same shape will recur wherever a permission is displayed**, because the flag-versus-rows
+asymmetry is in the data model rather than in this screen.
 
 ##### Two things the fresh read caught
 
