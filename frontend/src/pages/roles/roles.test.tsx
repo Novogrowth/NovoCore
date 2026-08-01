@@ -8,6 +8,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { AccessLevel, Section, type Me, type RoleView } from '@/api/generated/model'
 import { AppQueryProvider } from '@/auth/query-client'
 import '@/i18n'
+import { aUser, everySectionAt } from '@/test/fixtures'
 import { trackRequests } from '@/test/requests'
 
 import { RoleCreate } from './role-create'
@@ -28,40 +29,28 @@ import { RolesList } from './roles-list'
  * the truth about the two most privileged roles in the system.
  */
 
-const everySection = (level: AccessLevel) =>
-  Object.values(Section).map((section) => ({ section, level, available: true }))
-
-const owner: Me = {
+const owner: Me = aUser({
   id: 1,
-  username: 'owner',
-  active: true,
   role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
-  sections: everySection(AccessLevel.FULL),
-  restrictedFields: [],
-}
+  sections: everySectionAt(AccessLevel.FULL),
+})
 
 /** Holds USERS_AND_ROLES in full and SALES at VIEW — so it may confer VIEW on Sales, never FULL. */
-const limitedAdmin: Me = {
+const limitedAdmin: Me = aUser({
   id: 7,
-  username: 'probe-admin',
-  active: true,
   role: { id: 4, name: 'PROBE-ADMIN', fullAccess: false, systemRole: false },
   sections: [
     { section: Section.USERS_AND_ROLES, level: AccessLevel.FULL, available: true },
     { section: Section.SALES, level: AccessLevel.VIEW, available: true },
   ],
-  restrictedFields: [],
-}
+})
 
 /** Can read the section and change nothing in it. */
-const viewer: Me = {
+const viewer: Me = aUser({
   id: 8,
-  username: 'viewer',
-  active: true,
   role: { id: 5, name: 'VIEWER', fullAccess: false, systemRole: false },
   sections: [{ section: Section.USERS_AND_ROLES, level: AccessLevel.VIEW, available: true }],
-  restrictedFields: [],
-}
+})
 
 const ownerRole: RoleView = {
   id: 1,

@@ -109,6 +109,27 @@ test never set up — which is the case a per-handler counter structurally canno
 
 This is the standing pattern for **every** screen from Products on, not a Products-specific check.
 
+### A `Me` fixture comes from `src/test/fixtures.ts` — but only its invariant half
+
+`aUser({ role, sections })` fills `id`, `username`, `active` and `restrictedFields`. **`role` and
+`sections` are required parameters and must stay at the call site**, because which sections a role
+holds and whether it is full-access are the *content* of a test — a reader has to see them without
+opening another file.
+
+It exists because nineteen hand-authored `Me` literals across seven files **all omitted `active`**,
+and nothing noticed until the spec started declaring primitives required and `tsc` reported them at
+once. They had been describing a `/api/me` the server never sends. Fixing one field meant editing
+eleven sites.
+
+⚠️ **It does not close the drift class, and should not be relied on as if it did.** A reference-typed
+field that is mandatory in fact is still optional in the generated types, so a fixture can still omit
+one. Only the backend declaring those (`PROGRESS.md` item 8) lets `tsc` catch it — and no test in
+this repository can catch it honestly, because every other candidate source of truth about the wire
+is hand-authored here.
+
+`app.test.tsx` and `session.test.tsx` deliberately do not use it: they build a raw JSON body and
+assert on `displayName`, so their identity fields are content too.
+
 ### A list screen's filter state must never allocate
 
 `useListState`'s setters return the **same state object** when nothing changed, and `unwrapList`

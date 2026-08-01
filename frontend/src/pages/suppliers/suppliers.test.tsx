@@ -14,6 +14,7 @@ import {
 } from '@/api/generated/model'
 import { AppQueryProvider } from '@/auth/query-client'
 import i18n from '@/i18n'
+import { OWNER_ROLE, aUser, everySectionAt } from '@/test/fixtures'
 import { trackRequests } from '@/test/requests'
 
 import { SupplierCreate } from './supplier-create'
@@ -29,27 +30,18 @@ import { SuppliersList } from './suppliers-list'
  * a label rather than the value behind it.
  */
 
-const sections = (level: AccessLevel) =>
-  Object.values(Section).map((section) => ({ section, level, available: true }))
-
-const owner: Me = {
+const owner: Me = aUser({
   id: 1,
-  username: 'owner',
-  active: true,
-  role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
-  sections: sections(AccessLevel.FULL),
-  restrictedFields: [],
-}
+  role: OWNER_ROLE,
+  sections: everySectionAt(AccessLevel.FULL),
+})
 
 /** Holds SUPPLIERS but not TAX_AND_CHARGES — so exemption reasons are not readable. */
-const buyer: Me = {
+const buyer: Me = aUser({
   id: 2,
-  username: 'buyer',
-  active: true,
   role: { id: 4, name: 'BUYER', fullAccess: false, systemRole: false },
   sections: [{ section: Section.SUPPLIERS, level: AccessLevel.FULL, available: true }],
-  restrictedFields: [],
-}
+})
 
 const importer: SupplierView = {
   id: 7,

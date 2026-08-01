@@ -8,6 +8,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { AccessLevel, Section, type Me, type UserView } from '@/api/generated/model'
 import { AppQueryProvider } from '@/auth/query-client'
 import '@/i18n'
+import { OWNER_ROLE, aUser, everySectionAt } from '@/test/fixtures'
 import { trackRequests } from '@/test/requests'
 
 import { UserCreate } from './user-create'
@@ -23,30 +24,20 @@ import { UsersList } from './users-list'
  * that is refusing to close until somebody says they have it.
  */
 
-const owner: Me = {
+const owner: Me = aUser({
   id: 1,
-  username: 'owner',
-  active: true,
-  role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
-  sections: Object.values(Section).map((section) => ({
-    section,
-    level: AccessLevel.FULL,
-    available: true,
-  })),
-  restrictedFields: [],
-}
+  role: OWNER_ROLE,
+  sections: everySectionAt(AccessLevel.FULL),
+})
 
 /** Signed in as the account being looked at — the one case where the role is fixed. */
 const self: Me = { ...owner, id: 3 }
 
-const viewer: Me = {
+const viewer: Me = aUser({
   id: 8,
-  username: 'viewer',
-  active: true,
   role: { id: 5, name: 'VIEWER', fullAccess: false, systemRole: false },
   sections: [{ section: Section.USERS_AND_ROLES, level: AccessLevel.VIEW, available: true }],
-  restrictedFields: [],
-}
+})
 
 const kostas: UserView = {
   id: 3,

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import spec from '../../../docs/api/openapi.json'
 import { AccessLevel, Section, type Me } from '@/api/generated/model'
 import { permissionsOf } from '@/auth/permissions'
+import { OWNER_ROLE, aUser } from '@/test/fixtures'
 import en from '@/i18n/locales/en/nav.json'
 import el from '@/i18n/locales/el/nav.json'
 
@@ -176,10 +177,8 @@ describe('the navigation tree', () => {
 })
 
 describe('navigation visibility', () => {
-  const owner: Me = {
-    id: 1,
-    active: true,
-    role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
+  const owner: Me = aUser({
+    role: OWNER_ROLE,
     sections: Object.values(Section).map((section) => ({
       section,
       level: AccessLevel.FULL,
@@ -187,14 +186,13 @@ describe('navigation visibility', () => {
       available:
         section !== Section.SALES_ORDER_FULFILLMENT && section !== Section.BACK_IN_STOCK_REMINDERS,
     })),
-  }
+  })
 
-  const settlementsOnly: Me = {
+  const settlementsOnly: Me = aUser({
     id: 2,
-    active: true,
     role: { id: 6, name: 'BOOKKEEPER', fullAccess: false, systemRole: false },
     sections: [{ section: Section.SETTLEMENTS, level: AccessLevel.VIEW, available: true }],
-  }
+  })
 
   it('shows an owner the placeholders, disabled', () => {
     const visible = visibleNav(permissionsOf(owner))
@@ -243,12 +241,10 @@ describe('navigation visibility', () => {
     // The tree says Customers is built. The backend says nothing is available behind it — which
     // would be the state during a rollback, or if a section were retired. The item must degrade
     // to a placeholder rather than offering a link that 404s.
-    const backendDisagrees: Me = {
-      id: 1,
-      active: true,
-      role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
+    const backendDisagrees: Me = aUser({
+      role: OWNER_ROLE,
       sections: [{ section: Section.CUSTOMERS, level: AccessLevel.FULL, available: false }],
-    }
+    })
     const visible = visibleNav(permissionsOf(backendDisagrees))
     const customers = visible
       .find((entry) => entry.node.id === 'operations')
@@ -262,14 +258,12 @@ describe('navigation visibility', () => {
     // The other direction, which the test above did not check. If the backend reports a section
     // as available while this tree still says NOT_BUILT, the item stays a placeholder: there is no
     // screen behind it here, whatever the server has. Enabling it would route to nothing.
-    const backendIsAhead: Me = {
-      id: 1,
-      active: true,
-      role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
+    const backendIsAhead: Me = aUser({
+      role: OWNER_ROLE,
       sections: [
         { section: Section.SALES_ORDER_FULFILLMENT, level: AccessLevel.FULL, available: true },
       ],
-    }
+    })
     const visible = visibleNav(permissionsOf(backendIsAhead))
     const orders = visible
       .find((entry) => entry.node.id === 'operations')

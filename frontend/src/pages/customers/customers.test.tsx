@@ -15,6 +15,7 @@ import {
 } from '@/api/generated/model'
 import { AppQueryProvider } from '@/auth/query-client'
 import '@/i18n'
+import { OWNER_ROLE, aUser, everySectionAt } from '@/test/fixtures'
 import { trackRequests } from '@/test/requests'
 
 import { CustomerCreate } from './customer-create'
@@ -30,27 +31,18 @@ import { CustomersList } from './customers-list'
  * `400` carrying nothing (backend item 4), so "let the backend say" was never an option here.
  */
 
-const sections = (level: AccessLevel) =>
-  Object.values(Section).map((section) => ({ section, level, available: true }))
-
-const owner: Me = {
+const owner: Me = aUser({
   id: 1,
-  username: 'owner',
-  active: true,
-  role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
-  sections: sections(AccessLevel.FULL),
-  restrictedFields: [],
-}
+  role: OWNER_ROLE,
+  sections: everySectionAt(AccessLevel.FULL),
+})
 
 /** Customers at VIEW only — the case that must produce no affordance at all, locked or otherwise. */
-const viewer: Me = {
+const viewer: Me = aUser({
   id: 3,
-  username: 'viewer',
-  active: true,
   role: { id: 5, name: 'VIEWER', fullAccess: false, systemRole: false },
   sections: [{ section: Section.CUSTOMERS, level: AccessLevel.VIEW, available: true }],
-  restrictedFields: [],
-}
+})
 
 const cafe: CustomerView = {
   id: 4,

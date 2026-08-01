@@ -86,6 +86,10 @@ only thing that could ever have said so was the server.
 2. **`Objects.requireNonNull` on a request-body field** — sixteen routes answered `500` to a form submitted with something missing. Fixed by `Required.field` in the request record's compact constructor, which is also why `ReversalCommand` fixes six routes in one statement.
 3. **`IllegalArgumentException` for an id that names nothing** — four sites in the email slice, answering `400 "Bad request."` where every other route on the surface answers `404 "Not found."`. Fixed by `QueuedEmailNotFoundException` / `EmailAttachmentNotFoundException`.
 
+⚠️ **Those three are DISGUISES, not a total, and conflating the two counts has already made the backend queue contradict itself.** The running count of *instances* is separate and continues past step 15: **instance 4** is the retail customer's own rules thrown as `IllegalArgumentException` from the domain (found while reading the Customers API for F2), and **instance 5** is `Objects.requireNonNull` on `NewUser` and `NewRole` — disguise 2 recurring at a new site (found while reading the Users API for F3). Both are open, as items 4 and 6 in `PROGRESS.md`. **When you find another, it is instance 6, whichever disguise it wears.**
+
+**Instance 5 says something about the step-15 sweep that is worth more than the fix**: that sweep was scoped to the **web layer**, and `NewUser`/`NewRole` live in **`core-api`**. The anti-pattern is not a web-layer phenomenon — a request record can sit anywhere, and the guards below cannot see most of them. Check `core-api` too.
+
 **The remedy is always to name the failure:** `InvalidRequestException` (the request is wrong, and say how), `Required.field` (a body field is missing), or the core's own `...NotFoundException` (the id names nothing). If a new one is needed, add it to `core-api` — `WebExceptionMappingTest` then *forces* it to be mapped, which is the point.
 
 **Three layers guard it, and each catches what the others cannot:**
@@ -100,7 +104,7 @@ only thing that could ever have said so was the server.
 
 **Backend:** Java + Spring Boot, PostgreSQL, Docker, self-hosted with an HTTPS reverse proxy from the start. No SQLite, no Python/PHP backend — these were deliberately ruled out, don't reintroduce them for "quick" tooling either.
 
-**Frontend:** lives in `/frontend/`, a separate directory from the backend. Vite + React + TypeScript + Tailwind CSS + shadcn/ui. Use shadcn's default theme until Claude Design defines the real brand look — don't invent a color palette or visual style yourself. When more than one shadcn component could reasonably fit a given UI element, or there's no written component-mapping guidance covering it, stop and ask which one to use rather than picking one yourself; for anything a component-mapping reference (once one exists in this repo) already covers clearly, use it directly without asking.
+**Frontend:** lives in `/frontend/`, a separate directory from the backend. **Read `frontend/README.md` before writing frontend code — it is not a getting-started file.** Every convention in it was earned: the write-hooks defect, the render loop that wedged the tab, the select that showed raw ids, the two ways a control can be unavailable, and the one place a credential is ever displayed. Vite + React + TypeScript + Tailwind CSS + shadcn/ui. Use shadcn's default theme until Claude Design defines the real brand look — don't invent a color palette or visual style yourself. When more than one shadcn component could reasonably fit a given UI element, or there's no written component-mapping guidance covering it, stop and ask which one to use rather than picking one yourself; for anything a component-mapping reference (once one exists in this repo) already covers clearly, use it directly without asking.
 
 ## Environment note
 

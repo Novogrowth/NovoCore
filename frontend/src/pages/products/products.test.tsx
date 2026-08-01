@@ -8,6 +8,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { AccessLevel, ProtectedField, Section, type Me, type ProductView } from '@/api/generated/model'
 import { AppQueryProvider } from '@/auth/query-client'
 import i18n from '@/i18n'
+import { OWNER_ROLE, aUser, everySectionAt } from '@/test/fixtures'
 import { trackRequests } from '@/test/requests'
 
 import { ProductCreate } from './product-create'
@@ -20,28 +21,19 @@ import { ProductsList } from './products-list'
  * PATCH pattern every master-data screen after this one inherits.
  */
 
-const sections = (level: AccessLevel) =>
-  Object.values(Section).map((section) => ({ section, level, available: true }))
-
 /** OWNER: every section, so lookups resolve and editing is offered. */
-const owner: Me = {
+const owner: Me = aUser({
   id: 1,
-  username: 'owner',
-  active: true,
-  role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
-  sections: sections(AccessLevel.FULL),
-  restrictedFields: [],
-}
+  role: OWNER_ROLE,
+  sections: everySectionAt(AccessLevel.FULL),
+})
 
 /** The seeded operational role: Products at VIEW, nothing else, no field restrictions since V26. */
-const orderStaff: Me = {
+const orderStaff: Me = aUser({
   id: 2,
-  username: 'staff',
-  active: true,
   role: { id: 3, name: 'REMOTE_ORDER_STAFF', fullAccess: false, systemRole: false },
   sections: [{ section: Section.PRODUCTS, level: AccessLevel.VIEW, available: true }],
-  restrictedFields: [],
-}
+})
 
 const espresso: ProductView = {
   id: 41,

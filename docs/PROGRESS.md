@@ -49,10 +49,39 @@ directly rather than trusting the line count: **0 removed, 37 added, 174 total.*
 
 ---
 
-## ▶ Next session — mechanical follow-through, no new design
+## ▶ Next session — **F4, Settings.** Everything it needs is in these files
 
-**Finish tier-A paging across the remaining five services.** The contract is settled and proven on
-sales invoices; what is left is the same shape applied again, with no decision outstanding:
+**Read, in this order:** `CLAUDE.md` → **`frontend/README.md`** (every frontend convention lives
+there, and several of them were earned expensively) → `docs/novocore-frontend-roadmap.md` for what F4
+is → the *Step 16, the frontend* section below for F1–F3's decisions and what they left behind.
+
+**Where things stand for F4 specifically:**
+
+- **F0–F3 are done and pushed.** Products, Suppliers, Customers, Users & Roles. 228 frontend tests.
+- **F4 is Settings** — general config, Reference Data (VAT classes, units of measure), and the
+  Adapters/Modules grids, which are already built as read-only placeholders.
+- **Nothing in the backend queue blocks it.** Item 2 is done, so the contract now declares which
+  body fields are mandatory; F4 touches **exactly one** primitive body — `POST /api/units-of-measure`
+  (`fractionalQuantityAllowed`) — and `tsc` will now refuse a form that omits it.
+- ⚠️ **`SettingsCatalog` is an allowlist, not a view of the table**, and the whole `backup.*`
+  namespace has no route at all. A settings screen that expects to list everything will be wrong
+  about what exists. **`cash.payment.limit` is readable and deliberately never writable** —
+  statutory, and the catalogue entry says why, so its missing write route is not an oversight to
+  "fix".
+- ⚠️ **There is deliberately no route to change a VAT rate**, and its absence is asserted across
+  three plausible paths: editing one would retroactively change what every invoice already issued
+  under that class appears to have charged. A rate change is a **new class plus a deactivation**.
+- **The standing rule applies to F4's create forms**: a screen test over the mock server cannot tell
+  you a write works. Prove creation against the real backend — see F3's write-up for the pattern,
+  including how to get a refusal from the server without writing anything.
+
+---
+
+### Backend work, queued and not next — tier-A paging on five services
+
+**Not blocking F4 or any frontend step.** Mechanical follow-through with no decision outstanding; the
+contract is settled and proven on sales invoices. Kept here in full because the four checks below
+were expensive to learn and two of them are counter-intuitive.
 
 | Service | Routes | Sort enum to add | Note |
 |---|---|---|---|
@@ -4136,7 +4165,7 @@ was verified back to 8 products, all active, one user.
 ---
 ## Next action — read this first
 
-### ⚠️ Queued for the next BACKEND session — five open items (item 2 is done), plus one frontend proposal
+### ⚠️ Queued for the next session — five open backend items. Items 2 and 9 are DONE.
 
 Each was raised by frontend work and none of them is frontend work to fix. Nothing here blocks the
 next frontend step.
@@ -4161,11 +4190,13 @@ whose own contract said the request was valid.
 | 5 | **A role's `description` can be set at creation and never changed** — `NewRole` takes one, no `PATCH …/description` exists. The screen renders it read-only and says why | Small; with 2 or after | 2026-08-01 |
 | 6 | **`NewUser` and `NewRole` guard body fields with `Objects.requireNonNull`** — the **fifth** confirmed instance of *"a client's mistake raised as a programming error"* (disguise 2, recurring). Answers `400`, not `500` — proven by an existing sweep | With 4 — same anti-pattern | 2026-08-01 |
 | 7 | **Box the 7 boolean primitives with `Required.field`**, so the refusal names the field instead of saying "Cannot map null into type boolean" | After 2, which is done. Not urgent — `tsc` now refuses a TS caller that omits one | 2026-08-01 |
-| 8 | **Declare the 28 compact-constructor requirements** — mandatory in fact, invisible to reflection. Needs a decision (an annotation) before it needs code. ⚠️ **Scope it to response records too** and it also closes fixture drift for free | Last. This class has bitten nobody | 2026-08-01 |
-| 9 | 📐 **PROPOSED, not approved — frontend only.** Consolidate the 19 hand-authored `Me` fixtures into `src/test/fixtures.ts`. A duplication fix, not a correctness one: the remaining drift hole is **measured at zero**, and the argument against building anything larger is written up below | Owner's call; small | 2026-08-01 |
+| 8 | **Declare every compact-constructor requirement — requests AND responses** (scope widened and approved 2026-08-01). 90 records; 28 of them request bodies. Mandatory in fact, invisible to reflection; needs an annotation decision before it needs code. **This is what closes fixture drift** | Last of the backend three, and the highest-value of them on the response side | 2026-08-01 |
+| 9 | ✅ **DONE 2026-08-01, frontend.** Shared `Me` fixture in `src/test/fixtures.ts` — invariant fields only; `role` and `sections` stay at the call site | — | 2026-08-01 |
 
 **Order to work in: 4 and 6 together** (one anti-pattern, and 4's part 2 is what stops a sixth
 instance arriving the same way), **then 1, then 7, then 3 when the owner decides it, then 8.**
+Nothing here blocks F4 — items 2 and 9 are done, and F4 (Settings) touches exactly one primitive
+body, `POST /api/units-of-measure`, which the contract now declares.
 
 ⚠️ **Item 2's costed comparison is kept rather than deleted now that it is done.** It measured both
 options against all 71 request-bodied operations, and the estimate-versus-outcome is the only
@@ -4642,12 +4673,17 @@ call that omits one of these, so the only callers that can still hit it are non-
 
 ---
 
-#### 8. **Declare the 28 compact-constructor requirements — the half reflection cannot see.**
+#### 8. **Declare every compact-constructor requirement — requests *and* responses. The half reflection cannot see.**
+
+> ✅ **Scope widened 2026-08-01, approved.** It was written for request bodies only. It now covers
+> **response records too**, because the same annotation read by the same generator closes the last
+> fixture-drift gap **for free** — see the fixture note below — rather than needing a second
+> mechanism beside it. **90 records** across the surface guard at least one reference-typed field in
+> a compact constructor, of which **28 are request bodies**.
 
 **Its own item, not bundled into item 2, and deliberately the last of the three.** A reference-typed
 component required by a compact constructor (`Required.field` / `requireNonNull`) is mandatory in
 fact and **invisible to `OpenApiSchema`**, because reflection cannot look inside a constructor body.
-**28 request-body schemas have at least one.**
 
 `NewRole` is the readable example and is pinned by a frontend test: it declares no `required` list at
 all, `POST /api/roles` with `{}` is still refused, and `spec-hygiene.test.ts` asserts that
@@ -4660,22 +4696,53 @@ the `Required` helper itself records, or a hand-maintained table in the generato
 obvious candidate and the one with a real cost — it is ~28 records and it puts an annotation in
 `core-api`, which is the module the architecture rules keep deliberately thin.
 
-**Lower value than items 2 and 7, and worth saying why**: this class has **bitten nobody**. Every one
-of these fields is re-checked by the service with a message that names it, so the observed failure is
-an ordinary refusal an operator can act on — not the silent, field-less `400` that primitives
-produced. It is a completeness improvement, not a defect.
+**On the request side this class has bitten nobody**, and that is worth saying so it is not
+re-raised as urgent: every one of those fields is re-checked by the service with a message that names
+it, so the observed failure is an ordinary refusal an operator can act on — not the silent,
+field-less `400` that primitives produced.
 
-**⚠️ One thing raises its value, and it is on the response side rather than the request side.**
-Response records guard reference-typed fields the same way — `CustomerView` and `SupplierView` have
-2 each, `UserView` 3, `RoleView` 6, and **90 records across the surface have at least one**. Those
-fields are *always present on the wire* and *optional in the generated TypeScript*, which is
-precisely the hole that let 19 test fixtures drift (see below). **If this item is built, scope the
-annotation to every record rather than to request bodies only** — the same one change then lets
-`tsc` enforce fixture completeness, which nothing else can do honestly.
+**The response side is where the value is, and it is why the scope was widened.** `CustomerView` and
+`SupplierView` guard 2 reference-typed fields each, `UserView` 3, `RoleView` 6. Those fields are
+**always present on the wire and optional in the generated TypeScript**, which is exactly the hole
+that let 19 test fixtures drift undetected until item 2's primitive half exposed them. Declaring them
+lets `tsc` enforce fixture completeness — the one thing no test in this repository can do honestly,
+because every other candidate source of truth about the wire is hand-authored.
+
+**So the sequencing is: this closes the fixture-drift class properly, and item 9 only reduces the
+duplication that made the last occurrence expensive to fix.** They are not alternatives.
 
 ---
 
-#### 📐 Proposed, NOT approved — a note on fixture drift, and the argument against most of the obvious fixes
+#### 9. ✅ **Shared `Me` test fixture — DONE 2026-08-01, narrowly scoped as approved.**
+
+**`frontend/src/test/fixtures.ts`**: `aUser(...)`, `everySectionAt(level)` and `OWNER_ROLE`.
+
+**The scope was the whole point of the approval, so it is recorded here rather than left to the
+diff.** Only the **invariant** fields moved — `id`, `username`, `active`, `restrictedFields` — which
+is exactly the set no test reads and every fixture has to get right anyway, and exactly the set that
+drifted. **`role` and `sections` are required parameters, not defaults**, because which sections a
+role holds and whether it is full-access are the *content* of these tests: a reader has to see them
+at the call site or the test stops being evidence and becomes a pointer to a shared file.
+
+| | |
+|---|---:|
+| `Me` literals converted | **15**, across 6 files |
+| Left alone | 2 — both `{ ...owner, id: n }` spreads, which already inherit correctly |
+| Local copies of `everySectionAt` removed | 5 |
+| Not converted, deliberately | `app.test.tsx`, `session.test.tsx` — they build a raw JSON body and **assert on `displayName`**, so their identity fields are content too |
+| Tests | 228, unchanged and all passing |
+
+⚠️ **A `CUSTOM_ROLE` constant was written and then deleted.** Every viewer fixture names its own role
+(`VIEWER`, `PROBE-ADMIN`, `BOOKKEEPER`) and that name is the contrast the test is drawing — sharing
+one would have taken content out of the call site, which is what the approval ruled out. knip caught
+it as an unused export, which is the tool doing exactly its job.
+
+**This does not close the fixture-drift class** — item 8 does. See the note below for why nothing
+more should be built here.
+
+---
+
+#### 📐 The reasoning behind item 9, and the argument against building more than it
 
 **The question this answers:** item 2's sweep caught 19 test fixtures that had drifted from the real
 wire shape. Is anything catching that class going forward, or does it only resurface the next time a
@@ -4803,6 +4870,18 @@ may not grant anything", which would be wrong and would make the section unusabl
    generated, shown once with a copy affordance, and the dialog **cannot be closed until the
    administrator explicitly acknowledges having taken it**. Never shown again, never retrievable.
    **No confirm-field** — the same shape as every credential hand-off already used in this project.
+
+##### 📋 Approvals given after F3 landed, and their verdicts
+
+Reconciled here rather than left in a session's history, per the checklist rule.
+
+| Approved | Scope as approved | Verdict |
+|---|---|---|
+| **Item 2, primitive half** — sweep the spec generator before F4, not parallel to it | primitives only; boxing and the guarded half kept out | **Done** — `dee71ba`. 2 → 78 schemas, no production code touched, 19 fixtures corrected |
+| **Item 8, widened** | cover **response** records as well as request bodies, same annotation mechanism | **Done as a scope change** — item 8 rewritten; it is queued work, not built. It is now the thing that closes fixture drift |
+| **Item 9, narrowly** | only the invariant `Me` shape moves; anything a test asserts on stays at the call site | **Done** — `src/test/fixtures.ts`; 15 literals converted, `role` and `sections` required parameters, `CUSTOM_ROLE` written and deleted for taking content out of a call site |
+| **Item 7** | box the 7 booleans, later and separate | **Explicitly deferred**, queued as its own item with the full list of seven |
+| Build nothing else for fixture drift | — | **Held.** The argument against a frontend drift test and a backend optionality report is written up under the item 9 note |
 
 ##### 📋 F3's checklist, reconciled against what was approved
 

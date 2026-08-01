@@ -2,16 +2,16 @@ import { describe, expect, it } from 'vitest'
 
 import { AccessLevel, ProtectedField, Section, type Me } from '@/api/generated/model'
 
+import { OWNER_ROLE, aUser } from '@/test/fixtures'
+
 import { hiddenInResponse, permissionsOf } from './permissions'
 
 /**
  * The seeded Remote/Order Staff role, as V6 grants it: Sales Order Fulfillment, Customers and
  * Back-in-Stock in full, Products view-only, everything else invisible by default-deny.
  */
-const remoteOrderStaff: Me = {
+const remoteOrderStaff: Me = aUser({
   id: 2,
-  username: 'staff',
-  active: true,
   role: { id: 3, name: 'REMOTE_ORDER_STAFF', fullAccess: false, systemRole: false },
   sections: [
     { section: Section.SALES_ORDER_FULFILLMENT, level: AccessLevel.FULL, available: false },
@@ -19,8 +19,7 @@ const remoteOrderStaff: Me = {
     { section: Section.BACK_IN_STOCK_REMINDERS, level: AccessLevel.FULL, available: false },
     { section: Section.PRODUCTS, level: AccessLevel.VIEW, available: true },
   ],
-  restrictedFields: [],
-}
+})
 
 /**
  * An owner, shaped the way `/api/me` actually answers.
@@ -31,19 +30,15 @@ const remoteOrderStaff: Me = {
  * database table and false of the response, and it made this file and `tree.test.ts` disagree
  * about the shape of the thing they both draw conclusions from.
  */
-const owner: Me = {
-  id: 1,
-  username: 'owner',
-  active: true,
-  role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
+const owner: Me = aUser({
+  role: OWNER_ROLE,
   sections: Object.values(Section).map((section) => ({
     section,
     level: AccessLevel.FULL,
     available:
       section !== Section.SALES_ORDER_FULFILLMENT && section !== Section.BACK_IN_STOCK_REMINDERS,
   })),
-  restrictedFields: [],
-}
+})
 
 describe('permissions', () => {
   it('grants view on a VIEW section and refuses edit', () => {
