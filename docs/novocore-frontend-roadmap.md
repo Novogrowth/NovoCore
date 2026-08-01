@@ -2,6 +2,10 @@
 
 **Legend:** 🟢 Done · 🟡 **Current** = in progress · 🔴 Not started
 
+⚠️ **Nothing is 🟡 as of S1's close-out — no step is half-finished.** **S2 (sorting) is next**, then
+F4. F4 was marked Current before S1 and S2 were inserted ahead of it; it is not started and no work
+of it exists.
+
 **Hours** — `Est.` is a planning estimate where one exists; most rows here don't have one
 yet, matching how steps 16a/16b were treated on the backend roadmap (no estimate invented
 for work that wasn't originally planned). `Actual` is measured from session transcripts,
@@ -31,8 +35,9 @@ candidate causes per symptom).
 |   F2 | Customers — same pattern, plus the protected retail-customer record ᶠ²                                                            |     — |        | 🟢 Done        |
 |      | *(deferred out of F2)* Customer VAT class override — its own follow-up ᶠ²ᵃ                                                          |     — |        | 🔴 Not started |
 |   F3 | Users & Roles — real admin screen: create roles, grant sections, manage accounts ᶠ³                                                |     — |    0.9 | 🟢 Done        |
-|   S1 | *(standalone, not folded into F4)* Substring search — `pg_trgm` + `unaccent`, one shared mechanism, wired to all five built screens ˢ¹ |     — |        | 🟢 Done        |
-|   F4 | Settings — general config, Reference Data (VAT classes, UoM), Adapters/Modules toggle grids (read-only placeholders)               |     — |        | 🟡 **Current** |
+|   S1 | *(standalone, not folded into F4)* Substring search — `pg_trgm` + `unaccent`, one shared mechanism, wired to all five built screens ˢ¹ |     — |    1.8 | 🟢 Done        |
+|   S2 | *(standalone)* **Sorting** — not scoped, not designed; the server-side contract exists and is proven on sales invoices ˢ²                 |     — |        | 🔴 **Next**    |
+|   F4 | Settings — general config, Reference Data (VAT classes, UoM), Adapters/Modules toggle grids (read-only placeholders)               |     — |        | 🔴 Not started |
 |   F5 | Sales Invoice + Credit Note — first transactional-document screen; decides the create/preview/commit pattern                       |     — |        | 🔴 Not started |
 |   F6 | Purchase Invoice + Goods Receipt — same document pattern; no preview endpoint yet, decide whether to add one                       |     — |        | 🔴 Not started |
 |   F7 | Receipts, Payments, Bank Transfers — editable-in-place variant of the document pattern, plus settlement/allocation UI              |     — |        | 🔴 Not started |
@@ -287,8 +292,27 @@ categories at once**, which means a self-referencing category table plus a join 
 columns, and not an enum. Written down because the brief's one-line *"Category (main/sub)"*
 understates it, and building from that line would produce the wrong thing.
 
-**Its hours are blank**, on the standing rule: the step ran inside a session with no commit boundary
-before its own close-out that the measurement method can use.
+**✅ Closed out 2026-08-01, and live-verified by the owner.** All fifteen sub-parts have verdicts in
+`PROGRESS.md` — twelve approved up front, three added mid-step (Brand, the supplier VAT gap, and the
+`aria-label` fix a broken test forced). None is "still open". The owner ran the two live HTTP checks
+personally on the running stack and both returned correct results, so the one partial verdict the
+step carried is now closed.
+
+**Measured, per the method in `novocore-roadmap.md`** — and this row is *not* blank, because for once
+the window is clean: `d27d9bc` (F3's close-out) to `3ea8782`, commit-to-commit **inside a single
+session** rather than slicing through one. **821 events, 1.81 h active against 3.66 h wall clock,
+359k out, 120.2M in. Recorded as 1.8.** 815 of the 821 events are this session; the remaining 6 are
+the previous session's tail, which the window rule includes. As with every row here it **excludes its
+own close-out**, which is not in the transcript when the figure is computed — read it as "at least".
+
+**ˢ² S2, sorting — next, and deliberately not started.** No proposal, no design, no code. It is given
+a row so the sequence can be read off this table and so silence is not mistaken for completeness.
+⚠️ **It is not a green field**: the server-side contract exists and is proven on sales invoices, the
+frontend already consumes it through the generated capability map, and the queued tier-A paging item
+on five services is the same work with four checks already learned. ⚠️ **And it inherits S1's
+lesson** — under this database's `--locale=C`, `ORDER BY name` is byte order, not alphabetical to a
+human. Whether a user-facing sort carries an explicit collation is the first thing to settle. The
+full note is in `PROGRESS.md`.
 
 **F5 carries more weight than its position implies.** It's not just the next screen — it
 decides the entire document-creation interaction pattern (multi-line entry, running

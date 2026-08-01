@@ -236,6 +236,15 @@ than it tells anyone. What *has* been spent is recorded here instead, so the hou
 |---|---|---:|---:|---:|---:|---|
 | `94e17cd`, `56e3726`, `28c4119` | 2026-07-30/31 | *not measured* | — | — | — | Foundations, Products, two guards |
 | `d0ec9d9a` + `f4e4d84c` | 2026-07-31 | **0.73** | 0.97 | 232k | 23.6M | The brand pass and the session before it |
+| `d27d9bc`→`3ea8782` | 2026-08-01 | **1.81** | 3.66 | 359k | 120.2M | **S1 — substring search**, backend *and* frontend (V28, V29, `TextSearch`, five screens) |
+
+**S1's backend half has no numbered row in this file, deliberately.** Migrations V28 and V29,
+`TextSearch`, `Specifications` and the `?search=` parameter on five routes are backend work, but S1
+was agreed as one standalone step spanning both sides and is tracked as **S1 in
+`novocore-frontend-roadmap.md`**, where its full measurement and its findings live. It is recorded
+here so the backend hours are not lost and so nobody later reads its absence from the numbered
+sequence as "no backend work happened". **Sorting (S2) is next** and is likewise cross-cutting — the
+five services in the queued tier-A paging item below are its backend half.
 
 **The first row is blank on purpose, and it is a gap.** Those three commits landed without a
 close-out recording their figures, and reconstructing them now would mean assigning transcripts to

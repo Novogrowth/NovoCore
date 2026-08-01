@@ -76,6 +76,48 @@ declares required fields on 2 of 185 schemas, so every generated request type is
 none of them means it; the form was written correctly against a contract that was wrong, and the
 only thing that could ever have said so was the server.
 
+### Named anti-pattern: a test environment configured unlike the real one
+
+**A test that runs against a differently-configured dependency is not testing the system; it is
+testing a system.** Nothing about this fails loudly — the suite is green, the code is wrong, and the
+difference is a line of infrastructure config nobody looks at.
+
+**It has already happened once, and only the live check caught it.** `docker/compose.yml` initialises
+PostgreSQL with `--encoding=UTF8 --locale=C` — deliberately, so sort order is deterministic across
+machines. Testcontainers took the **image's own default**, `en_US.utf8`. Under locale `C`,
+`lower()` folds ASCII **and nothing else**, so the substring-search normalisation function shipped
+with a bare `lower()`:
+
+    Πελάτης Λιανικής  →  Πελατησ Λιανικησ      accents stripped, sigma folded, STILL CAPITALISED
+
+and searching for `πελατησ` returned **zero rows on the real server**. The dedicated test asserting
+that exact Greek string **passed**, because the database it ran against folded Greek and the real one
+does not. No error, no warning, in either place.
+
+**The fix is two things, and the second is the one that matters:**
+
+1. Make the code not depend on the ambient configuration — here, `lower(… COLLATE pg_c_utf8)`, naming
+   PostgreSQL 17's builtin provider explicitly instead of inheriting whatever the server was built
+   with. ⚠️ Chosen over ICU deliberately: ICU's behaviour tracks the bundled library version, and an
+   index expression whose meaning changes on an upgrade is exactly what must not be indexed. (Unicode
+   still moves between major versions — **`REINDEX` the trigram indexes after a major upgrade.**)
+2. **Pin the test environment to the real one and assert the pin.**
+   `PostgresTestContainerConfiguration` now passes the same `POSTGRES_INITDB_ARGS` as
+   `compose.yml`, and `TextSearchIT` asserts `datcollate = 'C'` — so removing the pin fails the
+   build instead of silently restoring the blind spot.
+
+**The general rule: every knob the real deployment sets, the test environment must set too — and
+something must assert it.** Locale and encoding are the ones already known to bite. Timezone,
+`DateStyle`, PostgreSQL major version, and Java default locale/charset are the same shape and are
+*not* currently pinned or asserted. **When you touch anything whose behaviour depends on collation,
+case, accents, ordering or time, check what the container is actually configured with rather than
+what you assume.**
+
+⚠️ **What this cost, and why it is worth a named entry:** the suite was green before and after, so
+nothing in this repository could have reported it. It was found by running the migration against the
+live stack — which is why the standing practice above ("when the question is *will the backend accept
+this*, the backend has to answer it") extends to configuration and not only to request bodies.
+
 ### Named anti-pattern: a client's mistake raised as a programming error
 
 **An exception type that means "our code is wrong" must never be used to tell a caller that *their* request is wrong.** The two are handled differently on purpose — `WebExceptionHandler` returns a validation message because an operator who cannot see why a document was refused cannot fix it, and *withholds* the message from a programming error because it describes internal state. Signal a client mistake with the wrong type and the message is correctly discarded: the caller gets `400 "Bad request."`, or a `500` in Boot's legacy body shape, and in both cases a response that looks deliberate.
@@ -125,6 +167,15 @@ Ask before implementing. Several entity field lists and mechanisms in the brief 
 **This rule exists because it has already cost something.** Step 15's proposal had three commits in it — 15a, 15b and **15c, the seed pass that populates the live Compose database** — and the step was agreed at *full* scope, which included 15c. 15a and 15b landed. 15c did not. `PROGRESS.md` recorded "15a — the harness", "15b, completed", and **never mentioned 15c in either direction** — not delivered, not deferred, not cut. Nothing was wrong with any sentence in that close-out; it was accurate about everything it described. The gap was that it summarised what was built instead of reconciling against what was approved.
 
 The cost surfaced two steps later, in the frontend: the development database held nothing but Flyway's own seed, the first real screen correctly showed an empty table, and a session was spent proving the data had never existed rather than building anything. The seam 15c needed (`HttpTransport`) had been sitting in the repository the whole time with a javadoc naming the driver that was never written.
+
+### And reconcile against the *fullest* list, not the one the step was scoped from
+
+**A second, cheaper version of the same failure**, from S1 (substring search). The step was scoped in conversation against five entities that already had screens. Reconciling it afterwards against the **complete** per-screen field list found two gaps, and **the suite was green before and after** — because a test only ever checks the fields somebody pointed it at:
+
+- **`Product.brand` had never been built at all**, despite being in brief §5's Product list from the beginning. Absent from the schema, therefore absent from every test, therefore invisible.
+- **`supplier.vat_number` existed and simply was not searched**, while `customer.vat_number` was — an inconsistency with no argument behind it, visible only by reading the two lists side by side.
+
+**The remedy is to write the full target list down once, in `PROGRESS.md`, and have each step adopt its row** rather than re-derive a narrower one from memory of a conversation. The search target list is there now and is the worked example. ⚠️ **A field named in the brief is not evidence that it was built** — check the schema. Several of the brief's entity field lists are marked *(draft)* and were built partially; `Supplier.code`, `Supplier.alias` and `Customer.code` are still not columns.
 
 ## Session close-out
 

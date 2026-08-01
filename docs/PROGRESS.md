@@ -1,6 +1,6 @@
 # NovoCore — Build Progress
 
-*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-08-01 (F3's close-out).*
+*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-08-01 (S1's close-out — substring search).*
 
 *Close-out now also pushes to `origin` automatically (`CLAUDE.md`), so this file no longer tracks
 unpushed commits.*
@@ -61,24 +61,64 @@ directly rather than trusting the line count: **0 removed, 37 added, 174 total.*
 
 ---
 
-## ▶ Next session — **F4, Settings.** Everything it needs is in these files
+## ▶ Next session — **sorting (S2)**, then F4. Search is closed and live-verified
 
 **Read, in this order:** `CLAUDE.md` → **`frontend/README.md`** (every frontend convention lives
-there, and several of them were earned expensively) → `docs/novocore-frontend-roadmap.md` for what F4
-is → the *Step 16, the frontend* section below for F1–F3's decisions and what they left behind.
+there, and several of them were earned expensively) → `docs/novocore-frontend-roadmap.md` for the step order → the *Step 16, the frontend* section below for F1–F3's decisions and what they left behind.
 
-**Where things stand for F4 specifically:**
+### ▶▶ What is next, in one place
+
+| | State |
+|---|---|
+| **Substring search (S1)** | ✅ **Complete and live-verified.** Nothing outstanding |
+| **Sorting** | 🔴 **NEXT, and not yet started.** Not scoped, not designed, no proposal written. See below |
+| **F4 — Settings** | 🟡 The next *screen* step, after sorting |
+| `Supplier.code` / `Supplier.alias` / `Customer.code` | 📌 Queued, scoped, blocks part of six rows of the search target list |
+| `Product.category` | 📌 Queued as **its own proposal**, requirement recorded, deliberately not started |
+
+### 🔴 Sorting — next, and deliberately not started
+
+**Nothing has been built, scoped or designed for it, and this note is not a design.** It is recorded
+so a fresh session knows sorting is the next piece of work and does not mistake silence for
+completeness — the failure that cost this project step 15c.
+
+What already exists and should be read before proposing anything, because sorting is **half-built in
+one place and absent everywhere else**:
+
+- **A server-side sorting contract exists and is proven on sales invoices**: a `…Sort` enum in
+  `core-api`, `PageRequest`/`PageResponse`, `SpringPaging.pageableFor` mapping a *logical* name to an
+  entity property, and `Paging.of` taking the enum at the route boundary so **no caller-supplied
+  string ever reaches a query**. ⚠️ **Every ordering ends with the id** — a sort on a non-unique
+  column leaves rows tied and PostgreSQL may return ties in a different order per query, so
+  successive pages could show one row twice and skip another.
+- **The frontend already reads it**: `useListState` has `setSort`, and `serverSorts(route)` comes
+  from the generated capability map — so a screen starts sorting on the server the moment the
+  backend declares it, with no component change.
+- **The queued tier-A paging item is the same work.** Five services (purchase invoices, goods
+  receipts, settlements, inventory, email outbox) are listed further down with their sort enums and
+  **four checks that were expensive to learn**, two of them counter-intuitive. Whoever scopes
+  sorting should start from that section rather than from scratch.
+- ⚠️ **Sorting interacts with locale, exactly as search did.** This database is `--locale=C`, so
+  `ORDER BY name` is **byte order**: uppercase before lowercase, and Greek after all Latin. That is
+  deterministic across machines, which is why it was chosen — but it is *not* alphabetical to a human
+  reading a customer list. **Whether a user-facing sort should use a collation
+  (`ORDER BY name COLLATE …`) is an open question and is the first thing to settle**, and S1's
+  finding is the reason to settle it deliberately rather than discover it.
+
+**Where things stand, for sorting and then for F4:**
 
 - **F0–F3 and S1 are done.** Products, Suppliers, Customers, Users & Roles, then substring search
-  across all five. **237 frontend tests, 26 files; 1355 backend tests, `mvn clean verify` exit 0.**
-- ⏳ **S1 leaves one check for the owner**, because it needs the Owner password and that is
-  deliberately not in this repo. Signed in, two URLs:
-  `/api/products?search=kit` (expect `TEST-PRODUCT-KIT-01` and `-02`) and
-  `/api/customers?search=πελατησ` (expect `Πελάτης Λιανικής`). Everything else about S1 was proven
-  against the live database directly — see its section below.
+  across all five. **238 frontend tests, 26 files; 1360 backend tests, `mvn clean verify` exit 0.**
+- ✅ **S1 (search) is COMPLETE and LIVE-VERIFIED — nothing about it is outstanding.** The database
+  half was proven directly during the step; the HTTP half needed the Owner password, and **the owner
+  ran it personally on 2026-08-01**, confirming `/api/products?search=kit` and
+  `/api/customers?search=πελατησ` both return correct results on the running stack. There is no
+  pending check, no partial verdict and nothing to re-test.
 - ⚠️ **F4 inherits S1's habit, not just its component.** Any new list screen gets `SearchFilter` and
   a `?search=` parameter built the same way; the backend side is one line in the service plus one
-  index in a new migration. `TextSearch` was written against exactly that criterion.
+  index in a new migration. `TextSearch` was written against exactly that criterion, and the
+  **16-row search target list below is where a screen reads its own fields from** rather than
+  re-deriving a narrower set.
 - ⏳ **First, check whether the owner's manual acceptance pass on F3 came back.** Seven checks were
   agreed at F3's close-out and are listed in the F3 section below. **Anything they turn up is an F3
   defect and is fixed inside F3 before F4 work starts** — the pass is the gate, not a formality
@@ -121,8 +161,12 @@ is → the *Step 16, the frontend* section below for F1–F3's decisions and wha
 
 ## Step S1 — **substring search** (`pg_trgm` + `unaccent`). Approved 2026-08-01, standalone, not folded into F4
 
-**The approved checklist.** Written down at the moment of approval, per `CLAUDE.md`. Verdicts are
-filled in at close-out — **done / explicitly deferred / still open**, one per line, no exceptions.
+**✅ CLOSED OUT 2026-08-01. Every sub-part has a verdict, and none is "still open."**
+
+**The approved checklist**, written down at the moment of approval per `CLAUDE.md`, and reconciled
+against here rather than against memory of what was built. Rows 13–15 were **added during the step**
+— 13 and 14 by reconciling against the complete field list, 15 by a test that broke — and they are in
+the same table rather than in prose, because prose is where a sub-part goes to be forgotten.
 
 | # | Sub-part | Verdict |
 |---|---|---|
@@ -137,7 +181,10 @@ filled in at close-out — **done / explicitly deferred / still open**, one per 
 | 9 | Roles — name, description | **Done** |
 | 10 | `?search=` on the five list routes; spec regenerated | **Done** — spec diff is **additions only**: 35 lines, 5 parameters, 0 deletions. Generated client diff is 5 lines |
 | 11 | Frontend — search box on all five screens, Products' exact-SKU box replaced | **Done** — `components/data-table/search-filter.tsx`, one component, debounced |
-| 12 | Confirmed against the **real running backend**: indexes exist, "Cof" matches prefix *and* mid-string, existing exact-match filtering does not regress | **Done for the database, PARTIAL over HTTP** — see below. It is the sub-part that **found the defect**, and the HTTP leg on the live stack needs the owner's credentials |
+| 12 | Confirmed against the **real running backend**: indexes exist, "Cof" matches prefix *and* mid-string, existing exact-match filtering does not regress | ✅ **Done, and now complete on both legs.** The database leg was proven here (see below) and **found the locale defect**. The HTTP leg needed the Owner password, which is deliberately not in this repo — **the owner ran it personally on 2026-08-01 and confirmed both `/api/products?search=kit` and `/api/customers?search=πελατησ` return correct results on the live stack.** Nothing about S1 is now unverified |
+| 13 | *(added mid-step)* **`Product.brand`** — column, route, form, index, searched | ✅ **Done** — migration **V29**. It was **never built at all**, despite being in brief §5's Product list from the beginning; found by reconciling against the full field list, not by a test |
+| 14 | *(added mid-step)* **Supplier VAT number searchable** | ✅ **Done** — **V29**. The column existed since V9 and simply was not searched, while `customer.vat_number` was. An inconsistency with no argument behind it, invisible to a green build |
+| 15 | *(added mid-step)* **`FieldEditor`'s Edit button carries its field name** | ✅ **Done** — an unasked-for change, and the reason is recorded: adding Brand broke four tests that reached their field by *position* among identically-named "Edit" buttons. Five controls all called "Edit" are indistinguishable to a screen reader too. 18 selectors across 5 files now name their field |
 
 ### ⚠️ S1's third finding — the reconciliation itself found two gaps a green build could not
 
@@ -206,7 +253,7 @@ restriction, so written against a seeded role it would have asserted a restricti
 configured and passed only if the guard were broken the other way. The first draft did exactly that
 and failed.
 
-### What sub-part 12 actually proved, and the one part it did not
+### What sub-part 12 proved — and it now covers both legs
 
 Proved against the **live stack** (`docker compose`, real seeded data, migrated v27 → v28 in place —
 not a fresh database):
@@ -222,15 +269,22 @@ not a fresh database):
 - **exact matching did not regress**: on the `sku`, `ean` and `vat_number` exact paths a *prefix*
   still matches nothing, and full values still match.
 
-**Not proved on the live stack: the `?search=` HTTP leg.** Driving it needs the Owner password,
-which is deliberately not in `docker/.env` and comes from the operator's environment
-(`NOVOCORE_SEED_USERNAME` / `_PASSWORD`). It **is** proved over real HTTP through the real Spring
-Security chain against a real PostgreSQL by `MasterDataEndpointIT.Search` and
-`UserRoleEndpointIT` — which is a real backend, just not *this* running one. **The remaining check
-is one for the owner**, and it is two URLs in a signed-in browser:
+✅ **And the HTTP leg is now proved too — by the owner, on 2026-08-01.** Driving it needs the Owner
+password, which is deliberately not in `docker/.env` and comes from the operator's environment, so it
+could not be done from inside the session. **The owner signed in and ran both checks on the real
+running stack:**
 
-    /api/products?search=kit          → expect TEST-PRODUCT-KIT-01 and -02
-    /api/customers?search=πελατησ     → expect Πελάτης Λιανικής
+    /api/products?search=kit          → correct results ✅
+    /api/customers?search=πελατησ     → correct results ✅
+
+The second is the one that matters most: it is the exact query that returned **zero rows** before the
+locale defect was found, and a green test suite said nothing was wrong. It is also independent
+confirmation of the whole chain — Caddy, TLS, the session cookie, the permission interceptor, the
+service, `TextSearch`, the function and the index — which no test in this repository exercises
+together against *this* database.
+
+The automated cover remains: `MasterDataEndpointIT.Search` and `UserRoleEndpointIT` drive `?search=`
+over real HTTP through the real Spring Security chain against a real PostgreSQL.
 
 **Three decisions taken at approval, each closing something that was genuinely open:**
 
