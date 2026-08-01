@@ -650,7 +650,7 @@ class BundleIT extends AbstractCoreIntegrationTest {
                     "BUNDLEIT-REDACT-COMP", "Component", pieceId(), standardRateId(),
                     Money.ofEur("10.00")));
             ProductView bundle = products.create(new NewProduct(
-                    "BUNDLEIT-REDACT-01", null, "Redacted bundle", ProductType.GOODS,
+                    "BUNDLEIT-REDACT-01", null, "Redacted bundle", null, ProductType.GOODS,
                     pieceId(), standardRateId(), Money.ofEur("18.00"),
                     supplier.id(), "SUPPLIER-BUNDLE-CODE", false));
             bundles.define(bundle.id(), List.of(NewBundleComponent.one(component.id())));
@@ -688,7 +688,7 @@ class BundleIT extends AbstractCoreIntegrationTest {
                     "BUNDLEIT-REDACT-UNPRICED-COMP", "Unpriced component", pieceId(),
                     standardRateId(), null));
             ProductView bundle = products.create(new NewProduct(
-                    "BUNDLEIT-REDACT-02", null, "Bundle with unpriced part", ProductType.GOODS,
+                    "BUNDLEIT-REDACT-02", null, "Bundle with unpriced part", null, ProductType.GOODS,
                     pieceId(), standardRateId(), Money.ofEur("30.00"),
                     supplier.id(), "SUPPLIER-UNPRICED-CODE", false));
             bundles.define(bundle.id(), List.of(NewBundleComponent.one(unpriced.id())));

@@ -3,7 +3,11 @@ package gr.novotrade.novocore.app;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import gr.novotrade.novocore.core.api.product.UnitOfMeasureService;
+import gr.novotrade.novocore.core.api.security.AccessLevel;
+import gr.novotrade.novocore.core.api.security.NewRole;
 import gr.novotrade.novocore.core.api.security.NewUser;
+import gr.novotrade.novocore.core.api.security.ProtectedField;
+import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.security.RoleService;
 import gr.novotrade.novocore.core.api.security.UserService;
 import gr.novotrade.novocore.core.api.supplier.NewSupplier;
@@ -66,6 +70,10 @@ class MasterDataEndpointIT {
 
     private static final String STAFF_USERNAME = "master.staff";
     private static final String STAFF_PASSWORD = "staff-password-long-enough";
+
+    private static final String GUARDED_ROLE = "MDIT_SUPPLIER_SKU_GUARDED";
+    private static final String GUARDED_USERNAME = "master.guarded";
+    private static final String GUARDED_PASSWORD = "guarded-password-long-enough";
 
     @Autowired
     private TestRestTemplate rest;
@@ -395,9 +403,185 @@ class MasterDataEndpointIT {
         }
     }
 
+    @Nested
+    @DisplayName("substring search, over HTTP")
+    class Search {
+
+        @Test
+        @DisplayName("?search= matches a name that starts with the term and one that contains it")
+        void searchMatchesAnywhere() {
+            // The worked example the step was approved against. Under the previous behaviour —
+            // ?sku= only, an exact lookup — neither of these would have been found by "Cof".
+            named("MDIT-SEARCH-1", "Coffee, Ethiopian");
+            named("MDIT-SEARCH-2", "Decaf coffee blend");
+            named("MDIT-SEARCH-3", "Earl Grey tea");
+
+            String body = owner.get("/api/products?search=Cof").getBody();
+
+            assertThat(body).contains("Coffee, Ethiopian");
+            assertThat(body).contains("Decaf coffee blend");
+            assertThat(body).doesNotContain("Earl Grey tea");
+        }
+
+        @Test
+        @DisplayName("the brand is set over HTTP and is then findable by ?search=")
+        void brandIsSetAndSearched() {
+            // Both halves in one test on purpose: the PATCH route and the searched column are the
+            // same feature, and a brand that stores but cannot be found is the failure worth
+            // catching.
+            long id = createProduct("MDIT-BRAND-1", null);
+            assertThat(owner.patch("/api/products/" + id + "/brand",
+                            "{\"brand\":\"Rocket Espresso\"}")
+                    .getStatusCode()).isEqualTo(HttpStatus.OK);
+            named("MDIT-BRAND-2", "Unbranded house blend");
+
+            String body = owner.get("/api/products?search=rocket").getBody();
+            assertThat(body).contains("MDIT-BRAND-1");
+            assertThat(body).doesNotContain("MDIT-BRAND-2");
+
+            // Cleared, and then no longer matched — so the column really is what answered.
+            assertThat(owner.patch("/api/products/" + id + "/brand", "{\"brand\":null}")
+                    .getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(owner.get("/api/products?search=rocket").getBody())
+                    .doesNotContain("MDIT-BRAND-1");
+        }
+
+        @Test
+        @DisplayName("the exact ?sku= lookup is unchanged — the two filters coexist")
+        void exactLookupDoesNotRegress() {
+            // The regression this step could most easily have caused. ?sku= is what a barcode-driven
+            // flow and every integration call use, and it must stay exact: a scan matching a
+            // SUBSTRING of a code would put the wrong product on an invoice.
+            named("MDIT-EXACT-1", "Exactly one");
+
+            assertThat(owner.get("/api/products?sku=MDIT-EXACT-1").getBody())
+                    .contains("Exactly one");
+            assertThat(owner.get("/api/products?sku=MDIT-EXACT").getBody())
+                    .as("a prefix of a SKU is still not a match for the exact lookup")
+                    .isEqualTo("{\"items\":[]}");
+        }
+
+        @Test
+        @DisplayName("search and the exact lookups are alternatives, and saying so is a 400")
+        void searchIsAnAlternativeLookup() {
+            ResponseEntity<String> response =
+                    owner.get("/api/products?search=Cof&sku=MDIT-EXACT-1");
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            // Named, not a bare "Bad request." — the CLAUDE.md anti-pattern about a client's
+            // mistake raised as a programming error.
+            assertThat(response.getBody()).contains("alternative lookups");
+        }
+
+        @Test
+        @DisplayName("search combines with active, rather than replacing it")
+        void searchCombinesWithActive() {
+            long retired = named("MDIT-SEARCH-OFF", "Retired combiner endpoint");
+            named("MDIT-SEARCH-ON", "Live combiner endpoint");
+            assertThat(owner.post("/api/products/" + retired + "/deactivate", "").getStatusCode())
+                    .isEqualTo(HttpStatus.NO_CONTENT);
+
+            assertThat(owner.get("/api/products?search=combiner+endpoint").getBody())
+                    .contains("Retired combiner endpoint", "Live combiner endpoint");
+            assertThat(owner.get("/api/products?search=combiner+endpoint&active=true").getBody())
+                    .contains("Live combiner endpoint")
+                    .doesNotContain("Retired combiner endpoint");
+        }
+
+        @Test
+        @DisplayName("suppliers and customers search the same way, case- and accent-insensitively")
+        void theOtherTwoMasterDataLists() {
+            assertThat(owner.post("/api/suppliers",
+                            "{\"name\":\"MDIT Ολυμπία Εισαγωγές\",\"vatStatus\":\"DOMESTIC\"}")
+                    .getStatusCode()).isEqualTo(HttpStatus.CREATED);
+            assertThat(owner.post("/api/customers",
+                            "{\"name\":\"MDIT Αφοί Παπαδοπούλου\",\"vatStatus\":\"DOMESTIC\"}")
+                    .getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+            // Mid-word, unaccented, and lowercase against a capitalised accented original — three
+            // things the previous exact matching could not do, in one term each.
+            assertThat(owner.get("/api/suppliers?search=λυμπι").getBody())
+                    .contains("MDIT Ολυμπία");
+            assertThat(owner.get("/api/customers?search=παπαδοπουλου").getBody())
+                    .contains("MDIT Αφοί Παπαδοπούλου");
+        }
+
+        /**
+         * ⚠️ This uses a <strong>purpose-built role</strong>, not Remote/Order Staff, and the reason
+         * is worth recording because the first version of this test used the latter and failed.
+         *
+         * <p>{@code PRODUCT_SUPPLIER_SKU} still exists as a {@code ProtectedField}, but <strong>V26
+         * removed the seeded restrictions</strong> — no seeded role restricts anything today, which
+         * is what this class's own javadoc means by "the claim being checked is that nothing IS
+         * blanked". Written against Remote/Order Staff this test would have asserted a restriction
+         * that is not configured, and passed only if the guard were broken in the opposite
+         * direction.
+         *
+         * <p>So the restriction is applied here, through the real route, on a role created for it.
+         */
+        @Test
+        @DisplayName("a role that may not see the supplier SKU cannot find a product by it")
+        void aHiddenColumnIsNotASearchableOne() {
+            // Redaction blanks the field; it does not stop the row being FOUND by matching it,
+            // which would disclose the value one character at a time. ProductService.searchFor
+            // takes the column out of the query for a restricted viewer, and this is that,
+            // asserted through the real filter chain rather than against the service.
+            ResponseEntity<String> supplier = owner.post("/api/suppliers",
+                    "{\"name\":\"MDIT Search Guard Supply\",\"vatStatus\":\"DOMESTIC\"}");
+            long supplierId = idOf(supplier.getBody());
+            createProduct("MDIT-GUARD-EP", null, supplierId, "HIDDENCODE42");
+
+            assertThat(owner.get("/api/products?search=HIDDENCODE42").getBody())
+                    .contains("MDIT-GUARD-EP");
+
+            ApiClient.Session guarded = guardedSession();
+            String hidden = guarded.get("/api/products?search=HIDDENCODE42").getBody();
+            assertThat(hidden)
+                    .as("a role that cannot see the supplier SKU must not be able to confirm it")
+                    .isEqualTo("{\"items\":[]}");
+
+            String visible = guarded.get("/api/products?search=MDIT-GUARD-EP").getBody();
+            assertThat(visible)
+                    .as("and the product is still reachable by everything the role may see")
+                    .contains("MDIT-GUARD-EP");
+            assertThat(visible)
+                    .as("with the field redacted in the response, which is the other half")
+                    .doesNotContain("HIDDENCODE42");
+        }
+
+        /** A product with a name of its own, since the shared fixture derives one from the SKU. */
+        private long named(String sku, String name) {
+            long id = createProduct(sku, null);
+            assertThat(owner.patch("/api/products/" + id + "/name",
+                            "{\"name\":\"" + name + "\"}")
+                    .getStatusCode()).isEqualTo(HttpStatus.OK);
+            return id;
+        }
+    }
+
     // -------------------------------------------------------------------------------------------
     // Fixtures
     // -------------------------------------------------------------------------------------------
+
+    /**
+     * A session for a role with {@code PRODUCT_SUPPLIER_SKU} restricted.
+     *
+     * <p>Built here rather than reusing a seeded role: V26 removed every seeded restriction, so
+     * there is no longer a role in the system that restricts anything, and a test needing one has to
+     * make it. VIEW on Products is all the search route requires.
+     */
+    private ApiClient.Session guardedSession() {
+        if (users.findByUsername(GUARDED_USERNAME).isEmpty()) {
+            var role = roles.findByName(GUARDED_ROLE)
+                    .orElseGet(() -> roles.create(new NewRole(
+                            GUARDED_ROLE, "MDIT: sees products, not supplier codes")));
+            roles.grant(role.id(), Section.PRODUCTS, AccessLevel.VIEW);
+            roles.restrictField(role.id(), ProtectedField.PRODUCT_SUPPLIER_SKU, true);
+            users.create(new NewUser(
+                    GUARDED_USERNAME, "MDIT Guarded", GUARDED_PASSWORD, role.id()));
+        }
+        return api.logIn(GUARDED_USERNAME, GUARDED_PASSWORD);
+    }
 
     private ApiClient.Session staffSession() {
         if (users.findByUsername(STAFF_USERNAME).isEmpty()) {

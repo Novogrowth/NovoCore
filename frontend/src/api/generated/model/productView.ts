@@ -18,6 +18,7 @@ export interface ProductView {
   sku?: string;
   ean?: string;
   name?: string;
+  brand?: string;
   type?: ProductType;
   unitOfMeasure?: UnitOfMeasureView;
   defaultVatClassId: number;

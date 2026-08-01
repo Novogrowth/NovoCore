@@ -2153,6 +2153,13 @@
           "schema" : {
             "type" : "boolean"
           }
+        }, {
+          "name" : "search",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -4670,6 +4677,13 @@
           "schema" : {
             "type" : "string"
           }
+        }, {
+          "name" : "search",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -4768,6 +4782,65 @@
             "format" : "int64"
           }
         } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProductView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/products/{id}/brand" : {
+      "patch" : {
+        "operationId" : "ProductController_changeBrand",
+        "x-novocore-section" : "PRODUCTS",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BrandRequest"
+              }
+            }
+          }
+        },
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -6011,6 +6084,13 @@
           "required" : false,
           "schema" : {
             "type" : "boolean"
+          }
+        }, {
+          "name" : "search",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
           }
         } ],
         "responses" : {
@@ -7341,6 +7421,13 @@
           "schema" : {
             "type" : "boolean"
           }
+        }, {
+          "name" : "search",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -8312,6 +8399,13 @@
           "required" : false,
           "schema" : {
             "type" : "boolean"
+          }
+        }, {
+          "name" : "search",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
           }
         } ],
         "responses" : {
@@ -9385,6 +9479,14 @@
           "journalEntryId" : {
             "type" : "integer",
             "format" : "int64"
+          }
+        }
+      },
+      "BrandRequest" : {
+        "type" : "object",
+        "properties" : {
+          "brand" : {
+            "type" : "string"
           }
         }
       },
@@ -11132,6 +11234,9 @@
           "name" : {
             "type" : "string"
           },
+          "brand" : {
+            "type" : "string"
+          },
           "type" : {
             "$ref" : "#/components/schemas/ProductType"
           },
@@ -11585,6 +11690,9 @@
             "type" : "string"
           },
           "name" : {
+            "type" : "string"
+          },
+          "brand" : {
             "type" : "string"
           },
           "type" : {

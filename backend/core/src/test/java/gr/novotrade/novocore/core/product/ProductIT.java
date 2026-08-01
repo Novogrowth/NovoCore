@@ -176,7 +176,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
                 "ProdIT — Importer", "EL066666001"));
 
         ProductView product = products.create(new NewProduct(
-                "ProdIT-SUP-01", null, "ProdIT supplied item", ProductType.GOODS,
+                "ProdIT-SUP-01", null, "ProdIT supplied item", null, ProductType.GOODS,
                 kilogramId(), standardRateId(), Money.ofEur("24.00"),
                 importer.id(), "IMP-77-A", false));
 
@@ -208,7 +208,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
     void supplierSkuNeedsASupplier() {
         assertThatExceptionOfType(InvalidProductException.class)
                 .isThrownBy(() -> products.create(new NewProduct(
-                        "ProdIT-ORPHAN-01", null, "ProdIT orphan code", ProductType.GOODS,
+                        "ProdIT-ORPHAN-01", null, "ProdIT orphan code", null, ProductType.GOODS,
                         pieceId(), standardRateId(), null, null, "ORPHAN-1", false)))
                 .withMessageContaining("identifies nothing without knowing whose code it is");
 
@@ -230,7 +230,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
                 "ProdIT — Own reference supplier", "EL066666002"));
 
         ProductView product = products.create(new NewProduct(
-                "ProdIT-SUP-02", null, "ProdIT own reference", ProductType.GOODS,
+                "ProdIT-SUP-02", null, "ProdIT own reference", null, ProductType.GOODS,
                 pieceId(), standardRateId(), null, supplier.id(), null, false));
         assertThat(product.supplierSkuIfAny()).isEmpty();
 
@@ -254,13 +254,13 @@ class ProductIT extends AbstractCoreIntegrationTest {
 
         assertThatExceptionOfType(InvalidProductException.class)
                 .isThrownBy(() -> products.create(new NewProduct(
-                        "ProdIT-BADSUP-01", null, "ProdIT unknown supplier", ProductType.GOODS,
+                        "ProdIT-BADSUP-01", null, "ProdIT unknown supplier", null, ProductType.GOODS,
                         pieceId(), standardRateId(), null, 999_999L, null, false)))
                 .withMessageContaining("No supplier with id 999999");
 
         assertThatExceptionOfType(InvalidProductException.class)
                 .isThrownBy(() -> products.create(new NewProduct(
-                        "ProdIT-BADSUP-02", null, "ProdIT inactive supplier", ProductType.GOODS,
+                        "ProdIT-BADSUP-02", null, "ProdIT inactive supplier", null, ProductType.GOODS,
                         pieceId(), standardRateId(), null, retired.id(), null, false)))
                 .withMessageContaining("inactive");
     }
@@ -289,7 +289,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
         SupplierView supplier = suppliers.create(NewSupplier.domestic(
                 "ProdIT — Visible to staff", "EL066666004"));
         ProductView product = products.create(new NewProduct(
-                "ProdIT-REDACT-01", "5209999900001", "ProdIT unrestricted item", ProductType.GOODS,
+                "ProdIT-REDACT-01", "5209999900001", "ProdIT unrestricted item", null, ProductType.GOODS,
                 pieceId(), standardRateId(), Money.ofEur("129.00"),
                 supplier.id(), "HID-99", false));
 
@@ -328,7 +328,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
         SupplierView supplier = suppliers.create(NewSupplier.domestic(
                 "ProdIT — Restricted supplier", "EL066666009"));
         ProductView product = products.create(new NewProduct(
-                "ProdIT-MECHANISM-01", null, "ProdIT mechanism item", ProductType.GOODS,
+                "ProdIT-MECHANISM-01", null, "ProdIT mechanism item", null, ProductType.GOODS,
                 pieceId(), standardRateId(), Money.ofEur("77.00"),
                 supplier.id(), "MECH-1", false));
 
@@ -353,7 +353,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
         SupplierView supplier = suppliers.create(NewSupplier.domestic(
                 "ProdIT — Visible supplier", "EL066666005"));
         ProductView product = products.create(new NewProduct(
-                "ProdIT-OWNER-01", null, "ProdIT owner view", ProductType.GOODS,
+                "ProdIT-OWNER-01", null, "ProdIT owner view", null, ProductType.GOODS,
                 pieceId(), standardRateId(), Money.ofEur("55.00"),
                 supplier.id(), "VIS-1", false));
 
@@ -411,10 +411,33 @@ class ProductIT extends AbstractCoreIntegrationTest {
     // ---------------------------------------------------------------------------------------
 
     @Test
+    @DisplayName("the brand is set, changed and cleared, and two products may share one")
+    void brandIsFreeTextAndNotUnique() {
+        ProductView first = products.create(new NewProduct(
+                "ProdIT-BRAND-01", null, "Dual boiler machine", "Rocket Espresso",
+                ProductType.GOODS, pieceId(), standardRateId(), null, null, null, false));
+
+        assertThat(first.brandIfAny()).contains("Rocket Espresso");
+
+        // No uniqueness constraint, and that is the decision rather than an omission: a brand is
+        // free text on the product, not a reference to a brand table. See V29.
+        ProductView second = products.create(new NewProduct(
+                "ProdIT-BRAND-02", null, "Single boiler machine", "Rocket Espresso",
+                ProductType.GOODS, pieceId(), standardRateId(), null, null, null, false));
+        assertThat(second.brandIfAny()).contains("Rocket Espresso");
+
+        assertThat(products.changeBrand(first.id(), "Lelit").brandIfAny()).contains("Lelit");
+
+        // Null clears it — "this product has no brand" is an ordinary state here, not an unfilled
+        // field, since most of this catalogue is own-blend coffee bagged in-store.
+        assertThat(products.changeBrand(first.id(), null).brandIfAny()).isEmpty();
+    }
+
+    @Test
     @DisplayName("SKU and barcode are both unique, and a blank scan matches nothing")
     void skuAndEanAreUnique() {
         products.create(new NewProduct(
-                "ProdIT-UNIQ-01", "5209999900002", "ProdIT unique one", ProductType.GOODS,
+                "ProdIT-UNIQ-01", "5209999900002", "ProdIT unique one", null, ProductType.GOODS,
                 pieceId(), standardRateId(), null, null, null, false));
 
         assertThatExceptionOfType(InvalidProductException.class)
@@ -424,7 +447,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
 
         assertThatExceptionOfType(InvalidProductException.class)
                 .isThrownBy(() -> products.create(new NewProduct(
-                        "ProdIT-UNIQ-02", "5209999900002", "ProdIT duplicate barcode",
+                        "ProdIT-UNIQ-02", "5209999900002", "ProdIT duplicate barcode", null,
                         ProductType.GOODS, pieceId(), standardRateId(),
                         null, null, null, false)))
                 .withMessageContaining("scan ambiguous");
@@ -504,7 +527,7 @@ class ProductIT extends AbstractCoreIntegrationTest {
     void serviceCannotBeSerialTracked() {
         assertThatExceptionOfType(InvalidProductException.class)
                 .isThrownBy(() -> products.create(new NewProduct(
-                        "ProdIT-SVCSER-01", null, "ProdIT serialised service", ProductType.SERVICE,
+                        "ProdIT-SVCSER-01", null, "ProdIT serialised service", null, ProductType.SERVICE,
                         pieceId(), standardRateId(), null, null, null, true)))
                 .withMessageContaining("no units to give serial numbers to");
 

@@ -380,7 +380,7 @@ class PurchasingEndpointIT {
     private TestProduct product() {
         String sku = "PURCHIT-" + next();
         long id = products.create(new NewProduct(
-                sku, null, "PurchIT item", ProductType.GOODS,
+                sku, null, "PurchIT item", null, ProductType.GOODS,
                 unitsOfMeasure.active().getFirst().id(), standardVatClassId(),
                 null, null, null, false)).id();
         return new TestProduct(id, sku);

@@ -6,6 +6,7 @@ import gr.novotrade.novocore.core.api.product.NewProduct;
 import gr.novotrade.novocore.core.api.product.ProductNotFoundException;
 import gr.novotrade.novocore.core.api.product.ProductService;
 import gr.novotrade.novocore.core.api.product.ProductView;
+import gr.novotrade.novocore.core.api.security.ProtectedField;
 import gr.novotrade.novocore.core.api.security.RoleView;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.shared.Money;
@@ -14,6 +15,8 @@ import gr.novotrade.novocore.core.api.supplier.SupplierService;
 import gr.novotrade.novocore.core.api.supplier.SupplierView;
 import gr.novotrade.novocore.core.api.tax.VatClassService;
 import gr.novotrade.novocore.core.api.tax.VatClassView;
+import gr.novotrade.novocore.core.support.Specifications;
+import gr.novotrade.novocore.core.support.TextSearch;
 import java.math.BigDecimal;
 import java.util.Currency;
 import java.util.HashMap;
@@ -22,6 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +49,22 @@ import org.springframework.transaction.annotation.Transactional;
 class ProductServiceImpl implements ProductService {
 
     private static final String ENTITY_TYPE = "Product";
+
+    /**
+     * What a substring search looks at. The supplier's own code is in here because finding a product
+     * by the code the supplier uses for it is one of the things a purchasing screen exists to do.
+     */
+    private static final String[] SEARCHABLE = {"sku", "name", "brand", "ean", "supplierSku"};
+
+    /**
+     * The same, for a viewer who may not see {@code PRODUCT_SUPPLIER_SKU}.
+     *
+     * <p>Redacting the column in the response is not enough on its own: a row that can still be
+     * <em>found</em> by matching a hidden field discloses that field one character at a time, and
+     * every step of that is a result the role is otherwise entitled to see. So the column leaves the
+     * query, not just the answer.
+     */
+    private static final String[] SEARCHABLE_WITHOUT_SUPPLIER_SKU = {"sku", "name", "brand", "ean"};
 
     private final ProductRepository repository;
     private final UnitOfMeasureRepository unitsOfMeasure;
@@ -83,6 +103,19 @@ class ProductServiceImpl implements ProductService {
     @Transactional(readOnly = true)
     public List<ProductView> active() {
         return toViews(repository.findByActiveTrueOrderBySkuAsc());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductView> search(String term, boolean activeOnly) {
+        return search(term, activeOnly, SEARCHABLE);
+    }
+
+    private List<ProductView> search(String term, boolean activeOnly, String[] columns) {
+        return toViews(repository.findAll(
+                Specifications.<Product>activeOnly(activeOnly)
+                        .and(TextSearch.matching(term, columns)),
+                Sort.by(Sort.Order.asc("sku"))));
     }
 
     @Override
@@ -149,6 +182,27 @@ class ProductServiceImpl implements ProductService {
         return redact(active(), viewer);
     }
 
+    /**
+     * The one {@code ...For} read that changes the <em>query</em> and not only the response — see
+     * {@link ProductService#searchFor} for why leaving the supplier's SKU in the query would disclose
+     * it to a role that cannot see it.
+     *
+     * <p>Both restricted fields are checked, mirroring {@code ProductView.redactedFor}: it hides the
+     * supplier SKU when either the supplier or the SKU itself is restricted, because a code is
+     * meaningless without knowing whose it is and equally revealing with it.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductView> searchFor(String term, boolean activeOnly, RoleView viewer) {
+        requireProductAccess(viewer);
+        boolean maySeeSupplierSku = viewer.canSee(ProtectedField.PRODUCT_SUPPLIER)
+                && viewer.canSee(ProtectedField.PRODUCT_SUPPLIER_SKU);
+        return redact(
+                search(term, activeOnly,
+                        maySeeSupplierSku ? SEARCHABLE : SEARCHABLE_WITHOUT_SUPPLIER_SKU),
+                viewer);
+    }
+
     @Override
     @Transactional(readOnly = true)
     public Optional<ProductView> findFor(long id, RoleView viewer) {
@@ -207,6 +261,7 @@ class ProductServiceImpl implements ProductService {
         String sku = requireText(request.sku(), "SKU");
         String name = requireText(request.name(), "Product name");
         String ean = optionalText(request.ean());
+        String brand = optionalText(request.brand());
         String supplierSku = optionalText(request.supplierSku());
 
         if (repository.existsBySkuIgnoreCase(sku)) {
@@ -231,7 +286,7 @@ class ProductServiceImpl implements ProductService {
         }
 
         Product saved = repository.save(new Product(
-                sku, ean, name, request.type(), unit,
+                sku, ean, name, brand, request.type(), unit,
                 request.defaultVatClassId(), request.sellingPrice(),
                 request.supplierId(), supplierSku, request.serialTracked()));
 
@@ -382,6 +437,21 @@ class ProductServiceImpl implements ProductService {
                 "sku", product.getSku(),
                 "supplierId", supplierId == null ? "(cleared)" : String.valueOf(supplierId),
                 "supplierSku", normalisedSupplierSku == null ? "(none)" : normalisedSupplierSku));
+
+        return toView(product);
+    }
+
+    @Override
+    @Transactional
+    public ProductView changeBrand(long id, String brand) {
+        Product product = load(id);
+        String normalised = optionalText(brand);
+
+        product.changeBrand(normalised);
+
+        auditLog.record("product.brand-changed", ENTITY_TYPE, String.valueOf(id), Map.of(
+                "sku", product.getSku(),
+                "brand", normalised == null ? "(cleared)" : normalised));
 
         return toView(product);
     }
@@ -582,6 +652,7 @@ class ProductServiceImpl implements ProductService {
                 product.getSku(),
                 product.getEan(),
                 product.getName(),
+                product.getBrand(),
                 product.getType(),
                 UnitOfMeasureServiceImpl.toView(product.getUnitOfMeasure()),
                 product.getDefaultVatClassId(),

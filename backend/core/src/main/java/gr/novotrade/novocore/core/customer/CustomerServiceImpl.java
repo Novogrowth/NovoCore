@@ -11,12 +11,15 @@ import gr.novotrade.novocore.core.api.tax.VatClassService;
 import gr.novotrade.novocore.core.api.tax.VatClassView;
 import gr.novotrade.novocore.core.api.tax.VatExemptionReasonService;
 import gr.novotrade.novocore.core.api.tax.VatStatus;
+import gr.novotrade.novocore.core.support.Specifications;
+import gr.novotrade.novocore.core.support.TextSearch;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +30,13 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 class CustomerServiceImpl implements CustomerService {
+
+    /**
+     * What a substring search looks at. The brief also names Code, which is not a column yet — the
+     * customer field list is marked (draft). Queued as its own item.
+     */
+    private static final String[] SEARCHABLE = {"name", "vatNumber", "email", "phone"};
+
 
     private static final String ENTITY_TYPE = "Customer";
 
@@ -53,6 +63,20 @@ class CustomerServiceImpl implements CustomerService {
     @Transactional(readOnly = true)
     public List<CustomerView> active() {
         return toViews(repository.findByActiveTrueOrderByNameAsc());
+    }
+
+    /**
+     * The VAT number is one of the searched columns, as a substring. {@link #findByVatNumber} stays
+     * exact and is untouched by this — it is the authoritative auto-link of brief §5, and the whole
+     * reason it may be applied without asking anybody is that it cannot match approximately.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<CustomerView> search(String term, boolean activeOnly) {
+        return toViews(repository.findAll(
+                Specifications.<Customer>activeOnly(activeOnly)
+                        .and(TextSearch.matching(term, SEARCHABLE)),
+                Sort.by(Sort.Order.asc("name"))));
     }
 
     @Override

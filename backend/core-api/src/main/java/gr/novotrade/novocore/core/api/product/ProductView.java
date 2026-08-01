@@ -52,6 +52,9 @@ import java.util.Set;
  *     (brief §5's serialized products — coffee machines). Decides the shape of its lots: a
  *     serial-tracked lot holds units rather than a pooled quantity, and its write-offs use the
  *     specific unit's own cost instead of FIFO. Only a stocked, non-bundle product can be one.
+ * @param brand the manufacturer or brand, or null. Not a protected field: an order picker needs to
+ *     know what a product is, and the brand is part of what it is. Searchable alongside SKU, title
+ *     and barcode.
  * @param bundle whether this is a bundle/composite product (Q11, brief §5). A bundle has its own SKU
  *     and <em>no stock of its own</em> — its availability is computed from its components, and it
  *     cannot receive a lot.
@@ -71,6 +74,7 @@ public record ProductView(
         String sku,
         String ean,
         String name,
+        String brand,
         ProductType type,
         UnitOfMeasureView unitOfMeasure,
         long defaultVatClassId,
@@ -148,7 +152,7 @@ public record ProductView(
         }
 
         return new ProductView(
-                id, sku, ean, name, type, unitOfMeasure, defaultVatClassId, sellingPrice,
+                id, sku, ean, name, brand, type, unitOfMeasure, defaultVatClassId, sellingPrice,
                 hideSupplier ? null : supplierId,
                 hideSupplierSku ? null : supplierSku,
                 serialTracked, bundle,
@@ -170,6 +174,10 @@ public record ProductView(
 
     public Optional<String> eanIfAny() {
         return Optional.ofNullable(ean);
+    }
+
+    public Optional<String> brandIfAny() {
+        return Optional.ofNullable(brand);
     }
 
     public Optional<Money> sellingPriceIfAny() {

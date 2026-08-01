@@ -27,10 +27,12 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  BrandRequest,
   EanRequest,
   ListResponseProductView,
   NameRequest,
   NewProduct,
+  ProductControllerChangeBrand4xx,
   ProductControllerChangeEan4xx,
   ProductControllerChangeSellingPrice4xx,
   ProductControllerChangeSerialTracking4xx,
@@ -305,7 +307,66 @@ export function useProductControllerProduct<TData = Awaited<ReturnType<typeof pr
 
 
 
-export const productControllerDeactivate = (
+export const productControllerChangeBrand = (
+    id: number,
+    brandRequest: BrandRequest,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<ProductView>(
+      {url: `/api/products/${id}/brand`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: brandRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getProductControllerChangeBrandMutationOptions = <TError = ProductControllerChangeBrand4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof productControllerChangeBrand>>, TError,{id: number;data: BrandRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof productControllerChangeBrand>>, TError,{id: number;data: BrandRequest}, TContext> => {
+
+const mutationKey = ['productControllerChangeBrand'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof productControllerChangeBrand>>, {id: number;data: BrandRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  productControllerChangeBrand(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ProductControllerChangeBrandMutationResult = NonNullable<Awaited<ReturnType<typeof productControllerChangeBrand>>>
+    export type ProductControllerChangeBrandMutationBody = BrandRequest
+    export type ProductControllerChangeBrandMutationError = ProductControllerChangeBrand4xx
+
+    export const useProductControllerChangeBrand = <TError = ProductControllerChangeBrand4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof productControllerChangeBrand>>, TError,{id: number;data: BrandRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof productControllerChangeBrand>>,
+        TError,
+        {id: number;data: BrandRequest},
+        TContext
+      > => {
+      return useMutation(getProductControllerChangeBrandMutationOptions(options), queryClient);
+    }
+    export const productControllerDeactivate = (
     id: number,
  signal?: AbortSignal
 ) => {

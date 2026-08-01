@@ -120,6 +120,57 @@ class UserRoleEndpointIT {
         }
 
         @Test
+        @DisplayName("?search= matches a username, a display name and a role description")
+        void searchMatchesAnywhere() {
+            // Both directions of the step's worked example on this surface: a term that begins the
+            // value, and one that sits in the middle of it. Under the previous behaviour these two
+            // lists had no text filter at all.
+            givenUser("search.aristotelis", roleWith("ADMIN_R_SEARCH"));
+
+            assertThat(usernames(Json.ok(
+                    owner.get("/api/users?search=search."), "GET /api/users?search")))
+                    .contains("search.aristotelis");
+            assertThat(usernames(Json.ok(
+                    owner.get("/api/users?search=totel"), "GET /api/users?search mid-string")))
+                    .as("mid-string is the whole point; an exact filter would find nothing")
+                    .contains("search.aristotelis");
+
+            // The display name, which is the other searched column and the one an administrator
+            // looking for a person actually knows. Greek, accented, and searched unaccented in
+            // lowercase — so this covers the normalisation over HTTP as well as the column.
+            users.create(new NewUser("search.bydisplay", "Αριστοτέλης Παπαδόπουλος",
+                    PASSWORD, roleWith("ADMIN_R_SEARCH").id()));
+            assertThat(owner.get("/api/users?search=παπαδοπουλ").getBody())
+                    .as("the display name is searched, and accents and case are folded")
+                    .contains("search.bydisplay");
+
+            assertThat(owner.get("/api/roles?search=ADMIN_R_SEARCH").getBody())
+                    .contains("ADMIN_R_SEARCH");
+            assertThat(owner.get("/api/roles?search=R_SEARC").getBody())
+                    .contains("ADMIN_R_SEARCH");
+        }
+
+        @Test
+        @DisplayName("search combines with active, and an absent term is no filter")
+        void searchCombinesAndDegrades() {
+            UserView dormant = givenUser("search.dormant", roleWith("ADMIN_R_SEARCH_OFF"));
+            users.deactivate(dormant.id());
+
+            assertThat(usernames(Json.ok(
+                    owner.get("/api/users?search=search.dormant"), "GET /api/users?search")))
+                    .contains("search.dormant");
+            assertThat(usernames(Json.ok(
+                    owner.get("/api/users?search=search.dormant&active=true"),
+                    "GET /api/users?search&active")))
+                    .doesNotContain("search.dormant");
+
+            // A blank term is the unfiltered list, not an empty one — so a screen can send the box's
+            // contents unconditionally without a special case for "the operator cleared it".
+            assertThat(usernames(Json.ok(owner.get("/api/users?search="), "GET /api/users?search=")))
+                    .contains(OWNER_USERNAME);
+        }
+
+        @Test
         @DisplayName("the role list, one role by id, and who holds it")
         void listAndReadRoles() {
             RoleView role = roleWith("ADMIN_R_HOLDERS");

@@ -125,7 +125,18 @@ export function FieldEditor<T>({
             {editable && (
               // Shown and disabled rather than absent: the field is editable on every other record
               // of this kind, and a control that vanishes reads as a bug rather than as a rule.
-              <Button variant="ghost" size="sm" onClick={start} disabled={locked}>
+              // The visible word is "Edit"; the ACCESSIBLE name says which field. A detail screen
+              // renders five or more of these, and without this they are five controls called
+              // "Edit" — indistinguishable to a screen reader, and indistinguishable to a test,
+              // which is why several tests used to index into them by position and broke the
+              // moment a field was inserted above.
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={start}
+                disabled={locked}
+                aria-label={t('field.editNamed', { label })}
+              >
                 {t('field.edit')}
               </Button>
             )}

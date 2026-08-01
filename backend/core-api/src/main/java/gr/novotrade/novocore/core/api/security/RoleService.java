@@ -23,6 +23,17 @@ public interface RoleService {
 
     List<RoleView> active();
 
+    /**
+     * Roles whose name or description contains the term anywhere, ignoring case and accents.
+     *
+     * <p>The description is searched because it is where the answer to "which role lets somebody do
+     * X" actually lives — a name alone rarely says.
+     *
+     * @param term matched as a substring; null or blank means no filter. Wildcards are literal.
+     * @param activeOnly whether to restrict to active roles, combining with the term
+     */
+    List<RoleView> search(String term, boolean activeOnly);
+
     Optional<RoleView> find(long id);
 
     /** @throws RoleNotFoundException if absent */

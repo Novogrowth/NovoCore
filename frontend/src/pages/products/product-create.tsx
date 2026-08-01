@@ -35,6 +35,7 @@ export function ProductCreate() {
 
   const [sku, setSku] = useState('')
   const [name, setName] = useState('')
+  const [brand, setBrand] = useState('')
   const [type, setType] = useState<ProductType>(ProductType.GOODS)
   const [unitOfMeasureId, setUnitOfMeasureId] = useState<number | undefined>()
   const [defaultVatClassId, setDefaultVatClassId] = useState<number | undefined>()
@@ -58,6 +59,9 @@ export function ProductCreate() {
         data: {
           sku: sku.trim(),
           name: name.trim(),
+          // Optional, and omitted rather than sent blank: the column stores one representation of
+          // "no brand", and most of this catalogue is own-blend coffee that genuinely has none.
+          ...(brand.trim() ? { brand: brand.trim() } : {}),
           type,
           unitOfMeasureId,
           defaultVatClassId,
@@ -109,6 +113,11 @@ export function ProductCreate() {
             <div className="space-y-1">
               <Label htmlFor="name">{t('products.column.name')}</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="brand">{t('products.column.brand')}</Label>
+              <Input id="brand" value={brand} onChange={(e) => setBrand(e.target.value)} />
             </div>
 
             <div className="space-y-1">

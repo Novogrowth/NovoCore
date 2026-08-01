@@ -72,8 +72,14 @@ class RoleController {
     // -------------------------------------------------------------------------------------------
 
     @GetMapping(path = "/api/roles", produces = MediaType.APPLICATION_JSON_VALUE)
-    ListResponse<RoleView> roles(@RequestParam(required = false) Boolean active) {
-        return ListResponse.of(Boolean.TRUE.equals(active) ? roles.active() : roles.all());
+    ListResponse<RoleView> roles(
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) String search) {
+        boolean activeOnly = Boolean.TRUE.equals(active);
+        if (search != null) {
+            return ListResponse.of(roles.search(search, activeOnly));
+        }
+        return ListResponse.of(activeOnly ? roles.active() : roles.all());
     }
 
     @GetMapping(path = "/api/roles/{id}", produces = MediaType.APPLICATION_JSON_VALUE)

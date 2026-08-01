@@ -35,15 +35,27 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 15 | **Dummy data validation** — the API driven end to end over HTTP | **Done** — 15a and 15b complete. **Nine real defects found and fixed**, migration **V26**. Route coverage **128/133 driven, 5 excused with reasons**, asserted rather than reported. See below |
 | 16a | **Backend prerequisites for the frontend** — four items agreed before any step 16 work | **Done** — `/me`, preview endpoints, the OpenAPI spec + drift check, and the paging contract. Migration **V27**, plus **session eviction**, a defect found while building the first item. See below |
 | 16b | **Users & roles, journal listing, settings** — the three sections with no HTTP surface at all | **Done, committed** `452b3fd` — 37 routes, **no migration**. Three defects found and fixed, none of them in the code the step set out to write. See below |
-| 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress. F0–F3 done, F4 (Settings) is next.** Foundations `94e17cd`, Products `56e3726` + guards `28c4119` + brand pass, then the render-loop fix `3458ee6`, F0 (the seed pass), F1 Suppliers `b406b27`, F2 Customers `496c7be`, F3 Users & Roles `aea0e56`. **228 frontend tests, 25 files, green.** Per-step detail in `docs/novocore-frontend-roadmap.md`; decisions and what each step left behind in *Step 16 — the frontend* below |
+| S1 | **Substring search** — `pg_trgm` + `unaccent`, one shared mechanism, five screens | **Done** — migrations **V28** and **V29**, 17 GIN trigram indexes, `TextSearch` + `SearchFilter`, `?search=` on five routes. **Two findings**, one of which was invisible to the entire test suite until the test database was made to match the real one. See below |
+| 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress. F0–F3 and S1 done, F4 (Settings) is next.** Foundations `94e17cd`, Products `56e3726` + guards `28c4119` + brand pass, then the render-loop fix `3458ee6`, F0 (the seed pass), F1 Suppliers `b406b27`, F2 Customers `496c7be`, F3 Users & Roles `aea0e56`, then **S1, substring search**. **237 frontend tests, 26 files, green.** Per-step detail in `docs/novocore-frontend-roadmap.md`; decisions and what each step left behind in *Step 16 — the frontend* below |
 
-**Tests: 1326 passing, 0 skipped, `mvn clean verify` exit 0. 174 routes.** Counted from a local run
-on this machine, and **0 skipped** holds: the PostgreSQL 17 client tools are installed here, so
-`BackupIT`'s 16 tests and the two backup legs run locally as well as on CI.
+**Tests: 1360 passing, 0 failing, 1 skipped, `mvn clean verify` exit 0. 175 routes.** Counted from a
+local run on this machine. The PostgreSQL 17 client tools are installed here, so `BackupIT`'s 16
+tests and the two backup legs run locally as well as on CI.
+
+⚠️ **The 1 skip is `LiveSeedTest.seedTheLiveDatabase`, and it is deliberate**, not a regression: it
+refuses to run without an explicit `-Dnovocore.seed.base-url`, because a seeder with a default target
+is how one eventually points at something that matters. Earlier revisions of this file said "0
+skipped"; that figure predates F0, which is the step that added this test.
+
+⚠️ **This run is the first under the production database locale.** Until S1, Testcontainers used the
+image default (`en_US.utf8`) while the real stack uses `--locale=C`, so every integration test in this
+repository was describing a database nobody runs. Both are `C` now, and the whole suite is green under
+it — nothing was depending on the permissive one, which is worth knowing because it means the pin
+costs nothing to keep.
 
 Step 16a added 36 (1152 → 1188) and four routes (133 → 137): `GET /api/me`,
 `PATCH /api/me/language`, `POST /api/sales-invoices/preview`, `POST /api/credit-notes/preview`.
-**Step 16b added 138 (1188 → 1326) and 37 routes (137 → 174)** — 18 users/roles, 3 journal, 3
+**S1 added 34 (1326 → 1360) and one route (174 → 175)** — the five list routes gained a *parameter* rather than an operation; the one new route is `PATCH /api/products/{id}/brand`. The spec diff is 108 lines of additions and **0 deletions**. **Step 16b added 138 (1188 → 1326) and 37 routes (137 → 174)** — 18 users/roles, 3 journal, 3
 settings, 13 lookup administration. The OpenAPI spec was regenerated and the operation sets diffed
 directly rather than trusting the line count: **0 removed, 37 added, 174 total.**
 
@@ -57,8 +69,16 @@ is → the *Step 16, the frontend* section below for F1–F3's decisions and wha
 
 **Where things stand for F4 specifically:**
 
-- **F0–F3 are done and pushed.** Products, Suppliers, Customers, Users & Roles. 228 frontend tests,
-  25 files, green as of F3's close-out.
+- **F0–F3 and S1 are done.** Products, Suppliers, Customers, Users & Roles, then substring search
+  across all five. **237 frontend tests, 26 files; 1355 backend tests, `mvn clean verify` exit 0.**
+- ⏳ **S1 leaves one check for the owner**, because it needs the Owner password and that is
+  deliberately not in this repo. Signed in, two URLs:
+  `/api/products?search=kit` (expect `TEST-PRODUCT-KIT-01` and `-02`) and
+  `/api/customers?search=πελατησ` (expect `Πελάτης Λιανικής`). Everything else about S1 was proven
+  against the live database directly — see its section below.
+- ⚠️ **F4 inherits S1's habit, not just its component.** Any new list screen gets `SearchFilter` and
+  a `?search=` parameter built the same way; the backend side is one line in the service plus one
+  index in a new migration. `TextSearch` was written against exactly that criterion.
 - ⏳ **First, check whether the owner's manual acceptance pass on F3 came back.** Seven checks were
   agreed at F3's close-out and are listed in the F3 section below. **Anything they turn up is an F3
   defect and is fixed inside F3 before F4 work starts** — the pass is the gate, not a formality
@@ -76,9 +96,256 @@ is → the *Step 16, the frontend* section below for F1–F3's decisions and wha
 - ⚠️ **There is deliberately no route to change a VAT rate**, and its absence is asserted across
   three plausible paths: editing one would retroactively change what every invoice already issued
   under that class appears to have charged. A rate change is a **new class plus a deactivation**.
+- 📌 **VAT Classes — how F4 sources them. Decided 2026-08-01, recorded here before the screen
+  exists so it is not re-opened while building it.**
+  - **No Go-adapter dependency.** The classes are **seeded directly** with the current Greek
+    statutory rates — **24% / 13% / 6%** — rather than imported from Prosvasis Go. F4 does not wait
+    on, and must not be designed around, an adapter that is phases away.
+  - ⏳ **Island-rate applicability is NOT settled** and is the one open part: whether the reduced
+    island rates apply to this business has to be **verified against actual operations**, not
+    assumed from the fact that the rates exist in law. Until that is answered, no island class is
+    seeded — consistent with this schema's standing refusal to invent a fallback rate.
+  - **Adding a class is always available.** The seed is a starting point, not a closed list.
+  - **An existing class's rate can never be modified after creation** — the bullet above is the
+    mechanism, this is the policy it enforces, and they are the same decision stated from both ends.
+    A rate change is **a new class plus a deactivation of the old one**, because editing a rate in
+    place would retroactively change what already-issued invoices appear to have charged. The screen
+    must therefore offer *"add a class"* and *"deactivate a class"* and must **not** offer a rate
+    field on an existing one — not even disabled, since a disabled field invites somebody to look
+    for the permission that unlocks it.
 - **The standing rule applies to F4's create forms**: a screen test over the mock server cannot tell
   you a write works. Prove creation against the real backend — see F3's write-up for the pattern,
   including how to get a refusal from the server without writing anything.
+
+---
+
+## Step S1 — **substring search** (`pg_trgm` + `unaccent`). Approved 2026-08-01, standalone, not folded into F4
+
+**The approved checklist.** Written down at the moment of approval, per `CLAUDE.md`. Verdicts are
+filled in at close-out — **done / explicitly deferred / still open**, one per line, no exceptions.
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| 1 | Migration enabling `pg_trgm` and `unaccent` | **Done** — `V28__substring_search.sql`. Both installed on the live stack, asserted by `TextSearchIT.extensionsInstalled` |
+| 2 | An `IMMUTABLE` normalisation function — lowercase, unaccent, **final sigma ς → σ** | **Done** — `novocore_searchable(text)`. ⚠️ **Shipped wrong once and was fixed by the live check** — see the locale finding below |
+| 3 | GIN trigram indexes on every searched column | **Done** — 17 of them (15 in V28, 2 in V29), all present on the live database, and `TextSearchIT.everySearchedColumnIsIndexed` fails the build if a searched column loses one |
+| 4 | **One shared, reusable query mechanism** — not per-entity duplicated logic | **Done** — `core/support/TextSearch.java` returning a `Specification<E>`, plus `Specifications.activeOnly`. Five services call it; none has search logic of its own |
+| 5 | Products — SKU, name, EAN, supplier's SKU, **brand** | **Done**, and it grew a guard nobody asked for — see the disclosure finding below. **Brand was added in V29** when the full target list was reconciled |
+| 6 | Suppliers — name, **VAT number**, email, phone | **Done**. VAT was **missing until the reconciliation** and was closed in V29. Code and Alias: **not built, queued** (they are not columns) |
+| 7 | Customers — name, VAT number, email, phone | **Done**. Code: **not built, queued** |
+| 8 | Users — username, display name | **Done** |
+| 9 | Roles — name, description | **Done** |
+| 10 | `?search=` on the five list routes; spec regenerated | **Done** — spec diff is **additions only**: 35 lines, 5 parameters, 0 deletions. Generated client diff is 5 lines |
+| 11 | Frontend — search box on all five screens, Products' exact-SKU box replaced | **Done** — `components/data-table/search-filter.tsx`, one component, debounced |
+| 12 | Confirmed against the **real running backend**: indexes exist, "Cof" matches prefix *and* mid-string, existing exact-match filtering does not regress | **Done for the database, PARTIAL over HTTP** — see below. It is the sub-part that **found the defect**, and the HTTP leg on the live stack needs the owner's credentials |
+
+### ⚠️ S1's third finding — the reconciliation itself found two gaps a green build could not
+
+**Recorded because it is an argument for the practice, not just an outcome.** S1 was scoped against a
+five-entity list agreed in conversation. Reconciling it afterwards against the **complete** per-screen
+field list — the 16-row table above — found two things, and **the whole suite was green both before
+and after**, because a test can only check the fields somebody pointed it at:
+
+1. **`Product.brand` was never built at all.** Named in brief §5's Product list since the beginning,
+   absent from the schema, and therefore absent from every test. Built in **V29**.
+2. **`supplier.vat_number` existed and was simply not searched**, while `customer.vat_number` was —
+   an inconsistency with no argument behind it, invisible to anything except reading the two lists
+   side by side. Closed in **V29**.
+
+**The list is now written down (above) precisely so this is a one-time cost.** A step that adds
+search adopts its row; it does not re-derive one from memory of a conversation.
+
+### ⚠️ S1's finding — the test database was not configured like the real one, and it hid a defect
+
+**This is the reason the live check exists, and the first time it has caught something the whole
+test suite could not.**
+
+`docker/compose.yml` initialises PostgreSQL with `--encoding=UTF8 --locale=C`, deliberately: it
+makes sort order deterministic across machines. **Under locale `C`, `lower()` folds ASCII and
+nothing else.** Greek capitals pass straight through.
+
+So the normalisation function, written with a plain `lower()`, did this on the real server:
+
+    Πελάτης Λιανικής  →  Πελατησ Λιανικησ      accents stripped, sigma folded, still capitalised
+
+and a search for `πελατησ` returned **zero rows**. No error. The index built, the query ran, the
+answer was empty and looked like "no such customer".
+
+**Every integration test passed against it**, because `PostgresTestContainerConfiguration` took the
+image's own default locale — `en_US.utf8` — where a bare `lower()` folds Greek correctly. The tests
+were describing a database nobody runs.
+
+Two fixes, and the second matters more than the first:
+
+1. **The function names its collation**: `lower(… COLLATE pg_c_utf8)`. PostgreSQL 17's builtin
+   provider does full Unicode case mapping and is platform-independent. Chosen over ICU
+   (`und-x-icu`) because ICU's behaviour tracks the bundled ICU version, and an index expression
+   whose meaning changes on a library upgrade is precisely what must not be indexed. ⚠️ **`REINDEX`
+   the fifteen indexes after a PostgreSQL major upgrade** — Unicode itself moves, which is the same
+   caveat the `unaccent` rules carry, and it is the price of the function being `IMMUTABLE` at all.
+2. **The test container now passes the same `POSTGRES_INITDB_ARGS` as `compose.yml`.** This is the
+   real fix: the divergence, not the collation, was the defect. `TextSearchIT` now asserts
+   `datcollate = 'C'`, so removing the pin fails the build rather than quietly restoring the blind
+   spot. **The whole suite was re-run under the production locale and is green** — nothing else was
+   depending on the permissive one.
+
+### ⚠️ S1's other finding — a hidden column must not be a searchable one
+
+Raised while writing `ProductService.search`, not by a test. `PRODUCT_SUPPLIER_SKU` is a restricted
+field *and* one of the columns worth searching. Redaction blanks it in the response — and does
+nothing about the row still being **findable** by matching it, which discloses the value one
+character at a time, every step confirmed by a result the role is entitled to see.
+
+So `searchFor` **removes the column from the query** for a viewer who may not see it, rather than
+only redacting the answer. Both restricted fields are checked, mirroring `ProductView.redactedFor`,
+which blanks the SKU when either is restricted. The consequence to know: **the same term can return
+fewer rows for a restricted role.** Two tests hold it, one at the service and one over HTTP.
+
+⚠️ The HTTP one uses a **purpose-built role, not Remote/Order Staff** — V26 removed every seeded
+restriction, so written against a seeded role it would have asserted a restriction that is not
+configured and passed only if the guard were broken the other way. The first draft did exactly that
+and failed.
+
+### What sub-part 12 actually proved, and the one part it did not
+
+Proved against the **live stack** (`docker compose`, real seeded data, migrated v27 → v28 in place —
+not a fresh database):
+
+- both extensions installed; **all 15 indexes present**;
+- `Πελάτης Λιανικής` found by all six spellings an operator could type — `ΠΕΛΑΤΗΣ`, `Πελάτης`,
+  `πελατης`, `πελατησ`, `ελατη`, `λιανικ`;
+- **the "Cof" case**: a name *starting* with it and a name *containing* it mid-string both returned,
+  a third row containing neither excluded — run inside a transaction and **rolled back**, so no rows
+  remain (residue: the `product` id sequence advanced, which a rollback does not undo);
+- **the index is genuinely used** — at 50,000 rows the planner chooses
+  `Bitmap Index Scan on product_name_search`, measured rather than assumed, also rolled back;
+- **exact matching did not regress**: on the `sku`, `ean` and `vat_number` exact paths a *prefix*
+  still matches nothing, and full values still match.
+
+**Not proved on the live stack: the `?search=` HTTP leg.** Driving it needs the Owner password,
+which is deliberately not in `docker/.env` and comes from the operator's environment
+(`NOVOCORE_SEED_USERNAME` / `_PASSWORD`). It **is** proved over real HTTP through the real Spring
+Security chain against a real PostgreSQL by `MasterDataEndpointIT.Search` and
+`UserRoleEndpointIT` — which is a real backend, just not *this* running one. **The remaining check
+is one for the owner**, and it is two URLs in a signed-in browser:
+
+    /api/products?search=kit          → expect TEST-PRODUCT-KIT-01 and -02
+    /api/customers?search=πελατησ     → expect Πελάτης Λιανικής
+
+**Three decisions taken at approval, each closing something that was genuinely open:**
+
+- **`Supplier.code`, `Supplier.alias` and `Customer.code` do not exist as columns**, and are *not*
+  added here. They come from the brief's Supplier and Customer field lists, **both marked
+  *(draft)***, and step 5 built neither. Search covers the columns that exist; the three fields are
+  **queued as their own item** (see below) because adding them is a schema plus routes plus forms
+  plus a uniqueness decision, not a search feature.
+- **Frontend is in scope**, all five screens.
+- **Greek final sigma is folded** — `unaccent` maps ά→α but leaves ς and σ distinct, so a term
+  ending in a sigma would match only if the operator typed the same form the data uses. On Greek
+  party names, which is most of this data, that is a real miss.
+
+⚠️ **This closes the open decision the frontend roadmap recorded and refused to guess at.** Its
+bugfix note says the SKU filter box is an exact lookup, that typing `TEST` against eight
+`TEST-PRODUCT-*` SKUs matches nothing, and that *"the choice between a real search endpoint and
+clearer labelling is the owner's, and the frontend should not change until it is made."* It is now
+made: a real search endpoint.
+
+**Explicitly out of scope, and why:** VAT classes, units of measure and every transactional document
+get no search here. Sub-part 4 exists so that wiring search in when their screens are built is one
+line at the call site plus one index — which is the criterion this step is judged against, not an
+aspiration.
+
+---
+
+## 🎯 The search target list — **all 15 rows.** This is the authoritative version
+
+**Confirmed 2026-08-01, and it is deliberately longer than the list S1 was scoped against.** The
+approval conversation narrowed to the five entities that already had screens; this is the whole
+thing. **It is recorded here so no future step re-derives it, and so nothing gets built narrower
+than it should be.** A screen that adds search adopts *its row*, not a guess at its row.
+
+⚠️ **"Not built yet" means two different things below, and conflating them will cost a session.**
+For rows 6–11 the **entity and its routes already exist** — only the screen is missing, so adopting
+search is the one-line change S1 was built for. For rows 12–15 **the entity does not exist at all**;
+its row here is a specification for whoever builds it, not work that is waiting.
+
+| # | Screen | Fields to search | State today |
+|---|---|---|---|
+| 1 | **Products** | SKU, Title, EAN, Supplier's SKU, Brand, **Category/subcategory** | ⚠️ **Five of six done** — SKU, title, brand, barcode, supplier's SKU. **Brand was built for this** (migration **V29**: column, PATCH route, create-form field, index). **Category is not a column and is its own proposal** — see below |
+| 2 | **Suppliers** | Code, Legal name, Alias, VAT (ΑΦΜ) | ⚠️ **Two of four done** — legal name and VAT, plus email and phone (kept). **Code and Alias are not columns**. The VAT gap was found by this reconciliation and closed in **V29** |
+| 3 | **Customers** | Code, Name, VAT (ΑΦΜ) | ⚠️ **Partly done** — name and VAT searched, plus email and phone (kept). **Code not a column** |
+| 4 | **Users** | Username | ✅ **Done**, plus display name (kept) |
+| 5 | **Roles** | Name, Description | ✅ **Done** |
+| 6 | **VAT Classes** | Name / Code | Entity + routes exist; **screen is F4** |
+| 7 | **Units of Measure** | Name / Code | Entity + routes exist; **screen is F4** |
+| 8 | **Sales Invoices / Credit Notes** | Document number, Customer name, Customer VAT, **Customer Code**, Date, Document type-series | Entities + routes exist; screens are **F5** |
+| 9 | **Purchase Invoices / Debit Notes** | Document number, Supplier name, Supplier VAT, **Supplier Alias**, Date, Document type-series | Purchase invoices exist; **debit notes do not exist at all** |
+| 10 | **Receipts / Payments** | As rows 8–9 — document number, counterparty name, VAT, alias, date, type-series | `settlement` + routes exist; screen is **F7** |
+| 11 | **Manual Journal Entries** | Description / memo | Entity + routes exist; screen is **F8** |
+| 12 | **Assets** | Name, Code | Entity + routes exist, **and `asset.code` is a real column** — the only one of the code fields that is |
+| 13 | **Purchase Orders** | PO number, Supplier name, Supplier VAT, Supplier Alias, Date | **No entity.** Later phase |
+| 14 | **Sales Order Fulfilment** | Order number, Customer name, Customer VAT, Status, Date, Sales channel, *Invoice number (later)*, *Skroutz reference (later)* | **No entity.** Later phase |
+| 15 | **Service Tickets** | Ticket number, Customer name, Serial number, Customer VAT, Date | **No entity.** Later phase |
+| 16 | **Back-in-Stock Reminders** | Customer name / phone, Product name, Customer VAT | **No entity.** Later phase |
+
+**Two things this table settles that would otherwise be re-argued every time:**
+
+- **Email and phone on Suppliers and Customers were added beyond the specified list, and stay.**
+  Confirmed 2026-08-01. They are a filter box's most useful columns and cost one index each.
+- **A counterparty's name, VAT, code or alias is on the *other* table.** Rows 8–10 and 13–15 all
+  search a field that does not live on the document. `TextSearch` supports a dotted path
+  (`"customer.name"`) for exactly this — ⚠️ **it produces an INNER JOIN**, so a document with no
+  counterparty would vanish from its own list. Whoever builds those decides join-versus-denormalise
+  per document; the mechanism does not force the choice, and this note exists so the trap is met
+  before the bug is.
+
+⚠️ **Rows 2, 3, 8, 9, 10 and 13 all depend on `Supplier.code`, `Supplier.alias` or `Customer.code`,
+none of which exist.** That single queued item below therefore blocks part of six rows, not two —
+which is the argument for doing it before F5 rather than after.
+
+### 📌 Queued out of S1 — the master-data fields the brief names and step 5 never built
+
+**`Supplier.code`, `Supplier.alias`, `Customer.code`.** All three are in the brief's *(draft)* field
+lists and **none is a column.** Verified against the live schema, not inferred.
+
+**This is not a search item.** Search over a column nobody can populate finds nothing, and an index
+on it would be a claim about coverage that is not true. Each field needs: a migration, service
+methods, PATCH routes, create-form fields, audit entries — and *then* one line in a new index
+migration plus one string in the service's `SEARCHABLE` array. That last part is the cheap half, as
+`Product.brand` has now demonstrated end to end.
+
+⚠️ **`Supplier.alias` collides with a word already in use.** Brief §5's *"alias forward, never
+rewrite history"* is the **customer merge** mechanism — a different thing entirely. A supplier alias
+here is a short trading name. Conflating them would be expensive.
+
+⚠️ **This item blocks part of six rows of the target list above**, not three: rows 2, 3, 8, 9, 10 and
+13 each search a code or alias. That is the argument for doing it **before F5**, when the first
+document screen starts wanting a counterparty's code.
+
+**`Product.brand` is no longer on this list — it was built (V29).** Plain nullable `varchar(120)`,
+one brand per product, **no uniqueness on the value** and no brand table: a brand is a label, not an
+accounting object, and nothing posts, reports or computes from one. Blank normalises to null so "no
+brand" has one representation. Column, `PATCH /api/products/{id}/brand`, create-form field, detail
+editor, audit entry, GIN index, and searched alongside SKU, title, barcode and the supplier's code.
+
+### 📌 Queued, its own proposal — `Product.category`
+
+**Deliberately not built in any form this session — not even the schema.** Brief §5's one-line
+*"Category (main/sub, including Spare Part)"* understates it, and building from that line would
+produce the wrong thing. The requirement, **decided 2026-08-01 and recorded here so it is not
+re-derived narrower:**
+
+- **Three levels deep** — category / subcategory / sub-subcategory. Not two.
+- **A product belongs to SEVERAL categories at once**, WooCommerce-style.
+
+Those two together mean **a self-referencing category table plus a product-to-category join
+table**. They rule out both of the shapes somebody reading only the brief would reach for: it is
+**not two flat columns** on `product`, and **not a fixed enum**.
+
+Consequences to work through when it is scoped: what a three-level path does to reporting and to the
+Woo adapter's own category tree; whether a product may be attached to a parent as well as a leaf;
+and — for search specifically — that a many-to-many makes the searched text a *joined* column, so
+`TextSearch`'s dotted path and its inner join need thinking about rather than reaching for.
 
 ---
 

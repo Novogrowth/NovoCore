@@ -157,6 +157,24 @@ function renderCreate() {
 const rowFor = (label: string) => screen.findByRole('group', { name: label })
 
 describe('the role list', () => {
+  it('sends the typed term as ?search=, alongside the active-only filter', async () => {
+    const seen: URLSearchParams[] = []
+    server.use(
+      http.get('http://localhost/api/roles', ({ request }) => {
+        seen.push(new URL(request.url).searchParams)
+        return HttpResponse.json({ items: [] })
+      }),
+    )
+
+    const user = userEvent.setup()
+    renderList()
+
+    await user.type(screen.getByLabelText('Search'), 'ware')
+
+    await waitFor(() => expect(seen.at(-1)?.get('search')).toBe('ware'))
+    expect(seen.at(-1)?.get('active')).toBe('true')
+  })
+
   it('sends no write merely by rendering', async () => {
     renderList()
     await screen.findByText('TEST-ROLE-SHOP')
@@ -237,7 +255,7 @@ describe('the grant grid', () => {
     await screen.findByRole('heading', { name: 'OWNER' })
 
     expect(within(await rowFor('Products')).getByRole('button', { name: 'None' })).toBeDisabled()
-    expect(screen.getAllByRole('button', { name: 'Edit' })[0]).toBeDisabled()
+    expect(screen.getAllByRole('button', { name: /^Edit / })[0]).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Deactivate' })).toBeDisabled()
     expect(screen.getByText(/is a system role and cannot be changed/i)).toBeInTheDocument()
   })
@@ -283,7 +301,7 @@ describe('the grant grid', () => {
     await screen.findByRole('heading', { name: 'TEST-ROLE-SHOP' })
 
     expect(screen.queryByRole('group', { name: 'Products' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Edit / })).not.toBeInTheDocument()
     // The levels are still stated — read-only is not the same as blank.
     expect(await screen.findAllByText('View')).not.toHaveLength(0)
   })

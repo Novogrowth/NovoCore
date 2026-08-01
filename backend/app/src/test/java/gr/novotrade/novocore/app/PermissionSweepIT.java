@@ -281,7 +281,7 @@ class PermissionSweepIT {
         // A product carrying every once-protected field, so a reachable Products read returns
         // something with substance rather than a row of nulls.
         productId = products.create(new NewProduct(
-                "SWEEP-PRODUCT-01", null, "SWEEP product", ProductType.GOODS, unitId, vatClassId,
+                "SWEEP-PRODUCT-01", null, "SWEEP product", null, ProductType.GOODS, unitId, vatClassId,
                 Money.ofEur("12.00"), supplierId, "SWEEP-SUPPLIER-CODE", false)).id();
 
         // A throwaway customer, because Remote/Order Staff holds FULL on Customers and the sweep
@@ -294,7 +294,7 @@ class PermissionSweepIT {
         // and therefore succeed; keeping their targets separate is what stops one sweep quietly
         // changing what another one is asserting about.
         probeProductId = products.create(new NewProduct(
-                "SWEEP-PRODUCT-PROBE", null, "SWEEP body probe product", ProductType.GOODS,
+                "SWEEP-PRODUCT-PROBE", null, "SWEEP body probe product", null, ProductType.GOODS,
                 unitId, vatClassId, Money.ofEur("12.00"), supplierId, "PROBE-CODE", false)).id();
         probeCustomerId = customers.create(new NewCustomer(
                 "SWEEP — Body probe customer", null, null, "EL099500002",

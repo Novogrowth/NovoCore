@@ -81,8 +81,8 @@ Two things the config does that are worth knowing:
 
 Two layers, because they answer different questions.
 
-**The client is wired correctly** — `src/api/client-shape.test.ts` checks all 174 operations against
-the spec: every one of the 82 GETs is a query, every one of the 92 writes is a mutation and none of
+**The client is wired correctly** — `src/api/client-shape.test.ts` checks all 175 operations against
+the spec: every one of the 82 GETs is a query, every one of the 93 writes is a mutation and none of
 them is also a query. This exists because the opposite was once true of **all 92 writes at once**: a
 single `query: { useQuery: true }` in `orval.config.ts` made every POST, PATCH, PUT and DELETE a
 query hook, so rendering a component that used one would have sent the request on mount, and again
@@ -297,6 +297,43 @@ needs and the endpoint it is built on, and `src/nav/tree.test.ts` checks that gr
 spec's own `x-novocore-section` / `x-novocore-level`**. Reordering the menu is an edit to that
 array. The sidebar and the router both filter it through `visibleNav`, so a page hidden from a role
 cannot be reached by typing its URL.
+
+### An "Edit" button's accessible name says which field
+
+`FieldEditor` renders the word **Edit**; its `aria-label` is **"Edit <the field's label>"**. A detail
+screen renders five or more of them, and without this they are five controls all called "Edit" —
+indistinguishable to a screen reader, and indistinguishable to a test.
+
+That second half is not hypothetical: several screen tests reached the field they wanted with
+`getAllByRole('button', { name: 'Edit' })[3]`, and **every one of them broke the day a field was
+inserted above it** (Brand, on Products). Positional indexing into identical controls is the smell;
+naming them is the fix. Tests now say `getByRole('button', { name: 'Edit VAT status' })`, which also
+makes them readable, and the count/absence assertions use `/^Edit /`.
+
+### A search box is `SearchFilter`, and it sends `search=`, never an exact-lookup parameter
+
+`components/data-table/search-filter.tsx`. One component for all five list screens, because the
+things they would drift on are the things that matter: the debounce interval, and whether a cleared
+box sends `search=` or omits it.
+
+- **It reports on a trailing debounce**, 250 ms. The visible value is not debounced, so the box never
+  feels laggy. This is not a micro-optimisation: every one of these lists is client-paged today, so a
+  filter change is a query-key change — the exact input to the render loop above. That loop is
+  defended against in `useListState` and `unwrapList` and stays defended, but there is no reason to
+  walk into it ten times a word.
+- **A cleared box reports `undefined`, never `''`.** Both mean "no filter" to the backend, but only
+  `undefined` keeps the parameter out of the query key, so clearing returns to the query the screen
+  started on rather than to a second identical one cached separately.
+- **The callback is held in a ref**, deliberately. Every call site passes an inline arrow, so naming
+  it as an effect dependency would restart the timer on every parent render and the debounce would
+  never elapse on a busy screen. A test holds it.
+
+⚠️ **`search=` is not the same parameter as `sku=` or `ean=`, and the Products box used to send the
+wrong one.** Those two are exact lookups and stay exact — they are what a barcode scanner and an
+integration call use, and a scan matching a *substring* of a barcode would put the wrong product on
+an invoice. The filter box sent `sku=` until the search endpoint existed, so typing `TEST` against
+eight `TEST-PRODUCT-*` SKUs matched nothing. The same distinction holds for customers'
+`by-vat-number`, which is the authoritative auto-link and must not match approximately.
 
 ### Tables page themselves
 

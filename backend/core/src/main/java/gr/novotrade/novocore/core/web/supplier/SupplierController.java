@@ -49,10 +49,25 @@ class SupplierController {
     // Reading
     // -------------------------------------------------------------------------------------------
 
+    /**
+     * Suppliers, optionally filtered.
+     *
+     * <p><strong>{@code search} is not {@code match-suggestions} under another name</strong>, even
+     * though the two look at the same three columns. This is a filter box over a list the operator
+     * is already looking at. That route feeds the never-silently-guess flow of {@code CLAUDE.md}
+     * rule 7, where each candidate is a proposed identity for a party on an incoming document and is
+     * confirmed by a human one at a time. Keeping them separate is what lets the filter box be made
+     * looser later without loosening what gets offered for confirmation.
+     */
     @GetMapping(path = "/api/suppliers", produces = MediaType.APPLICATION_JSON_VALUE)
-    ListResponse<SupplierView> suppliers(@RequestParam(required = false) Boolean active) {
-        return ListResponse.of(
-                Boolean.TRUE.equals(active) ? suppliers.active() : suppliers.all());
+    ListResponse<SupplierView> suppliers(
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) String search) {
+        boolean activeOnly = Boolean.TRUE.equals(active);
+        if (search != null) {
+            return ListResponse.of(suppliers.search(search, activeOnly));
+        }
+        return ListResponse.of(activeOnly ? suppliers.active() : suppliers.all());
     }
 
     @GetMapping(path = "/api/suppliers/{id}", produces = MediaType.APPLICATION_JSON_VALUE)

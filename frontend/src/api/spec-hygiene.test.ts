@@ -33,7 +33,7 @@ describe('the committed OpenAPI spec', () => {
   const all = operations()
 
   it('describes the surface the client is generated from', () => {
-    expect(all.length).toBe(174)
+    expect(all.length).toBe(175)
   })
 
   it('declares a section and a level on every route', () => {

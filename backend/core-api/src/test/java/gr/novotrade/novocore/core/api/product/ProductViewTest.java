@@ -67,7 +67,7 @@ class ProductViewTest {
     /** A product with every restricted field populated, so redaction has something to remove. */
     private static ProductView fullyPopulated() {
         return new ProductView(
-                7L, "JJ-ESP-001", "5201234567890", "Espresso machine",
+                7L, "JJ-ESP-001", "5201234567890", "Espresso machine", "Rocket Espresso",
                 ProductType.GOODS, PIECE, 9L,
                 PRICE, 4L, "SUP-ESP-77", false, false, LAST_PURCHASE_PRICE, true, Set.of());
     }
@@ -209,7 +209,7 @@ class ProductViewTest {
             // The invariant "supplier SKU needs a supplier" must not fire on a redacted view,
             // where the supplier is null because it was blanked rather than because none exists.
             ProductView noSupplier = new ProductView(
-                    8L, "JJ-BLEND-01", null, "House blend 250g",
+                    8L, "JJ-BLEND-01", null, "House blend 250g", null,
                     ProductType.GOODS, KILOGRAM, 9L,
                     Money.ofEur("9.90"), null, null, false, false, null, true, Set.of());
 
@@ -229,7 +229,7 @@ class ProductViewTest {
         void supplierSkuWithoutSupplierIsRefused() {
             assertThatExceptionOfType(IllegalArgumentException.class)
                     .isThrownBy(() -> new ProductView(
-                            9L, "JJ-X", null, "Orphan supplier code",
+                            9L, "JJ-X", null, "Orphan supplier code", null,
                             ProductType.GOODS, PIECE, 9L,
                             null, null, "SUP-ORPHAN", false, false, null, true, Set.of()))
                     .withMessageContaining("supplier SKU but no supplier");
@@ -239,7 +239,7 @@ class ProductViewTest {
         @DisplayName("a supplier with no supplier SKU is perfectly ordinary")
         void supplierWithoutSupplierSkuIsFine() {
             ProductView product = new ProductView(
-                    10L, "JJ-Y", null, "Bought under our own reference",
+                    10L, "JJ-Y", null, "Bought under our own reference", null,
                     ProductType.GOODS, PIECE, 9L,
                     null, 4L, null, false, false, null, true, Set.of());
 
@@ -254,7 +254,7 @@ class ProductViewTest {
         assertThat(fullyPopulated().isStocked()).isTrue();
 
         ProductView repair = new ProductView(
-                11L, "JJ-SVC-REPAIR", null, "Machine service",
+                11L, "JJ-SVC-REPAIR", null, "Machine service", null,
                 ProductType.SERVICE, PIECE, 9L,
                 Money.ofEur("60.00"), null, null, false, false, null, true, Set.of());
 
@@ -272,7 +272,7 @@ class ProductViewTest {
             // type would report it as carrying stock, and something would try to receive a lot against
             // it — counting the same goods twice, once as the bundle and once as its parts.
             ProductView giftSet = new ProductView(
-                    12L, "JJ-GIFT-01", null, "Brewing gift set",
+                    12L, "JJ-GIFT-01", null, "Brewing gift set", null,
                     ProductType.GOODS, PIECE, 9L,
                     Money.ofEur("129.00"), null, null, false, true, null, true, Set.of());
 
@@ -285,12 +285,26 @@ class ProductViewTest {
         }
 
         @Test
+        @DisplayName("the brand survives redaction — an order picker needs to know what a thing is")
+        void brandIsNotRedacted() {
+            // Deliberate, and the same reasoning as the selling price: what is kept from
+            // Remote/Order Staff is what a product COST us and who supplies it. The brand is part
+            // of what the product is, which is exactly what somebody picking an order needs.
+            ProductView redacted = fullyPopulated().redactedFor(remoteOrderStaff());
+
+            assertThat(redacted.brandIfAny()).contains("Rocket Espresso");
+            assertThat(redacted.isRedacted())
+                    .as("something WAS redacted, so this is not passing by redacting nothing")
+                    .isTrue();
+        }
+
+        @Test
         @DisplayName("serial tracking survives redaction — it is not a restricted field")
         void serialTrackingIsNotRedacted() {
             // Deliberate: whether a machine is identified by serial number is something an order
             // picker has to know in order to pick the right one. What is hidden is what it cost.
             ProductView machine = new ProductView(
-                    13L, "JJ-ESP-900", null, "Serialised espresso machine",
+                    13L, "JJ-ESP-900", null, "Serialised espresso machine", null,
                     ProductType.GOODS, PIECE, 9L,
                     Money.ofEur("2400.00"), 4L, "SUP-900", true, false, LAST_PURCHASE_PRICE, true,
                     Set.of());

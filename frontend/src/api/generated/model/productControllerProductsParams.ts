@@ -13,4 +13,5 @@ active?: boolean;
 supplierId?: number;
 sku?: string;
 ean?: string;
+search?: string;
 };

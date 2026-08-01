@@ -10,4 +10,5 @@
 
 export type SupplierControllerSuppliersParams = {
 active?: boolean;
+search?: string;
 };

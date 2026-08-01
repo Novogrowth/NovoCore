@@ -3,12 +3,14 @@ package gr.novotrade.novocore.core.supplier;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 /**
  * Core-internal. Reached only through
  * {@link gr.novotrade.novocore.core.api.supplier.SupplierService}.
  */
-interface SupplierRepository extends JpaRepository<Supplier, Long> {
+interface SupplierRepository extends JpaRepository<Supplier, Long>,
+        JpaSpecificationExecutor<Supplier> {
 
     List<Supplier> findAllByOrderByNameAsc();
 

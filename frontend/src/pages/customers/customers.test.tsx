@@ -129,6 +129,24 @@ function renderCreate() {
 }
 
 describe('the customer list', () => {
+  it('sends the typed term as ?search=, alongside the active-only filter', async () => {
+    const seen: URLSearchParams[] = []
+    server.use(
+      http.get('http://localhost/api/customers', ({ request }) => {
+        seen.push(new URL(request.url).searchParams)
+        return HttpResponse.json({ items: [] })
+      }),
+    )
+
+    const user = userEvent.setup()
+    renderList()
+
+    await user.type(screen.getByLabelText('Search'), 'Παπαδ')
+
+    await waitFor(() => expect(seen.at(-1)?.get('search')).toBe('Παπαδ'))
+    expect(seen.at(-1)?.get('active')).toBe('true')
+  })
+
   it('sends no write merely by rendering', async () => {
     renderList()
     await screen.findByText('TEST-CUSTOMER-03 Cafe')
@@ -161,7 +179,7 @@ describe('the structural retail record', () => {
     renderDetail(1)
     await screen.findByRole('heading', { name: 'Πελάτης Λιανικής' })
 
-    const edits = screen.getAllByRole('button', { name: 'Edit' })
+    const edits = screen.getAllByRole('button', { name: /^Edit / })
     // Name, VAT number, Contact, VAT status.
     expect(edits[1]).toBeDisabled()
     expect(edits[3]).toBeDisabled()
@@ -176,7 +194,7 @@ describe('the structural retail record', () => {
     renderDetail(1)
     await screen.findByRole('heading', { name: 'Πελάτης Λιανικής' })
 
-    const edits = screen.getAllByRole('button', { name: 'Edit' })
+    const edits = screen.getAllByRole('button', { name: /^Edit / })
     expect(edits[0]).toBeEnabled()
 
     await user.click(edits[0]!)
@@ -193,7 +211,7 @@ describe('the structural retail record', () => {
     await screen.findByRole('heading', { name: 'TEST-CUSTOMER-03 Cafe' })
 
     expect(screen.getByRole('button', { name: 'Deactivate' })).toBeEnabled()
-    for (const edit of screen.getAllByRole('button', { name: 'Edit' })) {
+    for (const edit of screen.getAllByRole('button', { name: /^Edit / })) {
       expect(edit).toBeEnabled()
     }
   })
@@ -206,7 +224,7 @@ describe('the structural retail record', () => {
     renderDetail(1)
     await screen.findByRole('heading', { name: 'Πελάτης Λιανικής' })
 
-    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Edit / })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Deactivate' })).not.toBeInTheDocument()
     expect(screen.queryByText(/every till sale/i)).not.toBeInTheDocument()
   })

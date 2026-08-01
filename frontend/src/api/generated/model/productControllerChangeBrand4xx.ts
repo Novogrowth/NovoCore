@@ -8,7 +8,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type CustomerControllerCustomersParams = {
-active?: boolean;
-search?: string;
+export type ProductControllerChangeBrand4xx = {
+  status?: number;
+  title?: string;
+  detail?: string;
 };

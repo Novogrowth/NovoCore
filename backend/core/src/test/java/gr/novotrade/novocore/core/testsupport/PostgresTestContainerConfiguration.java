@@ -38,10 +38,31 @@ public class PostgresTestContainerConfiguration {
      */
     static final String FALLBACK_IMAGE = "postgres:17-alpine";
 
+    /**
+     * ⚠️ <strong>Must match {@code docker/compose.yml}, and this line is not cosmetic.</strong>
+     *
+     * <p>The real stack initialises its database with {@code --encoding=UTF8 --locale=C},
+     * deliberately: it makes sort order deterministic across machines, so a report does not order
+     * Greek names differently on somebody else's laptop. Testcontainers took the image's own default
+     * instead ({@code en_US.utf8}) — so <strong>every integration test in this repository was running
+     * against a database configured unlike the one they describe.</strong>
+     *
+     * <p>That is not a theoretical gap. Under locale {@code C}, {@code lower()} folds ASCII and
+     * nothing else, so Greek capitals pass through untouched. The substring-search normalisation
+     * function shipped with a bare {@code lower()}, its tests asserted the Greek case and passed
+     * here, and searching for a Greek name found nothing on the real server. Nothing errored in
+     * either place. It was caught by running the migration against the live stack, which is the only
+     * thing that could have caught it — see {@code V28__substring_search.sql}.
+     *
+     * <p>So the two are pinned together now. If {@code compose.yml} changes, change this with it.
+     */
+    static final String INITDB_ARGS = "--encoding=UTF8 --locale=C";
+
     @Bean
     @ServiceConnection
     PostgreSQLContainer novocorePostgresContainer() {
-        return new PostgreSQLContainer(DockerImageName.parse(resolveImage()));
+        return new PostgreSQLContainer(DockerImageName.parse(resolveImage()))
+                .withEnv("POSTGRES_INITDB_ARGS", INITDB_ARGS);
     }
 
     private static String resolveImage() {

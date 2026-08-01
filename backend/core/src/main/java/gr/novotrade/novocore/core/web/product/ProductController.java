@@ -70,19 +70,28 @@ class ProductController {
      * than a 404. An unrecognised barcode is an ordinary outcome in brief §5's barcode-first flow —
      * it falls back to a supplier link and then to manual entry — so "no such product" is data here,
      * not an error.
+     *
+     * <p><strong>{@code search} is a fourth alternative lookup, and it did not replace {@code sku}
+     * or {@code ean}.</strong> Both of those are exact by design and are what a barcode scanner and
+     * an integration call; a scan that matched a <em>substring</em> of a barcode would put the wrong
+     * product on an invoice. {@code search} is the filter box a person types into — SKU, name, brand,
+     * barcode and the supplier's own code, matched anywhere in the string, case- and
+     * accent-insensitively. It combines with {@code active}, which the others do not need to.
      */
     @GetMapping(path = "/api/products", produces = MediaType.APPLICATION_JSON_VALUE)
     ListResponse<ProductView> products(
             @RequestParam(required = false) Boolean active,
             @RequestParam(required = false) Long supplierId,
             @RequestParam(required = false) String sku,
-            @RequestParam(required = false) String ean) {
+            @RequestParam(required = false) String ean,
+            @RequestParam(required = false) String search) {
 
         RoleView viewer = viewer();
-        int lookups = (sku == null ? 0 : 1) + (ean == null ? 0 : 1) + (supplierId == null ? 0 : 1);
+        int lookups = (sku == null ? 0 : 1) + (ean == null ? 0 : 1) + (supplierId == null ? 0 : 1)
+                + (search == null ? 0 : 1);
         if (lookups > 1) {
             throw new InvalidRequestException(
-                    "sku, ean and supplierId are alternative lookups; name one.");
+                    "sku, ean, supplierId and search are alternative lookups; name one.");
         }
 
         if (sku != null) {
@@ -93,6 +102,12 @@ class ProductController {
         }
         if (supplierId != null) {
             return ListResponse.of(products.bySupplierFor(supplierId, viewer));
+        }
+        if (search != null) {
+            // searchFor, never search: it narrows the searched columns for a role that may not see
+            // the supplier's SKU, which redaction alone would not do. See ProductService.searchFor.
+            return ListResponse.of(
+                    products.searchFor(search, Boolean.TRUE.equals(active), viewer));
         }
         return ListResponse.of(Boolean.TRUE.equals(active)
                 ? products.activeFor(viewer)
@@ -189,6 +204,20 @@ class ProductController {
                 .redactedFor(viewer());
     }
 
+    /**
+     * Sets or clears the brand.
+     *
+     * <p>Null clears it. Blank is normalised to null by the service rather than stored, so "no
+     * brand" has one representation in the column and a brand search cannot half-match a product
+     * that has none.
+     */
+    @PatchMapping(path = "/api/products/{id}/brand",
+            consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Requires(section = Section.PRODUCTS, level = AccessLevel.FULL)
+    ProductView changeBrand(@PathVariable long id, @RequestBody BrandRequest request) {
+        return products.changeBrand(id, request.brand()).redactedFor(viewer());
+    }
+
     @PatchMapping(path = "/api/products/{id}/ean",
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.PRODUCTS, level = AccessLevel.FULL)
@@ -259,6 +288,10 @@ class ProductController {
     }
 
     record EanRequest(String ean) {
+    }
+
+    /** Null clears the brand, which is how "this product has no brand" is said. */
+    record BrandRequest(String brand) {
     }
 
     record UnitOfMeasureRequest(long unitOfMeasureId) {

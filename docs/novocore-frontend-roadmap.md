@@ -31,6 +31,7 @@ candidate causes per symptom).
 |   F2 | Customers — same pattern, plus the protected retail-customer record ᶠ²                                                            |     — |        | 🟢 Done        |
 |      | *(deferred out of F2)* Customer VAT class override — its own follow-up ᶠ²ᵃ                                                          |     — |        | 🔴 Not started |
 |   F3 | Users & Roles — real admin screen: create roles, grant sections, manage accounts ᶠ³                                                |     — |    0.9 | 🟢 Done        |
+|   S1 | *(standalone, not folded into F4)* Substring search — `pg_trgm` + `unaccent`, one shared mechanism, wired to all five built screens ˢ¹ |     — |        | 🟢 Done        |
 |   F4 | Settings — general config, Reference Data (VAT classes, UoM), Adapters/Modules toggle grids (read-only placeholders)               |     — |        | 🟡 **Current** |
 |   F5 | Sales Invoice + Credit Note — first transactional-document screen; decides the create/preview/commit pattern                       |     — |        | 🔴 Not started |
 |   F6 | Purchase Invoice + Goods Receipt — same document pattern; no preview endpoint yet, decide whether to add one                       |     — |        | 🔴 Not started |
@@ -134,10 +135,11 @@ response delay to fail at all, is in `PROGRESS.md` under *Products — the wedge
   is already a link to exactly that — is a design decision for every list screen from F1 on, not a
   Products fix. **Deliberately left unbuilt pending that decision**, so F1 does not copy an answer
   nobody made.
-- **The SKU filter box is an exact lookup**, because `GET /api/products?sku=` is. Typing `TEST`
+- ~~**The SKU filter box is an exact lookup**, because `GET /api/products?sku=` is. Typing `TEST`
   against eight `TEST-PRODUCT-*` SKUs matches nothing. Queued as a backend item; the choice between
   a real search endpoint and clearer labelling is the owner's, and **the frontend should not change
-  until it is made.**
+  until it is made.**~~ **Decided and closed by S1 (2026-08-01): a real search endpoint.** The box
+  now sends `search=`; `sku=` and `ean=` stay exact and are what a scanner uses.
 
 **ᶠ¹ F1 — done, all ten sub-parts, with both open questions decided before anything was built.**
 The owner chose: VAT status and its exemption reason are **one editor**, with the reason revealed
@@ -244,6 +246,49 @@ which `PROGRESS.md` had recorded as one of *exactly two* on the surface. That co
 for primitive `boolean`; **at least 22 request records carry a primitive**, and **0 of the 50
 request-body schemas on the surface declare a `required` list**. F5 onwards is where those start
 being sent, one at a time.
+
+**ˢ¹ S1 — done, all twelve sub-parts.** Standalone, spanning backend and frontend: `pg_trgm` +
+`unaccent` (migration **V28**), one `IMMUTABLE` normalisation function, 15 GIN trigram indexes, one
+shared `TextSearch` specification, `?search=` on the five list routes, and one `SearchFilter`
+component on all five screens. It closes the open decision recorded in the bugfix note above.
+
+**Two findings, and the first is the more important one.** The **test database was not configured
+like the real one** — `compose.yml` uses `--locale=C` (deliberately, for deterministic Greek sort
+order) where Testcontainers took the image default `en_US.utf8`. Under locale `C`, `lower()` folds
+ASCII only, so the normalisation function shipped with a bare `lower()`, **every test passed**, and
+searching for a Greek name on the real server returned nothing with no error anywhere. Caught by the
+live check, not by the suite. The function now names `pg_c_utf8`, and — the real fix — the test
+container is pinned to the same locale as production, with an assertion so the pin cannot be quietly
+removed. The second: a **restricted column must leave the query, not just the response**, or a role
+can confirm a hidden supplier code one character at a time. Full write-ups in `PROGRESS.md`.
+
+🎯 **The authoritative search target list is the 16-row table in `PROGRESS.md`, not this row and not
+the five screens S1 shipped against.** It names the fields for every screen that will ever have a
+search box, including ones whose entity does not exist yet. **A step that adds search adopts its row
+from that table** — the point of writing it down is that nobody re-derives a narrower version later.
+It also flags the trap those rows share: a document's search fields include the *counterparty's*
+name, VAT, code and alias, which live on another table, and `TextSearch`'s dotted path produces an
+**inner join** — so a document with no counterparty would drop out of its own list.
+
+**The reconciliation against that full list found two gaps a green build could not**, and both were
+closed in **V29**: `Product.brand` had never been built at all (named in brief §5 since the
+beginning, absent from the schema, therefore absent from every test), and `supplier.vat_number`
+existed but was simply not searched while `customer.vat_number` was. A test only checks the fields
+somebody pointed it at, which is the argument for writing the list down once.
+
+**Still deliberately not built:** `Supplier.code`, `Supplier.alias`, `Customer.code` — named in the
+brief's *(draft)* field lists, built by neither entity, and a schema-plus-routes-plus-forms item
+rather than a search one. That single item blocks part of **six** rows of the target list, which is
+the argument for clearing it before F5.
+
+**`Product.category` is its own proposal and was not started in any form**, not even the schema. The
+requirement is recorded in `PROGRESS.md`: **three levels deep** and **a product belongs to several
+categories at once**, which means a self-referencing category table plus a join table — not two flat
+columns, and not an enum. Written down because the brief's one-line *"Category (main/sub)"*
+understates it, and building from that line would produce the wrong thing.
+
+**Its hours are blank**, on the standing rule: the step ran inside a session with no commit boundary
+before its own close-out that the measurement method can use.
 
 **F5 carries more weight than its position implies.** It's not just the next screen — it
 decides the entire document-creation interaction pattern (multi-line entry, running

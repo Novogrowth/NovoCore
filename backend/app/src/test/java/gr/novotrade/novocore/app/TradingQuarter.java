@@ -786,6 +786,9 @@ final class TradingQuarter {
                 new NameBody("House blend beans (250g)")), "renaming the beans");
         Json.ok(api.patchBody("/api/products/" + beans + "/selling-price",
                 new SellingPriceBody(Money.ofEur("19.50"))), "repricing the beans");
+        // The brand, added in V29 — one of the columns the catalogue's search box looks at.
+        Json.ok(api.patchBody("/api/products/" + beans + "/brand",
+                Map.of("brand", "Java Jives Roastery")), "set the brand");
         Json.ok(api.patchBody("/api/products/" + beans + "/ean",
                 new EanBody("5201234567890")), "giving the beans an EAN");
         Json.ok(api.patchBody("/api/products/" + beans + "/vat-class",
@@ -1207,7 +1210,7 @@ final class TradingQuarter {
     private long createProduct(String sku, String name, ProductType type, long unitOfMeasureId,
             long vatClassId, String sellingPrice, Long supplierId, boolean serialTracked) {
         return created("/api/products", new NewProduct(
-                sku, null, name, type, unitOfMeasureId, vatClassId,
+                sku, null, name, null, type, unitOfMeasureId, vatClassId,
                 sellingPrice == null ? null : Money.ofEur(sellingPrice),
                 supplierId, supplierId == null ? null : "SUP-" + sku, serialTracked), sku);
     }

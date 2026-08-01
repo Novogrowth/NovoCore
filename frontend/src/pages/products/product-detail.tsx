@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom'
 
 import {
   getProductControllerProductQueryKey,
+  useProductControllerChangeBrand,
   useProductControllerChangeEan,
   useProductControllerChangeSellingPrice,
   useProductControllerChangeSerialTracking,
@@ -72,6 +73,7 @@ export function ProductDetail() {
   }
 
   const rename = useProductControllerRename()
+  const changeBrand = useProductControllerChangeBrand()
   const changeEan = useProductControllerChangeEan()
   const changePrice = useProductControllerChangeSellingPrice()
   const changeUnit = useProductControllerChangeUnitOfMeasure()
@@ -160,6 +162,25 @@ export function ProductDetail() {
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
                 aria-label={t('products.column.name')}
+              />
+            )}
+          </FieldEditor>
+
+          <FieldEditor
+            label={t('products.column.brand')}
+            value={product.brand ?? ''}
+            display={product.brand ?? <UnsetValue />}
+            editable={editable}
+            onSave={async (brand) => {
+              const updated = await changeBrand.mutateAsync({ id: productId, data: { brand } })
+              applyResponse(updated)
+            }}
+          >
+            {(draft, setDraft) => (
+              <Input
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                aria-label={t('products.column.brand')}
               />
             )}
           </FieldEditor>

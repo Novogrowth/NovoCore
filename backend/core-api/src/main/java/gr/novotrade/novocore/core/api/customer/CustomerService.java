@@ -31,6 +31,24 @@ public interface CustomerService {
     /** Active customers only. */
     List<CustomerView> active();
 
+    /**
+     * Customers whose name, VAT number, email or phone contains the term anywhere, ignoring case and
+     * accents.
+     *
+     * <p><strong>This does not weaken {@link #findByVatNumber}, and must not be confused with
+     * it.</strong> That lookup is exact because brief §5 makes the VAT number authoritative and lets
+     * it auto-link a party without asking anybody; an exactness relaxed there would auto-link the
+     * wrong company. This is a filter box, where a partial ΑΦΜ read off a document is exactly the
+     * useful case and every result is chosen by a human looking at it.
+     *
+     * <p>The brief's field list also names <strong>Code</strong>, which is not a column yet — that
+     * list is marked <em>(draft)</em> — so it is not searched. Queued as its own item.
+     *
+     * @param term matched as a substring; null or blank means no filter. Wildcards are literal.
+     * @param activeOnly whether to restrict to active customers, combining with the term
+     */
+    List<CustomerView> search(String term, boolean activeOnly);
+
     Optional<CustomerView> find(long id);
 
     /** @throws CustomerNotFoundException if absent */

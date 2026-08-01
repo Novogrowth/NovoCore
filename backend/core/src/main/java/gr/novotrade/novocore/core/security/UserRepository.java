@@ -3,13 +3,15 @@ package gr.novotrade.novocore.core.security;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
 /**
  * Core-internal. Reached only through
  * {@link gr.novotrade.novocore.core.api.security.UserService}.
  */
-interface UserRepository extends JpaRepository<User, Long> {
+interface UserRepository extends JpaRepository<User, Long>,
+        JpaSpecificationExecutor<User> {
 
     List<User> findAllByOrderByUsernameAsc();
 

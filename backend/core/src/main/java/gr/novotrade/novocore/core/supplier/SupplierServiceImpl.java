@@ -8,12 +8,15 @@ import gr.novotrade.novocore.core.api.supplier.SupplierService;
 import gr.novotrade.novocore.core.api.supplier.SupplierView;
 import gr.novotrade.novocore.core.api.tax.VatExemptionReasonService;
 import gr.novotrade.novocore.core.api.tax.VatStatus;
+import gr.novotrade.novocore.core.support.Specifications;
+import gr.novotrade.novocore.core.support.TextSearch;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +27,14 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 class SupplierServiceImpl implements SupplierService {
+
+    /**
+     * What a substring search looks at. The brief's field list also names Code and Alias; that list
+     * is marked (draft) and neither is a column yet, so neither is here. Queued as its own item —
+     * adding one to this array once the column exists is the whole change, plus its index.
+     */
+    private static final String[] SEARCHABLE = {"name", "vatNumber", "email", "phone"};
+
 
     private static final String ENTITY_TYPE = "Supplier";
 
@@ -48,6 +59,21 @@ class SupplierServiceImpl implements SupplierService {
     @Transactional(readOnly = true)
     public List<SupplierView> active() {
         return toViews(repository.findByActiveTrueOrderByNameAsc());
+    }
+
+    /**
+     * Deliberately not expressed in terms of {@link #suggestMatches}, which searches the same three
+     * columns. They answer different questions — see {@code SupplierService.search} — and folding one
+     * into the other would make a change to a filter box silently change what the matching flow
+     * offers a human to confirm.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<SupplierView> search(String term, boolean activeOnly) {
+        return toViews(repository.findAll(
+                Specifications.<Supplier>activeOnly(activeOnly)
+                        .and(TextSearch.matching(term, SEARCHABLE)),
+                Sort.by(Sort.Order.asc("name"))));
     }
 
     @Override

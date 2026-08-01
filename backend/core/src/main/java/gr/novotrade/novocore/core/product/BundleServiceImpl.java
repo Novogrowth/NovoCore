@@ -384,6 +384,7 @@ class BundleServiceImpl implements BundleService {
                 bundle.getSku(),
                 bundle.getEan(),
                 bundle.getName(),
+                bundle.getBrand(),
                 bundle.getType(),
                 UnitOfMeasureServiceImpl.toView(bundle.getUnitOfMeasure()),
                 bundle.getDefaultVatClassId(),

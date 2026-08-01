@@ -4,12 +4,14 @@ import gr.novotrade.novocore.core.api.customer.CustomerSystemKey;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 /**
  * Core-internal. Reached only through
  * {@link gr.novotrade.novocore.core.api.customer.CustomerService}.
  */
-interface CustomerRepository extends JpaRepository<Customer, Long> {
+interface CustomerRepository extends JpaRepository<Customer, Long>,
+        JpaSpecificationExecutor<Customer> {
 
     List<Customer> findAllByOrderByNameAsc();
 

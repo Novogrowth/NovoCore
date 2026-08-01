@@ -10,4 +10,5 @@
 
 export type RoleControllerRolesParams = {
 active?: boolean;
+search?: string;
 };

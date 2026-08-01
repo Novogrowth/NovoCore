@@ -39,6 +39,21 @@ public interface UserService {
     List<UserView> active();
 
     /**
+     * Accounts whose username or display name contains the term anywhere, ignoring case and accents.
+     *
+     * <p>The display name is searched as well as the username on purpose: an administrator looking
+     * for somebody knows their name, and may well not know what username they were given.
+     *
+     * <p>Nothing about a password is searchable, which is not worth saying except that the hash is a
+     * column on this table and its absence from the searched set is a decision rather than an
+     * oversight.
+     *
+     * @param term matched as a substring; null or blank means no filter. Wildcards are literal.
+     * @param activeOnly whether to restrict to active accounts, combining with the term
+     */
+    List<UserView> search(String term, boolean activeOnly);
+
+    /**
      * Everyone holding a role, active and inactive, by username.
      *
      * <p>Exists because {@link RoleService#deactivate} refuses while any user still holds the role,

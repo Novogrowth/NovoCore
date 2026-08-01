@@ -14,6 +14,7 @@ export interface NewProduct {
   sku?: string;
   ean?: string;
   name?: string;
+  brand?: string;
   type?: ProductType;
   unitOfMeasureId: number;
   defaultVatClassId: number;

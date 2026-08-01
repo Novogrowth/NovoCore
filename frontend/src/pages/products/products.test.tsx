@@ -39,6 +39,7 @@ const espresso: ProductView = {
   id: 41,
   sku: 'ESP-001',
   name: 'Espresso blend 1kg',
+  brand: 'Rocket Espresso',
   type: 'GOODS',
   unitOfMeasure: { id: 1, code: 'kg', name: 'Kilogram', fractionalQuantityAllowed: true, active: true },
   defaultVatClassId: 3,
@@ -75,6 +76,10 @@ const server = setupServer(
   http.patch('http://localhost/api/products/41/name', async ({ request }) => {
     const body = (await request.json()) as { name: string }
     return HttpResponse.json({ ...espresso, name: body.name })
+  }),
+  http.patch('http://localhost/api/products/41/brand', async ({ request }) => {
+    const body = (await request.json()) as { brand?: string }
+    return HttpResponse.json({ ...espresso, brand: body.brand })
   }),
   http.patch('http://localhost/api/products/41/selling-price', () =>
     HttpResponse.json({ ...espresso, sellingPrice: { amount: '19.90', currency: 'EUR' } }),
@@ -140,6 +145,54 @@ function renderDetail() {
 }
 
 describe('the product list', () => {
+  it('shows the brand and searches it, since a title need not contain it', async () => {
+    const seen: URLSearchParams[] = []
+    server.use(
+      http.get('http://localhost/api/products', ({ request }) => {
+        seen.push(new URL(request.url).searchParams)
+        return HttpResponse.json({ items: [espresso] })
+      }),
+    )
+
+    const user = userEvent.setup()
+    renderList()
+    await screen.findByText('ESP-001')
+
+    await user.type(screen.getByLabelText('Search'), 'Rocket')
+
+    // The parameter is what matters here: the mock answers whatever it is given, so the assertion
+    // is on what left the browser. That brand actually matches a row is a backend claim, proved
+    // against a real PostgreSQL in TextSearchIT and over HTTP in MasterDataEndpointIT.
+    await waitFor(() => expect(seen.at(-1)?.get('search')).toBe('Rocket'))
+  })
+
+  it('sends the typed term as ?search=, not as an exact ?sku= lookup', async () => {
+    /*
+     * The regression this screen carried until the search endpoint existed: the box sent `sku=`, an
+     * exact lookup, so typing a fragment of a SKU matched nothing at all. The assertion is on the
+     * outgoing parameters, because that is the whole content of the change — the mock server would
+     * answer either one.
+     */
+    const seen: URLSearchParams[] = []
+    server.use(
+      http.get('http://localhost/api/products', ({ request }) => {
+        seen.push(new URL(request.url).searchParams)
+        return HttpResponse.json({ items: [espresso] })
+      }),
+    )
+
+    const user = userEvent.setup()
+    renderList()
+    await screen.findByText('ESP-001')
+
+    await user.type(screen.getByLabelText('Search'), 'Esp')
+
+    await waitFor(() => expect(seen.at(-1)?.get('search')).toBe('Esp'))
+    expect(seen.at(-1)?.get('sku')).toBeNull()
+    // active-only is the screen default and must survive the search, not be replaced by it.
+    expect(seen.at(-1)?.get('active')).toBe('true')
+  })
+
   it('shows money at two decimals and a unit cost at six', async () => {
     renderList()
     // Wait for the supplier lookup too: it re-renders the row, which detaches nodes found
@@ -270,7 +323,7 @@ describe('the product detail', () => {
     renderDetail()
     await screen.findByRole('heading', { name: 'Espresso blend 1kg' })
 
-    await user.click(screen.getAllByRole('button', { name: 'Edit' })[0]!)
+    await user.click(screen.getByRole('button', { name: 'Edit Name' }))
     const field = screen.getByLabelText('Name')
     await user.clear(field)
     await user.type(field, 'Espresso blend 500g')
@@ -296,7 +349,7 @@ describe('the product detail', () => {
     renderDetail()
     await screen.findByRole('heading', { name: 'Espresso blend 1kg' })
 
-    await user.click(screen.getAllByRole('button', { name: 'Edit' })[0]!)
+    await user.click(screen.getByRole('button', { name: 'Edit Name' }))
     await user.type(screen.getByLabelText('Name'), ' XL')
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
@@ -375,8 +428,9 @@ describe('the product detail', () => {
     renderDetail()
     await screen.findByRole('heading', { name: 'Espresso blend 1kg' })
 
-    // Name, EAN, Selling price, Unit — the fields in the order the card lays them out.
-    await user.click(screen.getAllByRole('button', { name: 'Edit' })[3]!)
+    // Named, not indexed. This used to be `getAllByRole('Edit')[3]` and broke the day a field
+    // was inserted above it — which is what gave every Edit button its own accessible name.
+    await user.click(screen.getByRole('button', { name: 'Edit Unit' }))
 
     expect(screen.getByLabelText('Unit')).toHaveTextContent('Kilogram')
     expect(screen.getByLabelText('Unit')).not.toHaveTextContent('1')
@@ -388,7 +442,7 @@ describe('the product detail', () => {
     await screen.findByRole('heading', { name: 'Espresso blend 1kg' })
 
     // Not disabled buttons that produce 403s — no affordance.
-    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Edit / })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Deactivate' })).not.toBeInTheDocument()
   })
 

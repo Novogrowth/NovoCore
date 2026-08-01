@@ -6,6 +6,7 @@ import { useSupplierControllerSuppliers } from '@/api/generated/endpoints/suppli
 import { Section } from '@/api/generated/model'
 import { usePermissions } from '@/auth/permissions'
 import { DataTable } from '@/components/data-table/data-table'
+import { SearchFilter } from '@/components/data-table/search-filter'
 import { useListState } from '@/components/data-table/use-list-state'
 import { PlusIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
@@ -20,10 +21,11 @@ import { supplierColumns } from './supplier-columns'
  * server today, so `DataTable` pages it in the browser and will stop doing so — without this file
  * changing — on the first regeneration after the backend adds paging.
  *
- * **No SKU-style text filter here.** The endpoint's only parameter is `active`; its other lookups
- * are `by-vat-number` (exact, for the AADE/VIES adapter) and `match-suggestions` (the
- * never-silently-guess matching flow). Neither is a filter box, and offering one that only matched
- * a whole VAT number would repeat the mistake the products screen is already carrying.
+ * The search box sends `search=` — name, email and phone, matched anywhere, case- and
+ * accent-insensitively. **It is not `match-suggestions` under another name**, even though the two
+ * look at the same three columns: that route feeds the never-silently-guess matching flow, where
+ * each candidate is a proposed identity for a party on an incoming document and a human confirms it
+ * one at a time. `by-vat-number` stays exact, because it is the authoritative auto-link.
  */
 export function SuppliersList() {
   const { t } = useTranslation('common')
@@ -32,11 +34,13 @@ export function SuppliersList() {
   // Active only, by default: an inactive supplier is a historical record rather than something
   // somebody is looking for.
   const [activeOnly, setActiveOnly] = useState(true)
+  const [search, setSearch] = useState<string | undefined>(undefined)
 
   const list = useListState('GET /api/suppliers')
 
   const suppliers = useSupplierControllerSuppliers({
     ...(activeOnly ? { active: true } : {}),
+    ...(search ? { search } : {}),
     ...list.params,
   })
 
@@ -45,14 +49,22 @@ export function SuppliersList() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <label className="flex items-center gap-2 pb-2 text-sm">
-          <input
-            type="checkbox"
-            checked={activeOnly}
-            onChange={(event) => setActiveOnly(event.target.checked)}
+        <div className="flex flex-wrap items-end gap-4">
+          <SearchFilter
+            id="supplier-search"
+            onChange={setSearch}
+            label={t('suppliers.filter.search')}
+            placeholder={t('suppliers.filter.searchPlaceholder')}
           />
-          {t('suppliers.filter.activeOnly')}
-        </label>
+          <label className="flex items-center gap-2 pb-2 text-sm">
+            <input
+              type="checkbox"
+              checked={activeOnly}
+              onChange={(event) => setActiveOnly(event.target.checked)}
+            />
+            {t('suppliers.filter.activeOnly')}
+          </label>
+        </div>
 
         {/* Creating needs a VAT status, and an exempt one needs an exemption reason from
             TAX_AND_CHARGES — so the action is absent for a role that could not complete the form,

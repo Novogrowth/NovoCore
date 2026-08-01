@@ -53,6 +53,17 @@ class Product extends AuditableEntity {
     @Column(name = "name", nullable = false, length = 300)
     private String name;
 
+    /**
+     * The manufacturer or brand, as free text (brief §5).
+     *
+     * <p>Null is ordinary rather than unfilled — most of this catalogue is own-blend coffee bagged
+     * in-store, which has no brand. Not a reference to a brand table and not unique: a brand is a
+     * label, not an accounting object, and V29 explains what would have to become true for that to
+     * change.
+     */
+    @Column(name = "brand", length = 120)
+    private String brand;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "product_type", nullable = false, length = 20)
     private ProductType type;
@@ -122,12 +133,13 @@ class Product extends AuditableEntity {
     protected Product() {
     }
 
-    Product(String sku, String ean, String name, ProductType type, UnitOfMeasure unitOfMeasure,
-            Long defaultVatClassId, Money sellingPrice, Long supplierId, String supplierSku,
-            boolean serialTracked) {
+    Product(String sku, String ean, String name, String brand, ProductType type,
+            UnitOfMeasure unitOfMeasure, Long defaultVatClassId, Money sellingPrice,
+            Long supplierId, String supplierSku, boolean serialTracked) {
         this.sku = sku;
         this.ean = ean;
         this.name = name;
+        this.brand = brand;
         this.type = type;
         this.unitOfMeasure = unitOfMeasure;
         this.defaultVatClassId = defaultVatClassId;
@@ -160,6 +172,10 @@ class Product extends AuditableEntity {
 
     String getName() {
         return name;
+    }
+
+    String getBrand() {
+        return brand;
     }
 
     ProductType getType() {
@@ -222,6 +238,11 @@ class Product extends AuditableEntity {
 
     void changeEan(String newEan) {
         this.ean = newEan;
+    }
+
+    /** Null clears it, which is how "this product has no brand" is said. */
+    void changeBrand(String newBrand) {
+        this.brand = newBrand;
     }
 
     /**

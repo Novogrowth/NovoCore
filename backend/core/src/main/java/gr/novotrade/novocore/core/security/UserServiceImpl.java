@@ -8,16 +8,23 @@ import gr.novotrade.novocore.core.api.security.UserNotFoundException;
 import gr.novotrade.novocore.core.api.security.UserService;
 import gr.novotrade.novocore.core.api.security.UserSessions;
 import gr.novotrade.novocore.core.api.security.UserView;
+import gr.novotrade.novocore.core.support.Specifications;
+import gr.novotrade.novocore.core.support.TextSearch;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 class UserServiceImpl implements UserService {
+
+    /** What a substring search looks at. Notably not the password hash, which is also a column. */
+    private static final String[] SEARCHABLE = {"username", "displayName"};
+
 
     private static final String ENTITY_TYPE = "User";
 
@@ -123,6 +130,18 @@ class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public List<UserView> active() {
         return users.findByActiveTrueOrderByUsernameAsc().stream()
+                .map(SecurityViews::toView)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserView> search(String term, boolean activeOnly) {
+        return users.findAll(
+                        Specifications.<User>activeOnly(activeOnly)
+                                .and(TextSearch.matching(term, SEARCHABLE)),
+                        Sort.by(Sort.Order.asc("username")))
+                .stream()
                 .map(SecurityViews::toView)
                 .toList();
     }

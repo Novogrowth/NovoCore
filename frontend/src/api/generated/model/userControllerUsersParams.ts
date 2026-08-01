@@ -10,4 +10,5 @@
 
 export type UserControllerUsersParams = {
 active?: boolean;
+search?: string;
 };

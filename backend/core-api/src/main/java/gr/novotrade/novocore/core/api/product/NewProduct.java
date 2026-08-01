@@ -14,6 +14,13 @@ import java.util.Objects;
  *     barcode-first may genuinely not have its price yet, and refusing to record the product at
  *     all would be worse than recording it unpriced; the check belongs at the point of sale
  *     instead.
+ * @param brand the manufacturer or brand, or null. Null is an ordinary answer rather than an
+ *     unfilled field — most of this catalogue is own-blend coffee bagged in-store, which has no
+ *     brand. Free text, not a reference: a brand is a label, not an accounting object, and V29
+ *     records what would have to become true for that to change. Searchable.
+ *     <p>There is deliberately no {@code category} here. Brief §5 names one alongside brand, and it
+ *     is a different kind of field — three levels deep, and a product belongs to several at once —
+ *     so it is its own proposal rather than a second string on this record.
  * @param supplierId one supplier or none (Q5). A supplier SKU without a supplier is refused.
  * @param serialTracked whether stock of this product is identified individually by serial number
  *     (brief §5). Stated at creation rather than set afterwards because it is knowable then and
@@ -29,6 +36,7 @@ public record NewProduct(
         String sku,
         String ean,
         String name,
+        String brand,
         ProductType type,
         long unitOfMeasureId,
         long defaultVatClassId,
@@ -46,7 +54,7 @@ public record NewProduct(
     /** A stocked item held as pooled stock, with no barcode and no supplier recorded yet. */
     public static NewProduct goods(String sku, String name, long unitOfMeasureId,
             long defaultVatClassId, Money sellingPrice) {
-        return new NewProduct(sku, null, name, ProductType.GOODS, unitOfMeasureId,
+        return new NewProduct(sku, null, name, null, ProductType.GOODS, unitOfMeasureId,
                 defaultVatClassId, sellingPrice, null, null, false);
     }
 
@@ -56,14 +64,14 @@ public record NewProduct(
      */
     public static NewProduct serializedGoods(String sku, String name, long unitOfMeasureId,
             long defaultVatClassId, Money sellingPrice) {
-        return new NewProduct(sku, null, name, ProductType.GOODS, unitOfMeasureId,
+        return new NewProduct(sku, null, name, null, ProductType.GOODS, unitOfMeasureId,
                 defaultVatClassId, sellingPrice, null, null, true);
     }
 
     /** A service: no stock, no supplier, no barcode. */
     public static NewProduct service(String sku, String name, long unitOfMeasureId,
             long defaultVatClassId, Money sellingPrice) {
-        return new NewProduct(sku, null, name, ProductType.SERVICE, unitOfMeasureId,
+        return new NewProduct(sku, null, name, null, ProductType.SERVICE, unitOfMeasureId,
                 defaultVatClassId, sellingPrice, null, null, false);
     }
 }

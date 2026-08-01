@@ -12,15 +12,22 @@ import gr.novotrade.novocore.core.api.security.RoleView;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.security.UserSessions;
 import gr.novotrade.novocore.core.api.security.UserView;
+import gr.novotrade.novocore.core.support.Specifications;
+import gr.novotrade.novocore.core.support.TextSearch;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 class RoleServiceImpl implements RoleService {
+
+    /** What a substring search looks at. */
+    private static final String[] SEARCHABLE = {"name", "description"};
+
 
     private static final String ENTITY_TYPE = "Role";
 
@@ -72,6 +79,18 @@ class RoleServiceImpl implements RoleService {
     @Transactional(readOnly = true)
     public List<RoleView> active() {
         return roles.findByActiveTrueOrderByNameAsc().stream()
+                .map(SecurityViews::toView)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RoleView> search(String term, boolean activeOnly) {
+        return roles.findAll(
+                        Specifications.<Role>activeOnly(activeOnly)
+                                .and(TextSearch.matching(term, SEARCHABLE)),
+                        Sort.by(Sort.Order.asc("name")))
+                .stream()
                 .map(SecurityViews::toView)
                 .toList();
     }

@@ -8,7 +8,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type CustomerControllerCustomersParams = {
-active?: boolean;
-search?: string;
-};
+export interface BrandRequest {
+  brand?: string;
+}

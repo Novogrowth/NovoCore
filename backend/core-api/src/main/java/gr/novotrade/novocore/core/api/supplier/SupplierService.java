@@ -26,6 +26,35 @@ public interface SupplierService {
     /** Active suppliers only — what a "choose a supplier" picker should offer. */
     List<SupplierView> active();
 
+    /**
+     * Suppliers whose name, VAT number, email or phone contains the term anywhere, ignoring case
+     * and accents.
+     *
+     * <p><strong>Not the same thing as {@link #suggestMatches}, and the difference is what the
+     * answer is <em>for</em>.</strong> This is an operator looking through a list they already know
+     * they want to be in — a filter box, where more results is a mild inconvenience. Match
+     * suggestions feed the never-silently-guess flow of {@code CLAUDE.md} rule 7, where each
+     * candidate is offered to a human as a possible identity for a party on an incoming document. A
+     * loose match is cheap in the first and expensive in the second, so they stay separate rather
+     * than one being expressed as the other.
+     *
+     * <p>The VAT number is searched as a substring, and that does <strong>not</strong> weaken
+     * {@link #findByVatNumber}: that lookup stays exact because it is brief §5's authoritative
+     * auto-link, and the reason it may be applied without asking anybody is that it cannot match
+     * approximately.
+     *
+     * <p>The brief's field list also names <strong>Code</strong> and <strong>Alias</strong>. Neither
+     * is a column yet — that list is marked <em>(draft)</em> and step 5 built neither — so neither is
+     * searched. They are queued as their own item, since a code nobody can enter would make this
+     * method's contract a claim about data that cannot exist.
+     *
+     * @param term matched as a substring; null or blank means no filter, so the whole list comes
+     *     back rather than nothing. Wildcards are matched literally.
+     * @param activeOnly whether to restrict to active suppliers, combining with the term rather than
+     *     replacing it
+     */
+    List<SupplierView> search(String term, boolean activeOnly);
+
     Optional<SupplierView> find(long id);
 
     /** @throws SupplierNotFoundException if absent */

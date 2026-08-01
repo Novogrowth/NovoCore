@@ -56,6 +56,26 @@ public interface ProductService {
     /** Active products only, by SKU. Unredacted. */
     List<ProductView> active();
 
+    /**
+     * Products whose SKU, name, brand, barcode or supplier's SKU contains the term anywhere,
+     * ignoring case and accents. Unredacted.
+     *
+     * <p>Brand is one of the searched columns: "which Rocket machines do we stock" is a question
+     * the catalogue could not answer at all before, since a brand only appeared in a title if
+     * somebody happened to type it there.
+     *
+     * <p><strong>The supplier's SKU is searched, and it is a restricted field.</strong>
+     * {@link ProtectedField#PRODUCT_SUPPLIER_SKU} is hidden from Remote/Order Staff, so a role that
+     * cannot see that column can nonetheless find a row by matching it — which would let somebody
+     * confirm a supplier code by guessing at it. {@link #searchFor} is where that is dealt with: it
+     * searches only the columns the viewer may actually see. This unredacted variant searches all
+     * five, which is right for the core's own callers and wrong for anything answering a person.
+     *
+     * @param term matched as a substring; null or blank means no filter. Wildcards are literal.
+     * @param activeOnly whether to restrict to active products, combining with the term
+     */
+    List<ProductView> search(String term, boolean activeOnly);
+
     Optional<ProductView> find(long id);
 
     /** @throws ProductNotFoundException if absent */
@@ -99,6 +119,27 @@ public interface ProductService {
 
     /** As {@link #active()}, redacted for the viewer. */
     List<ProductView> activeFor(RoleView viewer);
+
+    /**
+     * As {@link #search}, <strong>and it searches fewer columns for a restricted viewer.</strong>
+     *
+     * <p>This is the one {@code ...For} variant that does more than redact its results, and the
+     * reason is worth reading. Three of this product's fields are restricted, and one of them —
+     * {@link ProtectedField#PRODUCT_SUPPLIER_SKU} — is a searched column. Redaction alone would blank
+     * it in the response and still let a row be <em>found</em> by matching it, so Remote/Order Staff
+     * could recover a supplier's code one character at a time by watching which prefixes return a
+     * hit. Every character is confirmed by a result the role is otherwise entitled to see, so nothing
+     * looks unusual while it happens.
+     *
+     * <p>So the supplier's SKU is searched only for a viewer who may see it. A role that may not gets
+     * SKU, name, brand and barcode, and the results are redacted as usual on the way out. The consequence to
+     * be aware of is that <strong>the same term can return fewer rows for a restricted role</strong>
+     * — which is correct, and is the same shape as the sections a role cannot list at all.
+     *
+     * @throws gr.novotrade.novocore.core.api.security.SectionAccessDeniedException if the role cannot
+     *     view products at all
+     */
+    List<ProductView> searchFor(String term, boolean activeOnly, RoleView viewer);
 
     /** As {@link #find}, redacted for the viewer. */
     Optional<ProductView> findFor(long id, RoleView viewer);
@@ -202,6 +243,18 @@ public interface ProductService {
 
     /** Sets or clears the barcode. @throws InvalidProductException if another product has it */
     ProductView changeEan(long id, String ean);
+
+    /**
+     * Sets or clears the brand.
+     *
+     * <p>Null clears it, which is how "this product has no brand" is said — an ordinary state here,
+     * not an unfilled field. Blank is treated as null rather than stored, so the column has one
+     * representation of "none" and a brand search cannot half-match a product that has none.
+     *
+     * <p>No uniqueness check, deliberately: two products may spell a brand differently and that is
+     * accepted, because a brand is free text rather than a reference. See {@code V29}.
+     */
+    ProductView changeBrand(long id, String brand);
 
     /**
      * Deactivates a product.

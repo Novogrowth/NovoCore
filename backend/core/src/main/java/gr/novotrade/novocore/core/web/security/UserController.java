@@ -68,8 +68,14 @@ class UserController {
      * frontend parses.
      */
     @GetMapping(path = "/api/users", produces = MediaType.APPLICATION_JSON_VALUE)
-    ListResponse<UserView> users(@RequestParam(required = false) Boolean active) {
-        return ListResponse.of(Boolean.TRUE.equals(active) ? users.active() : users.all());
+    ListResponse<UserView> users(
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) String search) {
+        boolean activeOnly = Boolean.TRUE.equals(active);
+        if (search != null) {
+            return ListResponse.of(users.search(search, activeOnly));
+        }
+        return ListResponse.of(activeOnly ? users.active() : users.all());
     }
 
     @GetMapping(path = "/api/users/{id}", produces = MediaType.APPLICATION_JSON_VALUE)

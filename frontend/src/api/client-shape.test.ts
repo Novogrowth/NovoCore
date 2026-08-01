@@ -13,7 +13,7 @@ import spec from '../../../docs/api/openapi.json'
  * sent the PATCH on mount, and again on every refetch, invalidation and window focus. Rendering a
  * screen would have written to the ledger.
  *
- * The config has been fixed. This asserts the **result** across all 174 operations, because a
+ * The config has been fixed. This asserts the **result** across all 175 operations, because a
  * config change is a cause and what matters is the effect — and because the next person to add an
  * orval option should find out immediately if it does this again.
  *
@@ -91,14 +91,14 @@ describe('the generated client', () => {
   it('covers the whole surface', () => {
     // An anti-vacuity guard: if the generated output moved, every assertion below would pass
     // against an empty string and report a green build for a check that examined nothing.
-    expect(all.length).toBe(174)
+    expect(all.length).toBe(175)
     expect(source.length).toBeGreaterThan(100_000)
   })
 
   it('has writes to check, and knows how many', () => {
     // Stated as a number so that a route disappearing from the spec is visible here too.
     // 51 POST, 31 PATCH, 7 PUT, 3 DELETE. Every one of them was a query before this was fixed.
-    expect(writes.length).toBe(92)
+    expect(writes.length).toBe(93)
     expect(reads.length).toBe(82)
   })
 

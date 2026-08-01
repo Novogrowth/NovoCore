@@ -110,6 +110,24 @@ function renderCreate() {
 }
 
 describe('the user list', () => {
+  it('sends the typed term as ?search=, alongside the active-only filter', async () => {
+    const seen: URLSearchParams[] = []
+    server.use(
+      http.get('http://localhost/api/users', ({ request }) => {
+        seen.push(new URL(request.url).searchParams)
+        return HttpResponse.json({ items: [] })
+      }),
+    )
+
+    const user = userEvent.setup()
+    renderList()
+
+    await user.type(screen.getByLabelText('Search'), 'maria')
+
+    await waitFor(() => expect(seen.at(-1)?.get('search')).toBe('maria'))
+    expect(seen.at(-1)?.get('active')).toBe('true')
+  })
+
   it('sends no write merely by rendering', async () => {
     renderList()
     await screen.findByText('kostas')
@@ -129,7 +147,7 @@ describe('one account', () => {
     await screen.findByRole('heading', { name: 'Kostas' })
 
     // Display name and role. Not the username, and not the language.
-    expect(screen.getAllByRole('button', { name: 'Edit' })).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: /^Edit / })).toHaveLength(2)
     expect(screen.getByText(/audit log and every record's author refer to it/i)).toBeInTheDocument()
   })
 
@@ -140,7 +158,7 @@ describe('one account', () => {
     renderDetail(3)
     await screen.findByRole('heading', { name: 'Kostas' })
 
-    const edits = screen.getAllByRole('button', { name: 'Edit' })
+    const edits = screen.getAllByRole('button', { name: /^Edit / })
     expect(edits[0]).toBeEnabled()
     expect(edits[1]).toBeDisabled()
     expect(screen.getByText(/cannot change your own role/i)).toBeInTheDocument()
@@ -151,7 +169,7 @@ describe('one account', () => {
     renderDetail(3)
     await screen.findByRole('heading', { name: 'Kostas' })
 
-    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Edit / })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Set password' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Deactivate' })).not.toBeInTheDocument()
   })

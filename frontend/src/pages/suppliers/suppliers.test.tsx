@@ -141,6 +141,25 @@ async function chooseOption(
 }
 
 describe('the supplier list', () => {
+  it('sends the typed term as ?search=, alongside the active-only filter', async () => {
+    const seen: URLSearchParams[] = []
+    server.use(
+      http.get('http://localhost/api/suppliers', ({ request }) => {
+        seen.push(new URL(request.url).searchParams)
+        return HttpResponse.json({ items: [importer] })
+      }),
+    )
+
+    const user = userEvent.setup()
+    renderList()
+    await screen.findByText('Coffee Importers SA')
+
+    await user.type(screen.getByLabelText('Search'), 'Importe')
+
+    await waitFor(() => expect(seen.at(-1)?.get('search')).toBe('Importe'))
+    expect(seen.at(-1)?.get('active')).toBe('true')
+  })
+
   it('sends no write merely by rendering', async () => {
     renderList()
     await screen.findByText('Coffee Importers SA')
@@ -180,8 +199,7 @@ describe('the supplier detail', () => {
     renderDetail()
     await screen.findByRole('heading', { name: 'Coffee Importers SA' })
 
-    // Name, VAT number, Contact — the order the card lays them out.
-    await user.click(screen.getAllByRole('button', { name: 'Edit' })[2]!)
+    await user.click(screen.getByRole('button', { name: 'Edit Contact' }))
     const phone = screen.getByLabelText('Phone')
     await user.clear(phone)
     await user.type(phone, '+30 211 1111111')
@@ -199,7 +217,7 @@ describe('the supplier detail', () => {
     renderDetail()
     await screen.findByRole('heading', { name: 'Coffee Importers SA' })
 
-    await user.click(screen.getAllByRole('button', { name: 'Edit' })[3]!)
+    await user.click(screen.getByRole('button', { name: 'Edit VAT status' }))
     // DOMESTIC needs nothing, so there is no reason control at all.
     expect(screen.queryByLabelText('Exemption reason')).not.toBeInTheDocument()
 
@@ -218,7 +236,7 @@ describe('the supplier detail', () => {
     renderDetail()
     await screen.findByRole('heading', { name: 'Coffee Importers SA' })
 
-    await user.click(screen.getAllByRole('button', { name: 'Edit' })[3]!)
+    await user.click(screen.getByRole('button', { name: 'Edit VAT status' }))
     await chooseOption(user, 'VAT status', 'Exempt')
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
@@ -231,7 +249,7 @@ describe('the supplier detail', () => {
     renderDetail()
     await screen.findByRole('heading', { name: 'Coffee Importers SA' })
 
-    await user.click(screen.getAllByRole('button', { name: 'Edit' })[3]!)
+    await user.click(screen.getByRole('button', { name: 'Edit VAT status' }))
     await chooseOption(user, 'VAT status', 'Exempt')
     await chooseOption(user, 'Exemption reason', 'Article 39 — small business')
     await user.click(screen.getByRole('button', { name: 'Save' }))
@@ -251,7 +269,7 @@ describe('the supplier detail', () => {
     renderDetail()
     await screen.findByRole('heading', { name: 'Coffee Importers SA' })
 
-    await user.click(screen.getAllByRole('button', { name: 'Edit' })[3]!)
+    await user.click(screen.getByRole('button', { name: 'Edit VAT status' }))
     await chooseOption(user, 'VAT status', 'Intra-EU B2B')
 
     // A VAT number is a different route, so this cannot be fixed from here and the message says

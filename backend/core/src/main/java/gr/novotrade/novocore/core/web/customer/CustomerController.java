@@ -57,10 +57,23 @@ class CustomerController {
     // Reading
     // -------------------------------------------------------------------------------------------
 
+    /**
+     * Customers, optionally filtered.
+     *
+     * <p>{@code search} matches name, VAT number, email and phone anywhere in the string. It does
+     * <strong>not</strong> supersede {@code by-vat-number}, which stays exact: that lookup is
+     * authoritative and may auto-link a party without asking, so it is the one place approximate
+     * matching would be actively dangerous.
+     */
     @GetMapping(path = "/api/customers", produces = MediaType.APPLICATION_JSON_VALUE)
-    ListResponse<CustomerView> customers(@RequestParam(required = false) Boolean active) {
-        return ListResponse.of(
-                Boolean.TRUE.equals(active) ? customers.active() : customers.all());
+    ListResponse<CustomerView> customers(
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) String search) {
+        boolean activeOnly = Boolean.TRUE.equals(active);
+        if (search != null) {
+            return ListResponse.of(customers.search(search, activeOnly));
+        }
+        return ListResponse.of(activeOnly ? customers.active() : customers.all());
     }
 
     @GetMapping(path = "/api/customers/{id}", produces = MediaType.APPLICATION_JSON_VALUE)

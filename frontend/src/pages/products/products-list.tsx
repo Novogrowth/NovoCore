@@ -8,11 +8,10 @@ import { Section } from '@/api/generated/model'
 import { useSuppliers } from '@/api/lookups'
 import { usePermissions } from '@/auth/permissions'
 import { DataTable } from '@/components/data-table/data-table'
+import { SearchFilter } from '@/components/data-table/search-filter'
 import { PlusIcon } from '@/components/icons'
 import { useListState } from '@/components/data-table/use-list-state'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 
 import { productColumns } from './product-columns'
 
@@ -26,6 +25,15 @@ import { productColumns } from './product-columns'
  * Neither endpoint pages on the server today, so `DataTable` pages them in the browser — and will
  * stop doing so, without this file changing, on the first regeneration after the backend adds
  * paging. That is what `useListState` reads from the generated capability map.
+ *
+ * ⚠️ **The filter box used to send `sku=`, an exact lookup**, so typing `TEST` against eight
+ * `TEST-PRODUCT-*` SKUs matched nothing. The frontend roadmap recorded that and deliberately left it
+ * alone, because the fix was a backend decision: a real search endpoint, or clearer labelling. The
+ * decision was a search endpoint, and this box now sends `search=` — SKU, name, barcode and the
+ * supplier's own code, matched anywhere, case- and accent-insensitively.
+ *
+ * `sku=` and `ean=` still exist and are still exact. They are what a scanner uses, and a scan that
+ * matched a substring of a barcode would put the wrong product on an invoice.
  */
 export function ProductsList() {
   const { t, i18n } = useTranslation('common')
@@ -36,19 +44,19 @@ export function ProductsList() {
   // Active only, by default: an inactive product is a historical record rather than something
   // somebody is looking for.
   const [activeOnly, setActiveOnly] = useState(true)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState<string | undefined>(undefined)
 
   const list = useListState('GET /api/products')
 
   /*
-   * The SKU and EAN filters are the endpoint's own parameters, not a filter applied to rows already
-   * fetched: a search that only looks at the current page finds nothing on page two, and this list
-   * is paged in the browser today.
+   * `search` is the endpoint's own parameter, not a filter applied to rows already fetched: a filter
+   * that only looks at the current page finds nothing on page two, and this list is paged in the
+   * browser today.
    */
   const products = useProductControllerProducts(
     {
       ...(activeOnly ? { active: true } : {}),
-      ...(search ? { sku: search } : {}),
+      ...(search ? { search } : {}),
       ...list.params,
     },
     { query: { enabled: tab === 'products' } },
@@ -94,16 +102,12 @@ export function ProductsList() {
 
       {tab === 'products' && (
         <div className="flex flex-wrap items-end gap-4">
-          <div className="space-y-1">
-            <Label htmlFor="product-search">{t('products.filter.sku')}</Label>
-            <Input
-              id="product-search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={t('products.filter.skuPlaceholder')}
-              className="w-56"
-            />
-          </div>
+          <SearchFilter
+            id="product-search"
+            onChange={setSearch}
+            label={t('products.filter.search')}
+            placeholder={t('products.filter.searchPlaceholder')}
+          />
           <label className="flex items-center gap-2 pb-2 text-sm">
             <input
               type="checkbox"
