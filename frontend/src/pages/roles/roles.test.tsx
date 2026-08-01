@@ -34,6 +34,7 @@ const everySection = (level: AccessLevel) =>
 const owner: Me = {
   id: 1,
   username: 'owner',
+  active: true,
   role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
   sections: everySection(AccessLevel.FULL),
   restrictedFields: [],
@@ -43,6 +44,7 @@ const owner: Me = {
 const limitedAdmin: Me = {
   id: 7,
   username: 'probe-admin',
+  active: true,
   role: { id: 4, name: 'PROBE-ADMIN', fullAccess: false, systemRole: false },
   sections: [
     { section: Section.USERS_AND_ROLES, level: AccessLevel.FULL, available: true },
@@ -55,6 +57,7 @@ const limitedAdmin: Me = {
 const viewer: Me = {
   id: 8,
   username: 'viewer',
+  active: true,
   role: { id: 5, name: 'VIEWER', fullAccess: false, systemRole: false },
   sections: [{ section: Section.USERS_AND_ROLES, level: AccessLevel.VIEW, available: true }],
   restrictedFields: [],

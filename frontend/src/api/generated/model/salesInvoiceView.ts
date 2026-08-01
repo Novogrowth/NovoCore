@@ -13,8 +13,8 @@ import type { SalesInvoiceLineView } from './salesInvoiceLineView';
 import type { SettlementMethod } from './settlementMethod';
 
 export interface SalesInvoiceView {
-  id?: number;
-  customerId?: number;
+  id: number;
+  customerId: number;
   customerName?: string;
   channel?: SalesChannel;
   settlementMethod?: SettlementMethod;
@@ -26,11 +26,11 @@ export interface SalesInvoiceView {
   grossTotal?: Money;
   statedTotal?: Money;
   roundingAmount?: Money;
-  roundingNeededReview?: boolean;
+  roundingNeededReview: boolean;
   roundingAcceptedBy?: string;
   roundingAcceptedAt?: string;
   roundingNote?: string;
-  journalEntryId?: number;
+  journalEntryId: number;
   reversalOfInvoiceId?: number;
   reversedByInvoiceId?: number;
   lines?: SalesInvoiceLineView[];

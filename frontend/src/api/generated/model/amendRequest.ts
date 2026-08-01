@@ -10,7 +10,7 @@
 import type { Money } from './money';
 
 export interface AmendRequest {
-  accountId?: number;
+  accountId: number;
   settlementDate?: string;
   amount?: Money;
   reference?: string;

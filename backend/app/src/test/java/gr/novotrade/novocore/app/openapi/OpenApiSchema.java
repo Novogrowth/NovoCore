@@ -11,6 +11,7 @@ import java.lang.reflect.TypeVariable;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -277,16 +278,45 @@ final class OpenApiSchema {
     }
 
     /**
-     * A record becomes an object whose properties are its <strong>components</strong>.
+     * A record becomes an object whose properties are its <strong>components</strong>, and its
+     * <strong>primitive</strong> components are marked required.
      *
      * <p>Components, not accessors — that is what Jackson serialises for a record, and reading
      * accessors instead is precisely how springdoc invented {@code zero}, {@code negative} and
      * {@code positive} as fields of a quantity.
      *
-     * <p>Nothing is marked required. {@code application.yml} sets
-     * {@code default-property-inclusion: non_null}, so <em>any</em> null-valued component is absent
+     * <h2>Why a primitive is required, and a reference type is not</h2>
+     *
+     * <p>A reference type is not marked required, and that is correct for the reason this javadoc
+     * used to give for marking <em>nothing</em>: {@code application.yml} sets
+     * {@code default-property-inclusion: non_null}, so any null-valued component is simply absent
      * from the body — a client reads a missing key as "not set", and for a field withheld by
      * permission, as "not set, and named in {@code hiddenFields}".
+     *
+     * <p><strong>That argument is about responses, and this method also builds every request
+     * schema.</strong> Applying it in both directions published a contract saying no request body
+     * has a mandatory field, and it was not true: a primitive component cannot be null, so Jackson
+     * hands an <em>absent</em> creator property to the canonical constructor as {@code null} and
+     * {@code FAIL_ON_NULL_FOR_PRIMITIVES} — on, in this application — refuses the body before any
+     * handler runs, with a message naming no field. That broke product creation for every user
+     * ({@code NewProduct.serialTracked}) and would have broken account creation the same way
+     * ({@code NewUser.roleId}); both were found by a client written correctly against this document.
+     *
+     * <p><strong>The rule is accurate in both directions, which is why it is one rule.</strong> On a
+     * request a primitive is mandatory, as above. On a response it is always present: it cannot be
+     * null, so {@code non_null} inclusion cannot drop it, nothing here declares {@code @JsonInclude},
+     * and the two mechanisms that <em>do</em> withhold data both leave primitives alone —
+     * {@code ProductView.redactedFor} nulls three reference-typed fields
+     * ({@code Long supplierId}, {@code String supplierSku}, {@code UnitCost lastPurchasePrice}), and
+     * {@code SettingView} substitutes a masked {@code String} for a secret's value. Swept across all
+     * 53 response records carrying a primitive, with no exception.
+     *
+     * <p><strong>What is still not declared, deliberately:</strong> a reference-typed component that
+     * a compact constructor requires ({@code Required.field} / {@code requireNonNull}) is mandatory
+     * in fact and invisible here, because reflection cannot see inside a constructor body. Declaring
+     * those needs an annotation on the component and is queued separately — see {@code PROGRESS.md}
+     * item 2. This method deliberately does not guess at them: a {@code required} list that is
+     * incomplete is still true, while one that is wrong is worse than none.
      */
     private Map<String, Object> recordSchema(Class<?> raw, String name,
             Map<String, Type> substitutions, String context) {
@@ -296,13 +326,22 @@ final class OpenApiSchema {
             components.put(name, ordered());
 
             Map<String, Object> properties = ordered();
+            List<String> required = new ArrayList<>();
             for (RecordComponent component : raw.getRecordComponents()) {
                 properties.put(component.getName(), schemaFor(component.getGenericType(),
                         substitutions, context + " → " + name + "." + component.getName()));
+                if (component.getType().isPrimitive()) {
+                    required.add(component.getName());
+                }
             }
 
             Map<String, Object> schema = ordered();
             schema.put("type", "object");
+            // Ordered before `properties`, matching the hand-written Money and UnitCost schemas
+            // above, so the document reads the same way whoever wrote the schema.
+            if (!required.isEmpty()) {
+                schema.put("required", List.copyOf(required));
+            }
             schema.put("properties", properties);
             components.put(name, schema);
         }

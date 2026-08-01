@@ -18,6 +18,6 @@ export interface CreditNotePreview {
   statedTotal?: Money;
   roundingDifference?: Money;
   roundingThreshold?: Money;
-  roundingNeedsAcceptance?: boolean;
+  roundingNeedsAcceptance: boolean;
   payable?: Money;
 }

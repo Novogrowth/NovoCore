@@ -14,7 +14,7 @@ export interface OpenItem {
   ref?: OpenItemRef;
   documentNumber?: string;
   documentDate?: string;
-  partyId?: number;
+  partyId: number;
   partyName?: string;
   grossAmount?: Money;
   allocatedAmount?: Money;

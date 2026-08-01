@@ -11,12 +11,12 @@ import type { ProtectedField } from './protectedField';
 import type { RoleViewSectionGrants } from './roleViewSectionGrants';
 
 export interface RoleView {
-  id?: number;
+  id: number;
   name?: string;
   description?: string;
-  fullAccess?: boolean;
-  systemRole?: boolean;
-  active?: boolean;
+  fullAccess: boolean;
+  systemRole: boolean;
+  active: boolean;
   sectionGrants?: RoleViewSectionGrants;
   restrictedFields?: ProtectedField[];
 }

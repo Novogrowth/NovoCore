@@ -23,6 +23,6 @@ export interface NewPurchaseInvoiceLine {
   description?: string;
   vatClassId?: number;
   vatExemptionReasonId?: number;
-  reverseCharge?: boolean;
+  reverseCharge: boolean;
   matches?: GoodsReceiptMatch[];
 }

@@ -10,7 +10,7 @@
 import type { NewGoodsReceiptLine } from './newGoodsReceiptLine';
 
 export interface NewGoodsReceipt {
-  supplierId?: number;
+  supplierId: number;
   deliveryNoteNumber?: string;
   receiptDate?: string;
   description?: string;

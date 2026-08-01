@@ -13,17 +13,17 @@ import type { AccountType } from './accountType';
 import type { SubLedgerType } from './subLedgerType';
 
 export interface AccountView {
-  id?: number;
+  id: number;
   code?: string;
   name?: string;
   type?: AccountType;
   kind?: AccountKind;
   subLedgerType?: SubLedgerType;
   systemKey?: AccountSystemKey;
-  groupId?: number;
+  groupId: number;
   groupName?: string;
-  displayOrder?: number;
-  active?: boolean;
-  expectedToClear?: boolean;
+  displayOrder: number;
+  active: boolean;
+  expectedToClear: boolean;
   elpCode?: string;
 }

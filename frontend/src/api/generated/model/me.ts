@@ -12,11 +12,11 @@ import type { Role } from './role';
 import type { SectionAccess } from './sectionAccess';
 
 export interface Me {
-  id?: number;
+  id: number;
   username?: string;
   displayName?: string;
   language?: string;
-  active?: boolean;
+  active: boolean;
   role?: Role;
   sections?: SectionAccess[];
   restrictedFields?: ProtectedField[];

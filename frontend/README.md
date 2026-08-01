@@ -224,21 +224,32 @@ way everywhere: `Unit: 4`, `Type: GOODS`, and `en` for the language. `OptionSele
 once and renders both the `items` prop and the items from it, so the two cannot disagree and the
 trap cannot be reset by the next screen.
 
-### The spec says nothing is required, and that is not true
+### The spec declares primitives required — and nothing else, which is still not the whole truth
 
-`required` appears on two schemas out of 185 — `Money` and `UnitCost` — across 71 operations that
-take a request body. So **every generated request type is fully optional and none of them means
-it.** A field the types call optional can still be mandatory, and you find out as a `400`.
+**This section used to say the opposite.** Until 2026-08-01 `required` appeared on two schemas out of
+185, so every generated request type was fully optional and none of them meant it — a field the types
+called optional could be mandatory, and you found out as a `400` naming no field. That broke product
+creation for every user (`NewProduct.serialTracked`) and would have broken account creation the same
+way (`NewUser.roleId`).
 
-The known case: `NewProduct.serialTracked` is a primitive `boolean` on a Java record, Jackson hands
-an **absent** creator property to the canonical constructor as `null`, and
-`FAIL_ON_NULL_FOR_PRIMITIVES` refuses it — so omitting the field and sending `null` fail
-identically, before any handler runs, with a message naming no field. It broke product creation for
-every user. `product-create.tsx` sends it explicitly; `spec-hygiene.test.ts` pins the set of schemas
-declaring required fields and fails in both directions, so fixing the spec sends someone back here.
+**What changed:** `OpenApiSchema.recordSchema` now marks a record's **primitive** components
+required, so 78 schemas declare one. A primitive cannot be null, so on a request it is mandatory —
+`FAIL_ON_NULL_FOR_PRIMITIVES` refuses an absent one before any handler runs — and on a response it is
+always present, so one rule is accurate in both directions. **`tsc` now refuses a create form that
+omits one.**
 
-**Until the spec declares its bodies, a screen test cannot tell you a write works.** A mock server
-answers whatever it is given.
+⚠️ **What is still not declared, and you will meet it:** a *reference-typed* field that a compact
+constructor requires (`Required.field` / `requireNonNull`) is mandatory in fact and invisible to the
+generator, because reflection cannot see inside a constructor body. **28 schemas have one.**
+`NewRole` is the readable example — it declares no `required` list at all, and `POST /api/roles` with
+`{}` is still refused. So a field the types call optional *can* still be mandatory; the class that
+silently broke a screen is closed, the rest is queued.
+
+`spec-hygiene.test.ts` pins the count and fails in both directions — including asserting `NewRole`
+stays undeclared, so the day the guarded half lands, somebody comes back here.
+
+**A screen test still cannot tell you a write works.** A mock server answers whatever it is given;
+that has not changed and is why the create forms are proved against the real backend.
 
 ### Money is a string, everywhere
 

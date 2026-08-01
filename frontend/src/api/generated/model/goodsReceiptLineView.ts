@@ -12,14 +12,14 @@ import type { StockLocation } from './stockLocation';
 import type { UnitCost } from './unitCost';
 
 export interface GoodsReceiptLineView {
-  id?: number;
-  lineNumber?: number;
-  productId?: number;
+  id: number;
+  lineNumber: number;
+  productId: number;
   productSku?: string;
   quantity?: Quantity;
   unitCost?: UnitCost;
   location?: StockLocation;
-  lotId?: number;
+  lotId: number;
   serialNumbers?: string[];
   purchaseInvoiceLineId?: number;
   matchedQuantity?: Quantity;

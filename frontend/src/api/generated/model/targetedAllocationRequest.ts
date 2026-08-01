@@ -10,6 +10,6 @@
 import type { Money } from './money';
 
 export interface TargetedAllocationRequest {
-  salesInvoiceId?: number;
+  salesInvoiceId: number;
   amount?: Money;
 }

@@ -13,10 +13,10 @@ import type { StockLocation } from './stockLocation';
 import type { UnitCost } from './unitCost';
 
 export interface InventoryLotView {
-  id?: number;
-  productId?: number;
+  id: number;
+  productId: number;
   productSku?: string;
-  serialTracked?: boolean;
+  serialTracked: boolean;
   quantityReceived?: Quantity;
   quantityRemaining?: Quantity;
   receivedUnitCost?: UnitCost;

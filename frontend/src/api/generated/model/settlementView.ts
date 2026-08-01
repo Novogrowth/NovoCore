@@ -13,12 +13,12 @@ import type { PartyType } from './partyType';
 import type { SettlementDirection } from './settlementDirection';
 
 export interface SettlementView {
-  id?: number;
+  id: number;
   direction?: SettlementDirection;
   partyType?: PartyType;
-  partyId?: number;
+  partyId: number;
   partyName?: string;
-  accountId?: number;
+  accountId: number;
   accountName?: string;
   settlementDate?: string;
   amount?: Money;
@@ -26,7 +26,7 @@ export interface SettlementView {
   unallocatedAmount?: Money;
   reference?: string;
   description?: string;
-  journalEntryId?: number;
+  journalEntryId: number;
   customerCreditId?: number;
   allocations?: AllocationView[];
 }

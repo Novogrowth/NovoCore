@@ -10,8 +10,8 @@
 import type { AccountView } from './accountView';
 
 export interface AccountGroupView {
-  id?: number;
+  id: number;
   name?: string;
-  displayOrder?: number;
+  displayOrder: number;
   accounts?: AccountView[];
 }

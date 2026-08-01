@@ -9,10 +9,10 @@
  */
 
 export interface PageInfo {
-  page?: number;
-  size?: number;
-  totalElements?: number;
-  totalPages?: number;
-  hasNext?: boolean;
-  hasPrevious?: boolean;
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
 }

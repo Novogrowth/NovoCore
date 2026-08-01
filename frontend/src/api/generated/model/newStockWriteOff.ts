@@ -11,7 +11,7 @@ import type { Quantity } from './quantity';
 import type { WriteOffReason } from './writeOffReason';
 
 export interface NewStockWriteOff {
-  lotId?: number;
+  lotId: number;
   serializedUnitId?: number;
   quantity?: Quantity;
   reason?: WriteOffReason;

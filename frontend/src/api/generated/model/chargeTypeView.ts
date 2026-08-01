@@ -9,9 +9,9 @@
  */
 
 export interface ChargeTypeView {
-  id?: number;
+  id: number;
   name?: string;
-  defaultVatClassId?: number;
-  incomeAccountId?: number;
-  active?: boolean;
+  defaultVatClassId: number;
+  incomeAccountId: number;
+  active: boolean;
 }

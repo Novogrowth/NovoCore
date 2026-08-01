@@ -11,7 +11,7 @@ import type { CustomerSystemKey } from './customerSystemKey';
 import type { VatStatus } from './vatStatus';
 
 export interface CustomerView {
-  id?: number;
+  id: number;
   name?: string;
   email?: string;
   phone?: string;
@@ -20,5 +20,5 @@ export interface CustomerView {
   vatClassOverrideId?: number;
   vatExemptionReasonId?: number;
   systemKey?: CustomerSystemKey;
-  active?: boolean;
+  active: boolean;
 }

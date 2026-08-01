@@ -12,5 +12,5 @@ export interface NewUser {
   username?: string;
   displayName?: string;
   rawPassword?: string;
-  roleId?: number;
+  roleId: number;
 }

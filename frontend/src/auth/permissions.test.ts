@@ -11,6 +11,7 @@ import { hiddenInResponse, permissionsOf } from './permissions'
 const remoteOrderStaff: Me = {
   id: 2,
   username: 'staff',
+  active: true,
   role: { id: 3, name: 'REMOTE_ORDER_STAFF', fullAccess: false, systemRole: false },
   sections: [
     { section: Section.SALES_ORDER_FULFILLMENT, level: AccessLevel.FULL, available: false },
@@ -33,6 +34,7 @@ const remoteOrderStaff: Me = {
 const owner: Me = {
   id: 1,
   username: 'owner',
+  active: true,
   role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
   sections: Object.values(Section).map((section) => ({
     section,

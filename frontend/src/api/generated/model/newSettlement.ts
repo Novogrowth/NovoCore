@@ -15,12 +15,12 @@ import type { SettlementDirection } from './settlementDirection';
 export interface NewSettlement {
   direction?: SettlementDirection;
   partyType?: PartyType;
-  partyId?: number;
-  accountId?: number;
+  partyId: number;
+  accountId: number;
   settlementDate?: string;
   amount?: Money;
   reference?: string;
   description?: string;
   allocations?: NewAllocation[];
-  remainderBecomesCustomerCredit?: boolean;
+  remainderBecomesCustomerCredit: boolean;
 }

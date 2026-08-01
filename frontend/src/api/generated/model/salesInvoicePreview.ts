@@ -18,6 +18,6 @@ export interface SalesInvoicePreview {
   statedTotal?: Money;
   roundingDifference?: Money;
   roundingThreshold?: Money;
-  roundingNeedsAcceptance?: boolean;
+  roundingNeedsAcceptance: boolean;
   receivable?: Money;
 }

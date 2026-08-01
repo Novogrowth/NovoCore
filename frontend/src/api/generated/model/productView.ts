@@ -14,19 +14,19 @@ import type { UnitCost } from './unitCost';
 import type { UnitOfMeasureView } from './unitOfMeasureView';
 
 export interface ProductView {
-  id?: number;
+  id: number;
   sku?: string;
   ean?: string;
   name?: string;
   type?: ProductType;
   unitOfMeasure?: UnitOfMeasureView;
-  defaultVatClassId?: number;
+  defaultVatClassId: number;
   sellingPrice?: Money;
   supplierId?: number;
   supplierSku?: string;
-  serialTracked?: boolean;
-  bundle?: boolean;
+  serialTracked: boolean;
+  bundle: boolean;
   lastPurchasePrice?: UnitCost;
-  active?: boolean;
+  active: boolean;
   hiddenFields?: ProtectedField[];
 }

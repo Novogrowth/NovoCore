@@ -11,7 +11,7 @@ import type { JournalLineView } from './journalLineView';
 import type { JournalSource } from './journalSource';
 
 export interface JournalEntryView {
-  id?: number;
+  id: number;
   entryDate?: string;
   description?: string;
   source?: JournalSource;

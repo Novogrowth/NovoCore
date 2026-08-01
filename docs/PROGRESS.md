@@ -4136,7 +4136,7 @@ was verified back to 8 products, all active, one user.
 ---
 ## Next action — read this first
 
-### ⚠️ Queued for the next BACKEND session — six standalone items
+### ⚠️ Queued for the next BACKEND session — five open items (item 2 is done)
 
 Each was raised by frontend work and none of them is frontend work to fix. Nothing here blocks the
 next frontend step.
@@ -4154,18 +4154,23 @@ whose own contract said the request was valid.
 
 | # | Item | Priority | Raised |
 |---|---|---|---|
-| 2 | **A primitive on a body record is mandatory while the spec calls it optional** — broke product creation outright; the frontend carries a workaround. ⚠️ **Scope corrected 2026-08-01: at least 22 records, not two** | **First. The spec half before the serialisation half** | 2026-07-31 |
+| 2 | ✅ **DONE (primitive half), 2026-08-01** — the spec now declares every primitive component required, so a mandatory field is knowable from the contract. Items 7 and 8 carry what it deliberately did not close | — | 2026-07-31 |
 | 4 | **The retail customer's own VAT rules are raised as `IllegalArgumentException`**, so two routes answer `400 "Bad request."` and discard a complete explanation | With 2 — same family, and the guards structurally cannot reach it | 2026-07-31 |
 | 1 | `InventoryController_writeOff` — one `operationId` on two operations | After 2 | 2026-07-30 |
 | 3 | No SKU **search** endpoint — the products lookup is exact-match only | After 2; needs an owner decision first | 2026-07-31 |
 | 5 | **A role's `description` can be set at creation and never changed** — `NewRole` takes one, no `PATCH …/description` exists. The screen renders it read-only and says why | Small; with 2 or after | 2026-08-01 |
-| 6 | **`NewUser` and `NewRole` guard body fields with `Objects.requireNonNull`** — `CLAUDE.md`'s named anti-pattern instance 2, in records that predate `Required.field`. Not reachable from the F3 forms | With 2 — same family | 2026-08-01 |
+| 6 | **`NewUser` and `NewRole` guard body fields with `Objects.requireNonNull`** — the **fifth** confirmed instance of *"a client's mistake raised as a programming error"* (disguise 2, recurring). Answers `400`, not `500` — proven by an existing sweep | With 4 — same anti-pattern | 2026-08-01 |
+| 7 | **Box the 7 boolean primitives with `Required.field`**, so the refusal names the field instead of saying "Cannot map null into type boolean" | After 2, which is done. Not urgent — `tsc` now refuses a TS caller that omits one | 2026-08-01 |
+| 8 | **Declare the 28 compact-constructor requirements** — mandatory in fact, invisible to reflection. Needs a decision (an annotation) before it needs code | Last. This class has bitten nobody | 2026-08-01 |
 
-⚠️ **Item 2 now carries a costed comparison of the two ways to close it** — patch per screen as
-F4–F11 hit it, versus one sweep of the spec generator — measured against all 71 request-bodied
-operations rather than argued. See *"The two ways to close this"* under item 2. **It has a
-recommendation and it is the owner's call**; the short version is that the primitive half is
-test-scope-only, touches no production code, and is cheapest **before F4** rather than after F5.
+**Order to work in: 4 and 6 together** (one anti-pattern, and 4's part 2 is what stops a sixth
+instance arriving the same way), **then 1, then 7, then 3 when the owner decides it, then 8.**
+
+⚠️ **Item 2's costed comparison is kept rather than deleted now that it is done.** It measured both
+options against all 71 request-bodied operations, and the estimate-versus-outcome is the only
+calibration data this decision produced: the sweep was predicted to touch no production code and to
+show a small frontend blast radius, and it touched none and surfaced 19 errors, **all in fixtures**.
+Worth reading before items 7 and 8 are scheduled.
 
 *(Numbering is kept as originally assigned so existing references still resolve; the order of the
 rows is the order to work in.)*
@@ -4193,7 +4198,61 @@ confirm green.
 
 ---
 
-#### 2. **A primitive `boolean` on a request-body record is mandatory, the spec says it is optional, and omitting it is a `400`. This broke product creation for every user.**
+#### 2. **A primitive on a request-body record is mandatory, the spec said it was optional, and omitting it is a `400`. This broke product creation for every user.** — ✅ **primitive half DONE 2026-08-01**
+
+> ### ✅ The primitive half is fixed. Approved and done before F4, exactly as scoped.
+>
+> `OpenApiSchema.recordSchema` marks a record's **primitive** components required. **One rule, both
+> directions**: a primitive cannot be null, so on a request it is mandatory and on a response it is
+> always present.
+>
+> | | |
+> |---|---:|
+> | Schemas declaring `required` — was 2 (`Money`, `UnitCost`) | **78** |
+> | Spec diff | **+76 lines, −0**, 174 operations unchanged |
+> | Generated client files changed | 76 (+176 −176) |
+> | **Production code changed** | **none** — the generator is `src/test` |
+> | Type errors it surfaced | **19, every one in a test fixture** |
+> | Backend | `BUILD SUCCESS`, **1327 run**, 1 skipped (`LiveSeedTest`, disabled without a base URL) |
+> | Frontend | 228 tests, lint, build, knip all green |
+>
+> **The 19 errors are the interesting part, and they were not busywork.** Not one was in production
+> code — the whole blast radius was **fixtures claiming a wire shape the server never sends**:
+> `Me.active` (11 sites), `Role.id` (4), `UnitOfMeasureView.active`, `RoleView.active`. Every screen
+> test in the application was rendering against a `/api/me` with no `active` field, which the live
+> probe shows is always present. The spec fix found that; nothing else had.
+>
+> **`product-create.tsx`'s workaround is no longer a workaround.** `serialTracked` is now
+> `serialTracked: boolean` in the generated type, so **omitting it is a compile error** rather than a
+> runtime `400`. Its comment says so. `spec-hygiene.test.ts` was rewritten from pinning the defect to
+> pinning the guarantee — and still fails in both directions, including asserting that `NewRole`
+> stays *undeclared*, so the day the guarded half lands somebody comes back to it.
+>
+> **What this did NOT close is items 7 and 8 below.** They are separate on purpose, not bundled.
+
+##### The three things checked before it was approved
+
+1. **One spec artefact, one producer, no second path.** `docs/api/openapi.json` is the only spec file
+   in the repo; `OpenApiSpecIT` is its only producer; its consumers are orval, the paging-map
+   generator, and CI's drift check. **There is no live `/v3/api-docs`**: springdoc is not a
+   dependency, `unzip -l` finds **zero** springdoc/swagger entries in the deployed jar, and the `401`
+   that `/v3/api-docs` returns is simply what Spring Security answers for *any* unmapped path —
+   `/definitely-not-a-route-xyz` returns the same. So there is no second document to keep accurate.
+   (springdoc was tried and rejected in step 16a: it introspects with Jackson **2** while
+   `NovoCoreJsonModule` is Jackson **3**, so it could not see one of our serialisers and described
+   `Money.amount` as a JSON number.)
+2. **The redaction check now covers every response record, not just `ProductView`.** **53** response-
+   side records carry a primitive; all were swept. **No exception.** No `@JsonInclude` override exists
+   anywhere in the codebase, no construction site blanks a primitive with a literal default, and the
+   only two mechanisms that withhold data both leave primitives alone: `ProductView.redactedFor`
+   nulls three **reference-typed** fields (`Long supplierId` — boxed precisely because it is nullable
+   — `String supplierSku`, `UnitCost lastPurchasePrice`), and `SettingView` substitutes a masked
+   `String` for a secret's value. There is also direct wire evidence from F3's probe: `RoleView`
+   returned `"fullAccess":false,"systemRole":false` — **`false` values present on the wire**, which
+   is exactly what a `NON_DEFAULT` inclusion would have dropped.
+3. **The anti-pattern numbering was inconsistent, and is fixed below** — see item 6.
+
+#### 2 (continued). The original write-up
 
 > ⚠️ **This item was rewritten on 2026-07-31 after the owner reproduced it live.** The previous
 > version described it as an unreproduced edge case involving an *explicit* `null`, and recorded
@@ -4472,10 +4531,40 @@ notes come out when this lands.**
 
 ---
 
-#### 6. **`NewUser` and `NewRole` guard request-body fields with `Objects.requireNonNull` — the named anti-pattern, in records that predate the fix for it.**
+#### 6. **`NewUser` and `NewRole` guard request-body fields with `Objects.requireNonNull` — the fifth confirmed instance of "a client's mistake raised as a programming error".**
 
-`CLAUDE.md`'s *"a client's mistake raised as a programming error"*, instance 2, still present in two
-records:
+##### ⚠️ The numbering, stated once so the queue stops disagreeing with itself
+
+**Three anti-patterns are named in `CLAUDE.md`, and items 4 and 6 belong to the same one:**
+
+| Named anti-pattern | What it is | Items here |
+|---|---|---|
+| **Proxy self-invocation** | a class calling its own `@Transactional` method, so Spring's proxy is bypassed and the annotation does nothing | none outstanding |
+| **A verification that answers its own request** | a check whose subject is stubbed, so it can only confirm what it was told | none outstanding — it is now the standing rule |
+| **A client's mistake raised as a programming error** | an exception type meaning *our code is wrong* used to tell a caller *their request is wrong*, so `WebExceptionHandler` correctly discards the message | **items 4 and 6** |
+
+**Two counts were being conflated.** `CLAUDE.md` numbers **three disguises** found inside step 15 —
+(1) `IllegalArgumentException` for parameter guidance, (2) `Objects.requireNonNull` on a request-body
+field, (3) `IllegalArgumentException` for an id that names nothing. Item 4 counts **instances across
+the project** and its own text says the next one would be *"the fifth instance"*.
+
+**So, current and authoritative:** item 4 is the **fourth** confirmed instance (disguise 1/3's shape,
+found in F2). **Item 6 is the fifth** — disguise **2** recurring at a new site. Calling it "instance
+2" in the first draft mixed the disguise number with the instance count; that is corrected here.
+
+**Item 4 predicted exactly this.** It says the fifth would be *"found the same way this one was, by
+someone poking at it by hand"* — and it was, by reading `NewUser` while building F3. The prediction
+holding is itself the argument for its part 2: give the sweep a case carrying a **valid body that a
+domain rule refuses**, or the sixth arrives the same way.
+
+**Why no guard catches item 6 either, and it is the same blind spot as item 4:**
+`WebAuthorizationRulesTest` is scoped to `..core.web..` and these records are in **`core-api`**;
+`noRouteRefusesWithoutSayingWhy` sends no body; `noRouteFailsOnAnEmptyBody` looks for `5xx` and this
+is a `400`.
+
+---
+
+Still present in two records:
 
 ```java
 public record NewUser(String username, String displayName, String rawPassword, long roleId) {
@@ -4495,13 +4584,18 @@ public record NewRole(String name, String description) {
 sweep applied everywhere else — one statement per field, and the caller is told which field is
 missing instead of being handed a message that describes our internals.
 
-**⚠️ Its severity is genuinely lower than it looks, and the reason is worth recording** so nobody
-re-raises it as urgent. `UserServiceImpl.create` and `RoleServiceImpl.create` **re-check every one of
-these fields properly** — `requireUsername`, `requireText`, `PasswordPolicy.check` — and throw
-`InvalidUserException` / `InvalidRoleException`, which map to a `422` with a real message. The
-`requireNonNull` guards fire **only** when a field is absent from the JSON, and Jackson wraps a
-constructor throw in `ValueInstantiationException`, which Spring turns into a `400`. So the observed
-outcome is a bad-but-not-catastrophic `400`, not the `500` this anti-pattern usually produces.
+**⚠️ Its severity is genuinely lower than it looks, and the claim is backed by a test rather than by
+reasoning** — worth recording so nobody re-raises it as urgent. `UserServiceImpl.create` and
+`RoleServiceImpl.create` **re-check every one of these fields properly** — `requireUsername`,
+`requireText`, `PasswordPolicy.check` — and throw `InvalidUserException` / `InvalidRoleException`,
+which map to a `422` with a real message. The `requireNonNull` guards fire **only** when a field is
+absent from the JSON.
+
+**The evidence that it is a `400` and not a `500`:** `PermissionSweepIT.noRouteFailsOnAnEmptyBody`
+sends literally `"{}"` to **every** non-GET/DELETE route with no exclusions and asserts the answer is
+not `5xx`. The suite is green, so `POST /api/users` with `{}` — the exact body that trips
+`requireNonNull(username)` — is already proven not to explode, on every build. That is stronger than
+a one-off probe would have been, and it is why this sits below item 2 rather than beside it.
 
 **Not reachable from the F3 screens**, which always send every field and are tested on the exact
 body. Fix it with item 2 — same family, same files, and item 2's audit has to open both records
@@ -4509,9 +4603,73 @@ anyway.
 
 ---
 
-**Steps 0–16b are complete, committed and pushed. `mvn clean verify` is green at 1326 tests, 0
-skipped, across 174 routes. Step 16, the frontend, is in progress** — see *Step 16 — the frontend*
-above for what has landed.
+#### 7. **Box the 7 boolean primitives with `Required.field`, so the refusal names the field.**
+
+**Split out of item 2 deliberately, and approved as a separate later follow-on rather than bundled.**
+Item 2's primitive half made these fields *knowable from the contract*; this makes the refusal
+*readable* when somebody sends the body anyway — a raw HTTP client, an adapter, a future screen built
+against a stale client.
+
+The seven, and they are the whole set:
+
+| Record | Field | Route |
+|---|---|---|
+| `NewProduct` | `serialTracked` | `POST /api/products` |
+| `ProductController.SerialTrackingRequest` | `serialTracked` | `PATCH /api/products/{id}/serial-tracking` |
+| `NewUnitOfMeasure` | `fractionalQuantityAllowed` | `POST /api/units-of-measure` |
+| `NewAccount` | `expectedToClear` | `POST /api/accounts` |
+| `NewSettlement` | `remainderBecomesCustomerCredit` | `POST /api/settlements` |
+| `NewCreditNoteLine` | `stockReturned` | `POST /api/credit-notes` (nested) |
+| `NewPurchaseInvoiceLine` | `reverseCharge` | `POST /api/purchase-invoices` (nested) |
+
+**Booleans and not the `long` ids, and the distinction is the reasoning.** A form always sends an
+id — it came from a select the operator had to choose. **A false flag is exactly what a form omits.**
+`serialTracked` was precisely that, and the ids have never been the failure.
+
+**The pattern already exists one file away**: `RoleController.FieldRestrictionRequest(Boolean
+restricted)` with `Required.field(restricted, "restricted")` answers `400 "restricted" is required
+and was not supplied.` against `POST /api/products`'s `400 "Cannot map null into type boolean"`.
+Both were measured in the same probe run.
+
+⚠️ **Its javadoc names a second failure mode that is worse than the one we hit**, and it applies to
+all seven: had `FAIL_ON_NULL_FOR_PRIMITIVES` been off, an omitted flag would arrive as `false` and
+**silently turn the setting off**, answering `200`. The `400` is the lucky outcome. Boxing removes
+the luck.
+
+**Not urgent, and the reason is now in the contract:** with item 2 done, `tsc` refuses a frontend
+call that omits one of these, so the only callers that can still hit it are non-TypeScript ones.
+
+---
+
+#### 8. **Declare the 28 compact-constructor requirements — the half reflection cannot see.**
+
+**Its own item, not bundled into item 2, and deliberately the last of the three.** A reference-typed
+component required by a compact constructor (`Required.field` / `requireNonNull`) is mandatory in
+fact and **invisible to `OpenApiSchema`**, because reflection cannot look inside a constructor body.
+**28 request-body schemas have at least one.**
+
+`NewRole` is the readable example and is pinned by a frontend test: it declares no `required` list at
+all, `POST /api/roles` with `{}` is still refused, and `spec-hygiene.test.ts` asserts that
+`NewRole.required` stays **undefined** — so the day this lands, somebody is sent back to the
+frontend to decide what is newly knowable.
+
+**It needs a decision before it needs code.** Reflection cannot infer it, so the requirement has to
+be *declared*: an annotation on the record component (`@Mandatory`, read by the generator), a marker
+the `Required` helper itself records, or a hand-maintained table in the generator. The first is the
+obvious candidate and the one with a real cost — it is ~28 records and it puts an annotation in
+`core-api`, which is the module the architecture rules keep deliberately thin.
+
+**Lower value than items 2 and 7, and worth saying why**: this class has **bitten nobody**. Every one
+of these fields is re-checked by the service with a message that names it, so the observed failure is
+an ordinary refusal an operator can act on — not the silent, field-less `400` that primitives
+produced. It is a completeness improvement, not a defect.
+
+---
+
+**Steps 0–16b are complete, committed and pushed. `mvn verify` is green at 1327 tests across 174
+routes, with exactly one skip — `LiveSeedTest`, which is disabled unless `-Dnovocore.seed.base-url`
+is given and has been since F0 built it. Step 16, the frontend, is in progress** — see *Step 16 — the
+frontend* above for what has landed.
 
 **There is no known correctness defect in the ledger**, and step 15 is the strongest evidence this
 project has for that claim: a full trading quarter, built by nothing but HTTP requests, satisfies all

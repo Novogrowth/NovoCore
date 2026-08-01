@@ -10,8 +10,8 @@
 import type { Money } from './money';
 
 export interface NewBankTransfer {
-  fromAccountId?: number;
-  toAccountId?: number;
+  fromAccountId: number;
+  toAccountId: number;
   transferDate?: string;
   amount?: Money;
   reference?: string;

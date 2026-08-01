@@ -36,6 +36,7 @@ const sections = (level: AccessLevel) =>
 const owner: Me = {
   id: 1,
   username: 'owner',
+  active: true,
   role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
   sections: sections(AccessLevel.FULL),
   restrictedFields: [],
@@ -45,6 +46,7 @@ const owner: Me = {
 const viewer: Me = {
   id: 3,
   username: 'viewer',
+  active: true,
   role: { id: 5, name: 'VIEWER', fullAccess: false, systemRole: false },
   sections: [{ section: Section.CUSTOMERS, level: AccessLevel.VIEW, available: true }],
   restrictedFields: [],

@@ -11,9 +11,9 @@ import type { Quantity } from './quantity';
 import type { UnitCost } from './unitCost';
 
 export interface NewCreditNoteLine {
-  salesInvoiceLineId?: number;
+  salesInvoiceLineId: number;
   quantity?: Quantity;
   unitPrice?: UnitCost;
-  stockReturned?: boolean;
+  stockReturned: boolean;
   description?: string;
 }

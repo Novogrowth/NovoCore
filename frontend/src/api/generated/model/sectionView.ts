@@ -11,5 +11,5 @@ import type { Section } from './section';
 
 export interface SectionView {
   section?: Section;
-  available?: boolean;
+  available: boolean;
 }

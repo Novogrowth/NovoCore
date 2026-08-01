@@ -11,10 +11,10 @@ import type { Quantity } from './quantity';
 import type { UnitCost } from './unitCost';
 
 export interface GrIrMatchView {
-  id?: number;
-  purchaseInvoiceLineId?: number;
-  goodsReceiptLineId?: number;
-  lotId?: number;
+  id: number;
+  purchaseInvoiceLineId: number;
+  goodsReceiptLineId: number;
+  lotId: number;
   quantity?: Quantity;
   receiptUnitCost?: UnitCost;
   invoiceUnitPrice?: UnitCost;

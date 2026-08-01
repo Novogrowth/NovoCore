@@ -9159,6 +9159,7 @@
       },
       "AccountGroupView" : {
         "type" : "object",
+        "required" : [ "id", "displayOrder" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -9193,6 +9194,7 @@
       },
       "AccountView" : {
         "type" : "object",
+        "required" : [ "id", "groupId", "displayOrder", "active", "expectedToClear" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -9244,6 +9246,7 @@
       },
       "AllocationView" : {
         "type" : "object",
+        "required" : [ "id", "sourceId", "allocationOrder" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -9281,6 +9284,7 @@
       },
       "AmendRequest" : {
         "type" : "object",
+        "required" : [ "accountId" ],
         "properties" : {
           "accountId" : {
             "type" : "integer",
@@ -9307,6 +9311,7 @@
       },
       "AssetView" : {
         "type" : "object",
+        "required" : [ "id" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -9344,6 +9349,7 @@
       },
       "BankTransferView" : {
         "type" : "object",
+        "required" : [ "id", "fromAccountId", "toAccountId", "journalEntryId" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -9384,6 +9390,7 @@
       },
       "BundleComponentView" : {
         "type" : "object",
+        "required" : [ "bundleProductId", "componentProductId", "stocked", "componentActive" ],
         "properties" : {
           "bundleProductId" : {
             "type" : "integer",
@@ -9418,6 +9425,7 @@
       },
       "ChargeTypeView" : {
         "type" : "object",
+        "required" : [ "id", "defaultVatClassId", "incomeAccountId", "active" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -9463,6 +9471,7 @@
       },
       "CreditNoteLineView" : {
         "type" : "object",
+        "required" : [ "id", "lineNumber", "salesInvoiceLineId", "stockReturned" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -9517,6 +9526,7 @@
       },
       "CreditNotePreview" : {
         "type" : "object",
+        "required" : [ "roundingNeedsAcceptance" ],
         "properties" : {
           "lines" : {
             "type" : "array",
@@ -9552,6 +9562,7 @@
       },
       "CreditNotePreviewLine" : {
         "type" : "object",
+        "required" : [ "salesInvoiceLineId", "stockReturned" ],
         "properties" : {
           "salesInvoiceLineId" : {
             "type" : "integer",
@@ -9594,6 +9605,7 @@
       },
       "CreditNoteView" : {
         "type" : "object",
+        "required" : [ "id", "salesInvoiceId", "customerId", "roundingNeededReview", "journalEntryId" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -9679,6 +9691,7 @@
       },
       "CustomerCreditView" : {
         "type" : "object",
+        "required" : [ "id", "customerId", "settlementId" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -9716,6 +9729,7 @@
       },
       "CustomerView" : {
         "type" : "object",
+        "required" : [ "id", "active" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -9828,6 +9842,7 @@
       },
       "FreightAllocationLineView" : {
         "type" : "object",
+        "required" : [ "id", "lineNumber", "lotId", "productId" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -9870,6 +9885,7 @@
       },
       "FreightAllocationView" : {
         "type" : "object",
+        "required" : [ "id", "purchaseInvoiceLineId", "purchaseInvoiceId", "journalEntryId" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -9924,6 +9940,7 @@
       },
       "GoodsReceiptLineView" : {
         "type" : "object",
+        "required" : [ "id", "lineNumber", "productId", "lotId" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -9973,6 +9990,7 @@
       },
       "GoodsReceiptMatch" : {
         "type" : "object",
+        "required" : [ "goodsReceiptLineId" ],
         "properties" : {
           "goodsReceiptLineId" : {
             "type" : "integer",
@@ -9985,6 +10003,7 @@
       },
       "GoodsReceiptView" : {
         "type" : "object",
+        "required" : [ "id", "supplierId" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -10032,6 +10051,7 @@
       },
       "GrIrMatchView" : {
         "type" : "object",
+        "required" : [ "id", "purchaseInvoiceLineId", "goodsReceiptLineId", "lotId" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -10070,6 +10090,7 @@
       },
       "InventoryLotView" : {
         "type" : "object",
+        "required" : [ "id", "productId", "serialTracked" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -10126,6 +10147,7 @@
       },
       "JournalEntrySummaryView" : {
         "type" : "object",
+        "required" : [ "id", "lineCount" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -10160,6 +10182,7 @@
       },
       "JournalEntryView" : {
         "type" : "object",
+        "required" : [ "id" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -10193,6 +10216,7 @@
       },
       "JournalLineView" : {
         "type" : "object",
+        "required" : [ "id", "entryId", "lineNumber", "accountId" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -10755,6 +10779,7 @@
       },
       "Me" : {
         "type" : "object",
+        "required" : [ "id", "active" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -10827,6 +10852,7 @@
       },
       "NewAccount" : {
         "type" : "object",
+        "required" : [ "groupId", "expectedToClear" ],
         "properties" : {
           "name" : {
             "type" : "string"
@@ -10884,6 +10910,7 @@
       },
       "NewBankTransfer" : {
         "type" : "object",
+        "required" : [ "fromAccountId", "toAccountId" ],
         "properties" : {
           "fromAccountId" : {
             "type" : "integer",
@@ -10910,6 +10937,7 @@
       },
       "NewBundleComponent" : {
         "type" : "object",
+        "required" : [ "componentProductId" ],
         "properties" : {
           "componentProductId" : {
             "type" : "integer",
@@ -10922,6 +10950,7 @@
       },
       "NewCreditNote" : {
         "type" : "object",
+        "required" : [ "salesInvoiceId" ],
         "properties" : {
           "salesInvoiceId" : {
             "type" : "integer",
@@ -10956,6 +10985,7 @@
       },
       "NewCreditNoteLine" : {
         "type" : "object",
+        "required" : [ "salesInvoiceLineId", "stockReturned" ],
         "properties" : {
           "salesInvoiceLineId" : {
             "type" : "integer",
@@ -11005,6 +11035,7 @@
       },
       "NewFreightAllocation" : {
         "type" : "object",
+        "required" : [ "purchaseInvoiceLineId" ],
         "properties" : {
           "purchaseInvoiceLineId" : {
             "type" : "integer",
@@ -11031,6 +11062,7 @@
       },
       "NewGoodsReceipt" : {
         "type" : "object",
+        "required" : [ "supplierId" ],
         "properties" : {
           "supplierId" : {
             "type" : "integer",
@@ -11056,6 +11088,7 @@
       },
       "NewGoodsReceiptLine" : {
         "type" : "object",
+        "required" : [ "productId" ],
         "properties" : {
           "productId" : {
             "type" : "integer",
@@ -11088,6 +11121,7 @@
       },
       "NewProduct" : {
         "type" : "object",
+        "required" : [ "unitOfMeasureId", "defaultVatClassId", "serialTracked" ],
         "properties" : {
           "sku" : {
             "type" : "string"
@@ -11126,6 +11160,7 @@
       },
       "NewPurchaseInvoice" : {
         "type" : "object",
+        "required" : [ "supplierId" ],
         "properties" : {
           "supplierId" : {
             "type" : "integer",
@@ -11151,6 +11186,7 @@
       },
       "NewPurchaseInvoiceLine" : {
         "type" : "object",
+        "required" : [ "reverseCharge" ],
         "properties" : {
           "type" : {
             "$ref" : "#/components/schemas/PurchaseLineType"
@@ -11207,6 +11243,7 @@
       },
       "NewSalesInvoice" : {
         "type" : "object",
+        "required" : [ "customerId" ],
         "properties" : {
           "customerId" : {
             "type" : "integer",
@@ -11286,6 +11323,7 @@
       },
       "NewSettlement" : {
         "type" : "object",
+        "required" : [ "partyId", "accountId", "remainderBecomesCustomerCredit" ],
         "properties" : {
           "direction" : {
             "$ref" : "#/components/schemas/SettlementDirection"
@@ -11327,6 +11365,7 @@
       },
       "NewStockWriteOff" : {
         "type" : "object",
+        "required" : [ "lotId" ],
         "properties" : {
           "lotId" : {
             "type" : "integer",
@@ -11377,6 +11416,7 @@
       },
       "NewUnitOfMeasure" : {
         "type" : "object",
+        "required" : [ "fractionalQuantityAllowed" ],
         "properties" : {
           "code" : {
             "type" : "string"
@@ -11394,6 +11434,7 @@
       },
       "NewUser" : {
         "type" : "object",
+        "required" : [ "roleId" ],
         "properties" : {
           "username" : {
             "type" : "string"
@@ -11426,6 +11467,7 @@
       },
       "OpenItem" : {
         "type" : "object",
+        "required" : [ "partyId" ],
         "properties" : {
           "ref" : {
             "$ref" : "#/components/schemas/OpenItemRef"
@@ -11457,6 +11499,7 @@
       },
       "OpenItemRef" : {
         "type" : "object",
+        "required" : [ "id" ],
         "properties" : {
           "type" : {
             "$ref" : "#/components/schemas/OpenItemType"
@@ -11485,6 +11528,7 @@
       },
       "PageInfo" : {
         "type" : "object",
+        "required" : [ "page", "size", "totalElements", "totalPages", "hasNext", "hasPrevious" ],
         "properties" : {
           "page" : {
             "type" : "integer",
@@ -11528,6 +11572,7 @@
       },
       "ProductView" : {
         "type" : "object",
+        "required" : [ "id", "defaultVatClassId", "serialTracked", "bundle", "active" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -11589,6 +11634,7 @@
       },
       "PurchaseInvoiceLineView" : {
         "type" : "object",
+        "required" : [ "id", "lineNumber", "reverseCharge" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -11648,6 +11694,7 @@
       },
       "PurchaseInvoiceView" : {
         "type" : "object",
+        "required" : [ "id", "supplierId", "journalEntryId" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -11714,6 +11761,7 @@
       },
       "QueuedEmailView" : {
         "type" : "object",
+        "required" : [ "id", "attachmentCount", "attempts", "maxAttempts" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -11814,6 +11862,7 @@
       },
       "Role" : {
         "type" : "object",
+        "required" : [ "id", "fullAccess", "systemRole" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -11844,6 +11893,7 @@
       },
       "RoleView" : {
         "type" : "object",
+        "required" : [ "id", "fullAccess", "systemRole", "active" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -11899,6 +11949,7 @@
       },
       "SalesInvoiceLineComponentView" : {
         "type" : "object",
+        "required" : [ "id", "componentNumber", "productId" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -11929,6 +11980,7 @@
       },
       "SalesInvoiceLineView" : {
         "type" : "object",
+        "required" : [ "id", "lineNumber" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -12001,6 +12053,7 @@
       },
       "SalesInvoicePreview" : {
         "type" : "object",
+        "required" : [ "roundingNeedsAcceptance" ],
         "properties" : {
           "lines" : {
             "type" : "array",
@@ -12082,6 +12135,7 @@
       },
       "SalesInvoiceView" : {
         "type" : "object",
+        "required" : [ "id", "customerId", "roundingNeededReview", "journalEntryId" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -12168,6 +12222,7 @@
       },
       "SectionAccess" : {
         "type" : "object",
+        "required" : [ "available" ],
         "properties" : {
           "section" : {
             "$ref" : "#/components/schemas/Section"
@@ -12182,6 +12237,7 @@
       },
       "SectionView" : {
         "type" : "object",
+        "required" : [ "available" ],
         "properties" : {
           "section" : {
             "$ref" : "#/components/schemas/Section"
@@ -12201,6 +12257,7 @@
       },
       "SentEmailAttachmentView" : {
         "type" : "object",
+        "required" : [ "id", "attachmentOrder", "sizeBytes" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -12234,6 +12291,7 @@
       },
       "SerialTrackingRequest" : {
         "type" : "object",
+        "required" : [ "serialTracked" ],
         "properties" : {
           "serialTracked" : {
             "type" : "boolean"
@@ -12246,6 +12304,7 @@
       },
       "SerializedUnitView" : {
         "type" : "object",
+        "required" : [ "id", "lotId", "productId" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -12283,6 +12342,7 @@
       },
       "SettingView" : {
         "type" : "object",
+        "required" : [ "secret" ],
         "properties" : {
           "key" : {
             "type" : "string"
@@ -12319,6 +12379,7 @@
       },
       "SettlementView" : {
         "type" : "object",
+        "required" : [ "id", "partyId", "accountId", "journalEntryId" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -12385,6 +12446,7 @@
       },
       "StockConsumptionLineView" : {
         "type" : "object",
+        "required" : [ "id", "lotId" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -12407,6 +12469,7 @@
       },
       "StockConsumptionView" : {
         "type" : "object",
+        "required" : [ "id", "productId" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -12467,6 +12530,7 @@
       },
       "StockLevels" : {
         "type" : "object",
+        "required" : [ "productId" ],
         "properties" : {
           "productId" : {
             "type" : "integer",
@@ -12486,6 +12550,7 @@
       },
       "StockWriteOffView" : {
         "type" : "object",
+        "required" : [ "id", "lotId", "productId" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -12544,6 +12609,7 @@
       },
       "SubLedgerRef" : {
         "type" : "object",
+        "required" : [ "id" ],
         "properties" : {
           "type" : {
             "$ref" : "#/components/schemas/SubLedgerType"
@@ -12572,6 +12638,7 @@
       },
       "SupplierView" : {
         "type" : "object",
+        "required" : [ "id", "active" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -12603,6 +12670,7 @@
       },
       "TargetedAllocationRequest" : {
         "type" : "object",
+        "required" : [ "salesInvoiceId" ],
         "properties" : {
           "salesInvoiceId" : {
             "type" : "integer",
@@ -12615,6 +12683,7 @@
       },
       "UnallocatedAmount" : {
         "type" : "object",
+        "required" : [ "purchaseInvoiceLineId" ],
         "properties" : {
           "purchaseInvoiceLineId" : {
             "type" : "integer",
@@ -12646,6 +12715,7 @@
       },
       "UnitOfMeasureRequest" : {
         "type" : "object",
+        "required" : [ "unitOfMeasureId" ],
         "properties" : {
           "unitOfMeasureId" : {
             "type" : "integer",
@@ -12655,6 +12725,7 @@
       },
       "UnitOfMeasureView" : {
         "type" : "object",
+        "required" : [ "id", "fractionalQuantityAllowed", "active" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -12679,6 +12750,7 @@
       },
       "UserView" : {
         "type" : "object",
+        "required" : [ "id", "active" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -12734,6 +12806,7 @@
       },
       "VatClassRequest" : {
         "type" : "object",
+        "required" : [ "vatClassId" ],
         "properties" : {
           "vatClassId" : {
             "type" : "integer",
@@ -12747,6 +12820,7 @@
       },
       "VatClassView" : {
         "type" : "object",
+        "required" : [ "id", "active" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -12772,6 +12846,7 @@
       },
       "VatDimension" : {
         "type" : "object",
+        "required" : [ "vatClassId" ],
         "properties" : {
           "vatClassId" : {
             "type" : "integer",
@@ -12784,6 +12859,7 @@
       },
       "VatExemptionReasonView" : {
         "type" : "object",
+        "required" : [ "id", "code", "inputVatDeductible", "active" ],
         "properties" : {
           "id" : {
             "type" : "integer",

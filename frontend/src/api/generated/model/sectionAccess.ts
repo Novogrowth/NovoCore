@@ -13,5 +13,5 @@ import type { Section } from './section';
 export interface SectionAccess {
   section?: Section;
   level?: AccessLevel;
-  available?: boolean;
+  available: boolean;
 }

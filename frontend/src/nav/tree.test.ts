@@ -177,7 +177,9 @@ describe('the navigation tree', () => {
 
 describe('navigation visibility', () => {
   const owner: Me = {
-    role: { name: 'OWNER', fullAccess: true, systemRole: true },
+    id: 1,
+    active: true,
+    role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
     sections: Object.values(Section).map((section) => ({
       section,
       level: AccessLevel.FULL,
@@ -188,7 +190,9 @@ describe('navigation visibility', () => {
   }
 
   const settlementsOnly: Me = {
-    role: { name: 'BOOKKEEPER', fullAccess: false, systemRole: false },
+    id: 2,
+    active: true,
+    role: { id: 6, name: 'BOOKKEEPER', fullAccess: false, systemRole: false },
     sections: [{ section: Section.SETTLEMENTS, level: AccessLevel.VIEW, available: true }],
   }
 
@@ -240,7 +244,9 @@ describe('navigation visibility', () => {
     // would be the state during a rollback, or if a section were retired. The item must degrade
     // to a placeholder rather than offering a link that 404s.
     const backendDisagrees: Me = {
-      role: { name: 'OWNER', fullAccess: true, systemRole: true },
+      id: 1,
+      active: true,
+      role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
       sections: [{ section: Section.CUSTOMERS, level: AccessLevel.FULL, available: false }],
     }
     const visible = visibleNav(permissionsOf(backendDisagrees))
@@ -257,7 +263,9 @@ describe('navigation visibility', () => {
     // as available while this tree still says NOT_BUILT, the item stays a placeholder: there is no
     // screen behind it here, whatever the server has. Enabling it would route to nothing.
     const backendIsAhead: Me = {
-      role: { name: 'OWNER', fullAccess: true, systemRole: true },
+      id: 1,
+      active: true,
+      role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
       sections: [
         { section: Section.SALES_ORDER_FULFILLMENT, level: AccessLevel.FULL, available: true },
       ],

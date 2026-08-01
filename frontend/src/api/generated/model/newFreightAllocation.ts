@@ -10,7 +10,7 @@
 import type { Money } from './money';
 
 export interface NewFreightAllocation {
-  purchaseInvoiceLineId?: number;
+  purchaseInvoiceLineId: number;
   amount?: Money;
   allocationDate?: string;
   description?: string;

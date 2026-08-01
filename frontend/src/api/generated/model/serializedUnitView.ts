@@ -12,9 +12,9 @@ import type { StockLocation } from './stockLocation';
 import type { UnitCost } from './unitCost';
 
 export interface SerializedUnitView {
-  id?: number;
-  lotId?: number;
-  productId?: number;
+  id: number;
+  lotId: number;
+  productId: number;
   serialNumber?: string;
   status?: SerializedUnitStatus;
   location?: StockLocation;

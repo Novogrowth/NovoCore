@@ -11,9 +11,9 @@ import type { Money } from './money';
 import type { Quantity } from './quantity';
 
 export interface SalesInvoiceLineComponentView {
-  id?: number;
-  componentNumber?: number;
-  productId?: number;
+  id: number;
+  componentNumber: number;
+  productId: number;
   productSku?: string;
   quantity?: Quantity;
   allocatedAmount?: Money;

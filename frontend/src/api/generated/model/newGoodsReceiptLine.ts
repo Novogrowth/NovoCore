@@ -12,7 +12,7 @@ import type { StockLocation } from './stockLocation';
 import type { UnitCost } from './unitCost';
 
 export interface NewGoodsReceiptLine {
-  productId?: number;
+  productId: number;
   quantity?: Quantity;
   serialNumbers?: string[];
   unitCost?: UnitCost;

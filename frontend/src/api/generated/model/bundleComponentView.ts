@@ -12,13 +12,13 @@ import type { Quantity } from './quantity';
 import type { UnitOfMeasureView } from './unitOfMeasureView';
 
 export interface BundleComponentView {
-  bundleProductId?: number;
-  componentProductId?: number;
+  bundleProductId: number;
+  componentProductId: number;
   componentSku?: string;
   componentName?: string;
   quantityPerBundle?: Quantity;
   componentUnitOfMeasure?: UnitOfMeasureView;
   standalonePrice?: Money;
-  stocked?: boolean;
-  componentActive?: boolean;
+  stocked: boolean;
+  componentActive: boolean;
 }

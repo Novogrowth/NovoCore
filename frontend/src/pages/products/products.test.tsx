@@ -27,6 +27,7 @@ const sections = (level: AccessLevel) =>
 const owner: Me = {
   id: 1,
   username: 'owner',
+  active: true,
   role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
   sections: sections(AccessLevel.FULL),
   restrictedFields: [],
@@ -36,6 +37,7 @@ const owner: Me = {
 const orderStaff: Me = {
   id: 2,
   username: 'staff',
+  active: true,
   role: { id: 3, name: 'REMOTE_ORDER_STAFF', fullAccess: false, systemRole: false },
   sections: [{ section: Section.PRODUCTS, level: AccessLevel.VIEW, available: true }],
   restrictedFields: [],
@@ -46,7 +48,7 @@ const espresso: ProductView = {
   sku: 'ESP-001',
   name: 'Espresso blend 1kg',
   type: 'GOODS',
-  unitOfMeasure: { id: 1, code: 'kg', name: 'Kilogram', fractionalQuantityAllowed: true },
+  unitOfMeasure: { id: 1, code: 'kg', name: 'Kilogram', fractionalQuantityAllowed: true, active: true },
   defaultVatClassId: 3,
   sellingPrice: { amount: '18.50', currency: 'EUR' },
   supplierId: 7,

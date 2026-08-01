@@ -12,10 +12,10 @@ import type { Money } from './money';
 import type { OpenItemRef } from './openItemRef';
 
 export interface AllocationView {
-  id?: number;
+  id: number;
   sourceType?: AllocationSourceType;
-  sourceId?: number;
+  sourceId: number;
   target?: OpenItemRef;
-  allocationOrder?: number;
+  allocationOrder: number;
   amount?: Money;
 }

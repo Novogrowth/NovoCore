@@ -10,6 +10,6 @@
 import type { Quantity } from './quantity';
 
 export interface NewBundleComponent {
-  componentProductId?: number;
+  componentProductId: number;
   quantity?: Quantity;
 }

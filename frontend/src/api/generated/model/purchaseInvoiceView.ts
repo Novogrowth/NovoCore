@@ -11,8 +11,8 @@ import type { Money } from './money';
 import type { PurchaseInvoiceLineView } from './purchaseInvoiceLineView';
 
 export interface PurchaseInvoiceView {
-  id?: number;
-  supplierId?: number;
+  id: number;
+  supplierId: number;
   supplierName?: string;
   supplierInvoiceNumber?: string;
   invoiceDate?: string;
@@ -21,7 +21,7 @@ export interface PurchaseInvoiceView {
   vatTotal?: Money;
   grossTotal?: Money;
   variance?: Money;
-  journalEntryId?: number;
+  journalEntryId: number;
   reversalOfInvoiceId?: number;
   reversedByInvoiceId?: number;
   lines?: PurchaseInvoiceLineView[];

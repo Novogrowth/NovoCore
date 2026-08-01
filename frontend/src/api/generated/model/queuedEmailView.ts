@@ -10,15 +10,15 @@
 import type { EmailStatus } from './emailStatus';
 
 export interface QueuedEmailView {
-  id?: number;
+  id: number;
   to?: string[];
   cc?: string[];
   bcc?: string[];
   subject?: string;
-  attachmentCount?: number;
+  attachmentCount: number;
   status?: EmailStatus;
-  attempts?: number;
-  maxAttempts?: number;
+  attempts: number;
+  maxAttempts: number;
   nextAttemptAt?: string;
   lastAttemptAt?: string;
   sentAt?: string;

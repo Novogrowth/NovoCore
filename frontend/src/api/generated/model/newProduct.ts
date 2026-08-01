@@ -15,10 +15,10 @@ export interface NewProduct {
   ean?: string;
   name?: string;
   type?: ProductType;
-  unitOfMeasureId?: number;
-  defaultVatClassId?: number;
+  unitOfMeasureId: number;
+  defaultVatClassId: number;
   sellingPrice?: Money;
   supplierId?: number;
   supplierSku?: string;
-  serialTracked?: boolean;
+  serialTracked: boolean;
 }

@@ -10,6 +10,6 @@
 import type { Quantity } from './quantity';
 
 export interface GoodsReceiptMatch {
-  goodsReceiptLineId?: number;
+  goodsReceiptLineId: number;
   quantity?: Quantity;
 }

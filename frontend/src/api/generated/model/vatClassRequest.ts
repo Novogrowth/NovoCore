@@ -9,5 +9,5 @@
  */
 
 export interface VatClassRequest {
-  vatClassId?: number;
+  vatClassId: number;
 }

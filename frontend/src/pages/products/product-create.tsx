@@ -65,23 +65,23 @@ export function ProductCreate() {
           ...(supplierId !== undefined ? { supplierId } : {}),
           ...(supplierSku.trim() ? { supplierSku: supplierSku.trim() } : {}),
           /*
-           * ⚠️ **Sent explicitly, and creating a product fails outright without it.**
+           * Required, and the contract now says so — this is no longer a workaround.
            *
-           * The generated type says `serialTracked?: boolean`, because the spec declares no
-           * required fields on `NewProduct` — on any request body, in fact. It is not optional:
-           * `NewProduct.serialTracked` is a primitive `boolean` on a Java record, and Jackson
-           * passes an **absent** creator property to the constructor as null, which
-           * `FAIL_ON_NULL_FOR_PRIMITIVES` then refuses. Omitting it answers
-           * `400 "Malformed request body: Cannot map null into type boolean"` — every time, for
-           * every user, before any handler runs.
+           * `NewProduct.serialTracked` is a primitive `boolean` on a Java record: Jackson passes an
+           * **absent** creator property to the constructor as null and
+           * `FAIL_ON_NULL_FOR_PRIMITIVES` refuses it, answering
+           * `400 "Malformed request body: Cannot map null into type boolean"` before any handler
+           * runs. That broke product creation for every user, and the spec called the field
+           * optional, so the form was written correctly against a contract that was wrong.
+           *
+           * Since 2026-08-01 the generator marks primitive components required, so the type is
+           * `serialTracked: boolean` and **omitting it is a compile error** rather than a runtime
+           * `400`. Left explicit because it must be sent, not because the types are untrustworthy.
            *
            * `false` is not a default invented here: this form has no serial-tracking control, so
            * false is the only value it can honestly claim. A product is made serial-tracked
-           * afterwards, on its detail screen.
-           *
-           * This is a workaround for a backend/spec defect, pinned by `spec-hygiene.test.ts` and
-           * queued in PROGRESS.md. When the spec starts declaring what a body requires, come back
-           * and decide whether this belongs in the form as a control instead.
+           * afterwards, on its detail screen — worth revisiting if that ever becomes a create-time
+           * decision.
            */
           serialTracked: false,
         },

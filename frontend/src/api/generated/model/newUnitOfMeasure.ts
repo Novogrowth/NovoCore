@@ -11,6 +11,6 @@
 export interface NewUnitOfMeasure {
   code?: string;
   name?: string;
-  fractionalQuantityAllowed?: boolean;
+  fractionalQuantityAllowed: boolean;
   mydataCode?: string;
 }

@@ -26,6 +26,7 @@ import { UsersList } from './users-list'
 const owner: Me = {
   id: 1,
   username: 'owner',
+  active: true,
   role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
   sections: Object.values(Section).map((section) => ({
     section,
@@ -41,6 +42,7 @@ const self: Me = { ...owner, id: 3 }
 const viewer: Me = {
   id: 8,
   username: 'viewer',
+  active: true,
   role: { id: 5, name: 'VIEWER', fullAccess: false, systemRole: false },
   sections: [{ section: Section.USERS_AND_ROLES, level: AccessLevel.VIEW, available: true }],
   restrictedFields: [],
@@ -51,7 +53,7 @@ const kostas: UserView = {
   username: 'kostas',
   displayName: 'Kostas',
   language: 'el',
-  role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
+  role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true, active: true },
   active: true,
 }
 

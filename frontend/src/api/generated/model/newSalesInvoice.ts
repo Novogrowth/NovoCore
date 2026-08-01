@@ -13,7 +13,7 @@ import type { SalesChannel } from './salesChannel';
 import type { SettlementMethod } from './settlementMethod';
 
 export interface NewSalesInvoice {
-  customerId?: number;
+  customerId: number;
   channel?: SalesChannel;
   settlementMethod?: SettlementMethod;
   documentNumber?: string;

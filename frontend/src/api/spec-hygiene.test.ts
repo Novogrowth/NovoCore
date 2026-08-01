@@ -75,35 +75,59 @@ describe('the committed OpenAPI spec', () => {
     ).toEqual(['InventoryController_writeOff'])
   })
 
-  it('declares required fields on nothing but Money and UnitCost, which is why a body can be refused for a field the types call optional', () => {
+  it('declares every primitive component required, so a mandatory field is knowable from the contract', () => {
     /*
-     * **The spec does not say what a request body requires.** 185 schemas, 71 operations with a
-     * body, and `required` appears on exactly two value objects. So every generated request type
-     * is `Partial`-shaped, and a call site cannot tell a mandatory field from an optional one on
-     * any write route in the application.
+     * **This test used to assert the opposite, and the change is the point.**
      *
-     * That is not cosmetic, and it has already cost a screen. `NewProduct.serialTracked` is
-     * generated as `serialTracked?: boolean` and is mandatory in fact: it is a primitive `boolean`
-     * on a Java record, Jackson hands an absent creator property to the constructor as null, and
-     * `FAIL_ON_NULL_FOR_PRIMITIVES` refuses it. **Product creation failed for every user, every
-     * time**, with `400 "Malformed request body: Cannot map null into type boolean"` — a message
-     * naming no field, from a route the spec said the request satisfied. `product-create.tsx`
-     * sends the field explicitly until this is fixed.
+     * It read: *"declares required fields on nothing but Money and UnitCost, which is why a body can
+     * be refused for a field the types call optional"* — pinning a defect rather than a guarantee,
+     * and written to fail in both directions so that the day the backend started describing its
+     * bodies, somebody came back here. **That day was 2026-08-01** and this is that visit.
      *
-     * Written to fail in BOTH directions, like the collision above:
-     *   - a schema starts declaring `required` → the backend is describing its bodies, so go back
-     *     to the workarounds and the generated types and decide what is now knowable;
-     *   - one of these two stops   → a value object quietly became optional, and `Money` without a
-     *     currency is the defect ADR 0005 exists to prevent.
+     * What changed: `OpenApiSchema.recordSchema` now marks a record's **primitive** components
+     * required. A primitive cannot be null, so on a request it is mandatory —
+     * `FAIL_ON_NULL_FOR_PRIMITIVES` refuses an absent one before any handler runs, which is what
+     * broke product creation for every user (`NewProduct.serialTracked`) and would have broken
+     * account creation the same way (`NewUser.roleId`) — and on a response it is always present, so
+     * the same rule is accurate in both directions.
+     *
+     * **What is still NOT declared, so nobody reads this test as "the contract is now complete":**
+     * a reference-typed field that a compact constructor requires (`Required.field` /
+     * `requireNonNull`) is mandatory in fact and invisible to the generator, because reflection
+     * cannot see inside a constructor body. 28 schemas have one. `NewRole.name` is the readable
+     * example: `NewRole` declares no `required` list at all, and sending `{}` to `POST /api/roles`
+     * is still refused. That half is queued as its own backend item.
+     *
+     * Still written to fail in both directions:
+     *   - the count drops → the generator stopped declaring something it used to, and a client can
+     *     once again omit a field that is mandatory in fact;
+     *   - the count climbs a lot → the guarded half landed, and the frontend can stop working around
+     *     it (see `product-create.tsx`, which sends `serialTracked` explicitly).
      */
-    const declaring = Object.entries(spec.components.schemas as Record<string, { required?: string[] }>)
+    const schemas = spec.components.schemas as Record<string, { required?: string[] }>
+    const declaring = Object.entries(schemas)
       .filter(([, schema]) => (schema.required?.length ?? 0) > 0)
       .map(([name]) => name)
-      .sort()
+
+    // The two hand-written value objects are still there, and they are the ones ADR 0005 cares
+    // about: a Money without a currency is the defect that decision exists to prevent.
+    expect(declaring).toContain('Money')
+    expect(declaring).toContain('UnitCost')
+    expect(schemas.Money?.required).toEqual(['amount', 'currency'])
+
+    // The two that cost a screen between them, now declared rather than discovered.
+    expect(schemas.NewProduct?.required).toContain('serialTracked')
+    expect(schemas.NewUser?.required).toContain('roleId')
 
     expect(
-      declaring,
-      'the set of schemas declaring required fields changed — see the comment above before updating this list',
-    ).toEqual(['Money', 'UnitCost'])
+      declaring.length,
+      'the number of schemas declaring required fields changed — read the comment above before updating this number',
+    ).toBe(78)
+
+    // The guarded half is NOT declared, and this is what says so out loud.
+    expect(
+      schemas.NewRole?.required,
+      'NewRole.name is required by its compact constructor and cannot be seen by reflection — if this is now declared, the guarded half landed',
+    ).toBeUndefined()
   })
 })

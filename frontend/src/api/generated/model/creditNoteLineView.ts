@@ -12,9 +12,9 @@ import type { Quantity } from './quantity';
 import type { UnitCost } from './unitCost';
 
 export interface CreditNoteLineView {
-  id?: number;
-  lineNumber?: number;
-  salesInvoiceLineId?: number;
+  id: number;
+  lineNumber: number;
+  salesInvoiceLineId: number;
   productId?: number;
   productSku?: string;
   quantity?: Quantity;
@@ -23,7 +23,7 @@ export interface CreditNoteLineView {
   vatAmount?: Money;
   vatClassId?: number;
   vatExemptionReasonId?: number;
-  stockReturned?: boolean;
+  stockReturned: boolean;
   returnConsumptionId?: number;
   description?: string;
 }

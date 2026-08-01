@@ -11,16 +11,16 @@ import type { FreightAllocationLineView } from './freightAllocationLineView';
 import type { Money } from './money';
 
 export interface FreightAllocationView {
-  id?: number;
-  purchaseInvoiceLineId?: number;
-  purchaseInvoiceId?: number;
+  id: number;
+  purchaseInvoiceLineId: number;
+  purchaseInvoiceId: number;
   supplierInvoiceNumber?: string;
   allocationDate?: string;
   description?: string;
   amount?: Money;
   capitalised?: Money;
   variance?: Money;
-  journalEntryId?: number;
+  journalEntryId: number;
   reversalOfId?: number;
   reversedByAllocationId?: number;
   lines?: FreightAllocationLineView[];

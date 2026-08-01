@@ -11,5 +11,5 @@ import type { SubLedgerType } from './subLedgerType';
 
 export interface SubLedgerRef {
   type?: SubLedgerType;
-  id?: number;
+  id: number;
 }

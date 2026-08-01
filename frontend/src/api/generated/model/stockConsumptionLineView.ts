@@ -12,8 +12,8 @@ import type { Quantity } from './quantity';
 import type { UnitCost } from './unitCost';
 
 export interface StockConsumptionLineView {
-  id?: number;
-  lotId?: number;
+  id: number;
+  lotId: number;
   quantity?: Quantity;
   unitCost?: UnitCost;
   cost?: Money;

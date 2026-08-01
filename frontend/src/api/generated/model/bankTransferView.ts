@@ -10,14 +10,14 @@
 import type { Money } from './money';
 
 export interface BankTransferView {
-  id?: number;
-  fromAccountId?: number;
+  id: number;
+  fromAccountId: number;
   fromAccountName?: string;
-  toAccountId?: number;
+  toAccountId: number;
   toAccountName?: string;
   transferDate?: string;
   amount?: Money;
   reference?: string;
   description?: string;
-  journalEntryId?: number;
+  journalEntryId: number;
 }

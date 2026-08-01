@@ -12,7 +12,7 @@ import type { Quantity } from './quantity';
 import type { UnitCost } from './unitCost';
 
 export interface CreditNotePreviewLine {
-  salesInvoiceLineId?: number;
+  salesInvoiceLineId: number;
   productId?: number;
   chargeTypeId?: number;
   description?: string;
@@ -22,5 +22,5 @@ export interface CreditNotePreviewLine {
   vat?: Money;
   gross?: Money;
   vatClassId?: number;
-  stockReturned?: boolean;
+  stockReturned: boolean;
 }

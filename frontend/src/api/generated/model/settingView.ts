@@ -11,7 +11,7 @@
 export interface SettingView {
   key?: string;
   value?: string;
-  secret?: boolean;
+  secret: boolean;
   description?: string;
   updatedAt?: string;
   updatedBy?: string;

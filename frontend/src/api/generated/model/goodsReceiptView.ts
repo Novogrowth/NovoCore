@@ -11,8 +11,8 @@ import type { GoodsReceiptLineView } from './goodsReceiptLineView';
 import type { Money } from './money';
 
 export interface GoodsReceiptView {
-  id?: number;
-  supplierId?: number;
+  id: number;
+  supplierId: number;
   supplierName?: string;
   deliveryNoteNumber?: string;
   receiptDate?: string;

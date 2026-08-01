@@ -13,9 +13,9 @@ import type { UnitCost } from './unitCost';
 import type { WriteOffReason } from './writeOffReason';
 
 export interface StockWriteOffView {
-  id?: number;
-  lotId?: number;
-  productId?: number;
+  id: number;
+  lotId: number;
+  productId: number;
   productSku?: string;
   serializedUnitId?: number;
   serialNumber?: string;

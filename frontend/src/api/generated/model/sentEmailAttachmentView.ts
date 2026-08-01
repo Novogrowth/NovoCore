@@ -10,11 +10,11 @@
 import type { EmailAttachmentSource } from './emailAttachmentSource';
 
 export interface SentEmailAttachmentView {
-  id?: number;
-  attachmentOrder?: number;
+  id: number;
+  attachmentOrder: number;
   filename?: string;
   contentType?: string;
-  sizeBytes?: number;
+  sizeBytes: number;
   source?: EmailAttachmentSource;
   storedAttachmentId?: number;
   unavailableReason?: string;

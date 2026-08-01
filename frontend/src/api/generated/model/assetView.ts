@@ -11,7 +11,7 @@ import type { AssetStatus } from './assetStatus';
 import type { Rate } from './rate';
 
 export interface AssetView {
-  id?: number;
+  id: number;
   code?: string;
   name?: string;
   acquisitionDate?: string;

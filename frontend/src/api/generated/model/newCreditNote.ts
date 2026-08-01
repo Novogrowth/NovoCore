@@ -11,7 +11,7 @@ import type { Money } from './money';
 import type { NewCreditNoteLine } from './newCreditNoteLine';
 
 export interface NewCreditNote {
-  salesInvoiceId?: number;
+  salesInvoiceId: number;
   documentNumber?: string;
   creditNoteDate?: string;
   description?: string;

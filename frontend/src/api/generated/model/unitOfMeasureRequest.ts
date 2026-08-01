@@ -9,5 +9,5 @@
  */
 
 export interface UnitOfMeasureRequest {
-  unitOfMeasureId?: number;
+  unitOfMeasureId: number;
 }

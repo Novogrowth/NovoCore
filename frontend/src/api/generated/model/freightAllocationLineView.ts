@@ -12,10 +12,10 @@ import type { Quantity } from './quantity';
 import type { UnitCost } from './unitCost';
 
 export interface FreightAllocationLineView {
-  id?: number;
-  lineNumber?: number;
-  lotId?: number;
-  productId?: number;
+  id: number;
+  lineNumber: number;
+  lotId: number;
+  productId: number;
   productSku?: string;
   quantityReceived?: Quantity;
   quantityRemainingAtAllocation?: Quantity;

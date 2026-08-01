@@ -15,8 +15,8 @@ import type { UnitCost } from './unitCost';
 import type { VatClassSource } from './vatClassSource';
 
 export interface SalesInvoiceLineView {
-  id?: number;
-  lineNumber?: number;
+  id: number;
+  lineNumber: number;
   lineType?: SalesLineType;
   productId?: number;
   productSku?: string;

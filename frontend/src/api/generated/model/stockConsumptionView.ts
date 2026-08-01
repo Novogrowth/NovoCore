@@ -13,8 +13,8 @@ import type { Quantity } from './quantity';
 import type { StockConsumptionLineView } from './stockConsumptionLineView';
 
 export interface StockConsumptionView {
-  id?: number;
-  productId?: number;
+  id: number;
+  productId: number;
   productSku?: string;
   quantityRequested?: Quantity;
   quantityFilled?: Quantity;

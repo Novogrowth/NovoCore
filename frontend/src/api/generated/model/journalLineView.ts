@@ -15,13 +15,13 @@ import type { SubLedgerRef } from './subLedgerRef';
 import type { VatDimension } from './vatDimension';
 
 export interface JournalLineView {
-  id?: number;
-  entryId?: number;
+  id: number;
+  entryId: number;
   entryDate?: string;
   source?: JournalSource;
   entryDescription?: string;
-  lineNumber?: number;
-  accountId?: number;
+  lineNumber: number;
+  accountId: number;
   accountName?: string;
   accountType?: AccountType;
   side?: BalanceSide;

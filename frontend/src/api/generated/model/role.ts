@@ -9,9 +9,9 @@
  */
 
 export interface Role {
-  id?: number;
+  id: number;
   name?: string;
   description?: string;
-  fullAccess?: boolean;
-  systemRole?: boolean;
+  fullAccess: boolean;
+  systemRole: boolean;
 }

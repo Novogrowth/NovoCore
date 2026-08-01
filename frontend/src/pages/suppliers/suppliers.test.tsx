@@ -35,6 +35,7 @@ const sections = (level: AccessLevel) =>
 const owner: Me = {
   id: 1,
   username: 'owner',
+  active: true,
   role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true },
   sections: sections(AccessLevel.FULL),
   restrictedFields: [],
@@ -44,6 +45,7 @@ const owner: Me = {
 const buyer: Me = {
   id: 2,
   username: 'buyer',
+  active: true,
   role: { id: 4, name: 'BUYER', fullAccess: false, systemRole: false },
   sections: [{ section: Section.SUPPLIERS, level: AccessLevel.FULL, available: true }],
   restrictedFields: [],

@@ -10,6 +10,6 @@
 import type { Money } from './money';
 
 export interface UnallocatedAmount {
-  purchaseInvoiceLineId?: number;
+  purchaseInvoiceLineId: number;
   unallocated?: Money;
 }

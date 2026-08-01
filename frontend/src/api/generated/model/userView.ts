@@ -10,10 +10,10 @@
 import type { RoleView } from './roleView';
 
 export interface UserView {
-  id?: number;
+  id: number;
   username?: string;
   displayName?: string;
   language?: string;
   role?: RoleView;
-  active?: boolean;
+  active: boolean;
 }

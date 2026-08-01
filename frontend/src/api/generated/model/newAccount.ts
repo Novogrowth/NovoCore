@@ -16,6 +16,6 @@ export interface NewAccount {
   type?: AccountType;
   kind?: AccountKind;
   subLedgerType?: SubLedgerType;
-  groupId?: number;
-  expectedToClear?: boolean;
+  groupId: number;
+  expectedToClear: boolean;
 }

@@ -11,5 +11,5 @@ import type { OpenItemType } from './openItemType';
 
 export interface OpenItemRef {
   type?: OpenItemType;
-  id?: number;
+  id: number;
 }
