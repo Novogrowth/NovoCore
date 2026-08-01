@@ -30,7 +30,7 @@ candidate causes per symptom).
 |   F1 | Suppliers — list, detail, create, per-field PATCH (Products' pattern, reused) ᶠ¹                                                   |     — |        | 🟢 Done        |
 |   F2 | Customers — same pattern, plus the protected retail-customer record ᶠ²                                                            |     — |        | 🟢 Done        |
 |      | *(deferred out of F2)* Customer VAT class override — its own follow-up ᶠ²ᵃ                                                          |     — |        | 🔴 Not started |
-|   F3 | Users & Roles — real admin screen: create roles, grant sections, manage accounts ᶠ³                                                |     — |        | 🟢 Done        |
+|   F3 | Users & Roles — real admin screen: create roles, grant sections, manage accounts ᶠ³                                                |     — |    0.9 | 🟢 Done        |
 |   F4 | Settings — general config, Reference Data (VAT classes, UoM), Adapters/Modules toggle grids (read-only placeholders)               |     — |        | 🟡 **Current** |
 |   F5 | Sales Invoice + Credit Note — first transactional-document screen; decides the create/preview/commit pattern                       |     — |        | 🔴 Not started |
 |   F6 | Purchase Invoice + Goods Receipt — same document pattern; no preview endpoint yet, decide whether to add one                       |     — |        | 🔴 Not started |
@@ -149,6 +149,16 @@ with verdicts in `PROGRESS.md`.
 **Its hours are blank on the same rule as the bugfix row**: F1 was built inside a session that also
 carried that pass and its follow-up, with no commit boundary the measurement method can use.
 
+**Re-examined at F3's close-out, and still blank — for a reason worth stating precisely, because the
+obvious reading is wrong.** A window *does* exist for both F1 (`0a957d1`→`b406b27`, 0.36 h) and F2
+(`b406b27`→`496c7be`, 0.51 h). The blanks were never "no commit exists". They are that the bounding
+commits — `297cf9e`, `0a957d1`, `0cfb130` — are docs-and-practice commits made **part-way through the
+same sitting**, so each window slices the session rather than bounding the step, and the figure would
+under-count by an unknown amount. **A figure that cannot be measured is left blank rather than given a
+plausible value**, and a measurable-looking number that silently excludes part of its step is exactly
+the plausible value that rule exists to keep out. F3 differs because its window runs commit-to-commit
+across a session boundary, not through one.
+
 **Two things F1 establishes that F2 inherits.** First, `VatStatus`'s two flags — `INTRA_EU_B2B`
 needs a VAT number, `EXEMPT` needs an exemption reason — are **not on the wire**, so
 `vat-status-rules.ts` mirrors them from `VatStatus.java` and a test pins that every value is
@@ -208,8 +218,25 @@ all**, so a grid built from `RoleView.sectionGrants` alone renders every section
 and Admin — the screen stating the exact opposite of the truth about the two most privileged roles.
 The catalogue (`GET /api/sections`) is the row list; the flag is checked first. A test holds both.
 
-**Its hours are blank, on the same rule as F1 and F2**: F3 was built in a session with no commit
-boundary the measurement method can use before its own close-out.
+**Measured, per the method in `novocore-roadmap.md`** — and this row is no longer blank, because the
+thing that blocked it has gone. The earlier note here said F3's hours could not be measured as "F3
+was built in a session with no commit boundary the measurement method can use before its own
+close-out." Its close-out is this one, so both boundaries now exist: `496c7be` (F2's last commit) to
+`aea0e56`. **569 events, 0.87 h active against 16.74 h wall clock, 259k out, 86.6M in. Recorded as
+0.9.**
+
+The wall-clock figure is large because the window spans a night; the 5-minute gap cap is exactly
+what stops that counting, and the split shows it doing so: **0.66 h in the F3 build session**
+(2026-08-01, 519 events) plus **0.12 h of the preceding session's tail** (50 events, which carried
+the groundwork commit `96bed1c` seven minutes after F2's), the remaining 0.09 h being the single
+capped inter-session gap between them. As with every row here it excludes its own close-out, which is
+not in the transcript when the figure is computed, so read it as "at least".
+
+⚠️ **The post-F3 work in the same day is deliberately not in this figure.** The four commits from
+`50f7055` to `32305a9` — backend item 2's primitive half, item 9, item 8's rewrite and the docs
+cold-read — are queue work approved *after* F3 landed, not part of the step. Measured separately for
+the record: **1.55 h active, 236k out** over `aea0e56`→`32305a9`. They have no roadmap row of their
+own; `PROGRESS.md` carries them as the post-F3 approvals table.
 
 ⚠️ **F3's live probe corrected a backend item rather than just passing.** `NewUser.roleId` is a
 primitive `long`, so omitting it answers `400` naming no field — the same defect as `serialTracked`,

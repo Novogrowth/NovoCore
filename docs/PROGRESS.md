@@ -1,6 +1,6 @@
 # NovoCore — Build Progress
 
-*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-07-31 (close of the frontend brand session).*
+*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-08-01 (F3's close-out).*
 
 *Close-out now also pushes to `origin` automatically (`CLAUDE.md`), so this file no longer tracks
 unpushed commits.*
@@ -35,7 +35,7 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 15 | **Dummy data validation** — the API driven end to end over HTTP | **Done** — 15a and 15b complete. **Nine real defects found and fixed**, migration **V26**. Route coverage **128/133 driven, 5 excused with reasons**, asserted rather than reported. See below |
 | 16a | **Backend prerequisites for the frontend** — four items agreed before any step 16 work | **Done** — `/me`, preview endpoints, the OpenAPI spec + drift check, and the paging contract. Migration **V27**, plus **session eviction**, a defect found while building the first item. See below |
 | 16b | **Users & roles, journal listing, settings** — the three sections with no HTTP surface at all | **Done, committed** `452b3fd` — 37 routes, **no migration**. Three defects found and fixed, none of them in the code the step set out to write. See below |
-| 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress**, four commits so far: `94e17cd` foundations, `56e3726` Products + the write-hooks defect, `28c4119` two guards for it, and this session's brand pass. **144 frontend tests.** See *Step 16 — the frontend* below |
+| 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress. F0–F3 done, F4 (Settings) is next.** Foundations `94e17cd`, Products `56e3726` + guards `28c4119` + brand pass, then the render-loop fix `3458ee6`, F0 (the seed pass), F1 Suppliers `b406b27`, F2 Customers `496c7be`, F3 Users & Roles `aea0e56`. **228 frontend tests, 25 files, green.** Per-step detail in `docs/novocore-frontend-roadmap.md`; decisions and what each step left behind in *Step 16 — the frontend* below |
 
 **Tests: 1326 passing, 0 skipped, `mvn clean verify` exit 0. 174 routes.** Counted from a local run
 on this machine, and **0 skipped** holds: the PostgreSQL 17 client tools are installed here, so
@@ -57,7 +57,12 @@ is → the *Step 16, the frontend* section below for F1–F3's decisions and wha
 
 **Where things stand for F4 specifically:**
 
-- **F0–F3 are done and pushed.** Products, Suppliers, Customers, Users & Roles. 228 frontend tests.
+- **F0–F3 are done and pushed.** Products, Suppliers, Customers, Users & Roles. 228 frontend tests,
+  25 files, green as of F3's close-out.
+- ⏳ **First, check whether the owner's manual acceptance pass on F3 came back.** Seven checks were
+  agreed at F3's close-out and are listed in the F3 section below. **Anything they turn up is an F3
+  defect and is fixed inside F3 before F4 work starts** — the pass is the gate, not a formality
+  running alongside.
 - **F4 is Settings** — general config, Reference Data (VAT classes, units of measure), and the
   Adapters/Modules grids, which are already built as read-only placeholders.
 - **Nothing in the backend queue blocks it.** Item 2 is done, so the contract now declares which
@@ -5001,6 +5006,44 @@ role chosen, and a test asserts the exact body. The defect is queued, not carrie
 - **`NewUser` and `NewRole` use `Objects.requireNonNull` on request-body fields**, which is
   `CLAUDE.md`'s named anti-pattern instance 2 in a record that predates `Required.field`. Not
   reachable from the F3 forms, which always send every field.
+
+##### 📋 F3's close-out (2026-08-01) — and the one thing it leaves genuinely open
+
+**All fifteen sub-parts have a verdict above, and all fifteen are done.** The five approvals given
+after F3 landed have verdicts too — four done, one (**item 7**, boxing the seven booleans)
+**explicitly deferred** and queued with its full list. **No sub-part is without a verdict**, which is
+the finding this reconciliation exists to produce and this time there isn't one.
+
+**Hours are now measured and the roadmap row is no longer blank** — `496c7be`→`aea0e56`, **0.87 h
+active, 259k out**, recorded as **0.9**. The earlier note said the figure could not be measured
+because F3 had no commit boundary before its own close-out; this *is* that close-out, so the boundary
+now exists. Full split and caveats in `novocore-frontend-roadmap.md` under ᶠ³.
+
+⚠️ **F1 and F2 remain blank deliberately, and were re-examined rather than assumed.** A window does
+exist for each (`0a957d1`→`b406b27` yields 0.36 h, `b406b27`→`496c7be` yields 0.51 h), **but the
+reason those rows are blank was never "no commit exists"** — it was that the bounding commits are
+docs-and-practice commits made *part-way through* the same sitting, so the window slices the session
+instead of bounding the step, and the figure would under-count by an unknown amount. That objection
+still holds, so **no number was written in**. Recorded here so the next session does not re-derive it
+and reach the opposite conclusion.
+
+**⏳ Open: the owner's manual acceptance pass on F3, before F4 starts.** Everything above was proved
+by automated tests plus a live browser probe driven by Claude; this is the owner driving the same
+screens independently. Seven checks, agreed at close-out:
+
+| # | Check | What it is really testing |
+|---|---|---|
+| 1 | Owner and Admin role detail pages show **full access in every section**, never `NONE` | The grid trap above — the one defect most likely to be reintroduced by the next screen that displays a permission |
+| 2 | Deactivating a role with an active holder **names the holders** | That the `422` reaches the screen through `Refusal` and is not a dead end |
+| 3 | Every level the operator cannot confer is **disabled with the real reason** | `SegmentedControl`'s `disabledReason`, and that `NONE` is never locked |
+| 4 | Create a user, then **sign in as that user with the exact password the dialog showed** | The only check that proves the displayed value is the value that was set |
+| 5 | **No confirm-field anywhere**, and Escape / outside-click do not dismiss before acknowledgment | The hand-off's whole design — the failure mode is closing the dialog without having taken the value |
+| 6 | The nav shows **"Users" and "Roles" as two separate items** | Sub-part 12, including the label change away from "Users & Roles" |
+| 7 | A role's **description is genuinely uneditable** | Item 5 — there is no `PATCH …/description` route, and the screen must say so rather than offer an edit that cannot work |
+
+**If any of these fails it is an F3 defect and is fixed inside F3**, not carried into F4 — the step-15
+discipline this project already follows. Until the pass is done, F3 is *built and verified by test and
+probe*, which is not the same as *accepted*.
 
 ---
 
