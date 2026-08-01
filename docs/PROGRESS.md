@@ -4136,9 +4136,10 @@ was verified back to 8 products, all active, one user.
 ---
 ## Next action — read this first
 
-### ⚠️ Queued for the next BACKEND session — three standalone items
+### ⚠️ Queued for the next BACKEND session — six standalone items
 
-Each was raised by frontend work and none of them is frontend work to fix. Nothing here blocks F1.
+Each was raised by frontend work and none of them is frontend work to fix. Nothing here blocks the
+next frontend step.
 
 **Take item 2 first, and inside it the spec half before the serialisation half.** The owner set this
 priority explicitly on 2026-07-31, and the reason is not that item 2 is the newest or that it caused
@@ -4153,10 +4154,12 @@ whose own contract said the request was valid.
 
 | # | Item | Priority | Raised |
 |---|---|---|---|
-| 2 | **A primitive `boolean` on a body record is mandatory while the spec calls it optional** — broke product creation outright; the frontend carries a workaround | **First. The spec half before the serialisation half** | 2026-07-31 |
+| 2 | **A primitive on a body record is mandatory while the spec calls it optional** — broke product creation outright; the frontend carries a workaround. ⚠️ **Scope corrected 2026-08-01: at least 22 records, not two** | **First. The spec half before the serialisation half** | 2026-07-31 |
 | 4 | **The retail customer's own VAT rules are raised as `IllegalArgumentException`**, so two routes answer `400 "Bad request."` and discard a complete explanation | With 2 — same family, and the guards structurally cannot reach it | 2026-07-31 |
 | 1 | `InventoryController_writeOff` — one `operationId` on two operations | After 2 | 2026-07-30 |
 | 3 | No SKU **search** endpoint — the products lookup is exact-match only | After 2; needs an owner decision first | 2026-07-31 |
+| 5 | **A role's `description` can be set at creation and never changed** — `NewRole` takes one, no `PATCH …/description` exists. The screen renders it read-only and says why | Small; with 2 or after | 2026-08-01 |
+| 6 | **`NewUser` and `NewRole` guard body fields with `Objects.requireNonNull`** — `CLAUDE.md`'s named anti-pattern instance 2, in records that predate `Required.field`. Not reachable from the F3 forms | With 2 — same family | 2026-08-01 |
 
 *(Numbering is kept as originally assigned so existing references still resolve; the order of the
 rows is the order to work in.)*
@@ -4218,14 +4221,34 @@ other request body. Of 185 schemas, **exactly two declare a required field: `Mon
 `serialTracked?: boolean`, `product-create.tsx` was written correctly against the published
 contract, and **product creation failed for every user, every time.**
 
-**The whole surface has exactly two such bodies**, established by grep over all 174 routes, and both
-are the same field:
+~~**The whole surface has exactly two such bodies**, established by grep over all 174 routes, and both
+are the same field:~~
 
 - `NewProduct.serialTracked` — `POST /api/products`
 - `ProductController.SerialTrackingRequest.serialTracked` — `PATCH /api/products/{id}/serial-tracking`
 
 Both were confirmed to answer `400` to `{}`. The PATCH is not hit in practice only because the
 detail screen's editor always sends the field.
+
+> ⚠️ **"Exactly two" was wrong, corrected 2026-08-01 while building F3.** That grep searched for a
+> primitive **`boolean`**. A primitive **`long`** fails in exactly the same way and none were counted.
+> `POST /api/users` with `roleId` omitted answers `400 "Malformed request body: Cannot map null into
+> type long"` — proved live against the running stack, naming no field, on a route whose published
+> contract calls the field optional.
+>
+> **At least 22 request records carry a primitive component**, including `NewAccount`,
+> `NewBankTransfer`, `NewSalesInvoice`, `NewSalesInvoiceLine`, `NewPurchaseInvoice`,
+> `NewPurchaseInvoiceLine`, `NewCreditNote`, `NewCreditNoteLine`, `NewGoodsReceipt`,
+> `NewGoodsReceiptLine`, `NewSettlement`, `NewFreightAllocation`, `NewStockWriteOff`,
+> `NewJournalLine`, `NewInventoryLot`, `NewStockConsumption`, `NewBundleComponent`, `NewChargeType`,
+> `NewUnitOfMeasure`, `NewVatExemptionReason`, `NewProduct` and `NewUser`. **Every one is a route
+> where an omitted id or flag is a `400` naming nothing.** They have not bitten only because the
+> screens that would send those bodies do not exist yet — F5 onwards is precisely when they will,
+> one at a time, exactly as Products did.
+>
+> This raises the priority of part 2 rather than changing it: **50 request-body schemas are reachable
+> on the surface and zero declare a `required` list.** (The "2 of 185" above counts every schema,
+> responses included; 0 of 50 is the figure a client is affected by.)
 
 **⚠️ This codebase already documented the defect and already applies the fix — on one route.**
 Found while probing F3's surface, and it changes what item 2 costs. `RoleController` declares:
@@ -4345,9 +4368,9 @@ project has for that claim: a full trading quarter, built by nothing but HTTP re
 twelve universal invariants — and still does after being dumped, restored into a fresh database and
 swept again.
 
-### ➡️ Step 16, the frontend — under way. **Current: F2, Customers.**
+### ➡️ Step 16, the frontend — under way. **F3 is done; F4, Settings, is next.**
 
-#### 📋 F3, Users & Roles — scoped, and the escalation guards proved against the real server
+#### ✅ F3, Users & Roles — done (2026-08-01). Both decisions taken before building
 
 **Not a party record, and not the master-data pattern stretched to fit.** 18 routes over two
 entities that reference each other, one of which (`Role`) is a *permission* document: a name plus a
@@ -4401,18 +4424,102 @@ may not grant anything", which would be wrong and would make the section unusabl
 - **`GET /api/sections` reports `available` per section**, which is what lets a grant grid show
   "granted but not built yet" honestly rather than offering a permission that leads nowhere.
 
-##### Open before the screens are built
+##### ✅ Both open questions, decided by the owner on 2026-08-01 — before anything was built
 
-1. **❓ The grant grid's shape.** Sections × {NONE, VIEW, FULL} is a grid, and every cell the caller
-   cannot confer must be unavailable — which is `lockedReason` territory, per the standing pattern.
-   Whether that is a radio group per row, a select per row, or a three-state control is a component
-   choice `CLAUDE.md` says to ask about rather than pick.
-2. **❓ Setting a password.** `PATCH /api/users/{id}/password` is an administrator resetting somebody
-   else's. Confirm-field or not, and what is shown afterwards, is a decision about handling a
-   credential rather than a layout preference.
+1. **The grant grid is a segmented three-state toggle per row** — NONE / VIEW / FULL — with every
+   level the caller cannot confer rendered **disabled with its `lockedReason`**, matching the pattern
+   Customers established.
+2. **Setting somebody else's password is generate / display once / acknowledge.** The value is
+   generated, shown once with a copy affordance, and the dialog **cannot be closed until the
+   administrator explicitly acknowledges having taken it**. Never shown again, never retrievable.
+   **No confirm-field** — the same shape as every credential hand-off already used in this project.
 
-**Nothing of F3 is built yet.** The probe's role, target role and account were deleted; `app_role` is
-back to 3 and `app_user` to 1.
+##### 📋 F3's checklist, reconciled against what was approved
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| 1 | `SegmentedControl` — one exclusive choice, per-option `disabledReason`, built on shadcn `toggle-group` | **Done** — 3 tests, including that pressing the pressed option sends nothing |
+| 2 | Grant grid: `GET /api/sections` × {NONE, VIEW, FULL}, `PUT …/grants/{section}` per cell | **Done** — driven live in both browsers |
+| 3 | Field restrictions: the three `ProtectedField`s, `PUT …/field-restrictions/{field}` | **Done** — the boxed `restricted` always stated, asserted |
+| 4 | Roles list — name, description, what it grants, system / full-access / inactive flags | **Done** |
+| 5 | Role detail — rename, grants, restrictions, deactivate / reactivate, and its holders | **Done** |
+| 6 | Role create — `name` + `description` only, saying that grants are the next step | **Done, proved against the real backend from the form** |
+| 7 | Holders (`GET /api/roles/{id}/users`), because deactivation is refused while anybody holds it | **Done** |
+| 8 | Users list — username, display name, role, inactive flag | **Done** |
+| 9 | User detail — display name, role, deactivate / reactivate | **Done** |
+| 10 | Set password — generate, show once, copy, forced acknowledgment | **Done** — and the value it displayed was proved to sign that account in |
+| 11 | User create — username, display name, role, and the same hand-off for the first password | **Done, proved against the real backend from the form** |
+| 12 | Nav + routes: `/roles`, `/roles/new`, `/roles/:id`, `/users/new`, `/users/:id` | **Done** — `users` and `roles` are **two** menu items now, and the `users` label changed from "Users & Roles" to "Users" |
+| 13 | EN + EL strings | **Done** — 76 keys each |
+| 14 | Tests, including the standing "rendering sends no write" guard on every screen | **Done** — 34 new; 194 → 228 |
+| 15 | Proved against the **real** backend, per the standing rule — not against the mock server | **Done** — see below, including what it found |
+
+##### What the live probe was, and what it left behind
+
+The owner chose the probe account be created directly in the database rather than exchange a
+credential. So: a role `TEST-PROBE-F3-ADMIN` holding **`USERS_AND_ROLES:FULL` and nothing else**, and
+an account in it, inserted with a bcrypt hash generated for the purpose. Everything after that went
+through the real application over HTTPS — **nothing intercepted, nothing stubbed.**
+
+**Eight bodies proved without writing anything**, each answered by a refusal only reachable if the
+body *parsed*: `NewRole` and `NewUser` against a name the domain already holds (`422`), and
+`GrantRequest`, `FieldRestrictionRequest`, `PasswordRequest`, `RoleRequest`, `DisplayNameRequest` and
+`NameRequest` against ids that name nothing (`404`).
+
+**Then once, for real, in Chrome and Firefox both**, through the screens: a role created *from the
+form*, granted, narrowed and widened again, a field restricted, renamed; an account created *from the
+form*, given a password through the hand-off dialog, renamed, moved between roles. **The password the
+dialog displayed was then used to sign that account in** — which is the only check that proves the
+value on screen is the value that was set.
+
+The confer guard fired from the browser exactly as the groundwork found it, with its own sentence on
+screen. And the grid's disabled cell was confirmed **unclickable**, not merely styled.
+
+**Residue, stated rather than implied.** All eleven rows created were deleted; the fixture is back to
+**1 user, 3 roles, 4 grants, 0 field restrictions**. What remains and cannot be removed:
+`app_user_id_seq` is at 13 (the fixture uses 1) and `app_role_id_seq` at 9 (the fixture uses 1–3),
+and **20 audit entries** under the probe's username — append-only by trigger, which is correct.
+⚠️ The four rows inserted by SQL have **no** audit entries, because they bypassed the service layer;
+that is a property of the method the owner chose, and is worth knowing when reading the log.
+
+##### 🐛 What the probe found — and it corrects a claim in backend item 2
+
+**`NewUser.roleId` is a primitive `long`**, so `POST /api/users` with the field omitted answers
+`400 "Malformed request body: Cannot map null into type long"` — **naming no field**, while the spec
+calls it optional. Proved live. That is the *same defect as `serialTracked`*, which item 2 says is one
+of exactly two on the surface.
+
+**That claim is wrong, and the way it is wrong is the useful part.** The grep behind it searched for a
+primitive **`boolean`**. Every primitive **`long`** fails identically and none of them were counted.
+**At least 22 request records carry a primitive field** — `NewAccount`, `NewBankTransfer`,
+`NewSalesInvoice`, `NewPurchaseInvoice`, `NewCreditNote`, `NewGoodsReceipt`, `NewSettlement`,
+`NewFreightAllocation` and the rest — and every one of them is a route where an omitted id is a `400`
+that names nothing. Nothing has hit them because no screen exists for those routes yet. **F5 onwards
+will hit them one at a time**, exactly as Products did.
+
+Measured directly off the published spec while checking this: **50 request-body schemas are reachable
+on the surface and _zero_ of them declare a `required` list.** (Item 2's "2 of 185" counts all
+schemas, including responses; 0 of 50 is the number that matters to a client.)
+
+**The contrast that settles the design question** was in the same probe run, one route apart:
+
+| Body | Answer |
+|---|---|
+| `POST /api/users` with `roleId` omitted — a primitive `long` | `400 "Cannot map null into type long"`, **no field named** |
+| `PUT …/field-restrictions/{field}` with `restricted` omitted — a boxed `Boolean` + `Required.field` | `400 **"restricted" is required and was not supplied.**` |
+
+**F3 itself is safe from it**: `user-create.tsx` always sends `roleId` and cannot submit without a
+role chosen, and a test asserts the exact body. The defect is queued, not carried.
+
+**Two smaller backend items this raised**, both new:
+
+- **A role's `description` can be set and never changed.** `NewRole` takes one; there is no
+  `PATCH …/description` anywhere on the surface. The screen renders it as plain text with the reason
+  beside it rather than through `FieldEditor`, because `editable: false` in this application means
+  *"not yours to edit"* and would say something false here.
+- **`NewUser` and `NewRole` use `Objects.requireNonNull` on request-body fields**, which is
+  `CLAUDE.md`'s named anti-pattern instance 2 in a record that predates `Required.field`. Not
+  reachable from the F3 forms, which always send every field.
 
 ---
 

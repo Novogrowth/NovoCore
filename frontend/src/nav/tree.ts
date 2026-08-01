@@ -349,11 +349,21 @@ export const NAV_TREE: readonly NavNode[] = [
         ],
       },
       {
+        // Two items rather than one, unlike Products/Bundles, which are tabs. Accounts and roles
+        // are separate entities with separate lists, and the questions asked of them differ: "who
+        // holds this role" is asked from a role, "what may this person do" from an account.
         id: 'users',
         path: '/users',
         requires: view(Section.USERS_AND_ROLES),
         status: 'BUILT',
         endpoint: 'GET /api/users',
+      },
+      {
+        id: 'roles',
+        path: '/roles',
+        requires: view(Section.USERS_AND_ROLES),
+        status: 'BUILT',
+        endpoint: 'GET /api/roles',
       },
       {
         id: 'emailOutbox',

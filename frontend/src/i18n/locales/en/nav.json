@@ -42,7 +42,8 @@
   "settings.retention": "Retention",
   "settings.adapters": "Adapters",
   "settings.modules": "Modules",
-  "users": "Users & Roles",
+  "users": "Users",
+  "roles": "Roles",
   "emailOutbox": "Email Outbox",
   "backups": "Backups",
   "systemHealth": "System Health"

@@ -42,7 +42,8 @@
   "settings.retention": "Διατήρηση δεδομένων",
   "settings.adapters": "Διασυνδέσεις",
   "settings.modules": "Υπομονάδες",
-  "users": "Χρήστες & ρόλοι",
+  "users": "Χρήστες",
+  "roles": "Ρόλοι",
   "emailOutbox": "Εξερχόμενα email",
   "backups": "Αντίγραφα ασφαλείας",
   "systemHealth": "Κατάσταση συστήματος"

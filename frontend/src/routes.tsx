@@ -13,9 +13,15 @@ import { CustomerCreate } from '@/pages/customers/customer-create'
 import { CustomerDetail } from '@/pages/customers/customer-detail'
 import { CustomersList } from '@/pages/customers/customers-list'
 import { AdaptersGrid, ModulesGrid } from '@/pages/registry-grid'
+import { RoleCreate } from '@/pages/roles/role-create'
+import { RoleDetail } from '@/pages/roles/role-detail'
+import { RolesList } from '@/pages/roles/roles-list'
 import { SupplierCreate } from '@/pages/suppliers/supplier-create'
 import { SupplierDetail } from '@/pages/suppliers/supplier-detail'
 import { SuppliersList } from '@/pages/suppliers/suppliers-list'
+import { UserCreate } from '@/pages/users/user-create'
+import { UserDetail } from '@/pages/users/user-detail'
+import { UsersList } from '@/pages/users/users-list'
 
 /**
  * The routes, derived from the navigation tree rather than listed again.
@@ -31,6 +37,8 @@ const SCREENS: Record<string, () => ReactElement> = {
   '/products': ProductsList,
   '/suppliers': SuppliersList,
   '/customers': CustomersList,
+  '/users': UsersList,
+  '/roles': RolesList,
   '/settings/adapters': AdaptersGrid,
   '/settings/modules': ModulesGrid,
 }
@@ -53,6 +61,10 @@ const CHILD_ROUTES: { path: string; owner: string; element: () => ReactElement }
   { path: '/suppliers/:id', owner: 'suppliers', element: SupplierDetail },
   { path: '/customers/new', owner: 'customers', element: CustomerCreate },
   { path: '/customers/:id', owner: 'customers', element: CustomerDetail },
+  { path: '/users/new', owner: 'users', element: UserCreate },
+  { path: '/users/:id', owner: 'users', element: UserDetail },
+  { path: '/roles/new', owner: 'roles', element: RoleCreate },
+  { path: '/roles/:id', owner: 'roles', element: RoleDetail },
 ]
 
 function RouteElement({ node, screen }: { node: NavNode; screen?: () => ReactElement }) {

@@ -44,6 +44,19 @@ export interface Permissions {
    */
   isFullAccess: boolean
   /**
+   * Who the signed-in user is, when `/api/me` has answered.
+   *
+   * Here rather than read out of the session at a call site, because the only question these two
+   * answer is a permission question: **is this me?** Two backend guards turn on it and nothing
+   * else does. `RoleServiceImpl.refuseIfCallerHolds` refuses a caller editing the permissions of
+   * their own role, and `UserServiceImpl.changeRole` refuses a caller changing their own — because
+   * one person widening the role they hold, or stepping into one they built, is an escalation
+   * nobody else approved. The two screens compare against these so they do not offer a change whose
+   * refusal is already certain.
+   */
+  roleId: number | undefined
+  userId: number | undefined
+  /**
    * Whether this role has a field withheld from it, **across the application**.
    *
    * A withheld field is *absent* from the response rather than null — Jackson's `non_null`
@@ -132,6 +145,8 @@ export function permissionsOf(me: Me | undefined, isLoading = false): Permission
     canEdit: (section) => RANK[levelOf(section)] >= RANK[AccessLevel.FULL],
     isAvailable: (section) => grants.get(section)?.available ?? false,
     isFullAccess: fullAccess,
+    roleId: me?.role?.id,
+    userId: me?.id,
     isFieldHidden: (field) => restricted.has(field),
     isLoading,
   }

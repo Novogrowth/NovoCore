@@ -30,8 +30,8 @@ candidate causes per symptom).
 |   F1 | Suppliers — list, detail, create, per-field PATCH (Products' pattern, reused) ᶠ¹                                                   |     — |        | 🟢 Done        |
 |   F2 | Customers — same pattern, plus the protected retail-customer record ᶠ²                                                            |     — |        | 🟢 Done        |
 |      | *(deferred out of F2)* Customer VAT class override — its own follow-up ᶠ²ᵃ                                                          |     — |        | 🔴 Not started |
-|   F3 | Users & Roles — real admin screen: create roles, grant sections, manage accounts                                                   |     — |        | 🟡 **Current** |
-|   F4 | Settings — general config, Reference Data (VAT classes, UoM), Adapters/Modules toggle grids (read-only placeholders)               |     — |        | 🔴 Not started |
+|   F3 | Users & Roles — real admin screen: create roles, grant sections, manage accounts ᶠ³                                                |     — |        | 🟢 Done        |
+|   F4 | Settings — general config, Reference Data (VAT classes, UoM), Adapters/Modules toggle grids (read-only placeholders)               |     — |        | 🟡 **Current** |
 |   F5 | Sales Invoice + Credit Note — first transactional-document screen; decides the create/preview/commit pattern                       |     — |        | 🔴 Not started |
 |   F6 | Purchase Invoice + Goods Receipt — same document pattern; no preview endpoint yet, decide whether to add one                       |     — |        | 🔴 Not started |
 |   F7 | Receipts, Payments, Bank Transfers — editable-in-place variant of the document pattern, plus settlement/allocation UI              |     — |        | 🔴 Not started |
@@ -191,6 +191,32 @@ always taxed at this class regardless of the product"* carries real accounting w
 `TAX_AND_CHARGES` gating worked through. A test asserts the field is **absent** from the detail
 screen, so adding it later is a deliberate act with a test to update rather than something that
 drifts in with a copied screen. Not scheduled against a step — it is the owner's to place.
+
+**ᶠ³ F3 — done, all fifteen sub-parts, with both decisions taken before anything was built.** The
+grant grid is a **segmented three-state toggle per section**, unavailable levels disabled with their
+reason; setting somebody else's password is **generate, show once, force an acknowledgment, never
+again — no confirm-field**. Checklist with verdicts in `PROGRESS.md`.
+
+**Two things F3 establishes that later steps inherit.** `SegmentedControl` and `PasswordHandoff` are
+both written as shared components rather than screen parts, and both are documented in
+`frontend/README.md` — the password one because it is the only place this application ever displays a
+credential, and the segmented one because the "unavailable option, shown with its reason" shape is the
+`lockedReason` rule one level down.
+
+**And one trap worth carrying forward:** a **full-access role holds everything with no grant rows at
+all**, so a grid built from `RoleView.sectionGrants` alone renders every section as `NONE` for Owner
+and Admin — the screen stating the exact opposite of the truth about the two most privileged roles.
+The catalogue (`GET /api/sections`) is the row list; the flag is checked first. A test holds both.
+
+**Its hours are blank, on the same rule as F1 and F2**: F3 was built in a session with no commit
+boundary the measurement method can use before its own close-out.
+
+⚠️ **F3's live probe corrected a backend item rather than just passing.** `NewUser.roleId` is a
+primitive `long`, so omitting it answers `400` naming no field — the same defect as `serialTracked`,
+which `PROGRESS.md` had recorded as one of *exactly two* on the surface. That count came from a grep
+for primitive `boolean`; **at least 22 request records carry a primitive**, and **0 of the 50
+request-body schemas on the surface declare a `required` list**. F5 onwards is where those start
+being sent, one at a time.
 
 **F5 carries more weight than its position implies.** It's not just the next screen — it
 decides the entire document-creation interaction pattern (multi-line entry, running

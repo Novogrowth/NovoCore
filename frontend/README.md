@@ -153,6 +153,52 @@ locks are currently *mirrored* on the client because two of those routes throw
 defect queued as item 4. A mirrored reason is a stopgap and should be labelled as one at the call
 site, because it can drift from the rule it describes.
 
+### One choice out of a few is a `SegmentedControl`, and an unavailable option says why
+
+`components/segmented-control.tsx`. Built for the role grant grid — a row per section, `NONE` /
+`VIEW` / `FULL` across — and it does two things `ToggleGroup` on its own does not.
+
+**It cannot be emptied.** Base UI lets the pressed item be pressed again to deselect, which would
+leave a row answering "none of the three" — a state `PUT …/grants/{section}` cannot express. An empty
+change is ignored.
+
+**An option can carry a `disabledReason`**, which is the `lockedReason` distinction one level down:
+a caller holding `VIEW` on Sales may confer `NONE` and `VIEW` there and not `FULL`, so `FULL` is
+shown, disabled, with the reason — hiding it would leave an administrator hunting for a level that
+exists on every other row. **`NONE` is never locked**: revoking is always allowed, and must not
+require the access being taken away.
+
+⚠️ **Every `disabledReason` is a mirror of a backend rule.** They exist to stop the screen firing a
+request whose refusal is already certain — not to replace the refusal. Each of those guards answers
+`422` with a fuller sentence than the mirror, and `Refusal` shows it whenever a request is sent.
+
+### A grid of permissions is drawn from the catalogue, never from the record
+
+`GET /api/sections` is the row list, not `RoleView.sectionGrants`. A section a role has never been
+granted has no key in the map, so a grid built from the role draws only the rows somebody already
+touched — and the missing rows are the ones an administrator is looking for.
+
+⚠️ **And `sectionGrants` is empty for a full-access role.** Owner and Admin hold everything through
+the `fullAccess` flag and carry no grant rows at all, so reading the map alone renders seventeen rows
+of `NONE` for the two most privileged roles in the system. Check the flag first. A test holds it.
+
+### A password is generated, shown once, acknowledged, and gone
+
+`components/password/password-handoff.tsx` is the only place this application displays a credential,
+and it is used by both the reset on a user's page and the first password on the create form.
+
+- **Generated, never typed** (`lib/generated-password.ts`, `crypto.getRandomValues`, rejection-sampled
+  over an alphabet with no `0`/`O` or `1`/`l`/`I`). An administrator inventing a password on somebody
+  else's behalf is how an office ends up sharing a pattern.
+- **No confirm-field.** There is nothing to confirm: the operator did not choose the value and cannot
+  mistype it. What can actually go wrong is closing the dialog without having taken it — so the close
+  is gated on an explicit acknowledgment, and Escape and outside clicks do not dismiss it.
+- **Not retrievable.** The value lives in one component's state; it is not a query key, not written to
+  the cache, not in a URL. `UserView` has no password field and no route returns one, so "show it
+  again" is not a feature that was left out — it cannot exist.
+- **It takes no `open` prop**, deliberately: the caller renders it only while a hand-off is in
+  progress, so the acknowledgment cannot survive into the next one.
+
 ### Refusals are shown by one component
 
 `<Refusal error={mutation.error} />`. Never `error.detail` at a call site: a `403` carries no
