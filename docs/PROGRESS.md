@@ -4161,6 +4161,12 @@ whose own contract said the request was valid.
 | 5 | **A role's `description` can be set at creation and never changed** — `NewRole` takes one, no `PATCH …/description` exists. The screen renders it read-only and says why | Small; with 2 or after | 2026-08-01 |
 | 6 | **`NewUser` and `NewRole` guard body fields with `Objects.requireNonNull`** — `CLAUDE.md`'s named anti-pattern instance 2, in records that predate `Required.field`. Not reachable from the F3 forms | With 2 — same family | 2026-08-01 |
 
+⚠️ **Item 2 now carries a costed comparison of the two ways to close it** — patch per screen as
+F4–F11 hit it, versus one sweep of the spec generator — measured against all 71 request-bodied
+operations rather than argued. See *"The two ways to close this"* under item 2. **It has a
+recommendation and it is the owner's call**; the short version is that the primitive half is
+test-scope-only, touches no production code, and is cheapest **before F4** rather than after F5.
+
 *(Numbering is kept as originally assigned so existing references still resolve; the order of the
 rows is the order to work in.)*
 
@@ -4286,6 +4292,88 @@ and answered `200`. The 400 is the lucky outcome.
    that the answer is not `5xx` — a `400` satisfies it. It should send `{}` **and** an explicit
    `null` per field, and require the answer to name what was missing.
 
+##### 📊 The two ways to close this, costed against the surface rather than argued (2026-08-01)
+
+**Measured first, so the choice is made on figures.** Every request body on the surface was scripted
+against the Java record behind it, transitively — the top-level schema *and* everything reachable
+from it, because a sales invoice's lines are nested and the earlier grep could not see them:
+
+| | |
+|---|---:|
+| Request-body schemas on the surface | **50** |
+| …declaring a `required` list | **0** |
+| Schemas carrying a primitive component (17 top-level + 6 nested) | **23** |
+| **Operations that send a primitive somewhere in the body** | **22 of 71** |
+| Of those, **boolean flags** — the dangerous subset, see below | **7** |
+| Operations the frontend calls **today** | **5** |
+
+**The 7 booleans are the whole risk, and the ids mostly are not.** `NewProduct.serialTracked`,
+`SerialTrackingRequest.serialTracked`, `NewUnitOfMeasure.fractionalQuantityAllowed`,
+`NewAccount.expectedToClear`, `NewSettlement.remainderBecomesCustomerCredit`,
+`NewCreditNoteLine.stockReturned`, `NewPurchaseInvoiceLine.reverseCharge`. **A form always sends an
+id** — it comes from a select the operator had to choose — so a `long` is unlikely to be omitted in
+practice. **A false flag is exactly what a form omits**, which is what `serialTracked` was.
+
+⚠️ **And that is why a live probe cannot be relied on to find these.** A probe fills the form in and
+submits; the failure appears when a user **leaves the optional-looking checkbox alone**. The standing
+"the backend has to answer" rule lowers the cost of every other kind of contract defect, and is close
+to blind to this one. F3 is an honest example in the other direction: `roleId` was caught only
+because the probe deliberately sent a body *without* it.
+
+**(a) Keep discovering them one screen at a time.** 17 operations remain, and they are not spread
+evenly — they are concentrated in **F5 (sales invoices + credit notes, 5 operations including both
+nested-line flags), F6 (purchase invoices + goods receipts, 3), F7 (settlements + bank transfers, 5)
+and F8 (freight, write-offs, 2)**. F4 hits **exactly one**: `POST /api/units-of-measure`, and it is
+one of the seven booleans. Per instance the cost is small now — a one-line workaround, a test pinning
+the body, a queue entry — but it is paid **17 more times**, each on a screen whose defect surfaces
+as *"creating this fails for everyone"* rather than as a compile error, and each leaving a workaround
+that has to be found and removed when the backend is eventually fixed. **Three such workarounds
+already exist and are pinned by tests written to fail when the fix lands** — that mechanism works,
+and it is also 17 more places to unwind later.
+
+**(b) One sweep, and it is much cheaper than "71 operations at once" suggests.** The spec generator
+is a **single reflection loop over `RecordComponent`s** (`OpenApiSchema.recordSchema`), so the whole
+change is *mark a component required when `component.getType().isPrimitive()`*:
+
+- **It touches no production code at all.** `OpenApiSchema` and `OpenApiSpecIT` live in
+  `backend/app/src/**test**/java`. No runtime behaviour changes, no migration, no new refusal — the
+  application answers exactly as it does today. The only artefacts that change are a published
+  document and the generated TypeScript.
+- **The rule is accurate in both directions.** A primitive is never null, so it is always present in
+  a response *and* always mandatory in a request. Checked against the one thing that could have made
+  it a lie: redaction. `ProductView`'s three redactable fields are `Long supplierId` (boxed
+  deliberately, because it is nullable), `String supplierSku` and `UnitCost lastPurchasePrice` — all
+  reference types. **No primitive is ever blanked**, so no schema would claim a field that can go
+  missing.
+- **The frontend blast radius today is 5 call sites**, all of which already send every field, so
+  `tsc` should report nothing. The change announces itself through an existing tripwire:
+  `spec-hygiene.test.ts` pins the set of schemas declaring `required` and **fails in both
+  directions** — it is written to go red the moment the backend starts describing its bodies.
+- **The generator's javadoc is currently wrong and would be corrected by the same edit.** It
+  justifies "nothing is marked required" with `default-property-inclusion: non_null`, which is a
+  *response* argument applied to a method that also builds every request schema.
+
+**What (b) does not close, and should not be sold as closing.** 28 schemas guard a **non-primitive**
+field with `Required.*`/`requireNonNull` — mandatory in fact, invisible to reflection, because the
+guard is inside a compact constructor. Declaring those needs an annotation on the record components
+(or a marker interface) applied across ~28 records, which is the genuinely larger piece and carries
+real judgement per field. **It is separable and should be separated**: the primitive half is
+mechanical and closes the class of bug that has actually bitten twice; the guarded half is a
+consistency improvement that has bitten nobody.
+
+**Recommendation, and it is a recommendation rather than a decision.** Do the primitive half **before
+F4**, not in parallel with it: it is small, it is test-scope-only, and running it *during* a frontend
+step means regenerating the client mid-step for no reason. F4 then gets `fractionalQuantityAllowed`
+declared rather than discovered, and F5 — which is the heaviest hit, and the step the roadmap already
+singles out as deciding the whole document pattern — starts with an honest contract. Then, as a
+follow-on rather than a blocker, **box the 7 booleans with `Required.field`**, which upgrades the
+message from `"Cannot map null into type boolean"` to one naming the field. Leave the `long` ids
+primitive; the spec fix is enough for them. The guarded-field half stays queued.
+
+**What it costs if it is wrong:** a spec regeneration and a client regeneration, both reversible in
+one commit, with no production code touched. That asymmetry is the strongest argument for doing it
+now rather than after F5.
+
 **The frontend carries a workaround in the meantime** (`3458ee6`'s follow-up): `product-create.tsx`
 sends `serialTracked: false` explicitly, with the reason at the call site, pinned by
 `spec-hygiene.test.ts`, which asserts that only `Money` and `UnitCost` declare required fields and
@@ -4356,6 +4444,68 @@ there was enough data for anyone to notice.
 over SKU and probably name) and make the box fuzzy, or keep exact matching and relabel the control
 so it cannot be mistaken for a search. **Do not change the frontend until that is decided** — the
 current screen is a faithful rendering of the endpoint that exists.
+
+---
+
+#### 5. **A role's `description` can be set once and never changed — there is no route.**
+
+`NewRole` takes `name` and `description`, and `RoleService` exposes `rename` and nothing else. There
+is **no `PATCH /api/roles/{id}/description`** anywhere on the surface, so a description typed into
+the create form is permanent: the only way to correct a typo in one today is to create a second role,
+move every holder across, and deactivate the first.
+
+**The asymmetry is almost certainly an oversight rather than a decision**, because nothing in
+`RoleServiceImpl`, `RoleController` or the step 16b proposal gives a reason for it, and the parallel
+field on every other entity is editable. A description is not a permission — changing it confers
+nothing — so none of the escalation guards that make role editing careful apply to it.
+
+**The fix is a `PATCH …/description` mirroring `rename`**: `@Requires(USERS_AND_ROLES, FULL)`,
+`editableRole` (so system roles stay untouchable, consistent with every other role write), an audit
+entry, and the updated `RoleView` returned. `DescriptionRequest` already exists in
+`TaxLookupController` and would need either reuse or a sibling.
+
+**The frontend renders it read-only in the meantime, and deliberately not through `FieldEditor`.**
+`editable: false` in this application means *"not yours to edit"* — a VIEW grant — and would tell a
+full-access administrator something false. `role-detail.tsx` draws a plain row with the reason
+beside it, and `role-create.tsx` says on the form that this is the only chance to set it. **Both
+notes come out when this lands.**
+
+---
+
+#### 6. **`NewUser` and `NewRole` guard request-body fields with `Objects.requireNonNull` — the named anti-pattern, in records that predate the fix for it.**
+
+`CLAUDE.md`'s *"a client's mistake raised as a programming error"*, instance 2, still present in two
+records:
+
+```java
+public record NewUser(String username, String displayName, String rawPassword, long roleId) {
+    public NewUser {
+        Objects.requireNonNull(username, "username");       // ← a caller's omission,
+        Objects.requireNonNull(displayName, "displayName"); //   raised as our bug
+        Objects.requireNonNull(rawPassword, "rawPassword");
+    }
+}
+
+public record NewRole(String name, String description) {
+    public NewRole { Objects.requireNonNull(name, "name"); }
+}
+```
+
+**The remedy is `Required.text` / `Required.field`**, exactly as `ReversalCommand` and the step 15
+sweep applied everywhere else — one statement per field, and the caller is told which field is
+missing instead of being handed a message that describes our internals.
+
+**⚠️ Its severity is genuinely lower than it looks, and the reason is worth recording** so nobody
+re-raises it as urgent. `UserServiceImpl.create` and `RoleServiceImpl.create` **re-check every one of
+these fields properly** — `requireUsername`, `requireText`, `PasswordPolicy.check` — and throw
+`InvalidUserException` / `InvalidRoleException`, which map to a `422` with a real message. The
+`requireNonNull` guards fire **only** when a field is absent from the JSON, and Jackson wraps a
+constructor throw in `ValueInstantiationException`, which Spring turns into a `400`. So the observed
+outcome is a bad-but-not-catastrophic `400`, not the `500` this anti-pattern usually produces.
+
+**Not reachable from the F3 screens**, which always send every field and are tested on the exact
+body. Fix it with item 2 — same family, same files, and item 2's audit has to open both records
+anyway.
 
 ---
 
