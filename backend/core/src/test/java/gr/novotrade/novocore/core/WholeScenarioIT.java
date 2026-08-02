@@ -340,7 +340,7 @@ class WholeScenarioIT extends AbstractCoreIntegrationTest {
 
         // --- A credit note that brings stock back --------------------------------------------
         SalesInvoiceView onAccountSale = salesInvoices.require(onAccountSaleId);
-        long creditNoteId = creditNotes.issue(NewCreditNote.of(onAccountSaleId, "GO-CN-2026-0001",
+        long creditNoteId = creditNotes.record(NewCreditNote.of(onAccountSaleId, "GO-CN-2026-0001",
                 JULY,
                 List.of(NewCreditNoteLine.returning(
                         onAccountSale.lines().getFirst().id(), Quantity.of(4L),

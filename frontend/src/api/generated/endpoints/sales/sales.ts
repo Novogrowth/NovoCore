@@ -38,13 +38,13 @@ import type {
   SalesControllerInvoice4xx,
   SalesControllerInvoices4xx,
   SalesControllerInvoicesParams,
-  SalesControllerIssue4xx,
   SalesControllerNote4xx,
   SalesControllerNotes4xx,
   SalesControllerNotesParams,
   SalesControllerPreview4xx,
   SalesControllerPreviewNote4xx,
   SalesControllerRecord4xx,
+  SalesControllerRecordNote4xx,
   SalesControllerReverse4xx,
   SalesControllerReverseNote4xx,
   SalesControllerRoundingDifferences4xx,
@@ -160,7 +160,7 @@ export function useSalesControllerNotes<TData = Awaited<ReturnType<typeof salesC
 
 
 
-export const salesControllerIssue = (
+export const salesControllerRecordNote = (
     newCreditNote: NewCreditNote,
  signal?: AbortSignal
 ) => {
@@ -177,11 +177,11 @@ export const salesControllerIssue = (
 
 
 
-export const getSalesControllerIssueMutationOptions = <TError = SalesControllerIssue4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerIssue>>, TError,{data: NewCreditNote}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof salesControllerIssue>>, TError,{data: NewCreditNote}, TContext> => {
+export const getSalesControllerRecordNoteMutationOptions = <TError = SalesControllerRecordNote4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerRecordNote>>, TError,{data: NewCreditNote}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof salesControllerRecordNote>>, TError,{data: NewCreditNote}, TContext> => {
 
-const mutationKey = ['salesControllerIssue'];
+const mutationKey = ['salesControllerRecordNote'];
 const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -191,10 +191,10 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof salesControllerIssue>>, {data: NewCreditNote}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof salesControllerRecordNote>>, {data: NewCreditNote}> = (props) => {
           const {data} = props ?? {};
 
-          return  salesControllerIssue(data,)
+          return  salesControllerRecordNote(data,)
         }
 
 
@@ -204,19 +204,19 @@ const {mutation: mutationOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type SalesControllerIssueMutationResult = NonNullable<Awaited<ReturnType<typeof salesControllerIssue>>>
-    export type SalesControllerIssueMutationBody = NewCreditNote
-    export type SalesControllerIssueMutationError = SalesControllerIssue4xx
+    export type SalesControllerRecordNoteMutationResult = NonNullable<Awaited<ReturnType<typeof salesControllerRecordNote>>>
+    export type SalesControllerRecordNoteMutationBody = NewCreditNote
+    export type SalesControllerRecordNoteMutationError = SalesControllerRecordNote4xx
 
-    export const useSalesControllerIssue = <TError = SalesControllerIssue4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerIssue>>, TError,{data: NewCreditNote}, TContext>, }
+    export const useSalesControllerRecordNote = <TError = SalesControllerRecordNote4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerRecordNote>>, TError,{data: NewCreditNote}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof salesControllerIssue>>,
+        Awaited<ReturnType<typeof salesControllerRecordNote>>,
         TError,
         {data: NewCreditNote},
         TContext
       > => {
-      return useMutation(getSalesControllerIssueMutationOptions(options), queryClient);
+      return useMutation(getSalesControllerRecordNoteMutationOptions(options), queryClient);
     }
     export const salesControllerPreviewNote = (
     newCreditNote: NewCreditNote,

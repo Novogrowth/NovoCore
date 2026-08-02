@@ -208,7 +208,11 @@ class SalesController {
     }
 
     /**
-     * Issues a credit note against an invoice.
+     * Records a credit note issued against an invoice.
+     *
+     * <p><strong>Records, never issues.</strong> The credit note was legally issued by the external
+     * transmission path — Prosvasis Go today — and got its ΜΑΡΚ there; this route learns of it
+     * afterwards. Renamed from {@code issue} on 2026-08-02 for that reason.
      *
      * <p>It debits the channel's {@code Sales returns} account rather than netting into revenue, so
      * return rate stays visible per channel; it <strong>always credits AR, even against a cash
@@ -222,8 +226,8 @@ class SalesController {
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.SALES, level = AccessLevel.FULL)
     @ResponseStatus(HttpStatus.CREATED)
-    CreditNoteView issue(@RequestBody NewCreditNote request) {
-        return creditNotes.issue(request);
+    CreditNoteView recordNote(@RequestBody NewCreditNote request) {
+        return creditNotes.record(request);
     }
 
     /**

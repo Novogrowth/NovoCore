@@ -35,7 +35,13 @@ import java.util.Optional;
 public interface CreditNoteService {
 
     /**
-     * Issues a credit note against a sale: posts the return and puts back any stock that came with it.
+     * Records a credit note against a sale: posts the return and puts back any stock that came with it.
+     *
+     * <p><strong>Records, never issues.</strong> The document was legally issued elsewhere — by
+     * Prosvasis Go today — and reached AADE at that moment, which is where its ΜΑΡΚ comes from.
+     * Novocore learns of it afterwards. The name says so deliberately: this method was called
+     * {@code issue} until 2026-08-02, and that name had already produced one design
+     * misunderstanding about who allocates a document number.
      *
      * <p>Posts debit {@code Sales returns} (the original invoice's channel) per line, debit
      * {@code Output VAT} per class carrying its {@code VatDimension}, credit {@code Accounts
@@ -54,14 +60,14 @@ public interface CreditNoteService {
      *     threshold has not been accepted
      * @throws SalesInvoiceNotFoundException if the invoice or one of the referenced lines is unknown
      */
-    CreditNoteView issue(NewCreditNote request);
+    CreditNoteView record(NewCreditNote request);
 
     /**
-     * What {@link #issue} would produce for this request, <strong>computed and not posted</strong>.
+     * What {@link #record} would produce for this request, <strong>computed and not posted</strong>.
      *
      * <p>The counterpart of {@code SalesInvoiceService.preview}, with the same guarantees: produced
-     * by the code {@code issue} itself runs, so it cannot drift from what gets posted; it writes
-     * nothing, and not by rolling back; and it refuses what {@code issue} refuses, with the single
+     * by the code {@code record} itself runs, so it cannot drift from what gets posted; it writes
+     * nothing, and not by rolling back; and it refuses what {@code record} refuses, with the single
      * exception of an unaccepted rounding difference, which it reports as
      * {@link CreditNotePreview#roundingNeedsAcceptance} so a screen can offer the acceptance.
      *
@@ -71,7 +77,7 @@ public interface CreditNoteService {
      * override may have changed since. A client could not reproduce that, and would silently return
      * the wrong VAT on any customer whose rate has moved.
      *
-     * @throws InvalidCreditNoteException for every refusal listed on {@link #issue} except the
+     * @throws InvalidCreditNoteException for every refusal listed on {@link #record} except the
      *     unaccepted rounding difference — including a line crediting more than its invoice line
      *     has left to credit, which depends on every credit note already issued against it
      * @throws SalesInvoiceNotFoundException if the invoice named does not exist

@@ -1761,7 +1761,7 @@
         }
       },
       "post" : {
-        "operationId" : "SalesController_issue",
+        "operationId" : "SalesController_recordNote",
         "x-novocore-section" : "SALES",
         "x-novocore-level" : "FULL",
         "requestBody" : {

@@ -158,7 +158,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
                             UnitCost.ofEur("19.990000"))));
 
             CreditNotePreview preview = creditNotes.preview(request);
-            CreditNoteView issued = creditNotes.issue(request);
+            CreditNoteView issued = creditNotes.record(request);
 
             assertThat(preview.gross()).isEqualTo(issued.grossTotal());
             assertThat(preview.net()).isEqualTo(issued.netTotal());
@@ -237,7 +237,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
             assertThat(inventory.stockOf(beans.id()).sellable()).isEqualTo(Quantity.of(15L));
 
             // And the number is still free, which is the operative proof.
-            assertThat(creditNotes.issue(request).documentNumber()).isEqualTo(documentNumber);
+            assertThat(creditNotes.record(request).documentNumber()).isEqualTo(documentNumber);
         }
 
         @Test
@@ -264,7 +264,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
             assertThat(preview.roundingDifference()).isEqualTo(Money.ofEur("2.60"));
 
             assertThatExceptionOfType(InvalidCreditNoteException.class)
-                    .isThrownBy(() -> creditNotes.issue(request))
+                    .isThrownBy(() -> creditNotes.record(request))
                     .withMessageContaining("rounding threshold");
 
             assertThat(creditNotes.preview(
@@ -305,7 +305,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "20.000000");
             SalesInvoiceView invoice = sale(buyer, beans, 4L, "50.000000", SalesChannel.SKROUTZ);
 
-            CreditNoteView note = creditNotes.issue(NewCreditNote.of(
+            CreditNoteView note = creditNotes.record(NewCreditNote.of(
                     invoice.id(), number("CNIT-CN"), AUGUST,
                     List.of(NewCreditNoteLine.priceOnly(invoice.lines().getFirst().id(),
                             Quantity.of(1L), UnitCost.ofEur("50.000000")))));
@@ -366,7 +366,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("20.000000")))));
             assertThat(invoice.bornSettled()).isTrue();
 
-            CreditNoteView note = creditNotes.issue(NewCreditNote.of(
+            CreditNoteView note = creditNotes.record(NewCreditNote.of(
                     invoice.id(), number("CNIT-CN"), AUGUST,
                     List.of(NewCreditNoteLine.priceOnly(invoice.lines().getFirst().id(),
                             Quantity.of(1L), UnitCost.ofEur("20.000000")))));
@@ -404,7 +404,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("20.000000")))));
             assertThat(invoice.bornSettled()).isFalse();
 
-            CreditNoteView note = creditNotes.issue(NewCreditNote.of(
+            CreditNoteView note = creditNotes.record(NewCreditNote.of(
                     invoice.id(), number("CNIT-CN"), AUGUST,
                     List.of(NewCreditNoteLine.priceOnly(invoice.lines().getFirst().id(),
                             Quantity.of(1L), UnitCost.ofEur("20.000000")))));
@@ -436,7 +436,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
             // reconciling against what was filed.
             customers.changeVatClassOverride(buyer.id(), vatClasses.requireByCode("1131").id());
 
-            CreditNoteView note = creditNotes.issue(NewCreditNote.of(
+            CreditNoteView note = creditNotes.record(NewCreditNote.of(
                     invoice.id(), number("CNIT-CN"), AUGUST,
                     List.of(NewCreditNoteLine.priceOnly(invoice.lines().getFirst().id(),
                             Quantity.of(1L), UnitCost.ofEur("100.000000")))));
@@ -458,7 +458,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
             SalesInvoiceView invoice = sale(buyer, beans, 5L, "50.000000", SalesChannel.ECOMMERCE);
             assertThat(inventory.sellableStockOf(beans.id())).isEqualTo(Quantity.of(5L));
 
-            CreditNoteView note = creditNotes.issue(NewCreditNote.of(
+            CreditNoteView note = creditNotes.record(NewCreditNote.of(
                     invoice.id(), number("CNIT-CN"), AUGUST,
                     List.of(NewCreditNoteLine.returning(invoice.lines().getFirst().id(),
                             Quantity.of(2L), UnitCost.ofEur("50.000000")))));
@@ -492,10 +492,10 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
             SalesInvoiceView invoice = sale(buyer, beans, 3L, "50.000000", SalesChannel.ECOMMERCE);
             long line = invoice.lines().getFirst().id();
 
-            creditNotes.issue(NewCreditNote.of(invoice.id(), number("CNIT-CN"), AUGUST,
+            creditNotes.record(NewCreditNote.of(invoice.id(), number("CNIT-CN"), AUGUST,
                     List.of(NewCreditNoteLine.returning(
                             line, Quantity.of(1L), UnitCost.ofEur("50.000000")))));
-            creditNotes.issue(NewCreditNote.of(invoice.id(), number("CNIT-CN"), AUGUST,
+            creditNotes.record(NewCreditNote.of(invoice.id(), number("CNIT-CN"), AUGUST,
                     List.of(NewCreditNoteLine.returning(
                             line, Quantity.of(1L), UnitCost.ofEur("50.000000")))));
 
@@ -503,7 +503,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
 
             // Crediting more than was sold would reclaim output VAT that was never charged.
             assertThatExceptionOfType(InvalidCreditNoteException.class)
-                    .isThrownBy(() -> creditNotes.issue(NewCreditNote.of(
+                    .isThrownBy(() -> creditNotes.record(NewCreditNote.of(
                             invoice.id(), number("CNIT-CN"), AUGUST,
                             List.of(NewCreditNoteLine.returning(
                                     line, Quantity.of(2L), UnitCost.ofEur("50.000000"))))))
@@ -528,7 +528,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
             assertThat(inventory.findUnitBySerialNumber("CNIT-SN-1").orElseThrow().status())
                     .isEqualTo(SerializedUnitStatus.SOLD);
 
-            creditNotes.issue(NewCreditNote.of(invoice.id(), number("CNIT-CN"), AUGUST,
+            creditNotes.record(NewCreditNote.of(invoice.id(), number("CNIT-CN"), AUGUST,
                     List.of(NewCreditNoteLine.returning(invoice.lines().getFirst().id(),
                             Quantity.of(1L), UnitCost.ofEur("2400.000000")))));
 
@@ -555,7 +555,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
                             repair.id(), Quantity.of(1L), UnitCost.ofEur("80.000000")))));
 
             assertThatExceptionOfType(InvalidCreditNoteException.class)
-                    .isThrownBy(() -> creditNotes.issue(NewCreditNote.of(
+                    .isThrownBy(() -> creditNotes.record(NewCreditNote.of(
                             invoice.id(), number("CNIT-CN"), AUGUST,
                             List.of(NewCreditNoteLine.returning(invoice.lines().getFirst().id(),
                                     Quantity.of(1L), UnitCost.ofEur("80.000000"))))))
@@ -577,7 +577,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
             SalesInvoiceView second = sale(buyer, beans, 1L, "50.000000", SalesChannel.ECOMMERCE);
 
             assertThatExceptionOfType(InvalidCreditNoteException.class)
-                    .isThrownBy(() -> creditNotes.issue(NewCreditNote.of(
+                    .isThrownBy(() -> creditNotes.record(NewCreditNote.of(
                             first.id(), number("CNIT-CN"), AUGUST,
                             List.of(NewCreditNoteLine.priceOnly(second.lines().getFirst().id(),
                                     Quantity.of(1L), UnitCost.ofEur("50.000000"))))))
@@ -593,7 +593,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
             SalesInvoiceView invoice = sale(buyer, beans, 1L, "50.000000", SalesChannel.ECOMMERCE);
 
             assertThatExceptionOfType(InvalidCreditNoteException.class)
-                    .isThrownBy(() -> creditNotes.issue(NewCreditNote.of(
+                    .isThrownBy(() -> creditNotes.record(NewCreditNote.of(
                             invoice.id(), number("CNIT-CN"), AUGUST,
                             List.of(NewCreditNoteLine.priceOnly(invoice.lines().getFirst().id(),
                                     Quantity.of(1L), UnitCost.ofEur("60.000000"))))))
@@ -611,7 +611,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
             salesInvoices.reverse(invoice.id(), AUGUST, "typed wrong");
 
             assertThatExceptionOfType(InvalidCreditNoteException.class)
-                    .isThrownBy(() -> creditNotes.issue(NewCreditNote.of(
+                    .isThrownBy(() -> creditNotes.record(NewCreditNote.of(
                             invoice.id(), number("CNIT-CN"), AUGUST,
                             List.of(NewCreditNoteLine.priceOnly(
                                     lineId, Quantity.of(1L), UnitCost.ofEur("50.000000"))))))
@@ -625,7 +625,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
             ProductView beans = goods("CNIT-11", "50.00");
             stock(beans.id(), 10L, "20.000000");
             SalesInvoiceView invoice = sale(buyer, beans, 2L, "50.000000", SalesChannel.ECOMMERCE);
-            creditNotes.issue(NewCreditNote.of(invoice.id(), number("CNIT-CN"), AUGUST,
+            creditNotes.record(NewCreditNote.of(invoice.id(), number("CNIT-CN"), AUGUST,
                     List.of(NewCreditNoteLine.priceOnly(invoice.lines().getFirst().id(),
                             Quantity.of(1L), UnitCost.ofEur("50.000000")))));
 
@@ -643,7 +643,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "20.000000");
             SalesInvoiceView invoice = sale(buyer, beans, 2L, "50.000000", SalesChannel.ECOMMERCE);
 
-            CreditNoteView note = creditNotes.issue(NewCreditNote.of(
+            CreditNoteView note = creditNotes.record(NewCreditNote.of(
                     invoice.id(), number("CNIT-CN"), AUGUST,
                     List.of(NewCreditNoteLine.returning(invoice.lines().getFirst().id(),
                             Quantity.of(1L), UnitCost.ofEur("50.000000")))));
@@ -663,7 +663,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "20.000000");
             SalesInvoiceView invoice = sale(buyer, beans, 1L, "50.000000", SalesChannel.ECOMMERCE);
 
-            CreditNoteView note = creditNotes.issue(NewCreditNote.of(
+            CreditNoteView note = creditNotes.record(NewCreditNote.of(
                     invoice.id(), number("CNIT-CN"), AUGUST,
                     List.of(NewCreditNoteLine.priceOnly(invoice.lines().getFirst().id(),
                             Quantity.of(1L), UnitCost.ofEur("50.000000")))));
@@ -687,7 +687,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
             ProductView beans = goods("CNIT-15", "50.00");
             stock(beans.id(), 10L, "20.000000");
             SalesInvoiceView invoice = sale(buyer, beans, 1L, "50.000000", SalesChannel.ECOMMERCE);
-            creditNotes.issue(NewCreditNote.of(invoice.id(), number("CNIT-CN"), AUGUST,
+            creditNotes.record(NewCreditNote.of(invoice.id(), number("CNIT-CN"), AUGUST,
                     List.of(NewCreditNoteLine.priceOnly(invoice.lines().getFirst().id(),
                             Quantity.of(1L), UnitCost.ofEur("50.000000")))));
 

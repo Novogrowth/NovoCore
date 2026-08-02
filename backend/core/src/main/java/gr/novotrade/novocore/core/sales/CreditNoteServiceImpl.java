@@ -115,17 +115,17 @@ class CreditNoteServiceImpl implements CreditNoteService {
     }
 
     // ---------------------------------------------------------------------------------------
-    // Issuing
+    // Recording
     // ---------------------------------------------------------------------------------------
 
     /**
-     * Everything {@link #issue} works out before it writes anything.
+     * Everything {@link #record} works out before it writes anything.
      *
      * <p>Extracted so {@link #preview} produces its figures <strong>from this code</strong> rather
      * than from a second implementation. Same arrangement, and same reasoning, as
      * {@code SalesInvoiceServiceImpl.compute}: every refusal about the request lives here, and the
      * single decision left to the caller is what to do about a rounding difference above the
-     * threshold — {@code issue} refuses it, {@code preview} reports it so a screen can offer the
+     * threshold — {@code record} refuses it, {@code preview} reports it so a screen can offer the
      * acceptance before the operator submits.
      */
     private Computation compute(NewCreditNote request) {
@@ -195,7 +195,7 @@ class CreditNoteServiceImpl implements CreditNoteService {
 
     @Override
     @Transactional
-    public CreditNoteView issue(NewCreditNote request) {
+    public CreditNoteView record(NewCreditNote request) {
         Computation computation = compute(request);
         SalesInvoice invoice = computation.invoice();
         CustomerView customer = computation.customer();
@@ -436,7 +436,7 @@ class CreditNoteServiceImpl implements CreditNoteService {
             return Rounding.automatic(difference, threshold);
         }
         if (!request.roundingDifferenceIsAccepted()) {
-            // Reported, not thrown — see compute(). issue() raises it.
+            // Reported, not thrown — see compute(). record() raises it.
             return Rounding.unaccepted(difference, threshold);
         }
         return Rounding.accepted(difference, request.roundingAcceptedBy(), threshold);
@@ -699,7 +699,7 @@ class CreditNoteServiceImpl implements CreditNoteService {
     /**
      * Everything worked out from a request, before anything is written.
      *
-     * <p>The single value {@link #issue} and {@link #preview} share, which is what makes "the
+     * <p>The single value {@link #record} and {@link #preview} share, which is what makes "the
      * preview cannot drift from the posting" a property of the code rather than a promise.
      */
     private record Computation(

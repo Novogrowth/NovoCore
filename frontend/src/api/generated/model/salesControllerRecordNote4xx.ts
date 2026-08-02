@@ -8,7 +8,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type SalesControllerIssue4xx = {
+export type SalesControllerRecordNote4xx = {
   status?: number;
   title?: string;
   detail?: string;

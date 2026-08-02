@@ -549,7 +549,7 @@ class SettlementIT extends AbstractCoreIntegrationTest {
             CustomerView buyer = customer("Credit note");
             SalesInvoiceView invoice = openSale(buyer, "SETIT-19", 2L);
 
-            CreditNoteView note = creditNotes.issue(NewCreditNote.of(
+            CreditNoteView note = creditNotes.record(NewCreditNote.of(
                     invoice.id(), number("SETIT-CN"), AUGUST,
                     List.of(NewCreditNoteLine.priceOnly(invoice.lines().getFirst().id(),
                             Quantity.of(1L), UnitCost.ofEur("100.000000")))));
@@ -571,7 +571,7 @@ class SettlementIT extends AbstractCoreIntegrationTest {
             CustomerView buyer = customer("Refund");
             SalesInvoiceView invoice = openSale(buyer, "SETIT-20", 1L);
 
-            CreditNoteView note = creditNotes.issue(NewCreditNote.of(
+            CreditNoteView note = creditNotes.record(NewCreditNote.of(
                     invoice.id(), number("SETIT-CN"), AUGUST,
                     List.of(NewCreditNoteLine.priceOnly(invoice.lines().getFirst().id(),
                             Quantity.of(1L), UnitCost.ofEur("100.000000")))));
@@ -774,7 +774,7 @@ class SettlementIT extends AbstractCoreIntegrationTest {
             // existence trigger firing first and proving something else.
             CustomerView buyer = customer("Pairing");
             SalesInvoiceView invoice = openSale(buyer, "SETIT-24", 1L);
-            CreditNoteView note = creditNotes.issue(NewCreditNote.of(
+            CreditNoteView note = creditNotes.record(NewCreditNote.of(
                     invoice.id(), number("SETIT-CN"), AUGUST,
                     List.of(NewCreditNoteLine.priceOnly(invoice.lines().getFirst().id(),
                             Quantity.of(1L), UnitCost.ofEur("100.000000")))));
