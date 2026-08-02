@@ -27,7 +27,7 @@ import { NEEDS_EXEMPTION_REASON, NEEDS_VAT_NUMBER } from '@/lib/vat-status'
  * chosen and will not submit without one.
  *
  * **`vatClassOverrideId` is deliberately absent**, though `NewCustomer` accepts it. The override is
- * deferred out of F2 as its own follow-up — see `novocore-frontend-roadmap.md` — and a create form
+ * deferred out of F2 as its own follow-up — see `novocore-roadmap.md` — and a create form
  * is the worst place to introduce a field whose accounting implications have not been settled.
  */
 export function CustomerCreate() {

@@ -391,9 +391,14 @@ is sortable **only** if its `meta.sortKey` is one the endpoint declares, and it 
 request. `canSortColumn` states this once. Today every list takes the other branch — all five
 endpoints return their rows whole, confirmed against the running container's own bytecode — but the
 branch is built and tested because the day it starts applying is the day the backend adds paging,
-and nothing on this side would change to mark the occasion. **None of the five column files carries
+and nothing on this side would change to mark the occasion. **None of the seven column files carries
 a `sortKey` yet**, so when one of them gains paging its sort controls disappear until somebody adds
 them. Safe, loud, and a real obligation.
+
+⚠️ **Seven, not five.** S2 shipped sorting against five screens; F4 then shipped VAT classes and units
+of measure with sorting too, and the obligation grew with them without anyone restating it. Count
+`src/pages/*/*-columns.tsx` rather than trusting a number in prose — this one was wrong in three
+documents until 2026-08-02.
 
 Two defaults live on `DataTable` rather than on each column, because forgetting one on a single
 column is a table that is quietly wrong in one place: **`sortUndefined: 'last'`** in both directions
@@ -491,6 +496,34 @@ against the running Compose stack needs the Owner password, which is deliberatel
 repository — so the owner runs it. For S1, S2 and F4 they did, on 2026-08-01. **Neither leg
 substitutes for the other**: the IT cannot tell you a control is reachable, and a browser pass cannot
 tell you which of 22 sub-parts was checked.
+
+### A document screen records; it never issues
+
+**This governs F5 onward and it is not a wording preference.** Novocore never obtains a ΜΑΡΚ. Greek law
+requires transmission to AADE at issuance, the document gets its ΜΑΡΚ and QR code there, and it appears
+in Novocore only *afterwards* — through Prosvasis Go today, through a certified Πάροχος at step 40.
+Neither phase changes that. Full statement in `CLAUDE.md`, *The document model*.
+
+What this means on screen:
+
+- **No button says "Issue".** A sales-document form records something that already exists elsewhere;
+  the verb is *record*, or *save*. A screen offering to issue an invoice describes a system this is
+  not, and would set an operator's expectation that a ΜΑΡΚ appears when they press it.
+- **The document number is an input, not an output.** It arrives with the document. There is no
+  sequence, no counter and no "next number" preview to render — **until step 40**, and even there the
+  ΜΑΡΚ still comes back from the transmission path.
+- **ΜΑΡΚ, UID, QR URL and transmission status are ordinary core fields** on the record (ADR 0016), so
+  they read off `SalesInvoiceView` like anything else once R1 lands. They are **not** adapter data and
+  are not fetched from somewhere special.
+- ⚠️ **Stock does not always move.** ΑΛΠ and ΤΠΔΑ combine sale and transport, so stock moves; a plain
+  Τιμολόγιο is purely sales and **does not** reduce stock, and this business issues both routinely. A
+  document in that state must be **visibly and queryably** "stock not yet moved" — not silently
+  identical to one that did move.
+
+⚠️ **The generated client changed on 2026-08-02 and the old name is gone.** `POST /api/credit-notes`
+was `salesControllerIssue`; it is now **`salesControllerRecordNote`**, and
+`SalesControllerIssue4xx` is now `SalesControllerRecordNote4xx`. Nothing in `src/` consumed it yet —
+F5 is where it starts being used — but a stale snippet from an older session will not compile.
 
 ### knip's entry list
 

@@ -178,6 +178,116 @@ this*, the backend has to answer it") extends to configuration and not only to r
 
 **What none of them can see, so watch for it in review:** a *wrong but non-empty* value — an unparseable enum, an id of the right shape naming another party's record, a date range running backwards. Those reach the handler and are only as good as the message written for them. And **`Objects.requireNonNull` is not banned anywhere**, deliberately: it is correct on our own arguments (`ListResponse` uses it properly) and no rule can tell a caller's omission from a programmer's, which is exactly the judgement a reviewer has to make.
 
+## The document model — Novocore does not issue, it records
+
+**This section governs every document screen, adapter and schema decision from R1 onward.** It was
+settled in a design session on 2026-08-02 and is not open.
+
+**1. Novocore never obtains a ΜΑΡΚ itself.** Greek law requires transmission to AADE at issuance, and
+the document receives a ΜΑΡΚ and a QR code at that moment. **Legal issuance always runs through an
+external transmission path — Prosvasis Go today, a certified Πάροχος at step 40 — and that does not
+change in any phase.** A sales document appears in Novocore only *after* it legally exists.
+
+**2. Numbers are recorded, never generated — until step 40.** No sequence, no counter, no
+allocation-at-commit. What changes at step 40 is narrower than it sounds: Novocore begins allocating
+the **series number** and composing the document itself, transmitting via the Πάροχος adapter instead
+of handing the job to Go. It still does not obtain the ΜΑΡΚ. **Sequence and gap-prevention machinery
+belongs at step 40 and nowhere earlier.**
+
+**3. Naming rule: no operation, class, method or route may be named `issue`, `issueInvoice` or
+`issuance`.** Use `requestIssuance`, `submitForIssuance`, `recordIssuedDocument` — or, for the
+ordinary case of learning about a document that already exists, `record`, which is what
+`SalesInvoiceService.record` has always been called.
+
+- **Prose describing the legal act is not a violation.** "The document was issued by Go and reached
+  AADE" is accurate and should stay. The rule is about **identifiers**, because an identifier is what
+  a reader infers behaviour from.
+- ⚠️ **The rule was written after the misunderstanding, not before it.** `CreditNoteService.issue`
+  existed until 2026-08-02, and its `operationId` `SalesController_issue` sat in the committed spec
+  and the generated TypeScript client. It was renamed to `record` / `recordNote` in the same session
+  the rule was written, **deliberately rather than being queued**: a naming rule with a known standing
+  violation is a rule people stop believing. The controller method is `recordNote` and not `record`
+  because `SalesController_record` already exists for sales invoices, and a second duplicate
+  `operationId` is exactly the defect backend queue item 1 is open against.
+
+**4. ΜΑΡΚ, UID, QR URL and transmission status are CORE fields on the sales invoice** (ADR 0016), not
+adapter data. Go's own internal document id stays in the adapter mapping table. This is not a
+violation of rule 2 in *Non-negotiable architecture rules* above — see the ADR for why a statutory
+identifier of Novocore's own document is categorically different from a vendor's instance identifier.
+
+**5. Document behaviour varies by myDATA type.** ΑΛΠ and ΤΠΔΑ combine sale and transport, so **stock
+moves**. A plain Τιμολόγιο is purely sales and **does not reduce stock**. This business issues both
+routinely, so this is not an edge case. **Document types are SEEDED from the official AADE list** —
+users may activate, deactivate and edit a description, and may **never** author a row or its behaviour
+flags. ⚠️ **The model for that is `VatExemptionReason`, NOT `VatClass`.** VAT classes are seeded *and*
+extensible — `POST /api/vat-classes` exists and a user can author one and set its `reduced-counterpart`
+link. Reaching for VAT classes as the analogy produces the wrong thing.
+
+**6. Known limitation, and it must stay visible.** Until a dispatch document exists (18b), **stock
+figures are incomplete for every non-stock-moving sales document**, which is a routine share of real
+sales. The document is recorded, the ledger posts, stock is left untouched, and the document must sit
+in a **queryable** "stock not yet moved" state so the gap is measurable rather than merely known.
+
+**7. `Στοιχείο Αυτοπαράδοσης` (self-supply)** covers internal consumption and moving inventory into
+fixed assets. The customer is the issuer, so it needs a **protected self-customer record** on the
+retail-walk-in pattern, **excluded from customer sales, revenue and margin reporting** since revenue is
+recognised at cost. **The line price derives from FIFO lot cost, not the price list** — which couples
+pricing to lot selection, true nowhere else in the system. VAT is deductible and **not** capitalised
+into the asset cost. **Which accounts carry each leg is an accountant question — refuse rather than
+guess.**
+
+**8. Document transformation.** An employee correcting a mistake must transform a document into the
+correct series or a return document **in one action**, with series, products and customer auto-filled,
+**never re-keyed**. Same flow for a returned or cancelled order. This needs the Go adapter; only the
+allowed-target reference is stored earlier (R1).
+
+### AADE reference data
+
+**AADE publishes no live API for codifications.** The myDATA REST API only moves documents. Code lists
+live in the Annex tables of versioned PDFs, the XSD schema files, and an Excel of permitted
+classification combinations — and they **do** change between versions. *(Source: the 2026-08-02 design
+session, checked against AADE's published REST API method list. Not verified from inside this
+repository.)*
+
+**The approach:** seed as versioned core data, store which spec version the seed corresponds to, and
+add a periodic diff check that **alerts a human and never auto-applies**. ⚠️ **Auto-apply is
+forbidden** because a code list that updates itself would silently change what already-transmitted
+documents claim.
+
+**The live AADE services that genuinely are adapter-shaped** are a different thing and belong at step
+28: the **Basic Business Registry ΑΦΜ lookup** and **VIES**.
+
+### The integration outbox does not exist
+
+⚠️ **Architecture rule 4 — *a core operation never waits on an external call* — has no
+implementation.** Step 11 built an **email** outbox and nothing else: verified 2026-08-02, every
+`outbox` reference in the backend is email, backup or attachment, and `backend/adapters` and
+`backend/modules` contain zero Java files. There is **no** general integration-event outbox, **no**
+idempotency keys, **no** replay log and **no** ordering guarantee. **Ten adapters need all four.**
+Under this file's own "one shared service per cross-cutting concern" rule it should be built once,
+before the first adapter — roadmap step X1. **Record it as a real gap, not a future nicety.** For
+myDATA in particular, "transmitted twice" is not a theoretical failure mode.
+
+⚠️ **Adapter ID-mapping tables have no designed lifecycle either**, and it is the same design item:
+external ID reuse, deleted-then-recreated external records, and two adapters disagreeing about which
+core record an external ID resolves to are all unanswered.
+
+### Product categories are not two columns
+
+⚠️ **Three levels deep, and a product belongs to several categories at once** — a self-referencing
+category table plus a join table. **Not two flat columns, and not an enum.** Nothing exists, not even
+the schema; `V29` carries a header saying so, because the brief's one-line *"Category (main/sub)"*
+understates it and building from that line would produce the wrong thing.
+
+### Channel already reaches the ledger
+
+`SalesChannel` is an enum, `sales_invoice.channel` is `NOT NULL` with a CHECK, and **step 3 split the
+Sales *and* Sales-returns accounts per channel** — so per-channel revenue and return rate are already
+visible. **R1 references channel; it must not create it.** The open question is not channel: it is
+whether a **generic analysis-dimension mechanism on journal lines** is wanted before a second dimension
+(shop, product line, campaign) is needed, since account-splitting multiplies rather than adds and
+retrofitting a dimension means restating history. Recorded as an open decision in the roadmap.
+
 ## Stack
 
 **Backend:** Java + Spring Boot, PostgreSQL, Docker, self-hosted with an HTTPS reverse proxy from the start. No SQLite, no Python/PHP backend — these were deliberately ruled out, don't reintroduce them for "quick" tooling either.
@@ -213,6 +323,35 @@ The cost surfaced two steps later, in the frontend: the development database hel
 
 **The remedy is to write the full target list down once, in `PROGRESS.md`, and have each step adopt its row** rather than re-derive a narrower one from memory of a conversation. The search target list is there now and is the worked example. ⚠️ **A field named in the brief is not evidence that it was built** — check the schema. Several of the brief's entity field lists are marked *(draft)* and were built partially; `Supplier.code`, `Supplier.alias` and `Customer.code` are still not columns.
 
+### A decision reached in a design conversation gets the same close-out discipline as a build step
+
+**A decision is not recorded because it was reached. It is recorded because somebody wrote it into a
+repository document.** Chat is not a repository. If a design conversation settles something — a
+model, a constraint, a naming rule, a placement — it gets written into `PROGRESS.md` (and wherever
+else governs it) **in the same session**, as a checklist line with a verdict, exactly as an approved
+build proposal does.
+
+**This rule exists because it had already cost something by the time it was written.** As of
+2026-08-02, **four core-model decisions existed only in chat and were absent from every document in
+this repository**: document types, document series, the legal basis for VAT exemptions, and myDATA
+payment-method codes. All four are prerequisites for the document model — R1 — and none of them was
+findable by a fresh session reading the project record. Worse, the record was **actively misleading
+in a way nobody would have questioned**: it listed **F5 as the next step** long after the backend
+queue had been prioritised ahead of it in conversation. A reader following the documents would have
+started the wrong work, with nothing anywhere to contradict them.
+
+**This is §"An approved proposal is a checklist, not a paragraph" occurring one level up.** That rule
+catches a sub-part lost inside an approved proposal. This one catches a whole *decision* lost because
+the conversation that produced it was never treated as producing an artefact. The failure mode is
+identical and so is the remedy: **prose in a chat window is where a decision goes to be forgotten,
+because a conversation that felt conclusive reads as recorded.**
+
+**Two tells that a conversation has produced something that must be written down now:**
+
+- You find yourself about to say *"as we agreed"* about something you cannot cite a file for.
+- A document you are reading contradicts what you believe, and your instinct is that the document is
+  out of date rather than that you are wrong. **Check which — and then fix the document either way.**
+
 ## Session close-out
 
 When the user says "close the session" (or clearly equivalent phrasing like "let's stop here" or "end session"), perform these six actions **in this order**, regardless of what step or task is in progress:
@@ -220,7 +359,7 @@ When the user says "close the session" (or clearly equivalent phrasing like "let
 1. **Reconcile every approved checklist this session touched.** For each sub-part of every proposal in play, state which of exactly three things it is: **done** (and how it was verified), **explicitly deferred** (with the reason, and where it is now recorded so it can be picked up), or **still open**. Reconcile against the *approved* list, not against memory of what was worked on — the failure mode this exists to catch is a sub-part nobody has thought about since it was approved, and a summary written from what was built cannot see it. **A sub-part with no verdict is a finding**, and says so in the close-out. If a proposal was approved this session and never written down as a checklist, write it down now, then reconcile against it.
 2. **Update `docs/PROGRESS.md`.** Record: which step(s) were worked on, what's now done and verified, what's still open or blocked (including any question numbers from the product brief), and the concrete next action for the following session. Overwrite stale status, don't just append. The reconciliation from step 1 goes here, as the checklist with its verdicts — not as a paragraph summarising them.
 3. **Update `docs/novocore-context-primer.md`.** Reflect any changes to build status, resolved decisions, or open items so the primer stays accurate for a fresh chat session. Don't let it drift out of sync with what actually happened.
-4. **Update `docs/novocore-roadmap.md`.** Move any step that finished to 🟢 Done, mark the next one **Current**, and fill in the `Actual` hours and token columns for the work this session covered. **Measure, never estimate** — see below. Frontend steps live in `docs/novocore-frontend-roadmap.md` and are updated the same way.
+4. **Update `docs/novocore-roadmap.md`.** Move any step that finished to 🟢 Done, mark the next one **Current**, and fill in the `Actual` hours and token columns for the work this session covered. **Measure, never estimate** — see below. **There is one roadmap.** `docs/novocore-frontend-roadmap.md` was deleted on 2026-08-02 and merged into it; backend and frontend are one sequence because several steps span both. Do not recreate a second roadmap file — a second record of the same thing is what let the backend queue and the frontend roadmap disagree about item 3 for a week.
 5. **Commit, once, covering everything.** Stage and commit all outstanding changes — the session's work *and* the three documents above — in a single commit whose message summarizes what was done this session. If the work is incomplete or known-broken, say so explicitly in the message rather than implying it's finished.
 6. **Push to `origin`.** Always, without being asked. Then verify it landed (`git log --oneline origin/main -1` after a fetch) and confirm local and remote agree.
 

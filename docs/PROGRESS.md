@@ -37,7 +37,7 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | 16b | **Users & roles, journal listing, settings** — the three sections with no HTTP surface at all | **Done, committed** `452b3fd` — 37 routes, **no migration**. Three defects found and fixed, none of them in the code the step set out to write. See below |
 | S1 | **Substring search** — `pg_trgm` + `unaccent`, one shared mechanism, five screens | **Done** — migrations **V28** and **V29**, 17 GIN trigram indexes, `TextSearch` + `SearchFilter`, `?search=` on five routes. **Two findings**, one of which was invisible to the entire test suite until the test database was made to match the real one. See below |
 | F4 | **Settings** — three config pages, VAT classes and units of measure, plus search and sorting | **Done** — migration **V30**, 4 GIN trigram indexes, `?search=` on 2 more routes, **22 sub-parts all with verdicts** (21 approved, 1 added mid-step), and `F4WriteContractIT` (15 tests) which **corrected a premise the step was built on**. Two findings. See below |
-| 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress. F0–F4, S1 and S2 done; F5 is next.** Foundations `94e17cd`, Products `56e3726` + guards `28c4119` + brand pass, then the render-loop fix `3458ee6`, F0 (the seed pass), F1 Suppliers `b406b27`, F2 Customers `496c7be`, F3 Users & Roles `aea0e56`, then **S1** (search), **S2** (sorting) and **F4** (Settings). **307 frontend tests, 31 files, green.** Per-step detail in `docs/novocore-frontend-roadmap.md`; decisions and what each step left behind in *Step 16 — the frontend* below |
+| 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress. F0–F4, S1 and S2 done. ⚠️ Next is Q1 (the backend queue), then R1, then F5** — reprioritised 2026-08-02. Foundations `94e17cd`, Products `56e3726` + guards `28c4119` + brand pass, then the render-loop fix `3458ee6`, F0 (the seed pass), F1 Suppliers `b406b27`, F2 Customers `496c7be`, F3 Users & Roles `aea0e56`, then **S1** (search), **S2** (sorting) and **F4** (Settings). **307 frontend tests, 31 files, green.** Per-step detail in `docs/novocore-roadmap.md`; decisions and what each step left behind in *Step 16 — the frontend* below |
 
 **Tests: 1376 passing, 0 failing, 1 skipped, `mvn clean verify` exit 0. 175 routes.** Counted from a
 local run on this machine. **F4 added 16** (1360 → 1376) and **no routes** — the two reference-data
@@ -63,14 +63,21 @@ directly rather than trusting the line count: **0 removed, 37 added, 174 total.*
 
 ---
 
-## ▶ Next session — **F5, Sales Invoice + Credit Note.** F4 is complete and fully verified
+## ▶ Next session — **Q1, the backend follow-up queue.** F4 is complete and fully verified
 
-**Read, in this order:** `CLAUDE.md` → **`frontend/README.md`** (every frontend convention lives
-there, and several of them were earned expensively) → `docs/novocore-frontend-roadmap.md` for the
-step order → the *Step 16, the frontend* section below for F1–F4's decisions and what they left
-behind.
+⚠️ **This changed on 2026-08-02, and the previous version of this heading said F5.** The backend queue
+was prioritised ahead of F5 in a design conversation, and **that reprioritisation existed only in chat
+until now** — this file, the primer and the frontend roadmap all still said F5. It is the worked
+example for the new `CLAUDE.md` rule *"a decision reached in a design conversation gets the same
+close-out discipline as a build step."*
 
-*Last updated: 2026-08-01, F4's close-out.*
+**Read, in this order:** `CLAUDE.md` — including its new **document model** section, which governs
+everything from R1 onward → **`frontend/README.md`** (every frontend convention lives there, and
+several of them were earned expensively) → `docs/novocore-roadmap.md`, **now the single unified
+roadmap**, for the step order → the *Step 16, the frontend* section below for F1–F4's decisions and
+what they left behind.
+
+*Last updated: 2026-08-02, the roadmap-unification session.*
 
 ### ▶▶ What is next, in one place
 
@@ -79,7 +86,10 @@ behind.
 | **Substring search (S1)** | ✅ **Complete and live-verified.** Nothing outstanding |
 | **Sorting (S2)** | ✅ **Complete and live-verified.** Client-side, on all five list screens; the browser leg was run by the owner on 2026-08-01. Nothing outstanding |
 | **F4 — Settings** | ✅ **COMPLETE.** All 22 sub-parts have verdicts, none is "still open". Contract verified by the real backend; **browser leg run personally by the owner on 2026-08-01**. Nothing outstanding |
-| **F5 — Sales Invoice + Credit Note** | 🟡 **NEXT.** ⚠️ It decides the create/preview/commit pattern F6–F8 all reuse, so it is worth disproportionate scrutiny |
+| **Q1 — the backend follow-up queue** | 🟡 **NEXT** (changed 2026-08-02). Six open items, working order **4+6, 5, 1, 7, 8**, plus the credit-note rename already delivered. Item 3 is closed as stale |
+| **R1 — document reference data** | 🔴 After Q1, and **before F5**, because F5's document model depends on it. Governed by `CLAUDE.md`'s new *document model* section and **ADR 0016** |
+| **F5 — Sales Invoice + Credit Note** | 🔴 **No longer next.** ⚠️ It decides the create/preview/commit pattern F6–F8 all reuse, so it is worth disproportionate scrutiny — but ⚠️ **see the open decision in the roadmap**: since documents arrive already issued, F5 before step 18 is a data-entry screen for documents created elsewhere, and much of it disappears when the Go adapter lands |
+| ⚠️ **Backend queue item 8 — promote to first?** | ⚖️ **OPEN, the owner's.** 90 records with fields mandatory in fact but invisible to the contract generator, on the boundary every adapter consumes. It currently sits **last**. Not reordered pending the decision |
 | ⚠️ `Supplier.code` / `Supplier.alias` / `Customer.code` | 📌 **The argument for doing this BEFORE F5 is now stronger**, not weaker: it blocks part of six rows of the search target list, and rows 8–10 are exactly the document screens F5–F7 build |
 | ⚠️ **Database sort order ≠ browser sort order** | 📌 **OPEN, and F4 did not close it.** F4 established *that* `el-GR-x-icu` was never applied; the database still orders by bytes under locale `C` while the browser orders by `Intl.Collator('el')`. Invisible only because no list pages on the server. **Whoever adds paging to a list screen owns this.** See the standing item below |
 | `Product.category` | 📌 Queued as **its own proposal**, requirement recorded, deliberately not started |
@@ -116,6 +126,99 @@ failure is how a build gains checks that get deleted the first time one is incon
 fallback — which is the **Java-default-locale knob's JavaScript twin**, and is the fifth instance of
 the same shape. Whichever way the decision goes, that assertion stays; it is not a down payment on
 option 1 and should not be read as one.
+
+## Roadmap unification & documentation reconciliation — 2026-08-02. Reconciled against the approved scope
+
+**Not a build step.** A unified roadmap written outside the repository was reconciled against the real
+codebase and the running stack, then applied along with fourteen design decisions that existed only in
+chat. **Every part below has a verdict; none is "still open".**
+
+### 📋 Phase 0 — reconcile the supplied file (report, then stop)
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| 0.1 | Every 🟢 Done row against the repository; every Est./Actual/Out figure against the old roadmaps | **Done.** All 25 referenced commits resolve on the dates claimed. Phase 1 reproduces the old file exactly and all three subtotals add up. **Six discrepancies found**, all reported before any change and all corrected — see the table below |
+| 0.2 | Every factual claim in Notes, confirmed or refuted | **Done.** Eight confirmed (four of them **live**, against the running database), one confirmed-and-understated, two refuted, one refused as unverifiable — see below |
+| 0.3 | Anything real lost relative to the two files it replaces | **Done.** 15 items enumerated: **5 judged unacceptable and restored**, 4 carried as one-liners, 6 accepted because verified present elsewhere |
+| 0.4 | Anything in the repository contradicting a decision in the new file | **Done.** Eight found, all reported |
+
+### 📋 Phase 0's findings, and what was done with each
+
+| Finding | Verdict |
+|---|---|
+| **D1** — `FND \| Frontend foundations + Products \| 0.7` attached a **measured** figure to work the old file says is **unmeasured** (`56e3726` is in the blank window) | **Fixed.** Row split: *Frontend foundations* keeps 0.7/183k; *Products screens* gets its own row with a blank Actual and footnote ᵖ giving the reason |
+| **D2** — a measured **0.73 h / 232k out** (the brand pass, `d0ec9d9a`+`f4e4d84c`) had no home | **Fixed.** Its own Phase 2 row, footnote ᵛᵛ |
+| **D3** — Phase 2's Est. subtotal read **8.0** while every row read `—` | **Fixed.** Subtotal is `—`, with a note that 8.0 was step 16's estimate and covers the F-rows only |
+| **D4** — Phase 2 had no `Out` column, so six frontend figures were dropped | **Fixed.** Column added and populated: 183k / 221k / 259k / 359k / 216k / 605k |
+| **D5** — the file claimed the `In` column and per-step token detail "live in `PROGRESS.md`". **They do not.** This file contains **zero** input-token figures and one per-step `Out` figure | **Fixed.** The full `In` column, the **2,413M** subtotal and the cache-reads warning box are carried into the unified file. ⚠️ **This one would have destroyed measured data on deletion** |
+| **D6** — header said it replaces `novocore-roadmap.md`, the name it would be saved as | **Fixed** |
+| **F1** — "five list column files" | **Fixed to seven**, here, in the primer and in `frontend/README.md`. F4 shipped VAT classes and units of measure with sorting; S2's own row stays historically accurate at five |
+| **F2** — "five transitive vulnerabilities in the routing library" | **Refuted and replaced.** `npm audit` reports **4**: 2 high via `react-router`(`-dom`), 2 moderate via `@hono/node-server`/`@modelcontextprotocol/sdk`. Marked point-in-time with its date |
+| **F3** — Q1's order (`1, 4+6, 5, 7, 8`) contradicted this file's `4+6, 5, 1, 7, 3, 8`, and "seven open" contradicted its own next sentence | **This file's order stands.** Corrected to **six open** and **4+6, 5, 1, 7, 8**. Item 8 **not** promoted — recorded as an open decision instead |
+| **F4** — "AADE publishes no live API for codifications" | **Refused as unverifiable from here.** Recorded as stated, sourced to the design session and its 2026-08-02 check against AADE's published REST method list, explicitly **not** presented as confirmed |
+| **F5** — "the current password lives only in the chat session that generated it" | **This file was wrong, not the supplied one.** The owner demonstrably holds it — they ran the S1/S2/F4 browser checks. Corrected here; the roadmap now records the real gap, which is **no change-password screen and no recovery path** |
+| **C1** — `CreditNoteService.issue` / `SalesController_issue` violated the new naming rule | **Renamed, in this session** — see Q1 above |
+| **C2** — "never issues, in any phase" contradicted step 40 | **Requalified**, in `CLAUDE.md`, the roadmap and the primer: Novocore never obtains a **ΜΑΡΚ**; step 40 changes only that it allocates the **series number** and composes the document |
+| **C3** — "same treatment as VAT classes" | **Repointed at `VatExemptionReason`.** `POST /api/vat-classes` exists, so a user genuinely can author a VAT class — seeded **and** extensible, the wrong model for a seed-only list |
+| **C4** — channel presented as new reference data that stops at the document | **Restated.** `SalesChannel` is an enum, `sales_invoice.channel` is `NOT NULL` with a CHECK, and step 3 split Sales *and* Sales-returns per channel — so channel **already reaches the ledger**. R1 references it, never creates it. The open decision was rewritten around scaling and the enum-vs-table question |
+| **C5** — three documents said F5 was next after the queue had been reprioritised in chat | **Fixed** in this file (two places), the primer and the roadmap. It is the worked example for the new `CLAUDE.md` rule |
+| **C7** — `docs/PROJECT_STATE_SUMMARY.md`, untracked | **Deleted, not repointed.** A snapshot duplicating this file and the roadmap; a second record that drifts is the failure that produced the item-3 disagreement. Regenerate on demand |
+| **C8** — this file's search target list said "all 15 rows" over a 16-row table | **Fixed to 16**, matching the other two documents |
+
+### 📋 What was verified live rather than read
+
+Against the running Compose stack on 2026-08-02, because each is a claim about **the absence of
+behaviour across the system** and no file can support one (`CLAUDE.md`, *a fact established by
+reading*):
+
+- **`el-GR-x-icu` never applied** — `datcollate=C`, `datctype=C`, `datlocprovider=c`; **0** user
+  collations; **0** columns with a non-default collation; **0** indexes containing `COLLATE`; server
+  17.10.
+- **No product categories** — no category table, no category column on `product`.
+- **No `code`/`alias`** on `supplier` or `customer`.
+- **No document-number allocation** — **zero** non-identity sequences in the whole schema.
+- **No document type or series tables**; R1 is genuinely unbuilt.
+- **Paging** — exactly **3 of 175** operations accept `page`/`size`, and none of the five named
+  services is among them.
+- **No general integration outbox** — `backend/adapters` and `backend/modules` hold **zero** Java
+  files; every `outbox` reference is email, backup or attachment.
+- **Test counts** — a full `mvn clean verify` was run rather than trusting a recorded figure:
+  **1,376 tests, 0 failures, 0 errors, 1 skipped, exit 0**. Frontend: **307 across 31 files**.
+
+### 📋 Phases A–E, the applied changes
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| A | Replace `docs/novocore-roadmap.md` with the corrected unified file | **Done** |
+| B | Delete `docs/novocore-frontend-roadmap.md`, no stub; repoint every reference | **Done.** Deleted. Repointed in `CLAUDE.md`, `docs/novocore-context-primer.md`, this file (6 sites), `frontend/src/pages/customers/customer-create.tsx`, `frontend/src/pages/customers/customer-detail.tsx`. Two mentions remain **deliberately** — the deletion notices in `CLAUDE.md` and the roadmap header |
+| C1–C2 | Document model: never issues; records, never generates until step 40 | **Done** — `CLAUDE.md` (*The document model*), roadmap ʳ/ᵇᵇ, primer |
+| C3 | Naming rule in `CLAUDE.md` | **Done**, and the one standing violation fixed in the same session rather than queued |
+| C4 | ΜΑΡΚ/UID/QR/status are core fields | **Done — ADR 0016**, a new ADR rather than an amendment, because the reasoning (*would it survive the vendor being replaced?*) is worth stating once and citing |
+| C5 | Behaviour varies by myDATA type; types are seed-only | **Done**, with the analogy corrected to `VatExemptionReason` |
+| C6 | Known limitation: stock incomplete until a dispatch document exists, and queryable | **Done** — `CLAUDE.md`, roadmap, primer, `frontend/README.md` |
+| C7 | `Στοιχείο Αυτοπαράδοσης` | **Done.** Accounts explicitly refused rather than guessed |
+| C8 | Document transformation in one action | **Done** |
+| C9 | AADE publishes no live codification API; alert, never auto-apply | **Done**, sourced rather than asserted |
+| C10 | Live AADE services that are adapter-shaped | **Done** — roadmap ᵃᵈ, step 28 |
+| C11 | The fourth non-negotiable has no implementation | **Done** — recorded as a real gap in `CLAUDE.md`, roadmap X1 and the primer, with the live evidence |
+| C12 | Adapter ID-mapping lifecycle | **Done**, alongside C11 as the same design item |
+| C13 | Product categories: 3 levels, multi-membership | **Done** |
+| C14 | Channel is a real field, not propagated to journal lines | **Done, but restated** — see C4 in the findings table |
+| D | `CLAUDE.md`: a design conversation gets close-out discipline | **Done**, with the four missing core-model decisions and the stale "F5 is next" recorded as what it cost |
+| E | Backend queue item 3 reconciliation | **Done.** Closed as stale, in the summary table, the order list and its own section |
+
+### ⚠️ The finding that is worth more than the fixes
+
+**The F2a row — the deferred customer VAT class override — had been dropped from the unified file, and
+that drop is itself an instance of the failure `CLAUDE.md` §"An approved proposal is a checklist"
+exists to prevent.** A deliberately deferred sub-part, with a test asserting the field's absence and no
+owner placement, lost the only row in the project that tracked it — **in a file whose own notes explain
+why that must not happen.** Nothing would have failed. It was found by enumerating what the new file
+lost against the two it replaced, which is the same reconciliation move that found 15c.
+
+**The general shape, now stated in `CLAUDE.md`:** condensing is a rewrite, and a rewrite loses whatever
+nobody explicitly checks for. **A summary of what a file contains cannot see what it dropped** — only a
+comparison against the file it replaced can.
 
 ## Step F4 — **Settings**. Approved 2026-08-01, checklist written at approval
 
@@ -401,10 +504,14 @@ next. Fixed with a table-level `sortDescFirst: false`; a test names all three co
 - ⚠️ **`DataTable` now refuses to client-sort a server-paged list**, and this is the guard to know
   about: sorting one page of many and presenting it as the order of the whole table is convincing
   and wrong. A column on a server-paged endpoint is sortable **only** if it carries a `meta.sortKey`
-  the endpoint declares; otherwise its header renders as plain text. **None of the five column files
-  carries a `sortKey` yet**, because no backend enum exists to name — so the day one of these gains
-  paging, its sort controls *disappear* until somebody adds the keys. That is the safe failure and
-  it is loud, but it is a real obligation and it is written here rather than left to be discovered.
+  the endpoint declares; otherwise its header renders as plain text. **None of the *seven* column
+  files carries a `sortKey` yet**, because no backend enum exists to name — so the day one of these
+  gains paging, its sort controls *disappear* until somebody adds the keys. That is the safe failure
+  and it is loud, but it is a real obligation and it is written here rather than left to be discovered.
+  ⚠️ **Seven, not five, as of 2026-08-02**: S2 shipped against five screens and that row stays
+  historically accurate, but **F4 then shipped VAT classes and units of measure with sorting too**, so
+  the obligation is two files larger than the step that created it. Counted from
+  `frontend/src/pages/*/*-columns.tsx`.
 - **The queued tier-A paging item is adjacent work, not this work.** Five *different* services
   (purchase invoices, goods receipts, settlements, inventory, email outbox) are listed further down
   with their sort enums and **four checks that were expensive to learn**.
@@ -623,7 +730,7 @@ aspiration.
 
 ---
 
-## 🎯 The search target list — **all 15 rows.** This is the authoritative version
+## 🎯 The search target list — **all 16 rows.** This is the authoritative version
 
 **Confirmed 2026-08-01, and it is deliberately longer than the list S1 was scoped against.** The
 approval conversation narrowed to the five entities that already had screens; this is the whole
@@ -1307,9 +1414,17 @@ has not been made.
    2026-07-28 by `InitialOwnerBootstrap`, then changed the same day through
    `UserService.changePassword` — the real service, so the password policy, the delegating encoder
    and the `user.password-changed` audit entry all applied, exactly as they would if a screen
-   existed. **The current password lives only in the chat session that generated it.** There is
-   still **no change-password screen**, so rotating it again means the same route: a one-off run of
-   `UserService.changePassword` against the live database.
+   existed. **The owner holds it** — they signed in with it to run the S1, S2 and F4 browser checks
+   personally on 2026-08-01. It is deliberately **not** in this repository, which is why those checks
+   are the owner's to run rather than a session's.
+
+   ⚠️ **Corrected 2026-08-02.** This entry previously read *"the current password lives only in the
+   chat session that generated it"*, which was both alarming and wrong, and it had been carried
+   forward into the roadmap as an obligation about a lost credential. **The real gap is narrower and
+   is still real: there is no change-password screen and no recovery path.** Rotating it means the
+   same one-off route — `UserService.changePassword` against the live database — and there is nothing
+   an owner who forgot it could do from the application. That, not a missing copy, is what has to be
+   built before anyone else depends on this account.
 4. **All three one-time bootstrap variables have been removed from `.env`**, having served their
    purpose: `NOVOCORE_SMTP_PASSWORD` (consumed into the `smtp.password` setting) and
    `NOVOCORE_BOOTSTRAP_OWNER_USERNAME` / `_PASSWORD` (consumed into the user table). The app was
@@ -4671,7 +4786,7 @@ inside the step.
 | 4 | `LiveHttpTransport` | **Done** — `521a601` |
 | 5 | `LiveSeedTest` | **Done** — `521a601`, all three refusals proven |
 | 6 | `docker/reset-trading-data.sql` | **Done** — `521a601`. *Not yet executed*: nothing has needed a reset. Its `created_by <> 'system'` discriminator is confirmed correct against the live row |
-| 7 | Correct the roadmap's fixture counts | **Done** — `novocore-frontend-roadmap.md`; the old "15 products, 12 customers, ~120 journal entries" was wrong on all three |
+| 7 | Correct the roadmap's fixture counts | **Done** — `novocore-roadmap.md`; the old "15 products, 12 customers, ~120 journal entries" was wrong on all three |
 | 8 | `CLAUDE.md` reconciliation step | **Done** — a new "an approved proposal is a checklist" section, and reconciliation is now close-out **step 1 of six** |
 | 9 | *(added)* `TradingQuarter.happens()` extraction | **Done** — the alternative was the same fourteen-call sequence in two drivers, which `CLAUDE.md` names as the shape that decays |
 | 10 | *(added)* `seed.ps1` runner | **Done, and deleted by the owner after use as designed.** Never committed |
@@ -4773,7 +4888,7 @@ screen test asserts it is on the wire — proven to fail against the code that s
 | 5 | Select labels — show the resolved label, not the raw value/id | **Done** — `OptionSelect`, all eight call sites |
 | 6 | *(added)* The create form's own swallowed errors | **Done** — it read `error.detail` directly, so a `403` (no detail, by design) and an unreachable server rendered nothing. Approved after the fact |
 | 7 | *(added)* The language select showed `en`, not `English` | **Done** — same root cause, app-wide rather than Products-only. Approved after the fact |
-| 8 | Row double-click | **Explicitly deferred** — an open design decision, not a fix: whether a row should have a default action at all, and whether it is "open detail" when the SKU link already does that. Recorded in `novocore-frontend-roadmap.md` |
+| 8 | Row double-click | **Explicitly deferred** — an open design decision, not a fix: whether a row should have a default action at all, and whether it is "open detail" when the SKU link already does that. Recorded in `novocore-roadmap.md` |
 | 9 | The `Cannot map null into type boolean` log line | ⚠️ **Deferred, then reopened and half-fixed the same day.** It was not an unexplained edge case: it is `POST /api/products` failing for every user because `serialTracked` is absent. **Frontend workaround shipped**; the backend/spec half stays queued as item 2 |
 | 10 | *(found, not fixed)* The SKU filter is an exact lookup | **Explicitly deferred** — queued as backend item 3; the product decision is the owner's |
 
@@ -4813,10 +4928,27 @@ was verified back to 8 products, all active, one user.
 ---
 ## Next action — read this first
 
-### ⚠️ The follow-up queue — 9 items: **7 open, 2 done (2 and 9)**
+### ⚠️ The follow-up queue — 9 items: **6 open, 2 done (2 and 9), 1 closed as stale (3)**
 
-Each was raised by frontend work and none of the open ones is frontend work to fix. **Nothing here
-blocks F4** or any other frontend step.
+Each was raised by frontend work and none of the open ones is frontend work to fix.
+
+> ### ✅ Item 3 is closed as stale — reconciled 2026-08-02
+>
+> Item 3 asked for an **owner decision** between adding a real search endpoint and relabelling the
+> Products filter box, and said *"do not change the frontend until that is decided."* **That decision
+> was made and the work was delivered by S1 on 2026-08-01.** `?search=` exists on seven routes, the
+> filter box sends it, and `sku=`/`ean=` stay exact because that is what a barcode scanner uses.
+>
+> **This queue said the opposite for a full week**, while the frontend roadmap and
+> `frontend/README.md` both recorded the decision as made. **Two records of one fact disagreed, and
+> the one a fresh session would read first was the wrong one** — a step could have been scheduled for
+> work already shipped, or the owner asked again for a decision they had already given. It was found
+> by reconciling this file against the repository rather than by anything failing.
+>
+> ⚠️ **The lesson is the one now in `CLAUDE.md`**: a decision reached in conversation is not recorded
+> until somebody writes it into the document that governs it — *and closes the item that was waiting
+> on it*. S1 wrote the decision into two files and left the third contradicting them. It is also part
+> of why there is now **one** roadmap file instead of two.
 
 > **Item 2 was the priority and it is now done** (2026-08-01), so the paragraph that used to stand
 > here — *"take item 2 first… `required` is declared on 2 schemas out of 185"* — has been removed
@@ -4833,14 +4965,14 @@ blocks F4** or any other frontend step.
 | 2 | ✅ **DONE (primitive half), 2026-08-01** — the spec now declares every primitive component required, so a mandatory field is knowable from the contract. Items 7 and 8 carry what it deliberately did not close | — | 2026-07-31 |
 | 4 | **The retail customer's own VAT rules are raised as `IllegalArgumentException`**, so two routes answer `400 "Bad request."` and discard a complete explanation | With 2 — same family, and the guards structurally cannot reach it | 2026-07-31 |
 | 1 | `InventoryController_writeOff` — one `operationId` on two operations | After 2 | 2026-07-30 |
-| 3 | No SKU **search** endpoint — the products lookup is exact-match only | After 2; needs an owner decision first | 2026-07-31 |
+| 3 | ✅ **CLOSED AS STALE, 2026-08-02** — no SKU search endpoint. The decision it waited on was made and the work delivered by **S1** on 2026-08-01; this row said otherwise for a week | — | 2026-07-31 |
 | 5 | **A role's `description` can be set at creation and never changed** — `NewRole` takes one, no `PATCH …/description` exists. The screen renders it read-only and says why | Small; with 2 or after | 2026-08-01 |
 | 6 | **`NewUser` and `NewRole` guard body fields with `Objects.requireNonNull`** — the **fifth** confirmed instance of *"a client's mistake raised as a programming error"* (disguise 2, recurring). Answers `400`, not `500` — proven by an existing sweep | With 4 — same anti-pattern | 2026-08-01 |
 | 7 | **Box the 7 boolean primitives with `Required.field`**, so the refusal names the field instead of saying "Cannot map null into type boolean" | After 2, which is done. Not urgent — `tsc` now refuses a TS caller that omits one | 2026-08-01 |
 | 8 | **Declare every compact-constructor requirement — requests AND responses** (scope widened and approved 2026-08-01). 90 records; 28 of them request bodies. Mandatory in fact, invisible to reflection; needs an annotation decision before it needs code. **This is what closes fixture drift** | Last of the backend three, and the highest-value of them on the response side | 2026-08-01 |
 | 9 | ✅ **DONE 2026-08-01, frontend.** Shared `Me` fixture in `src/test/fixtures.ts` — invariant fields only; `role` and `sections` stay at the call site | — | 2026-08-01 |
 
-**Order to work in — all seven open items, none omitted:**
+**Order to work in — all six open items, none omitted. This is roadmap step Q1, and it is next.**
 
 1. **4 and 6 together** — one anti-pattern, and 4's part 2 (give the sweep a case carrying a valid
    body a domain rule refuses) is what stops a sixth instance arriving the way these two did.
@@ -4848,12 +4980,28 @@ blocks F4** or any other frontend step.
    almost nothing.
 3. **1** — `operationId` collision; mechanical, and deleting the frontend workaround is part of it.
 4. **7** — box the 7 booleans. Not urgent: `tsc` now refuses a TypeScript caller that omits one.
-5. **3** — needs an owner decision first (search endpoint versus relabelling the box), so it cannot
-   be scheduled until that is made.
-6. **8** — last, and needs an annotation design decided before any code is written.
+5. **8** — last, and needs an annotation design decided before any code is written.
 
-Nothing here blocks F4 — items 2 and 9 are done, and F4 (Settings) touches exactly one primitive
-body, `POST /api/units-of-measure`, which the contract now declares.
+*(Item 3 was fifth in the previous version of this list. It is closed as stale — see above.)*
+
+⚠️ **Item 8 sits last and is arguably the most severe thing in the project.** 90 records with fields
+mandatory in fact but invisible to the contract generator, on the API contract every adapter and
+module will consume. **Whether to promote it to first on severity is an open decision recorded in
+`docs/novocore-roadmap.md`, and it is the owner's.** It is deliberately **not** reordered here.
+
+**Q1 also carries one item that is not numbered in this table, because it came out of the roadmap
+reconciliation rather than from frontend work:**
+
+- ✅ **The credit-note rename — DONE 2026-08-02, ahead of the rest of the queue.**
+  `CreditNoteService.issue(NewCreditNote)` → `record(...)`, matching `SalesInvoiceService.record`
+  which was already correct. The controller method became **`recordNote`**, not `record`, because
+  `SalesController_record` already exists for sales invoices and a second duplicate `operationId` is
+  precisely item 1's defect. `operationId` `SalesController_issue` → `SalesController_recordNote`;
+  spec regenerated (**a one-line diff**); generated client regenerated (`salesControllerIssue4xx` →
+  `salesControllerRecordNote4xx`). **1376 backend tests green, 307 frontend tests green, lint 0
+  errors, `tsc` clean.** It was pulled forward rather than queued because **a naming rule with a known
+  standing violation is a rule people stop believing**, and it is the only violation of the new
+  terminology rule in `CLAUDE.md`, *The document model*.
 
 ⚠️ **Item 2's costed comparison is kept rather than deleted now that it is done.** It measured both
 options against all 71 request-bodied operations, and the estimate-versus-outcome is the only
@@ -5180,18 +5328,27 @@ all did.
 
 ---
 
-#### 3. **There is no SKU search — `GET /api/products?sku=` is an exact lookup.**
+#### 3. ~~**There is no SKU search — `GET /api/products?sku=` is an exact lookup.**~~ — ✅ **CLOSED AS STALE, 2026-08-02**
 
-`ProductController.products` routes `sku` to `findBySkuFor`, which returns nought or one product.
-The Products screen has a filter box wired to it, so typing `TEST` against eight `TEST-PRODUCT-*`
-SKUs matches nothing. The placeholder says *"Exact SKU"*, so the screen is not lying — but a box a
-person types into that only matches in full reads as broken, and this is the first session where
-there was enough data for anyone to notice.
+**As raised (2026-07-31):** `ProductController.products` routed `sku` to `findBySkuFor`, which returns
+nought or one product. The Products filter box was wired to it, so typing `TEST` against eight
+`TEST-PRODUCT-*` SKUs matched nothing. The item asked the owner to choose between adding a real search
+and relabelling the control, and said **"do not change the frontend until that is decided."**
 
-**The product decision is open and is the owner's**: either add a real search (prefix or contains,
-over SKU and probably name) and make the box fuzzy, or keep exact matching and relabel the control
-so it cannot be mistaken for a search. **Do not change the frontend until that is decided** — the
-current screen is a faithful rendering of the endpoint that exists.
+**What actually happened:** the owner chose a real search endpoint, and **S1 delivered it on
+2026-08-01** — `pg_trgm` + `unaccent` (V28/V29), one `IMMUTABLE` normalisation function, one shared
+`TextSearch` specification, and `?search=` on the list routes (**seven of them today**, after F4 added
+VAT classes and units of measure). The box sends `search=`. `sku=` and `ean=` deliberately stay exact,
+because that is what a barcode scanner and an integration call use, and a scan matching a *substring*
+of a barcode would put the wrong product on an invoice.
+
+⚠️ **This row went on saying "needs an owner decision first" for a week after the decision was made
+and the work shipped**, while `frontend/README.md` and the frontend roadmap both recorded it as
+closed. Nothing failed; nothing could. It was found by reconciling this file against the repository.
+**Two records of one fact, and the one a fresh session reads first was the stale one** — the same
+shape as the 15c gap, and part of why there is now one roadmap file instead of two. The general rule
+is in `CLAUDE.md`: *a decision reached in a design conversation gets the same close-out discipline as
+a build step* — which includes **closing the item that was waiting on it**.
 
 ---
 
@@ -5462,7 +5619,7 @@ project has for that claim: a full trading quarter, built by nothing but HTTP re
 twelve universal invariants — and still does after being dumped, restored into a fresh database and
 swept again.
 
-### ➡️ Step 16, the frontend — under way. **F3 is done; F4, Settings, is next.**
+### ➡️ Step 16, the frontend — under way. **F0–F4, S1 and S2 are done; Q1 is next, then R1, then F5.** *(This heading said "F4 is next" until 2026-08-02 — stale by two steps. Current status is at the top of this file.)*
 
 #### ✅ F3, Users & Roles — done (2026-08-01). Both decisions taken before building
 
@@ -5660,7 +5817,7 @@ the finding this reconciliation exists to produce and this time there isn't one.
 **Hours are now measured and the roadmap row is no longer blank** — `496c7be`→`aea0e56`, **0.87 h
 active, 259k out**, recorded as **0.9**. The earlier note said the figure could not be measured
 because F3 had no commit boundary before its own close-out; this *is* that close-out, so the boundary
-now exists. Full split and caveats in `novocore-frontend-roadmap.md` under ᶠ³.
+now exists. Full split and caveats in `novocore-roadmap.md` under ᶠ³.
 
 ⚠️ **F1 and F2 remain blank deliberately, and were re-examined rather than assumed.** A window does
 exist for each (`0a957d1`→`b406b27` yields 0.36 h, `b406b27`→`496c7be` yields 0.51 h), **but the
@@ -5716,7 +5873,7 @@ it is equivalent.
 | 7 | Create form, no VAT class override | **Done, proved against the real backend** |
 | 8 | Routes, EN + EL strings | **Done** — 22 keys each |
 | 9 | Tests | **Done** — 12 new; 194 total |
-| 10 | VAT class override | **Explicitly deferred**, recorded in `novocore-frontend-roadmap.md` as its own follow-up. A test asserts the field is **absent**, so adding it is a deliberate act with a test to update rather than something that drifts in with a copied screen |
+| 10 | VAT class override | **Explicitly deferred**, recorded in `novocore-roadmap.md` as its own follow-up. A test asserts the field is **absent**, so adding it is a deliberate act with a test to update rather than something that drifts in with a copied screen |
 
 ##### The distinction `FieldEditor` now draws, which is the reusable part
 
@@ -5823,7 +5980,7 @@ all**, because submit was disabled and `status` was `undefined`. That is the ide
 `CLAUDE.md` rule was written about, one turn later, in the tool written to enforce it. The check now
 asserts a request was made before asserting anything about its answer.
 
-Frontend work is tracked step by step in **`docs/novocore-frontend-roadmap.md`**, which is the file
+Frontend work is tracked step by step in **`docs/novocore-roadmap.md`**, which is the file
 to read for what comes next. **F0 is done** (see its section above): the development database now
 holds a real trading quarter — 8 products, 5 customers, 3 suppliers, 48 balanced journal entries —
 so **F1 onwards is the first frontend work in this project being built against data that exists.**

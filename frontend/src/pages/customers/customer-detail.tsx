@@ -251,7 +251,7 @@ export function CustomerDetail() {
            * "This customer is always taxed at this class regardless of the product" carries real
            * accounting weight and needs the TAX_AND_CHARGES gating worked through, so it was
            * deferred out of F2 as its own follow-up rather than built alongside the fields it
-           * happens to sit next to. See `novocore-frontend-roadmap.md`.
+           * happens to sit next to. See `novocore-roadmap.md`.
            */}
         </CardContent>
       </Card>
