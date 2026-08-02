@@ -26,7 +26,8 @@ The governing statement is `CLAUDE.md`, *The document model*; the identifier dec
 - **Naming rule:** no operation, class, method or route may be named `issue`/`issuance`. Prose about
   the legal act is fine; identifiers are not. ⚠️ **There was exactly one violation and it is fixed** —
   `CreditNoteService.issue` → `record`, `SalesController_issue` → `SalesController_recordNote`, spec
-  and generated client regenerated, 2026-08-02.
+  and generated client regenerated, 2026-08-02. **This was U1's work, not Q1's** — it came from finding
+  C1 on the committed surface, not from the backend follow-up queue.
 - **ΜΑΡΚ, UID, QR URL and transmission status are CORE fields** on the sales invoice (**ADR 0016**).
   Go's own internal document id stays in the adapter mapping table. The test that separates them:
   *would this survive the vendor being replaced?* A statutory identifier of our own document does; a
@@ -92,6 +93,23 @@ the summary.
   a design conversation and existed only in chat until 2026-08-02, while three documents still said F5.
   It is the worked example for the new `CLAUDE.md` rule that a design decision gets the same close-out
   discipline as a build step. **R1 (document reference data) comes after Q1 and before F5.**
+- ⚠️ **Q1 is `🔴 Not started` — nothing in that queue has been begun.** Five items to work through
+  (**4+6, 5, 1, 7, 8**, covering six open numbered rows). Items 2 and 9 were done and item 3 closed as
+  stale *before* Q1 was a step, and **the credit-note rename belongs to U1, not Q1** — it came from a
+  roadmap finding, not from the queue. Filed under Q1 until 2026-08-02, where it made a cold read
+  report *"Q1 current, one of six landed"* on an untouched queue.
+- **`U` is a step-ID prefix**: *a session that changes documentation and governance and produces no
+  production code.* **U1** is the roadmap unification and documentation reconciliation of 2026-08-02;
+  **U2** (⚪ unscheduled) is the `PROGRESS.md` → `PROGRESS.md` + `HISTORY.md` split. Future
+  doc/governance sessions take U3, U4 … rather than entering the F/Q/R sequence.
+- ⚠️ **The deferred customer VAT class override (F2a) is a sub-item of step 18, not a leftover screen
+  task.** Moved out of Phase 2 on 2026-08-02. Permission gating was the original reason and is still
+  open, but the decisive one is that **Novocore recomputes VAT from the line items to compare against
+  Go's document**, so an override held only here would disagree with every invoice for that customer by
+  a whole VAT class — a control that manufactures false alarms. **Step 18 carries a verification item:
+  does recording a sales invoice recompute VAT, or store what the source document states? Answer it
+  against the running system.** Precedence between product VAT class, island reduced-rate mapping and
+  customer override is an open accountant decision, **needed for the island rates either way.**
 - **Measured 2026-08-02:** 1,376 backend tests (0 failures, 1 skipped, `mvn clean verify` exit 0), 307
   frontend tests across 31 files, 175 API operations.
 

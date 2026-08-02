@@ -8,7 +8,13 @@ because they no longer proceed independently — several steps below span both.
 
 **Step IDs are deliberately not renumbered.** `0`–`16b` (backend), `F0`–`F11` (frontend) and `S1`/`S2`
 keep the identifiers used in `PROGRESS.md`, commit messages and every ADR. New work takes new prefixes
-(`Q`, `R`, `D`, `X`, `M`) rather than displacing anything.
+(`Q`, `R`, `D`, `X`, `M`, `U`) rather than displacing anything.
+
+**`U` = a session that changes documentation and governance and produces no production code.** U1 is
+the roadmap unification and documentation reconciliation of 2026-08-02. **Future documentation and
+governance sessions take `U2`, `U3` and so on rather than entering the `F`/`Q`/`R` sequence** — a
+doc-only session given a build-step letter makes the build sequence read as further along than it is,
+which is the same misreading the attribution note under ᵘ¹ exists to prevent.
 
 **Hours** — `Est.` is the original planning estimate, never overwritten. `Actual` is **measured** from
 Claude Code session transcripts, never estimated; method in *How the actual figures were derived*. A
@@ -79,13 +85,12 @@ frontend work that must land before any adapter is built.
 |   F0 | Restore dev seed data ᶠ⁰                |     — |    0.9 |  221k | 🟢 Done         |
 |   F1 | Suppliers screens                       |     — |        |       | 🟢 Done         |
 |   F2 | Customers screens                       |     — |        |       | 🟢 Done         |
-|      | *(deferred out of F2)* Customer VAT class override ᶠ²ᵃ | — | |    | 🔴 Not started  |
 |   F3 | Users & Roles screens                   |     — |    0.9 |  259k | 🟢 Done         |
 |   S1 | Substring search, 5 screens             |     — |    1.8 |  359k | 🟢 Done         |
 |   S2 | Column sorting, 5 screens               |     — |    0.7 |  216k | 🟢 Done         |
 |   F4 | Settings, VAT classes, UoM              |     — |    1.0 |  605k | 🟢 Done         |
 |   U1 | Roadmap unification + doc reconcile ᵘ¹  |     — |    1.0 |  253k | 🟢 Done         |
-|   Q1 | Backend queue: 4+6, 5, 1, 7, 8 ᵘ        |     — |        |       | 🟡 **Current**  |
+|   Q1 | Backend queue: 4+6, 5, 1, 7, 8 ᵘ        |     — |        |       | 🔴 Not started  |
 |   R1 | Document reference data (backend) ʳ     |     — |        |       | 🔴 Not started  |
 |   R2 | Document reference data (screens) ʳ²    |     — |        |       | 🔴 Not started  |
 |   R3 | Self-supply posting paths ˢ             |     — |        |       | ⚪ Placement TBD |
@@ -95,6 +100,7 @@ frontend work that must land before any adapter is built.
 |   D4 | Document numbers on own records         |     — |        |       | ⚪ Placement TBD |
 |   D5 | Period locking ᵛ                        |     — |        |       | ⚪ Placement TBD |
 |   M0 | Trial Manager.io import (probe) ᵐ⁰      |     — |        |       | ⚪ Placement TBD |
+|   U2 | Split `PROGRESS.md` / `HISTORY.md` ᵘ²   |     — |        |       | ⚪ Unscheduled   |
 |   F5 | Sales Invoice + Credit Note ʷ           |     — |        |       | 🔴 Not started  |
 |   F6 | Purchase Invoice + Goods Receipt        |     — |        |       | 🔴 Not started  |
 |   F7 | Receipts, Payments, Transfers           |     — |        |       | 🔴 Not started  |
@@ -102,18 +108,27 @@ frontend work that must land before any adapter is built.
 |   F9 | Operational read views                  |     — |        |       | 🔴 Not started  |
 |  F10 | Design pass, brand look                 |     — |        |       | 🔴 Not started  |
 |  F11 | Whole-system UI regression              |     — |        |       | 🔴 Not started  |
+|      | **Subtotal, F-rows (step 16 estimate)** |**8.0**|        |       |                |
 |      | **Subtotal, Phase 2**                   |  **—**|        |       |                |
 
-⚠️ **The subtotal is `—` on purpose.** **8.0 h was step 16's estimate and covers the F-rows only.**
-Q1, R1–R3, D1–D5 and M0 were **never estimated**, and several of them are backend schema work rather
-than screens. Adding 8.0 across this table would present an estimate for the frontend as an estimate
-for the phase.
+⚠️ **The phase subtotal is `—` on purpose, and the row above it is why.** **8.0 h was step 16's
+estimate and it covers the F-rows only.** Q1, U2, R1–R3, D1–D5 and M0 were **never estimated**, and
+several of them are backend schema work rather than screens. Adding 8.0 across this table would
+present an estimate for the frontend as an estimate for the phase — so the F-row subtotal is stated
+separately instead, where a reader scanning a column of dashes will actually meet it.
+
+**Q1 is `🔴 Not started` and is nonetheless the next step to start.** The status column records work
+done, not queue position; the running order is in `PROGRESS.md` under *What is next, in one place*.
+**Nothing in the backend queue has been begun** — see ᵘ¹ and ᵘ for why this file said otherwise until
+2026-08-02.
 
 ✅ **Every step through F4 is verified on both legs.** Each carries its own automated tests, and S1,
 S2 and F4 each also needed a live browser check against the running stack — **the owner ran all three
 personally on 2026-08-01**, since the Owner password is deliberately not in this repository. Nothing
-is outstanding on any built step. ⚠️ The one exception below the step level is the F2a row above,
-which is a deliberate deferral rather than an unfinished step.
+is outstanding on any built step. ⚠️ The one exception below the step level is **F2a, the customer VAT
+class override deferred out of F2** — a deliberate deferral rather than an unfinished step. **It no
+longer has a row in this phase**: it moved to step 18 on 2026-08-02, because it is adapter-dependent
+work rather than a leftover screen task. See ᶠ²ᵃ under step 18.
 
 **Testing is continuous per step, not batched at the end.** **F10 (design) and F11 (regression) are
 the only genuinely batched steps** — visual polish and a holistic proof only make sense once several
@@ -132,6 +147,7 @@ end. This is the gate before adapters and modules open up.
 |   X1 | General integration outbox ˣ            |     — | ⚪ Proposed, before 18 |
 |   17 | Operational monitoring                  |   1.0 | 🔴 Not started  |
 |   18 | Prosvasis Go adapter                    |   4.5 | 🔴 Not started  |
+|      | *(sub-item of 18)* Customer VAT class override ᶠ²ᵃ | — | 🔴 Not started |
 |  18b | Dispatch document + transport data ʸ    |     — | 🔴 Not started  |
 |   19 | WooCommerce adapter                     |   2.0 | 🔴 Not started  |
 |   20 | Skroutz adapter                         |   1.3 | 🔴 Not started  |
@@ -226,6 +242,10 @@ Nothing here is solved. Each is recorded so its absence reads as a decision rath
 
 **Awaiting the external accountant**
 
+- **Precedence between the product's VAT class, the island reduced-rate mapping and the customer VAT
+  class override.** Three inputs, no stated priority, and it is a statutory question rather than a UI
+  one. ⚠️ **Needed for the island rates regardless of whether the override is ever built** — the
+  mapping is seeded since `V5` and is in real use, so two of the three inputs already exist. See ᶠ²ᵃ.
 - Statutory depreciation rates per asset category, and the category taxonomy. ⚠️ **Do not create real
   assets with real values until confirmed.**
 - Two AADE VAT exemption codes (24, 28) absent from Go's list.
@@ -324,22 +344,68 @@ at the moment of approval. Built as `521a601`. **Re-seeding is `docker/reset-tra
 tokens and the Owner account, neither reproducible from `docker/.env`. The fixture's exact contents,
 measured off the seeded database, are in `PROGRESS.md`.
 
-**ᶠ²ᵃ The customer VAT class override is deferred, deliberately, with a test holding it.**
+**ᶠ²ᵃ The customer VAT class override — deferred out of F2, and moved to step 18 on 2026-08-02.**
 `vatClassOverrideId` and `PATCH …/vat-class-override` exist and are customer-only; *"this customer is
-always taxed at this class regardless of the product"* carries real accounting weight and needs the
-`TAX_AND_CHARGES` gating worked through. **A test asserts the field is absent from the detail screen**,
-so adding it later is a deliberate act with a test to update rather than something that drifts in with
-a copied screen. **Not scheduled against any step — it is the owner's to place.**
+always taxed at this class regardless of the product"* carries real accounting weight. **Two tests hold
+it absent** — one that nothing matching `/VAT class/i` renders on the customer detail screen, one that
+the create body carries no `vatClassOverrideId` key (both in `customers.test.tsx`) — so adding it later
+is a deliberate act with tests to update rather than something that drifts in with a copied screen.
+**Both stay and must not be weakened while this is unbuilt.**
+
+⚠️ **It sat under F2 as a sub-row until 2026-08-02, which read as a small leftover screen task somebody
+could pick up on a quiet afternoon. It is not.** It is **adapter-dependent work**, so it is attached to
+step 18 as a named sub-item. **Three reasons, and the recorded one is no longer the main one:**
+
+- **(a) Permission gating — the original reason, still open.** A control that changes what VAT a
+  customer is charged needs its section and level worked through (`TAX_AND_CHARGES` was the candidate).
+- **(b) Precedence, which got harder after the deferral.** There are now **three** inputs with no
+  stated priority: the **product's own VAT class**, the **island reduced-rate mapping** (seeded since
+  `V5`, and confirmed in use — Java Jives ships to reduced-VAT islands), and the **customer override**.
+  Which wins when a customer holding an override buys a product with its own class and ships to an
+  island is a **statutory question, not a UI decision**. Recorded under *Open decisions → awaiting the
+  external accountant*.
+- **(c) The decisive one — the rule must live in Go too.** Go prices and issues the documents;
+  Novocore records them and **recomputes net/VAT/total independently from the line items to compare
+  against the source document**. An override set only in Novocore would therefore make that comparison
+  disagree with **every invoice for that customer** — not by a rounding residual but by a **whole VAT
+  class**, which the mechanism flags as a probable data-entry error. The result is a control that
+  **manufactures false alarms**. If Go carries the equivalent setting instead, the same business rule
+  lives in two systems with no sync, which is the disconnected-data problem Novocore exists to end.
+  **Either way the adapter is where one system can own the rule.**
+
+🎯 **Verification item for whoever builds step 18 — to be answered against the running system, NOT by
+reading one file:** *"Does recording a sales invoice recompute VAT from the customer and the product,
+or store what the source document states?"* The answer decides whether this is a small screen or
+adapter-dependent work. ⚠️ **The reasoning in (c) was derived from the design record, not from the
+code** — which is `CLAUDE.md` §*a fact established by reading, then built upon* in its live form, and
+is why this is an item to execute rather than a conclusion to build on.
 
 ⚠️ **This row was dropped from the first draft of this unified file, and the drop is itself the
 failure `CLAUDE.md` §"An approved proposal is a checklist" exists to prevent** — a deferred sub-part
-losing the only row that tracked it, in a file whose own notes explain why that must not happen. It is
-restored here for that reason as much as for the work.
+losing the only row that tracked it, in a file whose own notes explain why that must not happen. It was
+restored for that reason as much as for the work, and moving it to step 18 does not undo the
+restoration: it still has exactly one row, and that row now sits where the work is.
 
 **ᵘ¹ U1 — roadmap unification and documentation reconciliation** (2026-08-02). Not a build step and it
 never had an estimate: two roadmap files became this one, fourteen design decisions that existed only
-in chat were written into the repository, ADR 0016 was added, and the credit-note rename landed. Its
-findings are in `PROGRESS.md` under *Roadmap unification*.
+in chat were written into the repository, ADR 0016 was added, and **the credit-note rename landed —
+U1's, not Q1's**. Its findings are in `PROGRESS.md` under *Roadmap unification*. U1 is what the `U`
+prefix defined at the top of this file means.
+
+✅ **U1 carries the credit-note rename.** `CreditNoteService.issue(NewCreditNote)` → `record(...)`,
+matching `SalesInvoiceService.record` which was already correct; the controller method → `recordNote`
+(not `record`, which would have collided with `SalesController_record` and created a *second*
+duplicate `operationId`, backend queue item 1's exact defect); `operationId` `SalesController_issue` →
+`SalesController_recordNote`; spec regenerated (**one-line diff**) and the generated client
+regenerated. It was done in the same session rather than queued because **a naming rule with a known
+standing violation is a rule people stop believing.**
+
+⚠️ **It was attributed to Q1 until 2026-08-02, and the attribution was wrong in a way that showed.**
+It came from **finding C1** — a naming-rule violation found on the committed surface while reconciling
+the roadmap — not from the backend follow-up queue, which is a queue of defects raised by frontend
+work. Filing it under Q1 made a cold read of these documents report *"Q1 current, one of six landed"*,
+which **overstates progress on a queue that is untouched.** Correcting the attribution removes that
+misreading at its source rather than annotating around it.
 
 **Measured, per the method below** — window `0450c9f` (F4's close-out) to this session's commits.
 **490 events, 1.01 h active against 17.99 h wall clock, 253k out, 49.0M in. Recorded as 1.0.** The
@@ -349,17 +415,29 @@ that morning** (128 events) and 0.01 h of a previous session's tail (6 events), 
 capped inter-session gaps. As with every row it **excludes its own close-out**, so read it as "at
 least".
 
+**The follow-up corrections of 2026-08-02 are inside U1, not a new row.** Six corrections from the
+close-out review — the `U` prefix definition, this reattribution, the F-row subtotal, the figures rule
+in `CLAUDE.md`, U2's placement and F2a's move to step 18. **The 1.0 h above does not include them**,
+for the same reason it excludes the rest of the close-out: the transcript does not yet contain the
+work when the figure is computed. **No number is written in for them rather than a plausible one.**
+
 ⚠️ **This row's `Out` is low relative to its `In`** — 253k against 49.0M — and that is the shape of a
 reconciliation rather than a build: most of the cost was reading `PROGRESS.md`, two roadmaps, a
 primer and a README repeatedly, plus a full `mvn clean verify` and a live database session, to produce
 comparatively little text. Recorded without adjustment; it is data about what this kind of step costs.
 
-**ᵘ Q1 — the backend follow-up queue.** Nine items: **two done (2 and 9), one stale and closed (3),
-six open.** Working order, as recorded in `PROGRESS.md`: **4+6, 5, 1, 7, 8**, plus the credit-note
-rename below. ⚠️ **Item 8 is the highest-severity open item in the project and sits last in that
-order** — 90 records with fields mandatory in fact but invisible to the contract generator. Its
-sibling, item 2, is what broke product creation. Whether to promote it is an open decision above; it
-is **not** reordered here.
+**ᵘ Q1 — the backend follow-up queue. Not started; nothing in it has been begun.** Of nine numbered
+items, **two are done (2 and 9)** and **one is closed as stale (3)** — all three from before Q1 was a
+step. The six that remain are worked as **five items**, because 4 and 6 are one anti-pattern and are
+done together. **Working order, as recorded in `PROGRESS.md`: 4+6, 5, 1, 7, 8.**
+
+⚠️ **Item 8 is the highest-severity open item in the project and sits last in that order** — 90
+records with fields mandatory in fact but invisible to the contract generator. Its sibling, item 2, is
+what broke product creation. Whether to promote it is an open decision above; it is **not** reordered
+here.
+
+⚠️ **The credit-note rename is not in this queue.** It belongs to **U1** — see ᵘ¹ for why the
+attribution was corrected. Q1 has no partial progress of any kind.
 
 **Item 3 is closed as stale.** It asked for an owner decision between a real search endpoint and
 relabelling the products filter box. **That decision was made and the work delivered by S1** on
@@ -367,14 +445,16 @@ relabelling the products filter box. **That decision was made and the work deliv
 scanners. `PROGRESS.md` still listed it as *"needs an owner decision first"*; the two records
 disagreed and `PROGRESS.md` was the stale one.
 
-**Q1 also carries the credit-note rename** — ✅ **delivered 2026-08-02, ahead of the rest of the
-queue.** `CreditNoteService.issue(NewCreditNote)` → `record(...)`, matching `SalesInvoiceService.record`
-which was already correct; the controller method → `recordNote` (not `record`, which would have
-collided with `SalesController_record` and created a *second* duplicate `operationId`, item 1's exact
-defect); `operationId` `SalesController_issue` → `SalesController_recordNote`; spec regenerated
-(**one-line diff**) and the generated client regenerated. It was pulled forward rather than queued
-because **a naming rule with a known standing violation is a rule people stop believing**, and Q1
-already opens the spec-and-client regeneration path for item 1.
+**ᵘ² U2 — split `PROGRESS.md`.** ⚪ **Unscheduled, and deliberately not started.** That file is **~6,000
+lines, append-only, and the first file every session reads.** It contains per-step route counts and
+test counts that are correct in their own context and wrong lifted out; **the headline ones were
+date-stamped during U1, the rest were not swept — stated rather than claimed.**
+
+The shape: **`PROGRESS.md` becomes short and always-current** — state, next step, open items.
+**Everything historical moves to `HISTORY.md`, append-only and explicitly not authoritative for current
+state.** The reason is not length: **a document that is only ever appended to cannot stay true**, and
+the backend-queue-item-3 disagreement already cost a session. Governed by `CLAUDE.md` §*Every figure
+written into a document carries a date or a step reference*, whose unswept instances this step closes.
 
 **ʳ R1 — document reference data, backend.** Scheduled before F5 because F5's document model depends on
 it. Covers: sales and purchase document types (two tables, seeded from the official AADE list, users may

@@ -352,6 +352,23 @@ because a conversation that felt conclusive reads as recorded.**
 - A document you are reading contradicts what you believe, and your instinct is that the document is
   out of date rather than that you are wrong. **Check which — and then fix the document either way.**
 
+### Every figure written into a document carries a date or a step reference
+
+**A bare number — a route count, a test count, a total — is correct in the paragraph that wrote it and
+wrong the moment somebody lifts it out. This is the same failure as two records disagreeing, one
+document further along.** So write *"175 operations as of 2026-08-02"* or *"133 routes at step 14"*,
+never *"175 operations"*.
+
+The failure needs no carelessness to happen: the number was true, the sentence around it was true, and
+a later reader — or a later paragraph in the same file — quotes it as current. Two records then
+disagree, exactly as they did over backend queue item 3, except that here **both records were written
+by someone who checked.**
+
+⚠️ **`PROGRESS.md` is known to contain unswept instances of this** — per-step route and test counts
+that are correct in their step's context and wrong lifted out. The headline ones were date-stamped
+during U1; the rest were deliberately not swept, and that is stated rather than claimed as done. The
+sweep belongs with **U2**, the `PROGRESS.md`/`HISTORY.md` split.
+
 ## Session close-out
 
 When the user says "close the session" (or clearly equivalent phrasing like "let's stop here" or "end session"), perform these six actions **in this order**, regardless of what step or task is in progress:

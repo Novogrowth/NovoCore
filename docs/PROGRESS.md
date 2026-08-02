@@ -1,6 +1,6 @@
 # NovoCore — Build Progress
 
-*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-08-01 (F4's close-out — Settings).*
+*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-08-02 (U1's follow-up corrections).*
 
 *Close-out now also pushes to `origin` automatically (`CLAUDE.md`), so this file no longer tracks
 unpushed commits.*
@@ -39,8 +39,9 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | F4 | **Settings** — three config pages, VAT classes and units of measure, plus search and sorting | **Done** — migration **V30**, 4 GIN trigram indexes, `?search=` on 2 more routes, **22 sub-parts all with verdicts** (21 approved, 1 added mid-step), and `F4WriteContractIT` (15 tests) which **corrected a premise the step was built on**. Two findings. See below |
 | 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress. F0–F4, S1 and S2 done. ⚠️ Next is Q1 (the backend queue), then R1, then F5** — reprioritised 2026-08-02. Foundations `94e17cd`, Products `56e3726` + guards `28c4119` + brand pass, then the render-loop fix `3458ee6`, F0 (the seed pass), F1 Suppliers `b406b27`, F2 Customers `496c7be`, F3 Users & Roles `aea0e56`, then **S1** (search), **S2** (sorting) and **F4** (Settings). **307 frontend tests, 31 files, green.** Per-step detail in `docs/novocore-roadmap.md`; decisions and what each step left behind in *Step 16 — the frontend* below |
 
-**Tests: 1376 passing, 0 failing, 1 skipped, `mvn clean verify` exit 0. 175 routes.** Counted from a
-local run on this machine. **F4 added 16** (1360 → 1376) and **no routes** — the two reference-data
+**Tests, measured 2026-08-02: 1376 passing, 0 failing, 1 skipped, `mvn clean verify` exit 0; 175
+routes.** Counted from a local run on this machine. ⚠️ **Every other figure in this file is a
+per-step count** — correct where it stands, wrong lifted out; this line is the current one. **F4 added 16** (1360 → 1376) and **no routes** — the two reference-data
 lists gained a *parameter*, not an operation, so the spec diff is **14 lines added and 0 removed**. The PostgreSQL 17 client tools are installed here, so `BackupIT`'s 16
 tests and the two backup legs run locally as well as on CI.
 
@@ -86,7 +87,7 @@ what they left behind.
 | **Substring search (S1)** | ✅ **Complete and live-verified.** Nothing outstanding |
 | **Sorting (S2)** | ✅ **Complete and live-verified.** Client-side, on all five list screens; the browser leg was run by the owner on 2026-08-01. Nothing outstanding |
 | **F4 — Settings** | ✅ **COMPLETE.** All 22 sub-parts have verdicts, none is "still open". Contract verified by the real backend; **browser leg run personally by the owner on 2026-08-01**. Nothing outstanding |
-| **Q1 — the backend follow-up queue** | 🟡 **NEXT** (changed 2026-08-02). Six open items, working order **4+6, 5, 1, 7, 8**, plus the credit-note rename already delivered. Item 3 is closed as stale |
+| **Q1 — the backend follow-up queue** | 🔴 **NOT STARTED, and it is next** (changed 2026-08-02). **Five items to work through — 4+6, 5, 1, 7, 8** — covering the six open numbered rows, since 4 and 6 are one anti-pattern. Item 3 is closed as stale. ⚠️ **Nothing in this queue has been begun.** The credit-note rename belongs to **U1**, not here — see the reattribution below |
 | **R1 — document reference data** | 🔴 After Q1, and **before F5**, because F5's document model depends on it. Governed by `CLAUDE.md`'s new *document model* section and **ADR 0016** |
 | **F5 — Sales Invoice + Credit Note** | 🔴 **No longer next.** ⚠️ It decides the create/preview/commit pattern F6–F8 all reuse, so it is worth disproportionate scrutiny — but ⚠️ **see the open decision in the roadmap**: since documents arrive already issued, F5 before step 18 is a data-entry screen for documents created elsewhere, and much of it disappears when the Go adapter lands |
 | ⚠️ **Backend queue item 8 — promote to first?** | ⚖️ **OPEN, the owner's.** 90 records with fields mandatory in fact but invisible to the contract generator, on the boundary every adapter consumes. It currently sits **last**. Not reordered pending the decision |
@@ -127,7 +128,12 @@ fallback — which is the **Java-default-locale knob's JavaScript twin**, and is
 the same shape. Whichever way the decision goes, that assertion stays; it is not a down payment on
 option 1 and should not be read as one.
 
-## Roadmap unification & documentation reconciliation — 2026-08-02. Reconciled against the approved scope
+## U1 — roadmap unification & documentation reconciliation — 2026-08-02. Reconciled against the approved scope
+
+**`U1` is this session's step ID, and `U` is now a defined prefix**: *a session that changes
+documentation and governance and produces no production code.* Future documentation and governance
+sessions take **U2, U3 …** rather than entering the F/Q/R sequence — a doc-only session given a build
+letter makes the build sequence read as further along than it is.
 
 **Not a build step.** A unified roadmap written outside the repository was reconciled against the real
 codebase and the running stack, then applied along with fourteen design decisions that existed only in
@@ -157,7 +163,7 @@ chat. **Every part below has a verdict; none is "still open".**
 | **F3** — Q1's order (`1, 4+6, 5, 7, 8`) contradicted this file's `4+6, 5, 1, 7, 3, 8`, and "seven open" contradicted its own next sentence | **This file's order stands.** Corrected to **six open** and **4+6, 5, 1, 7, 8**. Item 8 **not** promoted — recorded as an open decision instead |
 | **F4** — "AADE publishes no live API for codifications" | **Refused as unverifiable from here.** Recorded as stated, sourced to the design session and its 2026-08-02 check against AADE's published REST method list, explicitly **not** presented as confirmed |
 | **F5** — "the current password lives only in the chat session that generated it" | **This file was wrong, not the supplied one.** The owner demonstrably holds it — they ran the S1/S2/F4 browser checks. Corrected here; the roadmap now records the real gap, which is **no change-password screen and no recovery path** |
-| **C1** — `CreditNoteService.issue` / `SalesController_issue` violated the new naming rule | **Renamed, in this session** — see Q1 above |
+| **C1** — `CreditNoteService.issue` / `SalesController_issue` violated the new naming rule | **Renamed, in this session.** ⚠️ **The rename is U1's work, not Q1's** — it came from this finding, on the committed surface, not from the backend follow-up queue. Filed under Q1 until 2026-08-02; see *U1 follow-up corrections* below |
 | **C2** — "never issues, in any phase" contradicted step 40 | **Requalified**, in `CLAUDE.md`, the roadmap and the primer: Novocore never obtains a **ΜΑΡΚ**; step 40 changes only that it allocates the **series number** and composes the document |
 | **C3** — "same treatment as VAT classes" | **Repointed at `VatExemptionReason`.** `POST /api/vat-classes` exists, so a user genuinely can author a VAT class — seeded **and** extensible, the wrong model for a seed-only list |
 | **C4** — channel presented as new reference data that stops at the document | **Restated.** `SalesChannel` is an enum, `sales_invoice.channel` is `NOT NULL` with a CHECK, and step 3 split Sales *and* Sales-returns per channel — so channel **already reaches the ledger**. R1 references it, never creates it. The open decision was rewritten around scaling and the enum-vs-table question |
@@ -219,6 +225,85 @@ lost against the two it replaced, which is the same reconciliation move that fou
 **The general shape, now stated in `CLAUDE.md`:** condensing is a rewrite, and a rewrite loses whatever
 nobody explicitly checks for. **A summary of what a file contains cannot see what it dropped** — only a
 comparison against the file it replaced can.
+
+## U1 follow-up corrections — 2026-08-02. Six items from the close-out review, all with verdicts
+
+**Documentation and governance only; no production code was written or changed.** The list was
+approved as six items and is reconciled here one line per item, per `CLAUDE.md` §*An approved proposal
+is a checklist, not a paragraph*.
+
+| # | Correction | Verdict |
+|---|---|---|
+| 1 | **`U` approved as a step-ID prefix, with a definition** — *a session that changes documentation and governance and produces no production code*; future doc/governance sessions take U2, U3 … rather than entering the F/Q/R sequence | ✅ **Done.** Recorded in the roadmap's ID-convention note and at the head of the U1 section above |
+| 2 | **Reattribute the credit-note rename from Q1 to U1**, everywhere both are mentioned; Q1 returns to 🔴 Not started, five items, working order 4+6, 5, 1, 7, 8; remove any wording implying the queue has partial progress | ✅ **Done.** Roadmap ᵘ¹/ᵘ + the Q1 row + the note under the Phase 2 table; this file's *What is next* table, finding C1, the queue header, the order list, and the paragraph that used to carry the rename. Sites checked by grep in both directions, not by memory |
+| 3 | **Second subtotal row on Phase 2** — *Subtotal, F-rows (step 16 estimate) · 8.0* above the phase subtotal, which stays `—` | ✅ **Done.** The existing note was correct and stayed; the row exists because a reader scanning a column of dashes never reaches a note below the table |
+| 4 | **Rule into `CLAUDE.md`** — every figure carries a date or a step reference; a bare number is correct in the paragraph that wrote it and wrong the moment somebody lifts it out | ✅ **Done**, as its own subsection under the documentation-discipline cluster. ⚠️ **`PROGRESS.md` was deliberately NOT swept for existing violations** — that is U2's, and the rule says so rather than implying the sweep happened. **One line was fixed rather than swept:** this file's own headline count now reads *"Tests, measured 2026-08-02"*, because the U2 note asserts the headline figures are date-stamped and it was the one that was not |
+| 5 | **Record U2 as a scheduled future task, do not start it** | ✅ **Done.** ⚪ Unscheduled row in the roadmap with footnote ᵘ², and the section below. **Not started, and nothing was moved out of this file** |
+| 6 | **Move F2a out of Phase 2 and attach it to step 18**, keeping 🔴 and the test asserting the field's absence; record the three-part reasoning, the step-18 verification item, and the precedence open decision | ✅ **Done.** Row removed from Phase 2, sub-item added under step 18, footnote ᶠ²ᵃ rewritten, verification item and open decision recorded. **No production code touched; the test is untouched** |
+
+**Constraints, each confirmed rather than assumed:** no `Est.` figure changed, no `Est.` overwritten by
+an `Actual`, no blank `Actual` filled; no ⚪ item promoted or reordered; **U2 added as ⚪ is a new row,
+not a promotion**; no production code in the diff.
+
+### 📌 U2 — split `PROGRESS.md`. ⚪ Unscheduled, recorded and deliberately not started
+
+**This file is ~6,000 lines, append-only, and the first file every session reads.** It contains
+per-step route counts and test counts that are correct in their own context and wrong lifted out;
+**the headline ones were date-stamped during U1, the rest were not swept — and that is stated here
+rather than claimed as done.**
+
+**The shape.** `PROGRESS.md` becomes **short and always-current** — state, next step, open items.
+Everything historical moves to **`HISTORY.md`**, append-only and **explicitly not authoritative for
+current state**.
+
+**The reason is not length.** A document that is only ever appended to **cannot stay true**, and the
+backend-queue-item-3 disagreement already cost a session: two records of one fact disagreed, and the
+one a fresh session reads first was the stale one.
+
+### 📌 F2a — the customer VAT class override is adapter-dependent work, and now sits under step 18
+
+**It sat as a sub-row under F2 until 2026-08-02, which read as a small leftover screen task somebody
+could pick up on a quiet afternoon.** It is not. **The deferral reason recorded to date — permission
+gating — is no longer the main one.** Three reasons, in the order they matter:
+
+- **(a) Permission gating — the original, still open.** A control that changes what VAT a customer is
+  charged needs its section and level worked through (`TAX_AND_CHARGES` was the candidate).
+- **(b) Precedence, which got harder after the deferral.** Three inputs, no stated priority: the
+  **product's own VAT class**, the **island reduced-rate mapping** (seeded since `V5`, and confirmed
+  in use — Java Jives ships to reduced-VAT islands), and the **customer override**. Which wins when a
+  customer holding an override buys a product with its own class and ships to an island is a
+  **statutory question, not a UI decision.**
+- **(c) The decisive one — the rule must live in Go too.** Go prices and issues the documents;
+  Novocore records them and **recomputes net/VAT/total independently from the line items to compare
+  against the source document**. An override set only in Novocore would make that comparison disagree
+  with **every invoice for that customer** — not by a rounding residual but by a **whole VAT class**,
+  which the mechanism flags as a probable data-entry error. That is a control that **manufactures
+  false alarms**. If Go carries the equivalent setting instead, the same business rule lives in two
+  systems with no sync — the disconnected-data problem Novocore exists to end. **Either way the
+  adapter is where one system can own the rule.**
+
+🎯 **Verification item for whoever builds step 18 — answer it against the running system, NOT by
+reading one file:**
+
+> **Does recording a sales invoice recompute VAT from the customer and the product, or store what the
+> source document states?** The answer decides whether the customer VAT class override is a small
+> screen or adapter-dependent work.
+
+⚠️ **This was reasoned from the design record, not from the code** — which is `CLAUDE.md` §*a fact
+established by reading, then built upon* in its live form. The conclusion in (c) is a claim about what
+the system does, and no file supports one; hence an item to execute rather than a fact to build on.
+
+**Not built, and the tests holding it are untouched.** There are **two**, both in
+`frontend/src/pages/customers/customers.test.tsx`, and they were read rather than assumed:
+*"does not offer the VAT class override, which is deferred"* asserts nothing matching `/VAT class/i`
+renders on the **detail screen**, and *"sends what was filled in, and no VAT class override"* asserts
+the **create body** has no `vatClassOverrideId` key. **Both stay and must not be weakened while this is
+unbuilt** — they are what make adding the field a deliberate act with tests to update.
+
+**Also recorded as an open decision** (roadmap, *awaiting the external accountant*): precedence between
+product VAT class, island reduced-rate mapping and customer VAT class override. ⚠️ **Needed for the
+island rates regardless of whether the override is ever built** — two of the three inputs already
+exist and are in use.
 
 ## Step F4 — **Settings**. Approved 2026-08-01, checklist written at approval
 
@@ -4932,6 +5017,14 @@ was verified back to 8 products, all active, one user.
 
 Each was raised by frontend work and none of the open ones is frontend work to fix.
 
+> ### 🔴 Q1 has not been started. Nothing in this queue has been begun.
+>
+> Items 2 and 9 were done, and item 3 closed as stale, **before Q1 existed as a step** — they are not
+> Q1 progress. The **credit-note rename is U1's**, not Q1's: it came from finding C1 on the committed
+> surface while reconciling the roadmap, not from this queue. Attributing it here made a cold read
+> report *"Q1 current, one of six landed"*, **which overstates progress on a queue that is
+> untouched.** Corrected 2026-08-02.
+
 > ### ✅ Item 3 is closed as stale — reconciled 2026-08-02
 >
 > Item 3 asked for an **owner decision** between adding a real search endpoint and relabelling the
@@ -4972,7 +5065,8 @@ Each was raised by frontend work and none of the open ones is frontend work to f
 | 8 | **Declare every compact-constructor requirement — requests AND responses** (scope widened and approved 2026-08-01). 90 records; 28 of them request bodies. Mandatory in fact, invisible to reflection; needs an annotation decision before it needs code. **This is what closes fixture drift** | Last of the backend three, and the highest-value of them on the response side | 2026-08-01 |
 | 9 | ✅ **DONE 2026-08-01, frontend.** Shared `Me` fixture in `src/test/fixtures.ts` — invariant fields only; `role` and `sections` stay at the call site | — | 2026-08-01 |
 
-**Order to work in — all six open items, none omitted. This is roadmap step Q1, and it is next.**
+**Order to work in — five items covering all six open rows, none omitted (4 and 6 are one item). This
+is roadmap step Q1; it is next, and it is `🔴 Not started`.**
 
 1. **4 and 6 together** — one anti-pattern, and 4's part 2 (give the sweep a case carrying a valid
    body a domain rule refuses) is what stops a sixth instance arriving the way these two did.
@@ -4989,19 +5083,14 @@ mandatory in fact but invisible to the contract generator, on the API contract e
 module will consume. **Whether to promote it to first on severity is an open decision recorded in
 `docs/novocore-roadmap.md`, and it is the owner's.** It is deliberately **not** reordered here.
 
-**Q1 also carries one item that is not numbered in this table, because it came out of the roadmap
-reconciliation rather than from frontend work:**
+**The credit-note rename is NOT part of this queue** — it was listed here until 2026-08-02 and has
+been reattributed to **U1**, where it belongs. It came from finding **C1**, a naming-rule violation
+found on the committed surface while reconciling the roadmap, not from frontend work raising a backend
+defect, which is what every numbered row above is. Full detail under *U1 follow-up corrections*.
 
-- ✅ **The credit-note rename — DONE 2026-08-02, ahead of the rest of the queue.**
-  `CreditNoteService.issue(NewCreditNote)` → `record(...)`, matching `SalesInvoiceService.record`
-  which was already correct. The controller method became **`recordNote`**, not `record`, because
-  `SalesController_record` already exists for sales invoices and a second duplicate `operationId` is
-  precisely item 1's defect. `operationId` `SalesController_issue` → `SalesController_recordNote`;
-  spec regenerated (**a one-line diff**); generated client regenerated (`salesControllerIssue4xx` →
-  `salesControllerRecordNote4xx`). **1376 backend tests green, 307 frontend tests green, lint 0
-  errors, `tsc` clean.** It was pulled forward rather than queued because **a naming rule with a known
-  standing violation is a rule people stop believing**, and it is the only violation of the new
-  terminology rule in `CLAUDE.md`, *The document model*.
+**It still shares one edge with item 1**, worth keeping visible when item 1 is worked: the controller
+method became **`recordNote`**, not `record`, because `SalesController_record` already exists for
+sales invoices and a **second** duplicate `operationId` is precisely item 1's defect.
 
 ⚠️ **Item 2's costed comparison is kept rather than deleted now that it is done.** It measured both
 options against all 71 request-bodied operations, and the estimate-versus-outcome is the only
@@ -5860,7 +5949,8 @@ it is equivalent.
    explanation — never hidden, never left to produce a bare `400`.**
 2. **The VAT class override is deferred** to its own follow-up, with its own scrutiny once the
    `TAX_AND_CHARGES` gating and the accounting implications are worked through. F2 is
-   name / contact / VAT status / deactivate.
+   name / contact / VAT status / deactivate. ⚠️ **Since 2026-08-02 it is a sub-item of step 18**, and
+   permission gating is no longer the main reason — see *U1 follow-up corrections*.
 
 | # | Sub-part | Verdict |
 |---|---|---|
@@ -5873,7 +5963,7 @@ it is equivalent.
 | 7 | Create form, no VAT class override | **Done, proved against the real backend** |
 | 8 | Routes, EN + EL strings | **Done** — 22 keys each |
 | 9 | Tests | **Done** — 12 new; 194 total |
-| 10 | VAT class override | **Explicitly deferred**, recorded in `novocore-roadmap.md` as its own follow-up. A test asserts the field is **absent**, so adding it is a deliberate act with a test to update rather than something that drifts in with a copied screen |
+| 10 | VAT class override | **Explicitly deferred**, and since 2026-08-02 **attached to step 18 (Prosvasis Go adapter) as a named sub-item** — it is adapter-dependent work, not a leftover screen task. A test asserts the field is **absent**, so adding it is a deliberate act with a test to update rather than something that drifts in with a copied screen; **that test stays and is not to be weakened.** Reasoning in full under *U1 follow-up corrections* and roadmap ᶠ²ᵃ |
 
 ##### The distinction `FieldEditor` now draws, which is the reusable part
 
