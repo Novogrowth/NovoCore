@@ -84,7 +84,8 @@ frontend work that must land before any adapter is built.
 |   S1 | Substring search, 5 screens             |     — |    1.8 |  359k | 🟢 Done         |
 |   S2 | Column sorting, 5 screens               |     — |    0.7 |  216k | 🟢 Done         |
 |   F4 | Settings, VAT classes, UoM              |     — |    1.0 |  605k | 🟢 Done         |
-|   Q1 | Backend queue: 4+6, 5, 1, 7, 8 ᵘ        |     — |        |       | 🔴 **Next**     |
+|   U1 | Roadmap unification + doc reconcile ᵘ¹  |     — |    1.0 |  253k | 🟢 Done         |
+|   Q1 | Backend queue: 4+6, 5, 1, 7, 8 ᵘ        |     — |        |       | 🟡 **Current**  |
 |   R1 | Document reference data (backend) ʳ     |     — |        |       | 🔴 Not started  |
 |   R2 | Document reference data (screens) ʳ²    |     — |        |       | 🔴 Not started  |
 |   R3 | Self-supply posting paths ˢ             |     — |        |       | ⚪ Placement TBD |
@@ -334,6 +335,24 @@ a copied screen. **Not scheduled against any step — it is the owner's to place
 failure `CLAUDE.md` §"An approved proposal is a checklist" exists to prevent** — a deferred sub-part
 losing the only row that tracked it, in a file whose own notes explain why that must not happen. It is
 restored here for that reason as much as for the work.
+
+**ᵘ¹ U1 — roadmap unification and documentation reconciliation** (2026-08-02). Not a build step and it
+never had an estimate: two roadmap files became this one, fourteen design decisions that existed only
+in chat were written into the repository, ADR 0016 was added, and the credit-note rename landed. Its
+findings are in `PROGRESS.md` under *Roadmap unification*.
+
+**Measured, per the method below** — window `0450c9f` (F4's close-out) to this session's commits.
+**490 events, 1.01 h active against 17.99 h wall clock, 253k out, 49.0M in. Recorded as 1.0.** The
+wall figure is large because the window spans a night; the 5-minute cap is what stops that counting,
+and the split shows it working: **0.70 h in this session** (359 events), **0.14 h in a short session
+that morning** (128 events) and 0.01 h of a previous session's tail (6 events), the remainder being
+capped inter-session gaps. As with every row it **excludes its own close-out**, so read it as "at
+least".
+
+⚠️ **This row's `Out` is low relative to its `In`** — 253k against 49.0M — and that is the shape of a
+reconciliation rather than a build: most of the cost was reading `PROGRESS.md`, two roadmaps, a
+primer and a README repeatedly, plus a full `mvn clean verify` and a live database session, to produce
+comparatively little text. Recorded without adjustment; it is data about what this kind of step costs.
 
 **ᵘ Q1 — the backend follow-up queue.** Nine items: **two done (2 and 9), one stale and closed (3),
 six open.** Working order, as recorded in `PROGRESS.md`: **4+6, 5, 1, 7, 8**, plus the credit-note
