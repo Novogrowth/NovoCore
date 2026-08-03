@@ -452,6 +452,67 @@ When the user says "close the session" (or clearly equivalent phrasing like "let
 
 Reconciling before documenting, committing before pushing, and documenting before committing, is deliberate: the reconciliation is what the documentation has to record, and the documentation updates are themselves changes, so committing first would leave them uncommitted and immediately stale — the exact drift step 3 exists to prevent.
 
+### ⚠️ Rebuilding the app image is an unconditional precondition of handing a live leg to the owner
+
+**Before asking the owner to open a browser against the running stack — at close-out or at any other
+point — rebuild the app image. Always. Not "if it looks stale".**
+
+```
+cd docker && docker compose -f compose.yml -f compose.dev.yml build app \
+                          && docker compose -f compose.yml -f compose.dev.yml up -d app
+```
+
+⚠️ **`build` and `up -d app` ONLY. Never `down -v`** — on this stack `-v` also destroys the
+commissioned Google Drive refresh tokens and the Owner account, neither reproducible from
+`docker/.env`. The command is already in `docker/README.md`; what was missing was the trigger.
+
+**Why unconditional, and not the timestamp comparison it is tempting to write instead.** The obvious
+cheaper check is *"is the image older than `HEAD`?"* — and it was the first thing proposed. It is
+wrong for two reasons, both worth keeping:
+
+- **It is a heuristic, not a fact.** An image created *after* `HEAD` was not necessarily built *from*
+  `HEAD`. That holds for one developer on one branch and stops holding quietly the moment it does
+  not — a rebuild from a dirty tree, a branch switch, a second machine. A check that is right until
+  it silently is not is worse than no check, because it is trusted.
+- **This occurrence produced a false FAILURE, and the same condition produces a false PASS.** A
+  stale image made a working route look missing, which is loud and gets investigated. Reverse it: a
+  new commit breaks something the old image did correctly, the browser leg passes against the old
+  image, and **nothing ever prompts a second look at a pass.** That is the direction that ships.
+
+**One command, no judgement call, no output to interpret.** That is the whole argument for making it
+unconditional rather than conditional.
+
+### Named anti-pattern, sibling: the thing that answered was not the thing under test
+
+**⚠️ Found on 2026-08-03, the day after Q1 was committed.** The browser leg on Q1's new role
+description route answered `404 "No static resource api/roles/3/description"` — Spring's message when
+no handler matches and the request falls through to static resource resolution.
+
+**Nothing was wrong with the code.** Registration, generated client and committed spec all agreed on
+`PATCH /api/roles/{id}/description`; the only thing that disagreed was the **deployed artefact**. The
+app image had been built 26 hours before the commit, and reading the compiled `RoleController` out of
+that jar showed eight route templates and no description route — plus `core/web/Required`, the
+*pre-Q1* placement, and `InventoryController.writeOff` with no `createWriteOff`. It contained none of
+Q1.
+
+**The structural cause, which is the part worth recording — it is not "somebody forgot".** The app
+image serves **no frontend at all** (zero static assets in the jar). The browser loads from the
+**Vite dev server**, which proxies `/api` through Caddy to the app container. So the two halves have
+categorically different staleness behaviour: **the frontend recompiles from disk on every save; the
+backend changes only when somebody rebuilds an image.** **A current screen calling a stale API is the
+DEFAULT state of this stack after any backend commit**, not an unlucky one.
+
+**This is a sibling of *a verification that answers its own request*, not a new species.** That one is
+a check whose subject was **stubbed**; this is a check whose subject was **a different build**. Both
+reduce to the same sentence — **the thing that answered was not the thing under test** — and in both
+cases every individual observation was true. What neither makes visible on its own is the *identity*
+of the thing answering.
+
+⚠️ **An anonymous probe cannot tell the two apart on this surface.** `PATCH` to the real route and to
+`/api/roles/3/definitely-not-a-route` **both answer 401**: Spring Security refuses before dispatch.
+That is the same fact already recorded about `/v3/api-docs`, and it means "just curl it" is not a
+substitute for the rebuild.
+
 Do all six before ending the session — don't ask for confirmation on whether to do them, only flag anything unusual you find while doing so (e.g., uncommitted changes you didn't expect, tests that were failing when you started).
 
 **On the roadmap (step 3).** That file's `Actual` columns are worth something only because every figure in them was measured. The method is documented at the bottom of the file itself and must be followed rather than reinvented: session transcripts in `~/.claude/projects/`, windows bounded by each step's last commit, active time summed from inter-event gaps each capped at 5 minutes, tokens read from the `usage` field on assistant messages.

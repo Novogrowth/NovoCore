@@ -94,7 +94,11 @@ the summary.
   design conversation that existed only in chat until then, while three documents still said F5. It is
   the worked example for the `CLAUDE.md` rule that a design decision gets the same close-out discipline
   as a build step.
-- ✅ **Q1 is DONE — 2026-08-03. Four items: 4+6, 5, 1, 7.** Items 2 and 9 were done and item 3 closed as
+- ✅ **Q1 is BUILT AND LIVE-VERIFIED — 2026-08-03. Four items: 4+6, 5, 1, 7.** ⚠️ **Not "fully
+  closed":** item 7's regression is open and 8a closes it. **The owner's browser leg passed** on all
+  four checks — the description saved on role 3, cleared to its placeholder, role 1 (OWNER) showed the
+  editor disabled with the system-role reason exactly as Name does, and product creation still worked
+  (item 7's boxed `serialTracked`, proved from a form rather than from a test). Items 2 and 9 were done and item 3 closed as
   stale *before* Q1 was a step, and **the credit-note rename belongs to U1, not Q1**. What landed:
   `Required` and the exception moved from `core.web` into `core-api` as **`InvalidInputException`**; the
   two retail-customer rules enforced where a caller reaches them; `NewUser`/`NewRole` guarded with
@@ -116,11 +120,32 @@ the summary.
   2026-08-03.** The server still refuses; `tsc` no longer does. **No screen is built inside that
   window** — F5–F8 are the steps that would send these bodies and they come after 8b. Pinned in both
   directions by `spec-hygiene.test.ts`.
-- 📌 **Two new backend items were raised by Q1**, replacing the queue's original rows. **Q1-a:** spec
-  *schema* names collide exactly as `operationId` did — seven distinct `NameRequest` records resolve to
-  one schema, harmless only because they are identical today, and nothing checks it. **Q1-b:**
-  `VatExemptionReasonService.create` has no production caller (the seed is Flyway SQL; the route is
-  GET-only); **not deleted** — decide it with R1, which settles the seed-only pattern.
+- 📌 **Two new backend items were raised by Q1, and neither is a free-floating queue row.**
+  **Q1-a** — spec *schema* names collide exactly as `operationId` did, seven distinct `NameRequest`
+  records resolving to one schema, harmless only because they are identical today — is **folded into
+  8a**, because schema naming is a generator concern and 8a already regenerates the spec; its client
+  fallout lands in 8b. **Q1-b** — `VatExemptionReasonService.create` has no production caller (the
+  seed is Flyway SQL; the route is GET-only) — **stays open, to decide with R1**, which settles the
+  seed-only pattern.
+- ⚠️ **Rebuilding the app image is now an UNCONDITIONAL precondition of handing a live leg to the
+  owner** (`CLAUDE.md`, close-out). Q1's first browser attempt answered
+  `404 "No static resource api/roles/3/description"` against an image built **26 hours before the
+  commit** — registration, generated client and spec all agreed; only the deployed artefact did not.
+  **The cause is structural, not forgetfulness:** the app image serves **no frontend**, the browser
+  loads from the Vite dev server and proxies `/api` through Caddy to the container, so **the frontend
+  recompiles on every save and the backend only when an image is rebuilt.** A current screen calling a
+  stale API is this stack's **default** state after any backend commit. The rule is *rebuild*, not
+  *compare timestamps* — the comparison is a heuristic, and the same condition that produced this
+  false failure produces a **false pass** nobody re-examines. ⚠️ `build` + `up -d app`, **never
+  `down -v`**.
+- 📌 **The build-SHA badge is attached to F10**, with a named trigger rather than "if it recurs":
+  record the git SHA into the jar, expose it, and badge a frontend/backend mismatch in the app shell.
+  **Step 43 needs it regardless** — once anyone else runs NovoCore, *"which version is that customer
+  on?"* is a support precondition.
+- ⚖️ **Recorded, not acted on: a dedicated non-owner test account** with credentials in a gitignored
+  local env file, so live legs do not need the owner. Trade-off: a working credential on disk, under a
+  hard rule that it exists only on a dev stack. **Not needed for 8a** (no browser leg); **8b is the
+  first step that might want one.** Owner's call.
 - **`U` is a step-ID prefix**: *a session that changes documentation and governance and produces no
   production code.* **U1** is the roadmap unification and documentation reconciliation of 2026-08-02;
   **U2** (⚪ unscheduled) is the `PROGRESS.md` → `PROGRESS.md` + `HISTORY.md` split. Future

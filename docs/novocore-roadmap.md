@@ -90,8 +90,8 @@ frontend work that must land before any adapter is built.
 |   S2 | Column sorting, 5 screens               |     — |    0.7 |  216k | 🟢 Done         |
 |   F4 | Settings, VAT classes, UoM              |     — |    1.0 |  605k | 🟢 Done         |
 |   U1 | Roadmap unification + doc reconcile ᵘ¹  |     — |    1.0 |  253k | 🟢 Done         |
-|   Q1 | Backend queue: 4+6, 5, 1, 7 ᵘ           |     — |    1.5 |  208k | 🟢 Done         |
-|   8a | `@Mandatory` + generator + ArchUnit ᵈᵉᶜ |     — |        |       | 🟡 **Current**  |
+|   Q1 | Backend queue: 4+6, 5, 1, 7 ᵘ           |     — |    1.5 |  208k | 🟢 Done ⚠️ᶜᵒⁿᵈ  |
+|   8a | `@Mandatory`, schema names, ArchUnit ᵈᵉᶜ |     — |        |       | 🟡 **Current**  |
 |   8b | Client regeneration, fixture reconcile ᵈᵉᶜ |  — |        |       | 🔴 Not started  |
 |   R1 | Document reference data (backend) ʳ     |     — |        |       | 🔴 Not started  |
 |   R2 | Document reference data (screens) ʳ²    |     — |        |       | 🔴 Not started  |
@@ -108,7 +108,7 @@ frontend work that must land before any adapter is built.
 |   F7 | Receipts, Payments, Transfers           |     — |        |       | 🔴 Not started  |
 |   F8 | Freight, Journal, Write-offs            |     — |        |       | 🔴 Not started  |
 |   F9 | Operational read views                  |     — |        |       | 🔴 Not started  |
-|  F10 | Design pass, brand look                 |     — |        |       | 🔴 Not started  |
+|  F10 | Design pass, brand look + version badge ᵇᵃᵈᵍᵉ | — |      |       | 🔴 Not started  |
 |  F11 | Whole-system UI regression              |     — |        |       | 🔴 Not started  |
 |      | **Subtotal, F-rows (step 16 estimate)** |**8.0**|        |       |                |
 |      | **Subtotal, Phase 2**                   |  **—**|        |       |                |
@@ -250,6 +250,14 @@ Nothing here is solved. Each is recorded so its absence reads as a decision rath
   exactly that — is a decision affecting **every** list screen, not a Products fix.
 - **Reserve a company dimension?** Not building multi-company — deciding whether to reserve the column.
   A second legal entity is the one change that turns this system into a rewrite.
+- ⚖️ **A dedicated non-owner test account, so a live browser leg does not need the owner.** Raised
+  2026-08-03 and **recorded without being acted on.** Credentials would live in a **gitignored local
+  env file**, never in the repository. **The trade-off, stated rather than buried:** a working
+  credential on disk, against a hard rule that it exists **only** on a development stack and never
+  anywhere else — and the moment that rule is bent it is a real account on a real system. **Not
+  needed for 8a**, which has no browser leg at all. ⚠️ **8b is the first step that might want one**:
+  it regenerates the client and reconciles fixtures across the whole suite, which is exactly the
+  shape of change whose breakage shows up in a browser rather than in a test. Owner's call.
 
 **Awaiting the external accountant**
 
@@ -268,6 +276,13 @@ Nothing here is solved. Each is recorded so its absence reads as a decision rath
   business use; internal consumption may or may not be. One flag per type may be insufficient.
 - Whether the AADE digital delivery-note regime applies, and whether Go already issues the legal
   dispatch note.
+- **Q1-b — does `VatExemptionReasonService.create` keep a reason to exist?** ⚠️ **Decide with R1, not
+  before.** Confirmed 2026-08-03: it has **no production caller** — seeding is Flyway SQL (`V5`, `V8`)
+  and `/api/vat-exemption-reasons` is GET-only; its only callers are 12 sites in
+  `VatExemptionReasonIT`. **Deliberately not deleted**: exemption reasons are the *seed-only* model,
+  and two AADE codes (24, 28) plus the OSS and IOSS myDATA codes are still open with the accountant,
+  so a create path may yet be wanted. R1 is the step that settles the seed-only pattern for document
+  types, and this is the same question one entity earlier.
 
 **Product and vendor**
 
@@ -437,6 +452,12 @@ reconciliation rather than a build: most of the cost was reading `PROGRESS.md`, 
 primer and a README repeatedly, plus a full `mvn clean verify` and a live database session, to produce
 comparatively little text. Recorded without adjustment; it is data about what this kind of step costs.
 
+**ᶜᵒⁿᵈ Q1 is done and NOT fully closed, and the distinction is deliberate.** All four items landed
+and **the owner's live browser leg passed on 2026-08-03** (see ᵘ). What remains open is **item 7's
+regression** — boxing the booleans removed their `required` declaration from the spec — and **8a is
+what closes it.** Q1 must not read as fully closed while that is outstanding, which is why the status
+carries a marker rather than a plain 🟢.
+
 **ᵘ Q1 — the backend follow-up queue. 🟢 Done, 2026-08-03.** Of nine numbered items, two were done
 (2 and 9) and one closed as stale (3) before Q1 existed as a step. **Item 8 left the queue and became
 its own step** (see ᵈᵉᶜ), so **Q1 is four items: 4+6, 5, 1, 7 — all four landed.**
@@ -456,8 +477,24 @@ its own step** (see ᵈᵉᶜ), so **Q1 is four items: 4+6, 5, 1, 7 — all four
   (`NewVatExemptionReason.inputVatDeductible`). ⚠️ **It carries a known, time-boxed regression that
   8a closes** — see ᵈᵉᶜ.
 
+✅ **The live browser leg passed on 2026-08-03**, run personally by the owner after the app image
+was rebuilt (see ᵗʰᶦⁿ). Four checks: the description **saved** on role 3; **cleared** to its unset
+placeholder; role 1 (OWNER) showed the Description editor **disabled with the system-role reason**,
+exactly as Name does; and **product creation still worked**, which is item 7's boxed `serialTracked`
+proved from a form rather than from a test.
+
 ⚠️ **The credit-note rename is not in this queue.** It belongs to **U1** — see ᵘ¹ for why the
 attribution was corrected.
+
+**ᵗʰᶦⁿ The app image serves no frontend, and that is why a live leg needs a rebuild.** Confirmed
+2026-08-03: the deployed jar contains **zero** static assets. The browser loads from the **Vite dev
+server**, which proxies `/api` through Caddy to the app container — so the frontend recompiles from
+disk on every save and the backend changes only when an image is rebuilt. Q1's first browser attempt
+answered `404 "No static resource api/roles/3/description"` against an image built **26 hours before
+the commit**, whose compiled `RoleController` carried eight route templates and not the ninth.
+**Rebuilding the app image is now an unconditional precondition of handing a live leg to the owner**
+(`CLAUDE.md`), and it is `build` + `up -d app` — ⚠️ **never `down -v`**, which also destroys the
+commissioned Drive tokens and the Owner account.
 
 **ᵈᵉᶜ Step 8 — declare every compact-constructor requirement.** Lifted out of Q1 on 2026-08-03 and
 given its own step **after Q1, before R1**, replacing the open decision *"should item 8 be promoted
@@ -469,8 +506,18 @@ within Q1?"* The answer was neither promote nor leave last.
   must carry the annotation, and an annotated one must be guarded. ⚠️ **The cross-check is not
   optional.** Without it the annotation is ~289 hand-applied assertions that nothing verifies, which
   is *a fact established by reading, then built upon* at scale.
+  - ➕ **Q1-a is folded in here, not scheduled separately.** `OpenApiSchema` registers a component
+    schema under the record's **simple name**, so seven distinct `NameRequest` records across seven
+    controllers resolve to **one** schema — accidentally correct today because they are identical,
+    and silently wrong the day one gains a field. It belongs to 8a because **schema naming is a
+    generator concern and 8a already regenerates the spec**; doing it as its own step pays that
+    regeneration twice. The generator should refuse a collision the way it now refuses a duplicate
+    `operationId`. ⚠️ Meanwhile **a new request record must not add an eighth** —
+    `RoleController.RoleDescriptionRequest` is named apart for exactly this reason.
 - **8b** — client regeneration and fixture reconciliation. This is the larger half by volume and is
-  where item 2's primitive sweep found 19 drifted fixtures from a much smaller change.
+  where item 2's primitive sweep found 19 drifted fixtures from a much smaller change. **Q1-a's
+  fallout lands here too**: renaming schemas renames generated TypeScript types, so the two arrive in
+  the same regeneration rather than in two.
 
 ⚠️ **8a is now load-bearing for a regression Q1 shipped deliberately, measured rather than reasoned.**
 Boxing the booleans (item 7) improved the *message* — `"serialTracked" is required and was not
@@ -644,6 +691,22 @@ on the original 2.0 h.
 manual's own content** and says when a case isn't covered. The 1.5 h covers the mechanism only —
 **writing the manual's content is not a development-hours item.** Placed after the modules most likely
 to generate real procedures worth documenting.
+
+**ᵇᵃᵈᵍᵉ F10 — the build-SHA badge, with a named trigger rather than "if it recurs".** ⚠️ **It will
+recur; that is what the 2026-08-03 finding establishes** — a current screen calling a stale API is
+this stack's default state after any backend commit, because the frontend is served by a dev server
+that recompiles from disk and the backend by an image that changes only when rebuilt. The unconditional
+rebuild rule in `CLAUDE.md` removes the *cause*; this makes the *condition* visible when the rule is
+somehow not followed.
+
+The shape: record the git SHA into the jar (`spring-boot:build-info` plus the commit id), expose it on
+an authenticated route, and have the app shell show a badge when the frontend's SHA and the backend's
+disagree. **Attached to F10 because F10 touches the app shell anyway**, so the placement costs almost
+nothing there and would be a whole detour anywhere else.
+
+⚠️ **Step 43 needs it regardless of F10.** Once anyone other than this business runs NovoCore,
+*"which version is that customer on?"* stops being a convenience and becomes a support precondition —
+so if F10 slips past 43 for any reason, this moves rather than waits.
 
 **Steps 36 and 37 have not had a Claude Code pass against the real codebase** the way the rest of this
 file has. Treat their estimates as rougher than the others.

@@ -72,6 +72,10 @@ its own numbered step — **8a** (annotation, generator, bidirectional ArchUnit 
 closed the standing open question *"should item 8 be promoted within Q1?"*, and the answer was neither
 promote nor leave last. Reasons in the roadmap under ᵈᵉᶜ.
 
+✅ **Q1's live browser leg passed on 2026-08-03**, run by the owner **after the app image was
+rebuilt** — the first attempt hit a stale container, which is recorded below as a process finding and
+is explicitly not a defect.
+
 🎯 **8a is not optional housekeeping now: Q1 shipped a deliberate, measured regression that 8a closes.**
 Item 7 boxed the boolean primitives, which improved the refusal message and removed the `required`
 declaration from the spec (78 → 75 schemas declaring `required`, measured 2026-08-03). The window
@@ -92,7 +96,7 @@ what they left behind.
 | **Substring search (S1)** | ✅ **Complete and live-verified.** Nothing outstanding |
 | **Sorting (S2)** | ✅ **Complete and live-verified.** Client-side, on all five list screens; the browser leg was run by the owner on 2026-08-01. Nothing outstanding |
 | **F4 — Settings** | ✅ **COMPLETE.** All 22 sub-parts have verdicts, none is "still open". Contract verified by the real backend; **browser leg run personally by the owner on 2026-08-01**. Nothing outstanding |
-| **Q1 — the backend follow-up queue** | ✅ **COMPLETE, 2026-08-03.** **Four items — 4+6, 5, 1, 7 — all four landed with verdicts.** Item 8 left the queue and became its own step (see below). The queue is now **empty of open numbered rows**; two new items were raised by the work and are listed under *What Q1 raised*. Backend 1,377 tests green, frontend 308 green |
+| **Q1 — the backend follow-up queue** | ✅ **BUILT AND LIVE-VERIFIED, 2026-08-03** — four items, all with verdicts, and the owner's browser leg passed on all four checks. ⚠️ **NOT fully closed:** item 7's regression is open and **8a closes it**. Item 8 left the queue and became its own step. Q1-a folded into 8a; Q1-b open, to decide with R1. Backend 1,377 tests green, frontend 308 green |
 | **8a / 8b — declare every compact-constructor requirement** | 🟡 **8a IS NEXT.** Lifted out of Q1 on 2026-08-03, placed **before R1** so R1's eight tables' worth of new records are written with the enforcement in place rather than retrofitted. ⚠️ **8a also closes a regression Q1 shipped deliberately** — see item 7's verdict |
 | **R1 — document reference data** | 🔴 After 8a/8b, and **before F5**, because F5's document model depends on it. Governed by `CLAUDE.md`'s *document model* section and **ADR 0016** |
 | **F5 — Sales Invoice + Credit Note** | 🔴 **No longer next.** ⚠️ It decides the create/preview/commit pattern F6–F8 all reuse, so it is worth disproportionate scrutiny — but ⚠️ **see the open decision in the roadmap**: since documents arrive already issued, F5 before step 18 is a data-entry screen for documents created elsewhere, and much of it disappears when the Go adapter lands |
@@ -136,8 +140,9 @@ option 1 and should not be read as one.
 
 ## Q1 — the backend follow-up queue — 2026-08-03. Reconciled against the approved scope
 
-**Approved as decisions A–I plus a four-item work order. Every part below has a verdict; none is
-"still open".** Backend `mvn clean verify` exit 0, **1,377 tests, 0 failures, 1 skipped**
+**Approved as decisions A–I plus a four-item work order. Every part below has a verdict.**
+⚠️ **One thing IS still open and is meant to be: item 7's regression, which 8a closes.** Q1 is
+*built and live-verified*, not *fully closed*, and the two are recorded separately on purpose. Backend `mvn clean verify` exit 0, **1,377 tests, 0 failures, 1 skipped**
 (`LiveSeedTest`, as always). Frontend **308 tests across 31 files**, lint, build and knip green.
 **176 API operations** (was 175). All figures measured 2026-08-03.
 
@@ -194,9 +199,18 @@ went **78 → 75 (2026-08-03)**.
 primitive*. Boxing it is what removes that property. **Items 7 and 8 were coupled and the queue
 listed them as independent.**
 
-### 📋 What Q1 raised — two new items for the backend queue
+### 📋 What Q1 raised — two new items, and where each went (settled 2026-08-03)
 
-The queue is empty of its original numbered rows. These replace them.
+The queue is empty of its original numbered rows. **Neither of these becomes a free-floating queue
+row**, because a queue of two items that both belong to scheduled steps is a third record of the same
+work — which is the drift `PROGRESS.md` has already paid for twice.
+
+| # | Where it went |
+|---|---|
+| **Q1-a** | ➕ **Folded into 8a.** Schema naming is a **generator** concern and **8a already regenerates the spec**, so scheduling it separately pays that regeneration twice. The generator should refuse a schema-name collision the way it now refuses a duplicate `operationId`. **Q1-a's client fallout lands in 8b** — renaming schemas renames generated TypeScript types, so it arrives in the same regeneration as the `@Mandatory` fixture work rather than in a second one |
+| **Q1-b** | ⚖️ **Stays open, to decide with R1**, and is recorded as an open decision in the roadmap rather than as a task. R1 settles the seed-only pattern for document types; this is the same question one entity earlier |
+
+**Both as originally raised:**
 
 | # | Item | Raised |
 |---|---|---|
@@ -228,6 +242,115 @@ of those 269 are on **response** records and are correct there — they assert *
 which is our own invariant rather than a caller's obligation. They declare the same thing in a schema
 and mean something different in the code, which is exactly the judgement 8a cannot automate away.
 
+### ✅ The live browser leg — passed 2026-08-03, run by the owner
+
+**After the app image was rebuilt.** The first attempt failed against a stale container; that is the
+process finding below, not a defect. Four checks, all passed:
+
+| # | Check | Result |
+|---|---|---|
+| 1 | Edit the description on role 3 and save | ✅ **Saved** — `200`, the new text rendered |
+| 2 | Clear it to empty and save | ✅ **Cleared** to its unset placeholder, which is the blank-clears-it rule from the service |
+| 3 | Role 1 (OWNER), a system role | ✅ Description editor **disabled with the system-role reason**, exactly as Name is — `editableRole` reaching the screen |
+| 4 | Create a product | ✅ **Still works** — item 7's boxed `serialTracked` proved from a form rather than from a test |
+
+⚠️ **Check 4 is the one worth keeping in view.** `serialTracked` is the field whose primitive form
+broke product creation for every user, and item 7 changed its type. A contract test proves the server
+accepts the body; only the form proves the form still sends it.
+
+### ⚠️ Q1 is BUILT AND LIVE-VERIFIED, and deliberately not "closed"
+
+**Item 7's regression is open, and 8a is what closes it.** Every document states Q1 this way rather
+than as a plain ✅, because a step that reads as finished is a step nobody returns to — and there is
+something to return to here. See *Item 7's verdict in full* above for the measured detail
+(78 → 75 schemas declaring `required`, 2026-08-03).
+
+### 🔍 Process finding — a live leg was run against a container that did not contain the code
+
+⚠️ **This is a PROCESS finding and explicitly NOT a defect. Nothing in the code was wrong.** It is
+recorded because the workflow made it invisible, and because it will happen again unless the workflow
+changes.
+
+**What was observed.** The browser answered `404 "No static resource api/roles/3/description"` —
+Spring's message when no handler matches and the request falls through to static resource resolution.
+Not a validation failure and not a permission failure: *this path does not exist*.
+
+**The evidence, gathered rather than assumed:**
+
+| What | Finding |
+|---|---|
+| App image build time | **2026-08-02 07:50:40 UTC**. `/app/novocore.jar` dated the same |
+| Q1's commit `2bc19ab` | **2026-08-03 12:57:56 +0300** — the image predated it by 26 hours, and predated `f143215` too, so the container was **two commits behind** |
+| The old jar's compiled `RoleController` | **Eight** route templates, **no** `/api/roles/{id}/description`. Also `core/web/Required` and `core/web/InvalidRequestException` — the **pre-Q1** placement — and `InventoryController.writeOff` with no `createWriteOff`. **It contained none of Q1** |
+| Handler enumeration at `2bc19ab` | A booted Spring context, `RequestMappingHandlerMapping` enumerated rather than the source read: **176 `/api/**` handlers**, including `PATCH /api/roles/{id}/description → RoleController.describe` |
+| The generated client | `role.ts:368` — `{url: `/api/roles/${id}/description`, method: 'PATCH'}` |
+| The committed spec | `PATCH /api/roles/{id}/description`, `operationId` `RoleController_describe`, `USERS_AND_ROLES`/`FULL` |
+
+**The reconciliation: registration, client and spec all agreed. The lone disagreement was the
+deployed artefact.** Not a method mismatch, not a path mismatch, not a spec-versus-implementation
+gap.
+
+**After a clean rebuild** (`build` + `up -d app`, ⚠️ **never `down -v`**): the startup line reads
+**"176 handlers under /api/**"** where the old build would have said 175; the new jar's
+`RoleController` carries **nine** templates; `core/web/Required` is **gone** and
+`core.api.shared.Required` / `InvalidInputException` are **present**; `createWriteOff` exists.
+
+#### The structural cause — and it is not "somebody forgot"
+
+**The app image serves no frontend at all.** Zero static assets in the jar; Caddy proxies everything
+to `app:8080`. The browser loads from the **Vite dev server**, which proxies `/api` through Caddy to
+the app container. So the two halves have categorically different staleness behaviour:
+
+> **The frontend recompiles from disk on every save. The backend changes only when somebody rebuilds
+> an image. A current screen calling a stale API is the DEFAULT state of this stack after any backend
+> commit** — not an unlucky one.
+
+**The framing, now in `CLAUDE.md`: it is a sibling of *a verification that answers its own request*,
+not a new species.** That one is a check whose subject was **stubbed**; this is a check whose subject
+was **a different build**. Both reduce to one sentence — **the thing that answered was not the thing
+under test** — and in both cases every individual observation was true. Neither makes the *identity*
+of the answering thing visible on its own.
+
+⚠️ **An anonymous probe cannot separate them here.** `PATCH` to the real route and to
+`/api/roles/3/definitely-not-a-route` **both answer 401**, because Spring Security refuses before
+dispatch — the same fact already recorded about `/v3/api-docs`. So "just curl it" is not a substitute.
+
+#### The rule: REBUILD, unconditionally. Not a timestamp check
+
+⚠️ **This overrides the recommendation made when the finding was reported**, which was a one-line
+comparison of the image's creation time against `HEAD`. Two reasons, both recorded in `CLAUDE.md`:
+
+- **The comparison is a heuristic, not a fact.** An image created *after* `HEAD` was not necessarily
+  built *from* `HEAD`. It holds for one developer on one branch and **stops holding quietly** when
+  that changes — a rebuild from a dirty tree, a branch switch, a second machine. A check that is
+  right until it silently is not is worse than none, because it is trusted.
+- **This occurrence produced a false FAILURE; the same condition produces a false PASS.** A stale
+  image made a working route look missing — loud, and investigated within a day. Reverse it: a new
+  commit breaks something the old image did correctly, the browser leg passes against the old image,
+  and **nothing ever prompts a second look at a pass.** That is the direction that ships.
+
+**One command, already in `docker/README.md`, no judgement call and no output to interpret:**
+
+```
+cd docker && docker compose -f compose.yml -f compose.dev.yml build app \
+                          && docker compose -f compose.yml -f compose.dev.yml up -d app
+```
+
+⚠️ **`build` and `up -d app` ONLY — never `down -v`**, which also destroys the commissioned Google
+Drive refresh tokens and the Owner account, neither reproducible from `docker/.env`.
+
+#### 📌 The build-SHA badge — a future item with a NAMED trigger
+
+⚠️ **Not "if it recurs". It will recur** — that is exactly what the structural cause establishes.
+The unconditional rebuild removes the *cause*; the badge makes the *condition* visible when the rule
+is somehow not followed.
+
+**Attached to F10**, which touches the app shell anyway: record the git SHA into the jar
+(`spring-boot:build-info` plus the commit id), expose it on an authenticated route, and show a badge
+when the frontend's SHA and the backend's disagree. ⚠️ **Step 43 needs it regardless of F10** — once
+anyone other than this business runs NovoCore, *"which version is that customer on?"* stops being a
+convenience and becomes a support precondition. If F10 slips past 43, this moves rather than waits.
+
 ### 📋 What was proven against a real server rather than read
 
 Per the newly named practice. A throwaway `Q1ProbeIT` booted the real application over real HTTP
@@ -253,8 +376,18 @@ against a real PostgreSQL, made **26 requests**, printed every status and body, 
   that already carried a VAT number. They use a customer the test makes itself now. **A case that can
   pass for a reason it is not about is worse than no case.**
 
-⚠️ **The live browser leg is the owner's, as always** — the Owner password is deliberately not in this
-repository. What is closed here is the *contract* question, on every route Q1 touched.
+✅ **The live browser leg was the owner's, as always, and it passed on 2026-08-03** — see *The live
+browser leg* above for the four checks. The Owner password is deliberately not in this repository.
+⚠️ **The first attempt ran against a stale container**, which is the process finding above.
+
+📌 **Recorded, not acted on: a dedicated non-owner test account** with credentials in a **gitignored
+local env file**, so a live leg does not need the owner. **The trade-off is real and is why this is a
+decision rather than a task:** a working credential on disk, against a hard rule that it exists
+**only** on a development stack — and the moment that rule is bent it is a real account on a real
+system. **Not needed for 8a**, which has no browser leg. ⚠️ **8b is the first step that might want
+one**: it regenerates the client and reconciles fixtures across the whole suite, which is exactly the
+shape of change whose breakage shows up in a browser rather than in a test. **Owner's call**, recorded
+in the roadmap's open decisions.
 
 ## U1 — roadmap unification & documentation reconciliation — 2026-08-02. Reconciled against the approved scope
 
