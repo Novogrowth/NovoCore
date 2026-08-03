@@ -551,6 +551,198 @@ was waiting for.**
 from annex 8.2.** There is no myDATA code on a VAT class today in either direction. Recorded because
 the two are easy to conflate and nothing in the schema says otherwise.
 
+## ▶ R1 — scope approved 2026-08-03. **Checklist written at approval; nothing built yet**
+
+**Approved as: Part 1 (land the findings, ✅ done, commit `e8ee709`), Part 2 (six decisions), Part 3
+(eight scope items plus three artefact additions and the codification contract).** This checklist is
+written **now, at the moment of approval**, per `CLAUDE.md`'s *an approved proposal is a checklist,
+not a paragraph* — not after the build, when a summary of what was built cannot see what was not.
+
+⚠️ **Every line below is `⬜ NOT STARTED` except where marked.** That is the honest state.
+
+### 📋 Part 2 — the six decisions, recorded
+
+| # | Decision | Verdict |
+|---|---|---|
+| A | **Fees is CUT from R1**, unscheduled, not forgotten | ✅ **Recorded** — see *Fees, and why it was cut* below |
+| B | **Two codification families**, contract for one of them | ⬜ **Not started** — see the family split below |
+| C | **Keep AADE's original filenames** | ✅ **Done**, commit `e8ee709`. README rewritten; *"never edited"* now extends to names |
+| D | `SettlementMethod` **stays an enum**; `company.branch-number` **not** `mydata.*` | ✅ **Recorded**; the build half is scope D and F |
+| E | **Stock behaviour is driven by document type** — the flags are READ, not merely recorded | ⬜ **Not started** — see *the withdrawn instruction* below |
+| F | **Three artefact additions** — exemption codes 24/28, provenance, unit-of-measure codes | ⬜ **Not started** — F1, F2, F3 below |
+
+### ⚠️ Decision E — the withdrawn instruction, recorded so nobody reinstates it
+
+**An earlier instruction said to seed `affectsStock` and `transfersStock` as classification only and
+leave them unread. It is WITHDRAWN.** The owner's own correction, recorded as such rather than as a
+defect anyone found.
+
+**The argument for leaving them unread** was that wiring them would leave stock incomplete for
+Τιμολόγια until dispatch documents arrive at 18b. **It does not survive checking the sequence:** no
+real data exists yet (ten dev invoices, all `TEST-`), real invoices arrive at the **step-24
+migration**, and **18b lands well before it.** So the gap is dev-only and temporary.
+
+**Against that**, ⚠️ **a flag seeded in the database that nothing reads is a recorded fact
+contradicting the code** — the failure class this project has spent several sessions catching, and
+the same shape as *a fact established by reading, then built upon*.
+
+⭐ **The symmetry that confirms the design: the PURCHASE side already works this way.** Stock arrives
+on the **Goods Receipt**, not on the purchase invoice — document and stock movement are already
+separate entities, reconciled by GR/IR. **The sales side has no equivalent, and the dispatch document
+at 18b is exactly that missing half.** Document-type-driven stock is not a new idea being introduced
+here; it is the sales side catching up with the purchase side.
+
+### 📋 Decision B — TWO codification families, not one. The distinction is who authors a row
+
+⚠️ **An earlier framing collapsed these. They are different things and only one gets the contract.**
+
+| | **Statutory codifications** | **Business reference lists** |
+|---|---|---|
+| Who authors a row | **AADE, and nobody else** | **The business** |
+| Members | `VatExemptionReason`, sales document types, purchase document types | `ChargeType` |
+| Row authorship | **Flyway alone** | The application |
+| Contract in `core-api` | `activate`, `deactivate`, `describe` — **no `create`** | *(none — an ordinary CRUD service)* |
+| Enforcement | ⬜ **An architecture rule.** The absence of `create` must be **assertable, not conventional** | — |
+
+⚠️ **`ChargeType`'s six write methods are unreachable because its ROUTES WERE NEVER BUILT, not
+because it is seed-only.** Adding "Gift wrapping" is a business decision. **Freezing it under the
+statutory contract would be wrong**, and the fact that it *looks* like `VatExemptionReason` from the
+outside is exactly the trap this split exists to avoid. 📌 **Recorded as needing write routes,
+unscheduled.**
+
+✅ **This answers Q1-b as a consequence rather than as a judgement call:**
+**`VatExemptionReasonService.create` is REMOVED**, with its tests, because the contract says Flyway
+owns row authorship. If AADE adds a code, that is a migration, not an API call.
+
+⚠️ **The counter-argument is recorded and was accepted as the reason for defining a contract rather
+than copying a shape:** three copies of an unexercised decision is not a pattern. Deleting `create`
+without stating the contract would have left the next entity to rediscover the argument.
+
+### ⭐ Annex 8.1's group map — read from RASTERISED pages, and it cross-checks exactly
+
+⚠️ **Established 2026-08-03 by rendering pages 88–92 at 170 dpi with PyMuPDF and reading them as
+images.** Not from `pdftotext` — that extractor scrambles this table, which is why it is now a named
+anti-pattern in `CLAUDE.md`. **Every group heading below was read visually.**
+
+| Annex 8.1 group | Meaning | Codes | Count |
+|---|---|---|---:|
+| **Αντικριζόμενα Παραστατικά Εκδότη** ημεδαπής/αλλοδαπής | matched, **we issue** | `1.1–1.6`, `2.1–2.4`, `3.1`, `3.2`, `4`, `5.1`, `5.2`, `6.1`, `6.2`, `7.1`, `8.1`, `8.2`, `8.4`, `8.5`, `8.6`, `9.1–9.3`, `10.1`, `10.2` | 28 |
+| **Μη Αντικριζόμενα Παραστατικά Εκδότη** ημεδαπής/αλλοδαπής → Παραστατικά Λιανικής | unmatched, **we issue** (retail) | `11.1–11.5`, `12` | 6 |
+| **Μη Αντικριζόμενα Παραστατικά Λήπτη** ημεδαπής/αλλοδαπής → Λήψη Παραστατικών Λιανικής | unmatched, **we receive** | `13.1–13.4`, `13.30`, `13.31` | 6 |
+| **Αντικριζόμενα Παραστατικά Λήπτη** ημεδαπής/αλλοδαπής | matched, **we receive** | `14.1–14.5`, `14.30`, `14.31`, `15.1`, `16.1` | 9 |
+| **Εγγραφές Τακτοποίησης Εσόδων-Εξόδων** → Εγγραφές Οντότητας | **the entity's own adjusting entries** | `17.1–17.6` | 6 |
+
+✅ **28 + 6 + 6 + 9 + 6 = 55, which is exactly the XSD `InvoiceType` enumeration size.** Every code in
+the machine-readable list is accounted for by a group, none is left over and none was invented. **That
+equality is the cross-check**, and it is why the map can be trusted rather than merely believed.
+
+**The split is decided by Εκδότη (issuer) versus Λήπτη (recipient):**
+
+- **SALES — 34 codes:** `1.x`, `2.x`, `3.x`, `4`, `5.x`, `6.x`, `7.1`, `8.x`, `9.x`, `10.x`, `11.x`, `12`
+- **PURCHASE — 15 codes:** `13.x`, `14.x`, `15.1`, `16.1`
+
+⚠️ **AND A THIRD GROUP THAT FITS NEITHER TABLE — a finding, not an ambiguity.** `17.1` Μισθοδοσία,
+`17.2` Αποσβέσεις and `17.3–17.6` (adjusting entries, accounting and tax basis) are **the entity's own
+journal entries**, not documents issued to or received from a counterparty. **Scope A says two tables;
+these six codes belong to neither.** This is the "if any row's group cannot be read with confidence,
+stop and list it" case arriving from the other side — they *can* be read with confidence, and the
+confident reading says they do not fit. ⚖️ **Needs a decision before scope A is built:** omit them, or
+add a third table, or carry a nullable group discriminator. **Not guessed.**
+
+⭐ **Also confirmed visually, and it matters to R3:** `6.1 Στοιχείο Αυτοπαράδοσης` and
+`6.2 Στοιχείο Ιδιοχρησιμοποίησης` sit under one sub-heading, `Στοιχείο Αυτοπαράδοσης -
+Ιδιοχρησιμοποίησης`, as **two distinct codes**. Both are in the **issuer** group, so both are sales
+document types.
+
+### 📌 Fees, and why it was cut — decision A, with the open question stated precisely
+
+**Not built, no schema proposed, unscheduled.** The reasoning, because "deferred" without it is how a
+thing gets rebuilt wrong later:
+
+**The likely reading** is that Go's *Έξοδα και κρατήσεις* is its list of **non-product line items**,
+carrying **both** classification pairs because one row serves both directions — *Delivery* is income
+when charged to a customer and expense when the courier bills us. That makes its AADE grounding
+**8.8–8.11**, not 8.7. (Annex 8.7 `Κατηγορία Τελών` is 22 statutory levies and contains neither.)
+
+⚠️ **But under that reading it is a GENERALISATION of `ChargeType`, not a sibling.** *Delivery* and
+*COD fee* **already exist as `ChargeType` rows** — live, ids 1 and 2. A second table would be **two
+records of the same thing**, which is the drift that let backend item 3 contradict itself for a week.
+**Whether `ChargeType` grows an expense side or is subsumed is a design decision, not a settings
+table**, and nothing in F5 needs it.
+
+**The open question, stated so it can actually be answered:** ⚖️ **does Go's *Έξοδα και κρατήσεις*
+list contain *Delivery* and *COD fee* — the same rows `ChargeType` already holds?** If yes it is a
+generalisation and `ChargeType` is the thing to change. If no, it is a different concept and the
+question is what it actually is.
+
+### 📋 Part 3 — the build, one line per sub-part. **All not started**
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| **B.1** | Statutory-codification contract in `core-api` — `activate`, `deactivate`, `describe`, **no `create`** | ⬜ Not started |
+| **B.2** | Architecture rule asserting the absence of `create` on the contract's implementors | ⬜ Not started |
+| **B.3** | `VatExemptionReason` adopts the contract | ⬜ Not started |
+| **B.4** | `VatExemptionReasonService.create` **removed**, with its tests (Q1-b, closed by consequence) | ⬜ Not started |
+| **B.5** | `ChargeType` recorded as a **business reference list** needing write routes; **does not** adopt the contract | ⬜ Not started |
+| **A.1** | `sales_document_type` — id, description, affectsStock, transfersStock, aadeCode, requiresMyDataTransmission, active | ⬜ Not started |
+| **A.2** | `purchase_document_type` — same columns | ⬜ Not started |
+| **A.3** | Seed the **34 sales** codes from the XSD + rasterised annex 8.1, active only where in use | ⬜ Not started |
+| **A.4** | Seed the **15 purchase** codes, same treatment | ⬜ Not started |
+| **A.5** | ⚖️ **The six `17.x` entity-adjusting codes — decision needed**, see the group map above | ⬜ **BLOCKED on a decision** |
+| **A.6** | Both tables adopt the B.1 contract | ⬜ Not started |
+| **A.7** | Record that the sales/purchase split is **ours**, from annex 8.1's headings — the XSD has one enumeration | ⬜ Not started |
+| **B.6** | `sales_document_series` — id, abbreviation, description, active, documentType FK, channel, getsMark, transformableIntoSeries | ⬜ Not started |
+| **B.7** | `purchase_document_series` — same columns | ⬜ Not started |
+| **B.8** | Uniqueness on (series, number). ⚠️ **Must reconcile with the existing trigger + partial unique index on `upper(document_number)`** | ⬜ Not started |
+| **B.9** | No sequence, no counter, no allocation. "Integers from 1, continuous" recorded as an **expectation**, not enforced | ⬜ Not started |
+| **C.1** | `delivery_method` — id, abbreviation, description, active | ⬜ Not started |
+| **D.1** | myDATA payment code on `SettlementMethod`: CASH→3, BANK_DEPOSIT→1, CARD_POS→7, ON_ACCOUNT→5, SKROUTZ→5 | ⬜ Not started |
+| **D.2** | `ACS_COD`, `PAYPAL`, `STRIPE` **null and listed open — three, not one** | ⬜ Not started |
+| **D.3** | Strike *"settable once, then frozen"* from the immutability section, with the reason | ⬜ Not started |
+| **F.1** | `company.branch-number` setting. Head office is `0`. Never a constant in code | ⬜ Not started |
+| **G.1** | ΜΑΡΚ, UID, QR URL, transmission status on `sales_invoice` — nullable, schema + validation only | ⬜ Not started |
+| **G.2** | Series reference on `sales_invoice`. ⚠️ **Keep `document_number`, do not duplicate it** | ⬜ Not started |
+| **G.3** | ADR note — why statutory identifiers are core fields and Go's document id is not | ⬜ Not started |
+| **H.1** | Spec-version marker recording `v2.0.1`, pointing at `docs/aade/v2.0.1/` | ⬜ Not started |
+| **F1** | Seed exemption codes **24 and 28** with verbatim wire strings from annex 8.3 | ⬜ Not started |
+| **F1b** | Both rows listed as **needing the accountant** for `input_vat_deductible` | ✅ **Done** — on the accountant list, commit `e8ee709` |
+| **F2** | Provenance on the existing 29 rows — confirmed against ν.5144/2024, brought under the version marker | ⬜ Not started |
+| **F3** | Seed the **8** unit-of-measure myDATA codes from annex 8.13 | ⬜ Not started |
+| **E1** | `documentType` **mandatory** on `NewSalesInvoice`; consequence recorded where F5 and step 18 will see it | ⬜ Not started |
+| **E2** | `SalesInvoiceServiceImpl` branches on `affectsStock` before `consumeStock` | ⬜ Not started |
+| **E3** | **Silent** — no pending state, no marker, no gap indicator, no warning. Recorded as a decision | ⬜ Not started |
+| **E4** | `stock_consumption`'s source CHECK **not widened** — a non-moving document creates no row | ⬜ Not started |
+| **E6** | Tests for the new branch, leaving the proven path unchanged, **with a negative control** | ⬜ Not started |
+| **S.1** | Spec regenerated; `npm run api:generate`; **every drifted fixture reported by name** | ⬜ Not started |
+| **S.2** | Contract ITs against the **real running server** for every new write route | ⬜ Not started |
+| **S.3** | `CLAUDE.md`, the primer and the roadmap updated | ⬜ Not started |
+
+### ⚖️ PROPOSED: split R1 into R1a and R1b. **A proposed split is a finding, not a failure**
+
+**R1 as scoped is 35 sub-parts, eight new tables' worth of schema, a new architecture rule, a
+deletion, three seeds, a full spec+client regeneration — and one behavioural change to the most
+load-bearing service in the system.** The recommendation is to split it, and the boundary is not
+arbitrary.
+
+| | **R1a — additive** | **R1b — behavioural** |
+|---|---|---|
+| Sub-parts | B.1–B.5, A.1–A.7, B.6–B.9, C.1, D.1–D.3, F.1, G.1–G.3, H.1, F1, F2, F3 | E1, E2, E3, E4, E6 |
+| Risk shape | **Nothing existing changes behaviour.** New tables, new seeds, new nullable columns, one deletion of an uncalled method | ⚠️ **Adds a mandatory field to `NewSalesInvoice`** and branches the consumption path |
+| What it can break | Almost nothing. The 1,381 tests do not touch any of it | ⚠️ **Every construction site of `NewSalesInvoice`** — `TradingQuarter`, `WholeScenarioIT`, `SalesInvoiceIT`, `CreditNoteIT`, `PermissionSweepIT`, `RefusalMatrix`, `LiveSeedTest`, plus frontend fixtures |
+
+**The argument for the boundary, in one sentence:** R1a cannot change what any existing test asserts,
+and R1b changes what **every sales-invoice test constructs** — so a failure in R1a is a failure in new
+code, and a failure in R1b could be either. Keeping them apart is what makes a red build diagnosable.
+
+⚠️ **The cost, stated honestly because it is the same cost that moved 8a's boundary:** both halves
+change `docs/api/openapi.json`, so **both need their own spec + client regeneration.** That is two
+regenerations instead of one, and `frontend.yml` triggers on each. It is a real price and it is
+smaller than the alternative — 8a's own lesson was that a boundary which leaves `main` red is not a
+boundary, and this one leaves it green on both sides.
+
+**R1b depends on R1a** (E1 cannot make `documentType` mandatory before A creates the document types),
+so the order is fixed rather than a preference.
+
 ## Q1 — the backend follow-up queue — 2026-08-03. Reconciled against the approved scope
 
 **Approved as decisions A–I plus a four-item work order. Every part below has a verdict.**
