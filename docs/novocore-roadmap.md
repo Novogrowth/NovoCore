@@ -95,15 +95,17 @@ frontend work that must land before any adapter is built.
 |   8a | `@Mandatory`, schema names, bytecode rule ᵈᵉᶜ | — |  1.3 |  314k | 🟢 Done         |
 |   8b | Consumer cleanup — optional ᵈᵉᶜ         |     — |        |       | ⚪ Optional      |
 |  R1a | Document reference data — additive ʳ    |     — |    1.9 |  529k | 🟢 Done         |
+|   U3 | Eleven design decisions recorded ᵘ³     |     — |    0.2 |   90k | 🟢 Done         |
 |  R1b | Document reference data — behavioural ʳᵇ |     — |        |       | 🟡 **Current**  |
 |   R2 | Document reference data (screens) ʳ²    |     — |        |       | 🔴 Not started  |
-|   R3 | Self-supply posting paths ˢ             |     — |        |       | ⚪ Placement TBD |
-|   D1 | Supplier/customer codes + alias         |     — |        |       | ⚪ Placement TBD |
-|   D2 | Product categories, 3 levels ᵗ          |     — |        |       | ⚪ Placement TBD |
-|   D3 | Customer/supplier addresses             |     — |        |       | ⚪ Placement TBD |
-|   D4 | Document numbers on own records         |     — |        |       | ⚪ Placement TBD |
-|   D5 | Period locking ᵛ                        |     — |        |       | ⚪ Placement TBD |
-|   M0 | Trial Manager.io import (probe) ᵐ⁰      |     — |        |       | ⚪ Placement TBD |
+|   R3 | Self-supply posting paths ˢ             |     — |        |       | ⚪ Blocked — accountant |
+|   D1 | Supplier/customer codes + alias ᵈ¹      |     — |        |       | ⚪ Placement TBD |
+|   D2 | Product categories, 3 levels ᵗ          |     — |        |       | ⚪ Before the Woo load (19) |
+|   D3 | Customer/supplier addresses ᵈ³          |     — |        |       | ⚪ Placement TBD |
+|   D4 | Internal document numbers ᵈ⁴            |     — |        |       | ⚪ Placement TBD |
+|   D5 | Period locking — a movable lock date ᵛ  |     — |        |       | ⚪ Placement TBD |
+|  M0a | Manager chart mapping — no code ᵐ⁰      |     — |        |       | ⚪ Unblocked, any time |
+|  M0b | Trial import, one real year ᵐ⁰          |     — |        |       | ⚪ After D1/D3/D4, before 24 |
 |   U2 | Split `PROGRESS.md` / `HISTORY.md` ᵘ²   |     — |        |       | ⚪ Unscheduled   |
 |   F5 | Sales Invoice + Credit Note ʷ           |     — |        |       | 🔴 Not started  |
 |   F6 | Purchase Invoice + Goods Receipt        |     — |        |       | 🔴 Not started  |
@@ -131,6 +133,31 @@ so the placement decision is visible in the sequence rather than buried in a que
 
 ⚠️ **8b dropped from 🔴 Not started to ⚪ Optional on 2026-08-03, and the reason was measured rather
 than judged** — see ᵈᵉᶜ. It is no longer on the critical path, so **R1 follows 8a directly.**
+
+### ⚠️ The ⚪ rows share a deadline, and that is the decision (U3, 2026-08-03)
+
+**Six of the seven ⚪ items above have the SAME gate: they must land before real data does, at step
+24.** They are not seven independently schedulable rows, and treating them as such is exactly how a
+**cluster** slips past a **shared** deadline — each row moves a little, no row looks late, and the
+thing they have in common is written down nowhere.
+
+| Item | Why it is inside the gate |
+|---|---|
+| **D5** | Before anything is filed from Novocore |
+| **D4** | Before the accountant works in it |
+| **D1** | Manager and Go data both carry codes and aliases — migrating without them means importing into columns that do not exist |
+| **D3** | The same, for addresses |
+| **M0** (both halves) | Its whole purpose is to *precede* the real migration |
+| **R3** | ΣΑΥΤ and ΠΣΑΥΤ are issued routinely, so it must work before go-live |
+
+**D2 is the exception — its gate is step 19**, because the Woo adapter syncs categories and the
+one-time load runs before it.
+
+⚠️ **The gate is decided. The individual slots are NOT**, and nothing here promotes or reorders any
+⚪ row beyond the four placements U3 applied (M0a unblocked; M0b after D1/D3/D4; D2 before the Woo
+load; and two requirements moved into steps 21 and 22). **Whether D1 and D3 land before or after F5
+is an open decision below**, stated as a trade rather than resolved. Full reasoning in `PROGRESS.md`
+under *U3*.
 
 ✅ **Every step through Q1 is verified on both legs, with one stated exception.** ⚠️ **Q1's live
 browser leg has not been run** — its four items are proved by the contract tests and by a probe
@@ -164,12 +191,13 @@ end. This is the gate before adapters and modules open up.
 |   18 | Prosvasis Go adapter                    |   4.5 | 🔴 Not started  |
 |      | *(sub-item of 18)* Customer VAT class override ᶠ²ᵃ | — | 🔴 Not started |
 |  18b | Dispatch document + transport data ʸ    |     — | 🔴 Not started  |
-|   19 | WooCommerce adapter                     |   2.0 | 🔴 Not started  |
+|      | *(before 19)* One-time Woo → Novocore product load ʷᵒᵒ | — | 🔴 Not started |
+|   19 | WooCommerce adapter ʷᵒᵒ                 |   2.0 | 🔴 Not started  |
 |   20 | Skroutz adapter                         |   1.3 | 🔴 Not started  |
-|   21 | ACS Courier adapter                     |   1.3 | 🔴 Not started  |
-|   22 | Sales Order Fulfillment module          |   2.5 | 🔴 Not started  |
+|   21 | ACS Courier adapter ᵃᶜˢ                 |   1.3 | 🔴 Not started  |
+|   22 | Sales Order Fulfillment module ˢᵒᶠ       |   2.5 | 🔴 Not started  |
 |   23 | File import adapter                     |   1.0 | 🔴 Not started  |
-|   24 | Manager.io migration, parallel run      |   2.5 | 🔴 Not started  |
+|   24 | Manager.io migration, parallel run ᵐᵍ    |   2.5 | 🔴 Not started  |
 |   25 | Clearing Checks module ᶻ                |   2.0 | 🔴 Not started  |
 |   26 | Price Tag Printing module               |   0.7 | 🔴 Not started  |
 |   27 | Purchase Orders module                  |   1.5 | 🔴 Not started  |
@@ -219,6 +247,7 @@ Real work with no step number. Each has an owner condition rather than a date.
 | **Customer / supplier merge** — no mechanism exists (`V17` says so explicitly) | Leaning "alias forward, never rewrite history" |
 | **Frontend dependency advisories — 4 as of 2026-08-02** (`npm audit`): 2 high via `react-router`/`react-router-dom`, 2 moderate via `@hono/node-server`/`@modelcontextprotocol/sdk`. ⚠️ Point-in-time figure; re-run rather than trust it | Deliberately unfixed |
 | **Old repository copy in a Google Drive folder** | Pending safe removal |
+| **One build script — make the safe path the easy path** ᵇˢ. ⚪ **Recommended by U3 (2026-08-03), unscheduled, deliberately not built.** Sets `pipefail`, always builds with `-am`, never truncates output, and is what `CLAUDE.md` tells sessions to invoke | ⚠️ **Nothing in this repository can guard a session's shell habits** — no rule, no test, no CI job sees how a command was typed. The only lever is making the correct invocation the default one. **Trigger: the fifth member of the stale-artefact family**, or whoever next writes a script that builds |
 
 ---
 
@@ -242,9 +271,27 @@ Nothing here is solved. Each is recorded so its absence reads as a decision rath
   the enforcement already in place rather than retrofitted; and **every screen built afterwards
   multiplies the fixture reconciliation**, so it is cheapest now and only gets worse. Never
   concurrent with a frontend step. See ᵈᵉᶜ.
-- **Where D1–D5 and M0 sit.** All are core schema, all are cheap before real data and expensive after.
-  M0 in particular — a trial import of real Manager.io data — is the highest-information test available
-  and currently sits twenty steps away at step 24.
+- ⚠️ **Do D1 and D3 land before or after F5? OPEN, and it is a real trade rather than a preference.**
+  Recorded by U3 (2026-08-03) in these terms and **deliberately not resolved**:
+  - **For doing them first:** **F5 through F9 are then built once.** Both add fields the document
+    screens want — a counterparty's code and alias are searched by six rows of the search target
+    list, and rows 8–10 are exactly F5–F7.
+  - **Against:** **Q1, 8a, R1a, R1b and R2 have all been foundation with nothing visible to show**,
+    and **F5 is the first step in a long while that produces something to look at.**
+  - **What is NOT open:** the gate. Both are inside the before-step-24 cluster either way — see *The
+    ⚪ rows share a deadline* above.
+- **Where D4 and D5 sit exactly.** Same shape: **the gate is decided, the slot is not.**
+- ✅ **~~Where M0 sits.~~ DECIDED 2026-08-03 (U3), by splitting it.** **M0a — the chart mapping — is
+  unblocked and can run at any time**, because it is a mapping exercise rather than an import and
+  needs no code. **M0b — a real year of transactions — waits on D1, D3 and D4**, or it imports into a
+  model already known to be incomplete. ⚠️ **Not after F11, and the reasoning is kept because that was
+  the initial instinct:** M0 exists to find gaps while fixing them is still free; run it after eleven
+  screens exist and every finding costs screens too. **It also does not need F11 — it is an import,
+  not data entry.**
+- **R3 is not schedulable at all.** Blocked on the accountant, and it carries **the hardest structural
+  item in the project** — pricing from FIFO lot cost, which fights the price → post → consume
+  ordering. ⚠️ **When the answer arrives, size it as a step rather than slotting it in as a
+  sub-part.**
 - **Analysis dimensions on journal lines.** ⚠️ **Channel is not the open part** — `SalesChannel` is an
   enum, `sales_invoice.channel` is `NOT NULL` with a CHECK, and step 3 split the Sales *and*
   Sales-returns accounts per channel, so per-channel revenue and return rate are **already visible in
@@ -626,6 +673,48 @@ state.** The reason is not length: **a document that is only ever appended to ca
 the backend-queue-item-3 disagreement already cost a session. Governed by `CLAUDE.md` §*Every figure
 written into a document carries a date or a step reference*, whose unswept instances this step closes.
 
+**ᵘ³ U3 — eleven design decisions written into the repository** (2026-08-03). **Documentation and
+governance only: no production code, no schema, no migration, no test changed.** Eleven decisions had
+been settled in a design conversation and existed **nowhere in this repository** — the failure
+`CLAUDE.md` §*A decision reached in a design conversation gets the same close-out discipline as a
+build step* was added to prevent, and the same shape that left *"F5 is next"* standing in four
+documents after the owner had decided otherwise.
+
+**What it changed here:** D4 rewritten to its remaining half (ᵈ⁴); D1 and D3 given their content
+(ᵈ¹, ᵈ³); D5 given its model (ᵛ); M0 split into M0a and M0b (ᵐ⁰); D2 gated to step 19 (ᵗ); the Woo
+one-time load separated from the Woo adapter and given its own row (ʷᵒᵒ); voucher creation modes
+recorded at step 21 (ᵃᶜˢ); the per-order shipping address moved to step 22 (ˢᵒᶠ); **the shared
+before-24 gate recorded as a decision in its own right**; and the build-script recommendation filed as
+a cross-cutting obligation (ᵇˢ).
+
+⚠️ **Nothing ⚪ was promoted or reordered beyond the four decided placements**, and the
+D1/D3-versus-F5 question is in *Open decisions* stated as a trade rather than resolved. Full
+reasoning, the four prompt-versus-repository discrepancies it reported, and the two things the
+repository already said that sharpened D4 and D5 are in `PROGRESS.md` under *U3*.
+
+**Measured, per the method below** — window `fadcddd` (R1a's close-out, 2026-08-03 20:44) to this
+session's commit. **127 events, 0.242 h active against 0.263 h wall clock, 90k out, 13.0M in.
+Recorded as 0.2.** Wall and active are nearly equal, which is what a single uninterrupted sitting
+looks like; 6 of the 127 events are the previous session's tail. As with every row it **excludes its
+own close-out**, so read it as "at least" — and for a doc-only session that exclusion is a larger
+share of the total than usual, because the close-out *is* most of the writing.
+
+⚠️ **`In` is 13.0M against 90k `Out`, the most lopsided ratio of any row here**, and that is the shape
+of a session that read four long governance documents and several `PROGRESS.md` sections repeatedly to
+produce comparatively little text. Recorded without adjustment; it is data about what a decision-
+recording session costs.
+
+**ᵇˢ One build script.** ⚪ **A recommendation recorded by U3, unscheduled and deliberately not
+built.** The stale-artefact family has four members, all in `CLAUDE.md`: a container serving an old
+jar; annotations reverted with the build error piped away; `mvn -pl app` without `-am`; an aborted
+`install` answering from stale jars. All four reduce to *the thing that answered was not the thing
+under test* — **and it keeps happening because the rule is a convention.** The proposal is to make the
+safe path the easy path: one script that sets `pipefail`, always builds with `-am`, never truncates
+output, and is what `CLAUDE.md` tells sessions to invoke, so the mistake requires **deliberately not
+using the provided tool.** ⚠️ **The reasoning is the durable part: nothing in this repository can
+guard a session's shell habits** — no ArchUnit rule, no test and no CI job sees how a command was
+typed — **so the only lever is the default invocation.**
+
 **ʳ R1 — document reference data, backend.** Scheduled before F5 because F5's document model depends on
 it. Covers: sales and purchase document types (two tables, seeded from the official AADE list, users may
 not author rows or behaviour flags); sales and purchase document series; delivery methods; the myDATA
@@ -715,16 +804,131 @@ product belonging to several categories at once — a self-referencing category 
 Recorded so the requirement is not re-derived narrower. **Nothing exists, not even the schema**;
 confirmed live 2026-08-02, and `V29` carries a header saying so explicitly.
 
-**ᵛ D5 — period locking.** Confirmed absent: `V15` states *"NO PERIOD LOCKING and therefore no lock
-table (brief §6, explicit)"* and no lock table exists. Without it, entries dated into a filed period
-can keep arriving, so the ledger silently drifts away from what the accountant filed and nothing
-reports that it happened. Small to build now; awkward to retrofit onto live data. Related: confirm that
-a reversing entry carries the correction date, not the original document's date.
+⚠️ **Its gate is step 19, not step 24** (U3, 2026-08-03) — the Woo adapter syncs categories, and the
+one-time load runs before that. **Woo's own category structure is hierarchical and multi-membership,
+which is the same shape D2 already requires**, so the load does not need a reshaping step. **The
+owner confirms Woo's categories are exactly the ones wanted: they import AS-IS, with no curation
+during the load.** See ʷᵒᵒ for why the load is not the adapter.
 
-**ᵐ⁰ M0 — trial Manager.io import.** Not the migration; a probe. Real chart of accounts and one real
-year, imported into the current core to find out whether the model fits data nobody has examined yet.
-Migration is where data models die, and step 24 is twenty steps away. This is the cheapest, highest-
-information test available and it gets cheaper the sooner it runs.
+**ᵈ¹ D1 — supplier/customer codes, and the alias.** Decided 2026-08-03 (U3):
+
+- **Codes are for the business's own reference and are NULLABLE.** The id remains the handle; nothing
+  in the system depends on a code existing.
+- **Supplier has an alias. Customer never does.** ⚠️ **Recorded as a decision, not an oversight** —
+  an asymmetry with no argument behind it is the shape S1's reconciliation caught with
+  `supplier.vat_number`, so this one has its argument written down.
+
+⚠️ **"Alias" already means something else in this repository and D1 does not resolve that.** Brief
+§5's *"alias forward, never rewrite history"* is the **customer merge** mechanism; a supplier alias
+here is a **short trading name**. Customer-never-has-one *narrows* the collision — the two senses no
+longer land on the same entity — but the word still carries both meanings, and customer merge is
+still an open cross-cutting obligation above. **Do not conflate them.** The three fields
+(`Supplier.code`, `Supplier.alias`, `Customer.code`) and what each needs beyond a column are itemised
+in `PROGRESS.md` under *Queued out of S1*.
+
+**ᵈ³ D3 — addresses. Structured, conditional, and smaller than the row suggests.** Decided
+2026-08-03 (U3).
+
+**Structured, not free text** — street, number, postcode, city, country as separate fields. Three
+concrete reasons: **myDATA requires the counterparty address elements separately** on transmitted
+documents; **ACS needs the same** for shipping labels; and **the data already exists structured in
+both Woo and Go**. A free-text field means parsing it back apart later, by hand, on every record.
+
+**Who needs one:** suppliers **always**; customers **who purchase with VAT**. ⚠️ **Retail customer
+addresses may be NULL** — Skroutz frequently sends orders with no phone, address or email at all.
+
+⚠️ **Enforced at the DOCUMENT, not at the CUSTOMER**, and the reasoning is recorded because the
+opposite looks more natural. When a customer has a VAT number the address is **sourced from AADE or
+VIES rather than typed** — and that lookup is **step 28**, far after this work. So a customer-level
+constraint would **block record creation for a long stretch** with no way to satisfy it except manual
+entry, and would **fail any adapter processing a B2B order that arrives without one**. Document-level
+enforcement works whether the address was typed now or fetched later, **the legal requirement is on
+the transmitted document anyway**, and it is the shape **`@ConditionallyMandatory` already exists
+for** (8a).
+
+⚠️ **D3 shrinks.** Billing and shipping are separate, shipping defaulting to billing — but the
+**shipping address is registered at the ORDER**, not on the customer, and affects only the courier
+voucher. **The customer entity holds ONE (billing) address**; per-order shipping **moved to step 22**
+— see ˢᵒᶠ.
+
+**ᵈ⁴ D4 — internal document numbers. It splits in two, and one half needs nothing built.** Decided
+2026-08-03 (U3).
+
+**Half one is already answered and is not D4's.** Sales document numbers are **captured** from Go —
+or from a certified Πάροχος in future — after the document has been issued and transmitted, exactly
+like the ΜΑΡΚ, UID and QR code. Purchase document numbers are **whatever the supplier issued**:
+through myDATA for domestic suppliers once step 29 exists, and the supplier's own reference number
+for foreign ones. That is `CLAUDE.md` §*The document model* item 2 already in force.
+
+**Half two is what D4 actually named, and it is all that remains in this row.** Documents **Novocore
+itself creates and no external party issues** — manual journal entries, goods receipts, freight
+allocations, write-offs. They have no supplier and no Go, so **without a Novocore number they have no
+human-facing identifier at all.** *"What is entry 412"* is a question about a manual journal entry,
+and today the only answer is a database id.
+
+⚠️ **The distinction that makes this cheap, and it is what stops a reader refusing to build it:**
+these are **internal reference numbers, not statutory document numbers.** No legal sequence, no
+unbroken requirement, **gaps do not matter.** Simple per-type counters. **None of step 40's machinery
+and no conflict with "numbers are recorded, never generated"** — that rule is about documents an
+external party issues, and `CLAUDE.md` now carries the carve-out explicitly.
+
+⭐ **Step 7 filed this question already, and it names D4's two open decisions.** `PROGRESS.md`,
+journal engine: *"**No entry number.** The id is the handle. A human-facing sequential number is a
+real thing an accountant asks for and carries a format decision (per-year reset? prefix per source?)
+nobody has been asked."* **Those two are D4's to answer.**
+
+**ᵛ D5 — period locking, by a movable LOCK DATE.** Confirmed absent: `V15` states *"NO PERIOD LOCKING
+and therefore no lock table (brief §6, explicit)"* and no lock table exists. Without it, entries dated
+into a filed period can keep arriving, so the ledger silently drifts away from what the accountant
+filed and nothing reports that it happened. Small to build now; awkward to retrofit onto live data.
+
+**The model, decided 2026-08-03 (U3): a single movable lock date, NOT a fiscal-year flag.**
+Everything dated on or before it is closed; everything after it is open, and the owner moves it
+forward as periods are filed. Two reasons, both load-bearing:
+
+- **The owner will not accept blanket locking** — past records sometimes genuinely need altering, and
+  a lock date leaves open exactly what must stay open.
+- **It is finer grained than a fiscal year, and Greek VAT is why that matters.** VAT is filed monthly
+  or quarterly, so a year-granularity toggle leaves a filed February editable for eleven more months
+  — the very drift the lock exists to prevent.
+
+⚠️ **Two properties without which it is decoration:** **only the owner may move it** (a lock anyone
+can slide backwards is a suggestion), and **every change is audited** — who, from what date, to what
+date, when.
+
+**It blocks two different operations and both are in scope:** editing an existing entry in a closed
+period, **and** posting a new entry dated into one.
+
+⚠️ **Consequence, and it is a requirement for whoever builds this rather than an established fact:
+reversal dating stops being optional.** If a closed period cannot receive entries, a correction to a
+document in one must carry **the correction date**, not the original document's date. **U3 did not
+confirm this against the code — it ran none.** ⚠️ **Confirming what reversals do today is D5's first
+task.**
+
+⚠️ **Two statements elsewhere in `PROGRESS.md` are built on this feature's absence and change meaning
+the day it exists.** Step 3: *"There is no delete, only `deactivate`. **With no period locking** there
+is no point at which an account is safely finished with."* Step 7: `entry_date` *"has a floor of
+2000-01-01 and **no upper bound**, because a forward-dated accrual is legitimate and **there is no
+period locking**."* Revisit both rather than rediscovering them — and note the second is only half
+answered by a lock date, which bounds postings from **below**.
+
+**ᵐ⁰ M0 — it splits, and the first half is not an import.** Decided 2026-08-03 (U3).
+
+**M0a — a mapping exercise. No code, and unblocked now.** ⭐ **Novocore's chart of accounts was built
+from scratch, not copied from Manager** — 65 accounts across 13 groups, designed from the brief, with
+`AccountSystemKey` on the eleven the posting rules must locate (step 3's record). So **the real test
+is not an import**: does every account in Manager map to a Novocore account, and **which do not?**
+That is a spreadsheet and a session, and **it tests the most load-bearing part of the model.**
+
+**M0b — a real year of transactions.** Real chart plus one real year, imported into the current core
+to find out whether the model fits data nobody has examined yet. ⚠️ **Waits until D1, D3 and D4
+exist**, or it imports into a model already known to be incomplete.
+
+Migration is where data models die, and step 24 is twenty steps away. This is the cheapest,
+highest-information test available and it gets cheaper the sooner it runs. ⚠️ **Why NOT after F11,
+kept because it was the owner's initial instinct:** M0 exists to find gaps **while fixing them is
+still free** — run it after eleven screens exist and every finding costs screens too. **And it does
+not need F11**: it is an import, not data entry.
 
 **ʷ F5 — Sales Invoice + Credit Note.** Decides the document interaction pattern F6–F8 reuse. ⚠️ **But
 see the open decision above**: since documents arrive already issued, F5 before step 18 is a
@@ -752,6 +956,56 @@ external ID resolves to are all unanswered. An adapter-time design item.
 dispatch document is most likely another **received** document rather than a Novocore-authored one —
 much smaller than designing one from scratch. Vehicles (`Μεταφορικά μέσα`) and transport purposes
 (`Σκοποί διακίνησης`) were dropped from R1 and return here, where the document that uses them exists.
+
+**ʷᵒᵒ 19 — the WooCommerce adapter, and the one-time load that is NOT it.** Decided 2026-08-03 (U3).
+
+**Direction first: Novocore is the centre of the ecosystem.** Categories, brands, products and
+everything product-related are **created in Novocore**; **WooCommerce receives from Novocore, never
+the reverse.**
+
+⚠️ **Conflating the adapter with the initial load means building bidirectional sync that is never
+needed again.** They are two different things with two different lifetimes:
+
+- **The adapter syncs Novocore → Woo, forever.** That is step 19.
+- **The initial load runs Woo → Novocore ONCE and is then deleted.** It has a migration's property —
+  **one clean shot** — so it is **throwaway code with careful verification**, and it has its own row
+  above rather than being absorbed into 19.
+
+**Three decisions recorded with it:**
+
+- **Categories import AS-IS.** The owner confirms Woo's categories are exactly the ones wanted, so
+  there is **no curation during the load**. Woo's hierarchical, multi-membership structure matches
+  D2's three-level many-to-many — see ᵗ. **D2 must therefore exist before the load.**
+- ⚠️ **STOCK MUST NOT COME FROM WOO.** Woo's stock numbers are **a projection with no cost attached**,
+  and Novocore needs opening **lots** — quantity *and* cost. Those come from Go, or from a physical
+  count valued against purchase invoices. **Product data from Woo; stock from elsewhere.** Recorded
+  as **a separate and probably harder migration question**, not as part of the product load.
+- **After cutover Woo is READ-ONLY for product data**, and any change made there is overridden by
+  Novocore. ⚠️ **Scoped, and the scope is the part that matters:** Novocore owns **the fields it
+  manages** and overwrites them without asking; fields it does **not** manage — SEO text, image
+  galleries, plugin data — are **left untouched**. ⚠️ **That list must be explicit and written down
+  at step 19. It does not exist yet.** The alternative is discovering it when a product's images
+  vanish.
+
+**ᵃᶜˢ 21 — the ACS Courier adapter has TWO MODES, and the step name hides one of them.** Decided
+2026-08-03 (U3), **before the step is scoped**, because *"ACS adapter"* naturally reads as one thing
+and a step scoped from the name alone would build half of it.
+
+- **Receive an existing voucher.** **Skroutz vouchers are created by Skroutz** and arrive at Novocore
+  ready.
+- **Create one.** Novocore creates the voucher for **WooCommerce and phone (manual) orders**.
+
+**ˢᵒᶠ 22 — Sales Order Fulfilment also owns the per-order SHIPPING address.** Moved here from D3 on
+2026-08-03 (U3). Billing and shipping are separate and shipping defaults to billing, but **the
+shipping address is registered at the ORDER, not on the customer**, and it affects only the courier
+voucher — so **the customer entity holds one (billing) address** and this is where the other lives.
+⚠️ **There is no order entity anywhere in this system today**; step 22 is where one *will* exist,
+which is precisely why the requirement is recorded here rather than left in D3 waiting on a table
+that does not exist. See ᵈ³.
+
+**ᵐᵍ 24 — the migration is the shared deadline for six ⚪ rows.** D5, D4, D1, D3, M0 and R3 all have
+to land before real data does — see *The ⚪ rows share a deadline* under Phase 2 for the per-item
+reasons. **M0 exists to precede this step**, and M0a can run immediately.
 
 **ᶻ 25 — Clearing Checks** also owns series gap detection: because Novocore records numbers rather than
 generating them, a jump in a series means a document was issued through Go and never arrived. That check

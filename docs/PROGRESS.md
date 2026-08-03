@@ -1,6 +1,7 @@
 # NovoCore — Build Progress
 
-*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-08-03 (R1a).*
+*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-08-03 (U3 —
+documentation only; the last code step is R1a).*
 
 *Close-out now also pushes to `origin` automatically (`CLAUDE.md`), so this file no longer tracks
 unpushed commits.*
@@ -38,6 +39,7 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | S1 | **Substring search** — `pg_trgm` + `unaccent`, one shared mechanism, five screens | **Done** — migrations **V28** and **V29**, 17 GIN trigram indexes, `TextSearch` + `SearchFilter`, `?search=` on five routes. **Two findings**, one of which was invisible to the entire test suite until the test database was made to match the real one. See below |
 | F4 | **Settings** — three config pages, VAT classes and units of measure, plus search and sorting | **Done** — migration **V30**, 4 GIN trigram indexes, `?search=` on 2 more routes, **22 sub-parts all with verdicts** (21 approved, 1 added mid-step), and `F4WriteContractIT` (15 tests) which **corrected a premise the step was built on**. Two findings. See below |
 | R1a | **Document reference data (backend)** — the two-layer document model | **Done, committed** `aa1eda4` + `c5f9a97` — `aade_invoice_type` (55 seeded), the business's own document-type, series and delivery-method lists (all shipped **empty**), the statutory-codification contract with an ArchUnit rule, myDATA payment codes, statutory identifiers on `sales_invoice`, and the three artefact seeds. Migrations **V31**, **V32**. **54 new operations.** All 48 sub-parts have verdicts. See below |
+| U3 | **Eleven design decisions written into the repository** — D5, D4, D1, D3, D2, M0, vouchers, the shared gate | **Done, documentation only** — no production code, no schema, no migration, no test changed. D4 split (half already answered), M0 split into M0a/M0b, the per-order shipping address moved to step 22, voucher creation modes recorded against step 21, the Woo one-time load separated from the Woo adapter at step 19, and the **shared gate before step 24** recorded. Nothing ⚪ was promoted or reordered beyond those placements. See below |
 | 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress. F0–F4, S1 and S2 done. ⚠️ Next is Q1 (the backend queue), then R1, then F5** — reprioritised 2026-08-02. Foundations `94e17cd`, Products `56e3726` + guards `28c4119` + brand pass, then the render-loop fix `3458ee6`, F0 (the seed pass), F1 Suppliers `b406b27`, F2 Customers `496c7be`, F3 Users & Roles `aea0e56`, then **S1** (search), **S2** (sorting) and **F4** (Settings). **307 frontend tests, 31 files, green.** Per-step detail in `docs/novocore-roadmap.md`; decisions and what each step left behind in *Step 16 — the frontend* below |
 
 **Tests, measured 2026-08-03 (after R1a): 1,440 passing, 0 failing, 1 skipped, `mvn clean verify`
@@ -71,6 +73,304 @@ Step 16a added 36 (1152 → 1188) and four routes (133 → 137): `GET /api/me`,
 **S1 added 34 (1326 → 1360) and one route (174 → 175)** — the five list routes gained a *parameter* rather than an operation; the one new route is `PATCH /api/products/{id}/brand`. The spec diff is 108 lines of additions and **0 deletions**. **Step 16b added 138 (1188 → 1326) and 37 routes (137 → 174)** — 18 users/roles, 3 journal, 3
 settings, 13 lookup administration. The OpenAPI spec was regenerated and the operation sets diffed
 directly rather than trusting the line count: **0 removed, 37 added, 174 total.**
+
+---
+
+## ▶ U3 — eleven design decisions written into the repository, 2026-08-03
+
+**Documentation and governance only.** No production code, no schema, no migration, no test was
+changed. `U` is the prefix for exactly this (see the roadmap's ID-convention note): a session that
+changes documentation and governance and produces none of the above.
+
+**Why this session existed, stated plainly because it is the point.** Eleven decisions had been
+settled in a design conversation and existed **nowhere in this repository**. That is the failure
+`CLAUDE.md` §*A decision reached in a design conversation gets the same close-out discipline as a
+build step* was added to prevent — the same shape that left *"F5 is next"* standing in four documents
+long after the owner had decided otherwise. **This session is that rule being applied rather than
+described.**
+
+### 📋 The nine sections of the approved scope, one line each, with verdicts
+
+| § | Decision | Verdict |
+|---|---|---|
+| 1 | **D5 — period locking by a movable lock date**, owner-only, every move audited, blocking both edits *and* new postings into a closed period | ✅ **Recorded.** Roadmap footnote ᵛ rewritten; the reversal-dating consequence recorded as a **requirement on whoever builds D5** and as something to confirm against the code, deliberately **not** confirmed here |
+| 2 | **D4 splits in two.** Half one (sales and purchase document numbers) is **already answered and needs nothing built**; half two (Novocore's own internal documents) is what D4 keeps | ✅ **Recorded.** Roadmap row rewritten to half two only, new footnote ᵈ⁴, and half one recorded as answered. ⭐ **Step 7 had already recorded the question** — see *What the repository already said* below |
+| 3 | **D1 — codes are nullable and for the business's own reference; supplier has an alias, customer never does** | ✅ **Recorded.** New roadmap footnote ᵈ¹; the asymmetry is recorded **as a decision, not an oversight**, which is the whole reason it needed writing down |
+| 4 | **D3 — addresses are structured, conditional at the document, and the row shrinks**; per-order shipping moves to step 22 | ✅ **Recorded.** New footnote ᵈ³, and step 22 gains footnote ˢᵒᶠ so the moved requirement is read where the work is |
+| 5 | **Vouchers — the courier adapter has two modes**, receive an existing Skroutz voucher or create one for Woo and phone orders | ✅ **Recorded** against step 21, footnote ᵃᶜˢ, **before that step is scoped** |
+| 6 | **M0 splits.** M0a is a **mapping exercise, not an import**, and is unblocked now; M0b is the real year and waits on D1/D3/D4 | ✅ **Recorded.** Roadmap row split into two, footnote ᵐ⁰ rewritten, and **why not after F11** kept because it was the owner's initial instinct |
+| 7 | **D2 — direction, and the one-time load is not the adapter.** Categories import as-is; **stock must not come from Woo**; Woo is read-only for product data after cutover, **scoped** to the fields Novocore manages | ✅ **Recorded.** Footnote ᵗ extended, step 19 gains footnote ʷᵒᵒ, and the field-ownership list is recorded as **owed at step 19** rather than described as existing |
+| 8 | **Re-sequencing — the shared gate is the decision; the individual slots are not** | ✅ **Recorded.** The gate is a note under the Phase 2 table; the four decided placements are applied; **nothing else was promoted or reordered**, and the F5-versus-D1/D3 trade is in *Open decisions* stated as a trade rather than resolved |
+| 9 | **One build script — make the safe path the easy path.** Recorded as unscheduled, **not built** | ✅ **Recorded** as a cross-cutting obligation with a trigger, plus a pointer in `CLAUDE.md` beside the piped-build rule it exists to make unnecessary |
+
+**Out of scope and deliberately untouched:** the derived-accessor architecture rule (a rule over
+*every* response record, the general version of the two one-record guards R1a built). **It is code,
+it belongs to R1b**, and this session wrote no pointer to it beyond this sentence.
+
+### ⭐ What the repository already said, and it sharpens two of the decisions
+
+**Neither of these was in the prompt. Both were found by reading the record before writing to it.**
+
+- **D4 half two was already an open question, filed at step 7, and it names the format decisions.**
+  The journal-entry section records: *"**No entry number.** The id is the handle. A human-facing
+  sequential number is a real thing an accountant asks for and carries a format decision (per-year
+  reset? prefix per source?) nobody has been asked."* So D4 half two is **not a new requirement** —
+  it is a question this project has been carrying since step 7, and **those two format questions are
+  D4's to answer**: does a counter reset per year, and is the prefix per document type or per source?
+- ⭐ **Three of these decisions already had product-brief QUESTION NUMBERS, and nothing connected
+  them.** **Q40** — *"a human-facing document number for the documents NovoCore owns"*, with step 10
+  adding freight allocations to its list — **is D4's remaining half, exactly.** **Q37** — *"addresses
+  on Customer and Supplier, plus human-facing codes"* — **is D3 and D1 together.** Both were sitting
+  under *Also still open, not blocking anything* while the D-rows sat under *Placement TBD* in the
+  roadmap, **two records of the same open items with no cross-reference between them.** Both question
+  entries are now annotated with what U3 answered and, more importantly, **what it did not**: Q37's
+  *multiple selling prices per product* is untouched by D1 or D3 and remains unasked.
+- **D5 has two standing statements built on its absence**, and whoever builds it must revisit both
+  rather than discover them. Step 3: *"There is no delete, only `deactivate`. **With no period
+  locking** there is no point at which an account is safely finished with."* Step 7: `entry_date`
+  *"has a floor of 2000-01-01 and **no upper bound**, because a forward-dated accrual is legitimate
+  and **there is no period locking**."* ⚠️ Both are correct today and **both change meaning the day a
+  lock date exists** — the second one especially, since a lock date is a *lower* bound on new
+  postings and the absent upper bound is a separate question it does not answer.
+
+### 1️⃣ D5 — a movable lock date, not a fiscal-year flag
+
+**A single movable lock date. Everything dated on or before it is closed; everything after is open.**
+The owner moves it forward as periods are filed.
+
+**Why not a fiscal-year flag, and both halves of the reasoning are load-bearing:**
+
+- **The owner will not accept blanket locking** — past records sometimes genuinely need altering. A
+  lock date gives exactly that: whatever must stay open is simply left after the line.
+- **It is finer grained than a fiscal year, and Greek VAT is why that matters.** VAT is filed monthly
+  or quarterly here, so a year-granularity toggle leaves a filed February editable for eleven more
+  months — which is precisely the drift the lock exists to prevent.
+
+**Two properties without which it is decoration**, and they are requirements rather than nice-to-haves:
+
+- ⚠️ **Only the owner may move it.** A lock anyone can slide backwards is a suggestion.
+- ⚠️ **Every change is audited** — who, from what date, to what date, when.
+
+**It blocks two different operations and both are in scope:** editing an existing entry in a closed
+period, **and** posting a new entry dated into one.
+
+⚠️ **Consequence, and it is a requirement for whoever builds D5 rather than a finding of this
+session: reversal dating stops being optional.** If a closed period cannot receive entries, a
+correction to a document in one must be dated to **the correction date**, not to the original
+document's date. **This was deliberately NOT confirmed against the code here** — this session ran no
+code and read no service to check what reversals do today. **Confirming it is D5's first task**, and
+the roadmap footnote says so. (The existing footnote already carried a weaker version of this —
+*"confirm that a reversing entry carries the correction date"* — which is the same item arriving
+before the lock date made it unavoidable.)
+
+### 2️⃣ D4 — it splits in two, and one half needs nothing built
+
+**Half one, already answered, nothing to build.** Sales document numbers are **captured** from Go —
+or from a certified Πάροχος in future — after the document has been issued and transmitted, exactly
+like the ΜΑΡΚ, UID and QR code. Purchase document numbers are **whatever the supplier issued**:
+captured through myDATA for domestic suppliers once that adapter exists (step 29), and taken as the
+supplier's own reference number for foreign suppliers. **This half is `CLAUDE.md` §*The document
+model* item 2 already in force; D4 never needed to decide it.**
+
+**Half two, which is what D4 actually named.** Documents **Novocore itself creates and no external
+party issues** — manual journal entries, goods receipts, freight allocations, write-offs. These have
+no supplier and no Go, so **if Novocore does not number them they have no human-facing identifier at
+all.** *"What is entry 412"* is a question about a manual journal entry, and today the answer is a
+database id.
+
+⚠️ **The distinction that makes this cheap, and it is what stops a reader refusing to build it:**
+these are **internal reference numbers, not statutory document numbers.** No legal sequence, no
+unbroken requirement, **gaps do not matter.** Simple per-type counters. **None of step 40's
+machinery**, and **no conflict with "Novocore records numbers, never generates them"** — that rule is
+about documents an external party issues. Written into `CLAUDE.md` §*The document model* as an
+explicit carve-out, because a future session reading rule 2 alone would correctly refuse to build
+this.
+
+**D4's own two open questions, inherited from step 7:** does the counter reset per year, and is the
+prefix per document type or per source? Nobody has been asked.
+
+### 3️⃣ D1 — codes and alias
+
+- **Codes are for the business's own reference and are NULLABLE.** They are not identifiers the
+  system depends on; the id remains the handle.
+- **Supplier has an alias. Customer never does.** ⚠️ **Recorded as a decision, not an oversight** —
+  which is the entire reason it is written here, because an asymmetry with no argument behind it is
+  the shape S1's reconciliation caught with `supplier.vat_number`.
+
+⚠️ **The word "alias" is already in use in this repository for something else, and D1 does not
+resolve that.** Brief §5's *"alias forward, never rewrite history"* is the **customer merge**
+mechanism; a supplier alias here is a **short trading name**. The customer-never-has-one decision
+*narrows* the collision — the two senses no longer land on the same entity — but the word still means
+two things, and the customer-merge obligation is still open in the roadmap's cross-cutting table.
+**Do not conflate them.**
+
+### 4️⃣ D3 — addresses: structured, conditional, and smaller than the row suggests
+
+**Structured, not free text** — street, number, postcode, city, country as separate fields. Three
+reasons, all concrete: myDATA requires the counterparty address elements **separately** on
+transmitted documents; ACS needs the same for shipping labels; and **the data already exists
+structured in both Woo and Go.** A free-text field means parsing it back apart later, by hand, on
+every record.
+
+**Who needs one:** suppliers **always**; customers **who purchase with VAT**. Retail customer
+addresses may be **NULL** — Skroutz frequently sends orders with no phone, address or email at all.
+
+⚠️ **Enforced at the DOCUMENT, not at the CUSTOMER**, and the reasoning is recorded because the
+opposite looks more natural:
+
+- When a customer has a VAT number the address is **sourced from AADE or VIES rather than typed** —
+  and that lookup is **step 28**, far after this work.
+- So a customer-level constraint would **block record creation for a long stretch** with no way to
+  satisfy it except manual entry, and would **fail any adapter processing a B2B order that arrives
+  without one.**
+- Document-level enforcement works whether the address was typed now or fetched later, and **the
+  legal requirement is on the transmitted document anyway.**
+- It is also the shape **`@ConditionallyMandatory` already exists for** (8a).
+
+⚠️ **D3 shrinks.** Billing and shipping are separate, shipping defaulting to billing — but the
+**shipping address is registered at the ORDER, not on the customer**, and affects only the courier
+voucher. So **the customer entity holds ONE (billing) address**, and per-order shipping **moves to
+step 22, Sales Order Fulfilment.** ⚠️ **There is no order entity anywhere in this system today** —
+step 22 is where one would be created, which is exactly why the requirement is recorded there rather
+than left in D3 waiting for a table that does not exist.
+
+### 5️⃣ Vouchers — the courier adapter has two modes (step 21)
+
+**Skroutz vouchers are already created by Skroutz and arrive at Novocore ready.** Novocore only needs
+to **create** a voucher for **WooCommerce and phone (manual) orders**.
+
+So the ACS adapter has **two modes — receive an existing voucher, or create one.** ⚠️ Recorded
+against step 21 **before that step is scoped**, because *"ACS adapter"* naturally reads as one thing
+and a step scoped from the name alone would build half of it.
+
+### 6️⃣ M0 splits, and the first half is not an import
+
+- **M0a — a mapping exercise.** ⭐ **Novocore's chart of accounts was built from scratch, not copied
+  from Manager** — confirmed against this file's own step-3 record: 65 accounts across 13 groups,
+  designed from the brief, with `AccountSystemKey` on the eleven the posting rules must locate. So
+  **the real test is not an import**: does every account in Manager map to a Novocore account, and
+  **which do not?** That is a spreadsheet and a session, **it needs no code**, and it tests the most
+  load-bearing part of the model. **It can run almost immediately.**
+- **M0b — a real year of transactions.** Waits until **D1, D3 and D4 exist**, or it imports into a
+  model already known to be incomplete.
+
+⚠️ **Why NOT after F11, recorded because it was the owner's initial instinct and the reasoning should
+outlive the conversation:** M0's purpose is to **find gaps while fixing them is still free.** Run it
+after eleven screens exist and every finding costs screens too. **It also does not need F11** — it is
+an import, not data entry.
+
+### 7️⃣ D2 — categories, and the one-time load that is not the adapter
+
+**Direction: Novocore is the centre of the ecosystem.** Categories, brands, products and everything
+product-related are **created in Novocore**; WooCommerce **receives** from Novocore, never the
+reverse.
+
+⚠️ **The initial load is NOT the adapter, and conflating them means building bidirectional sync that
+is never needed again.**
+
+- **The Woo adapter syncs Novocore → Woo, forever.**
+- **The initial load runs Woo → Novocore ONCE and is then deleted.** It is a migration with a
+  migration's property: **one clean shot.** Treat it as throwaway code with careful verification.
+
+**Three decisions recorded with it:**
+
+- **Categories import as-is.** The owner confirms Woo's categories are exactly the ones wanted; **no
+  curation during the load.** Woo's structure is hierarchical and multi-membership, which **matches
+  D2's three-level many-to-many** — the shape is already right.
+- ⚠️ **Stock must NOT come from Woo.** Woo's stock numbers are **a projection with no cost attached**,
+  and Novocore needs opening **lots** — quantity *and* cost. Those come from Go, or from a physical
+  count valued against purchase invoices. **Product data from Woo, stock from elsewhere.** Recorded
+  as a **separate and probably harder migration question**, not as part of the product load.
+- **After cutover Woo is READ-ONLY for product data**, and any change made there is overridden by
+  Novocore. ⚠️ **Scoped:** Novocore owns the fields it manages and overwrites them without asking;
+  fields it does **not** manage — SEO text, image galleries, plugin data — are left untouched.
+  ⚠️ **That list must be explicit and written down at step 19** — not discovered when a product's
+  images vanish. **It does not exist yet, and the roadmap now says so rather than implying it does.**
+
+### 8️⃣ Re-sequencing — the shared gate is the decision
+
+⚠️ **Six of the seven ⚪ TBD items have the SAME deadline: before real data lands at step 24.**
+
+| Item | Why it is inside the gate |
+|---|---|
+| **D5** | Before anything is filed from Novocore |
+| **D4** | Before the accountant works in it |
+| **D1** | Manager and Go data carry codes and aliases — migrating without them means importing into columns that do not exist |
+| **D3** | Same, for addresses |
+| **M0** | Its whole purpose is to precede the real migration |
+| **R3** | ΣΑΥΤ and ΠΣΑΥΤ are issued routinely, so it must work before go-live |
+
+**D2 is the exception: its gate is step 19**, because the Woo adapter syncs categories.
+
+⚠️ **Recording the gate is the point of this section.** Treating these as seven independently
+schedulable rows is exactly what lets a **cluster** slip past a **shared** deadline — each row moves a
+little, no row looks late, and the deadline they all share is nowhere in the file.
+
+**Decided placements, applied:**
+
+| Placement | Applied where |
+|---|---|
+| **M0a — unblocked, can run at any time** | Roadmap row split; M0a is no longer ⚪ Placement TBD |
+| **M0b — before step 24, after D1/D3/D4** | Roadmap row, gated |
+| **D2 — before the one-time load, which is before step 19** | Roadmap row + footnote ʷᵒᵒ at step 19 |
+| **Per-order shipping address → step 22** | Footnote ˢᵒᶠ |
+| **Voucher creation modes → step 21** | Footnote ᵃᶜˢ |
+
+⚠️ **STILL ⚪, and deliberately NOT promoted or ordered:**
+
+- **Whether D1 and D3 land before or after F5** is the owner's open call, and it is a **real trade**,
+  recorded in *Open decisions* in those terms: doing them first means **F5–F9 are built once**, but
+  **Q1, 8a, R1a, R1b and R2 have all been foundation with nothing visible to show**, and **F5 is the
+  first step in a long while that produces something to look at.**
+- **D4 and D5's exact slots.** The gate is decided; the position is not.
+- **R3 is not schedulable at all** — blocked on the accountant, and it carries **the hardest
+  structural item in the project** (pricing from FIFO lot cost, which fights the price → post →
+  consume ordering). ⚠️ **When the answer arrives it should be sized as a step, not slotted in as a
+  sub-part.**
+
+### 9️⃣ One build script — recorded as a recommendation, not built
+
+**The stale-artefact family now has four members**, all four already in `CLAUDE.md`:
+
+1. a container serving an old jar (Q1's browser leg);
+2. annotations reverted with the build error **piped away** (8a's third probe);
+3. `mvn -pl app` without `-am` (R1a);
+4. an aborted `install` answering from stale jars (R1a).
+
+All four reduce to **the thing that answered was not the thing under test**, which `CLAUDE.md`
+already names — **and it keeps happening because the rule is a convention.**
+
+**Recommendation, recorded as unscheduled and NOT built here: make the safe path the easy path.** One
+build script that **sets `pipefail`, always builds with `-am`, never truncates output**, and is what
+`CLAUDE.md` tells sessions to invoke. Then the mistake requires **deliberately not using the provided
+tool.** ⚠️ **The reasoning, which is the part worth keeping: nothing in this repository can guard a
+session's shell habits.** No ArchUnit rule, no test, no CI job sees how a command was typed. **The
+only lever is making the correct invocation the default one.**
+
+### 📌 What did not match the repository, reported rather than manufactured
+
+**Per the session's own instruction: where the prompt referred to repository text, it was treated as
+conditional.** Four items.
+
+1. ⚠️ **"The pipefail rule … written in one session, broken in the next" is right in substance and
+   imprecise in mechanism.** The rule was written in **8a** and the two recurrences were in **R1a** the
+   same day — but **neither R1a recurrence involved a pipe.** They were an **unread build exit
+   status**: `INSTALL=1` was on screen both times. `CLAUDE.md` already states these are *"the same
+   rule"*, so the four-member family stands; the sentence is recorded here with the mechanism
+   corrected rather than repeated.
+2. ⚠️ **Step 22 has no order entity to attach a shipping address to.** The placement is still correct
+   — step 22 is where an order would be created — but the roadmap footnote says *"where the order
+   entity will exist"*, not *"does"*.
+3. ✅ **The M0a premise checked out.** *"Novocore's chart of accounts was built from scratch, not
+   copied from Manager"* is confirmed by this file's step-3 record, so the mapping-exercise argument
+   rests on something verified rather than assumed.
+4. ✅ **"Seven ⚪ TBD items" is exactly right** — R3, D1, D2, D3, D4, D5, M0 carried ⚪ Placement TBD in
+   the Phase 2 table before this session. **U2 and 8b are also ⚪ but are *Unscheduled* and *Optional*
+   respectively**, not *Placement TBD*, and are correctly outside the gate.
+
+**Nothing in this session was verified against running code**, and nothing in it needed to be: it
+records decisions. ⚠️ **The one claim that would need a live check before being built on** is D5's
+reversal-dating consequence, and it is written down as **D5's first task** rather than as a fact.
 
 ---
 
@@ -277,11 +577,15 @@ F6, purchasing.
 | **8a — declare every compact-constructor requirement** | ✅ **DONE, 2026-08-03**, in two commits. 339 components across 114 records declared, cross-checked against the canonical constructors' bytecode in both directions; four schema-name collisions split; spec 75 → **143** schemas declaring `required`. All three gates met. Backend **1,381** tests green, frontend **308** green |
 | **8b — consumer cleanup** | ⚪ **OPTIONAL, and not a correctness step.** 8a already regenerated the client and made the suite green; what remains is *taking advantage* of the new contract — removing `?.`/`??` guards on fields that can no longer be undefined. ⚠️ **The test-account decision attaches here** and should be settled *before* it starts |
 | **R1a — document reference data, additive** | ✅ **DONE, 2026-08-03**, commits `aa1eda4` + `c5f9a97`. Six new tables, 54 new routes, a new architecture rule, one deletion. **All 48 sub-parts have a verdict**; 46 done, S.4 deferred to R2, E.3 a finding. **Four premise corrections and one defect only the real server could find** — see R1a's findings. No live leg: R1a ships no screens |
+| **U3 — eleven design decisions recorded** | ✅ **DONE, 2026-08-03. Documentation only** — no code, no schema, no migration, no test. It does **not** change what is next. Four placements applied (M0a unblocked, M0b gated, D2 before step 19, and two requirements moved into steps 21 and 22); **the shared before-24 gate recorded as a decision**; nothing else promoted or reordered. **D1/D3-versus-F5 is stated as a trade in the roadmap, not resolved** |
 | **R1b — document reference data, behavioural** | 🔴 **NEXT.** Two lines: `documentType` becomes mandatory on `NewSalesInvoice` and the consumption path branches on `affectsStock`; and **channel becomes authoritative from the series**. ⚠️ It changes what **every sales-invoice test constructs**, which is the whole reason the split exists |
 | **R2 — document reference data, screens** | 🔴 After R1b. ⚠️ **Full CRUD**, not the read-plus-activate shape F4 built — the owner authors these rows. He creates his 19 document types and their series here, **choosing each AADE type himself**. ⚠️ Needs a **live browser leg**, and therefore an app-image rebuild |
 | **F5 — Sales Invoice + Credit Note** | 🔴 **No longer next.** ⚠️ It decides the create/preview/commit pattern F6–F8 all reuse, so it is worth disproportionate scrutiny — but ⚠️ **see the open decision in the roadmap**: since documents arrive already issued, F5 before step 18 is a data-entry screen for documents created elsewhere, and much of it disappears when the Go adapter lands |
 | ~~⚠️ **Backend queue item 8 — promote to first?**~~ | ✅ **DECIDED 2026-08-03, and the answer was neither.** Not promoted within Q1 and not left last: **lifted out of the queue** into its own step, split 8a/8b, placed after Q1 and before R1. The open decision is removed from the roadmap and replaced by the step |
-| ⚠️ `Supplier.code` / `Supplier.alias` / `Customer.code` | 📌 **The argument for doing this BEFORE F5 is now stronger**, not weaker: it blocks part of six rows of the search target list, and rows 8–10 are exactly the document screens F5–F7 build |
+| **M0a — map Manager's chart onto Novocore's** | 🟢 **UNBLOCKED, can run at any time** (U3, 2026-08-03). It is a **mapping exercise, not an import**: no code, no schema, a spreadsheet and a session. Novocore's chart was built from scratch, so the question is *which Manager accounts have no Novocore home* |
+| **M0b — a real year of transactions** | ⚪ **Gated: after D1/D3/D4, before step 24.** Importing before those exist means importing into columns that do not exist |
+| **D1–D5, M0, R3 — the shared gate** | ⚠️ **Six of the seven share ONE deadline: before real data lands at step 24** (D2 is the exception — its gate is step 19). Recorded by U3 because seven independently schedulable rows is how a cluster slips past a shared deadline. **The gate is decided; the individual slots are not** |
+| ⚠️ `Supplier.code` / `Supplier.alias` / `Customer.code` | 📌 **This is D1, and its content is now decided** (U3, 2026-08-03): codes are **nullable** and for the business's own reference; **supplier has an alias, customer never does** — an asymmetry recorded as a decision rather than an oversight. ⚠️ **The placement is still ⚪** — whether D1 lands before or after F5 is the owner's open call and is stated as a trade in the roadmap. **The argument for doing it BEFORE F5 is unchanged and still stronger, not weaker**: it blocks part of six rows of the search target list, and rows 8–10 are exactly the document screens F5–F7 build |
 | ⚠️ **Database sort order ≠ browser sort order** | 📌 **OPEN, and F4 did not close it.** F4 established *that* `el-GR-x-icu` was never applied; the database still orders by bytes under locale `C` while the browser orders by `Intl.Collator('el')`. Invisible only because no list pages on the server. **Whoever adds paging to a list screen owns this.** See the standing item below |
 | `Product.category` | 📌 Queued as **its own proposal**, requirement recorded, deliberately not started |
 | **Test-environment parity — enforcement** | ⚖️ **STILL HELD, awaiting the owner's decision.** Untouched by F4. Do not act on it in either direction |
@@ -5232,6 +5536,9 @@ supplied and seeded, built as a runtime-editable entity; precedence rule stated 
   invoices, but needed by phase 11 at the latest, and possibly sooner for courier vouchers in phase
   4. Also unasked: whether Customer and Supplier want human-facing codes (the internal id is a
   bigint), and whether more than one selling price per product is ever needed.
+  ⚠️ **Two of those three were answered on 2026-08-03 (U3) — addresses as D3, human-facing codes as
+  D1. Multiple selling prices remains unasked.** See the master list under *Also still open*, which is
+  the current record, and `PROGRESS.md` §*U3* for the reasoning.
 - **⚠️ Statutory depreciation rates and the asset category taxonomy** — **needs the accountant**,
   the same way the VAT class list did. The rate field exists per asset and is nullable; no rates
   and no category table were invented. Do not create real assets with real values until these are
@@ -7446,8 +7753,18 @@ repository is not an accountant question.** Two of the four items below were exa
   regime applies (accountant question). Nothing built.
 - **Q32 — the 8-hour session timeout.**
 - **Q37 — addresses on Customer and Supplier**, plus human-facing codes and multiple selling prices.
+  ⚠️ **PARTLY ANSWERED 2026-08-03 (U3), and the remainder is stated so it is not read as closed.**
+  **Addresses are D3** — structured, suppliers always, customers who purchase with VAT, retail may be
+  NULL, **enforced at the document rather than the customer**, and the customer holds only the
+  **billing** address (per-order shipping moved to step 22). **Human-facing codes are D1** — nullable,
+  the business's own reference, **supplier has an alias and customer never does**. ⚠️ **Multiple
+  selling prices per product is STILL UNASKED** and is not covered by either.
 - **Q40 — a human-facing document number** for the documents NovoCore owns. Step 10 adds one more to
-  the list: a freight allocation has no number either, only an id.
+  the list: a freight allocation has no number either, only an id. ⚠️ **ANSWERED IN PRINCIPLE
+  2026-08-03 (U3): this is D4's remaining half.** These are **internal reference numbers, not
+  statutory ones** — no legal sequence, gaps do not matter, simple per-type counters, none of step
+  40's machinery. ⚠️ **Two format decisions are still open and nobody has been asked**, and step 7
+  named them: **does a counter reset per year, and is the prefix per document type or per source?**
 - **Q12 leftover — is the periodic depreciation posting run Phase 1 scope**, or only the register and
   the calculation? Still waiting on the statutory rates either way.
 - ~~**Q43**~~ — **answered and built (V22).** See the section below.

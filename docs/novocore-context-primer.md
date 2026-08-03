@@ -23,6 +23,11 @@ The governing statement is `CLAUDE.md`, *The document model*; the identifier dec
   **series number** and composing the document, transmitting via the Πάροχος instead of handing the job
   to Go. It still does not obtain the ΜΑΡΚ. Verified 2026-08-02: the database has **no non-identity
   sequences at all**, so "records, never generates" is currently true by construction.
+  ⚠️ **The rule is about documents an EXTERNAL PARTY issues** — D4 (2026-08-03) carves out **internal
+  reference numbers** for documents Novocore itself creates and nobody else issues (journal entries,
+  goods receipts, freight allocations, write-offs). Those are **not statutory numbers**: no legal
+  sequence, gaps do not matter, simple per-type counters, **none of step 40's machinery.** The
+  carve-out is in `CLAUDE.md` because reading rule 2 alone would correctly refuse to build it.
 - **Naming rule:** no operation, class, method or route may be named `issue`/`issuance`. Prose about
   the legal act is fine; identifiers are not. ⚠️ **There was exactly one violation and it is fixed** —
   `CreditNoteService.issue` → `record`, `SalesController_issue` → `SalesController_recordNote`, spec
@@ -83,7 +88,7 @@ dimension means restating history.
 **Product categories** remain three levels deep with a product in several at once — a self-referencing
 table plus a join table, **not two flat columns and not an enum**. Nothing exists, not even the schema.
 
-## Current build status (as of this primer — 2026-08-02, the roadmap-unification session)
+## Current build status (as of this primer — 2026-08-03, after R1a and U3)
 
 **Detailed, always-current status lives in `docs/PROGRESS.md`.** Read that first; this section is
 the summary.
@@ -103,6 +108,64 @@ the summary.
   conversation that existed only in chat until then, while three documents still said F5. It is the
   worked example for the `CLAUDE.md` rule that a design decision gets the same close-out discipline as
   a build step.
+- ✅ **U3 — eleven design decisions written into the repository, 2026-08-03. Documentation only: no
+  production code, no schema, no migration, no test changed.** They had been settled in a design
+  conversation and existed **nowhere in this repository**, which is the failure `CLAUDE.md`'s
+  design-conversation close-out rule exists to prevent. Full reasoning in `PROGRESS.md` under *U3*;
+  the placements are in the roadmap.
+  - **D5 — period locking is a movable LOCK DATE, not a fiscal-year flag.** Everything on or before
+    it is closed; the owner moves it forward as periods are filed. ⚠️ **Only the owner may move it,
+    and every change is audited** — without both it is decoration. It blocks **editing an existing
+    entry** in a closed period *and* **posting a new entry dated into one**. Chosen over a year flag
+    because the owner will not accept blanket locking, and because **Greek VAT is filed monthly or
+    quarterly** — a year toggle leaves a filed February editable for eleven more months. ⚠️ **It makes
+    reversal dating non-optional**, and confirming what reversals do today is **D5's first task, not
+    a fact U3 established.**
+  - **D4 splits, and half of it needs nothing built.** Sales and purchase document numbers are
+    **captured** (from Go, or the supplier / myDATA) — already covered by *numbers are recorded,
+    never generated*. What D4 keeps is **internal reference numbers for documents Novocore itself
+    creates** — journal entries, goods receipts, freight allocations, write-offs. ⚠️ **Not statutory
+    numbers: no legal sequence, gaps do not matter, simple per-type counters, none of step 40's
+    machinery.** `CLAUDE.md` now carries that carve-out explicitly. Step 7 had already filed the
+    question and it names the two open format decisions: **per-year reset? prefix per source?**
+  - **D1 — codes are NULLABLE and for the business's own reference. Supplier has an alias; customer
+    never does** — recorded as a decision, not an oversight. ⚠️ "Alias" still means two things in
+    this repository (the other is brief §5's customer-merge mechanism).
+  - **D3 — addresses are STRUCTURED** (street, number, postcode, city, country), because myDATA wants
+    the elements separately, ACS needs them for labels, and Woo and Go already hold them apart.
+    Suppliers always; customers who purchase with VAT; **retail may be NULL** (Skroutz sends orders
+    with no address at all). ⚠️ **Enforced at the DOCUMENT, not the customer** — a VAT-registered
+    customer's address is *sourced* from AADE/VIES, which is **step 28**, so a customer-level
+    constraint would block record creation until then and break any adapter taking a B2B order
+    without one. **D3 shrinks: the customer holds ONE (billing) address; per-order shipping moved to
+    step 22.**
+  - **D2 — Novocore is the centre. Woo receives from Novocore, never the reverse.** ⚠️ **The one-time
+    load is NOT the adapter** — the adapter syncs Novocore → Woo forever; the load runs Woo →
+    Novocore **once** and is deleted. **Categories import as-is** (Woo's hierarchy already matches
+    D2's three-level many-to-many). ⚠️ **Stock must NOT come from Woo** — its numbers are a projection
+    with no cost, and Novocore needs opening **lots**; that is a separate, harder question. **After
+    cutover Woo is read-only for product data, scoped** to the fields Novocore manages — and **that
+    list must be written down at step 19; it does not exist.**
+  - **M0 splits. M0a — mapping Manager's chart onto Novocore's — is UNBLOCKED and needs no code**
+    (Novocore's chart was built from scratch, so the question is which Manager accounts have no home).
+    **M0b — a real year — waits on D1/D3/D4.** ⚠️ **Not after F11:** M0 exists to find gaps while
+    fixing them is free, and it is an import rather than data entry.
+  - **The ACS adapter (21) has TWO MODES** — receive an existing Skroutz voucher, or **create** one
+    for Woo and phone orders. Recorded before the step is scoped, because "ACS adapter" reads as one
+    thing.
+  - ⚠️ **THE SHARED GATE, which is the decision rather than a summary of the others.** **Six of the
+    seven ⚪ items — D5, D4, D1, D3, M0, R3 — have the SAME deadline: before real data lands at step
+    24.** D2 is the exception; its gate is **step 19**. Seven independently schedulable rows is how a
+    cluster slips past a shared deadline. ⚠️ **The gate is decided; the individual slots are not**,
+    and **nothing was promoted or reordered** beyond four placements. **Whether D1 and D3 land before
+    or after F5 is an open owner decision**, stated as a trade: doing them first means F5–F9 are built
+    once, but Q1/8a/R1a/R1b/R2 have all been foundation with nothing visible, and **F5 is the first
+    step in a long while that produces something to look at.** **R3 is not schedulable at all** —
+    blocked on the accountant, and it carries the hardest structural item in the project.
+  - 📌 **Recommended, unscheduled, not built: one build script** that sets `pipefail`, always builds
+    with `-am` and never truncates output. The stale-artefact family has **four** members and keeps
+    growing **because the rule is a convention** — and **nothing in this repository can guard a
+    session's shell habits**, so the only lever is making the correct invocation the default.
 - ✅ **Q1 is FULLY CLOSED — 2026-08-03. Four items: 4+6, 5, 1, 7.** It read "built and live-verified,
   deliberately not closed" for one day, because item 7's regression was outstanding; **8a shut it**.
   **The owner's browser leg passed** on all
@@ -210,8 +273,9 @@ the summary.
   first step that might want one.** Owner's call.
 - **`U` is a step-ID prefix**: *a session that changes documentation and governance and produces no
   production code.* **U1** is the roadmap unification and documentation reconciliation of 2026-08-02;
-  **U2** (⚪ unscheduled) is the `PROGRESS.md` → `PROGRESS.md` + `HISTORY.md` split. Future
-  doc/governance sessions take U3, U4 … rather than entering the F/Q/R sequence.
+  **U2** (⚪ unscheduled) is the `PROGRESS.md` → `PROGRESS.md` + `HISTORY.md` split; **U3** is the
+  eleven design decisions of 2026-08-03, above. Future doc/governance sessions take U4, U5 … rather
+  than entering the F/Q/R sequence.
 - ⚠️ **The deferred customer VAT class override (F2a) is a sub-item of step 18, not a leftover screen
   task.** Moved out of Phase 2 on 2026-08-02. Permission gating was the original reason and is still
   open, but the decisive one is that **Novocore recomputes VAT from the line items to compare against

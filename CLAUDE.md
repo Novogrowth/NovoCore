@@ -343,6 +343,17 @@ invisible to a script *and* to a human reading the output, which is why it survi
 depends on a fresh artefact — and one that rebuilds a module before testing it always does —
 **confirm the build succeeded on its own terms before believing anything the test then says.**
 
+📌 **A recommendation is on file to make this unnecessary, and it is deliberately not built** —
+roadmap footnote ᵇˢ, recorded by U3 on 2026-08-03. **One build script** that sets `pipefail`, always
+builds with `-am` and never truncates output, which this file would then tell sessions to invoke — so
+the mistake requires **deliberately not using the provided tool**. ⚠️ **The argument for it is that
+nothing in this repository can guard a session's shell habits**: no ArchUnit rule, no test and no CI
+job sees how a command was typed, so **the only available lever is making the correct invocation the
+default one.** The stale-artefact family has **four** members and this rule is a convention — which is
+why it was written in one session (8a) and the family gained two more the same day (R1a). ⚠️ Those two
+did not involve a pipe; they were an **unread build exit status**, which is the same rule and is why
+they are recorded together.
+
 ⚠️ **Delete it.** A probe is evidence for a decision, not a test — it asserts nothing, so leaving it
 behind adds runtime and implies coverage it does not provide. What survives is the *assertion* it
 justified, written into a real test.
@@ -371,6 +382,19 @@ allocation-at-commit. What changes at step 40 is narrower than it sounds: Novoco
 the **series number** and composing the document itself, transmitting via the Πάροχος adapter instead
 of handing the job to Go. It still does not obtain the ΜΑΡΚ. **Sequence and gap-prevention machinery
 belongs at step 40 and nowhere earlier.**
+
+⚠️ **This rule is about documents an EXTERNAL PARTY issues, and the carve-out is written here because
+without it a future session would correctly refuse to build D4.** Novocore also creates documents
+**nobody else issues** — manual journal entries, goods receipts, freight allocations, write-offs.
+Those have no supplier and no Go, so **without a Novocore number they have no human-facing identifier
+at all**; *"what is entry 412"* is a question about a manual journal entry, and today the only answer
+is a database id.
+
+**Those are INTERNAL REFERENCE NUMBERS, not statutory document numbers**, and the distinction is what
+makes them cheap: **no legal sequence, no unbroken requirement, gaps do not matter.** Simple per-type
+counters, **none of step 40's machinery**. Decided 2026-08-03 (U3); scope and the two open format
+questions are in the roadmap under ᵈ⁴. **A sales or purchase document number is still captured, never
+generated** — that half of D4 was already answered by this rule and needs nothing built.
 
 **3. Naming rule: no operation, class, method or route may be named `issue`, `issueInvoice` or
 `issuance`.** Use `requestIssuance`, `submitForIssuance`, `recordIssuedDocument` — or, for the
@@ -492,6 +516,29 @@ core record an external ID resolves to are all unanswered.
 category table plus a join table. **Not two flat columns, and not an enum.** Nothing exists, not even
 the schema; `V29` carries a header saying so, because the brief's one-line *"Category (main/sub)"*
 understates it and building from that line would produce the wrong thing.
+
+### Novocore is the centre — and an initial load is not an adapter
+
+**Decided 2026-08-03 (U3).** Product-related data — categories, brands, products — is **created in
+Novocore**. **WooCommerce receives from Novocore, never the reverse.**
+
+⚠️ **The trap is conflating the adapter with the one-time load, and doing so means building
+bidirectional sync that is never needed again.** They have different lifetimes:
+
+- **The adapter syncs Novocore → Woo, forever** (step 19).
+- **The initial load runs Woo → Novocore ONCE and is then deleted.** It is a migration and has a
+  migration's property — **one clean shot** — so it is throwaway code with careful verification, and
+  it has its own roadmap row rather than living inside step 19.
+
+⚠️ **Stock must not come from Woo.** Woo's stock numbers are a **projection with no cost attached**,
+and Novocore needs opening **lots** — quantity *and* cost. Product data from Woo; **stock from Go or
+from a physical count valued against purchase invoices**, which is a separate and probably harder
+migration question.
+
+⚠️ **After cutover Woo is read-only for product data, SCOPED.** Novocore owns the fields it manages
+and overwrites them without asking; fields it does not manage — SEO text, image galleries, plugin
+data — are left untouched. **That list must be explicit and written down at step 19; it does not
+exist yet.** The alternative is discovering it when a product's images vanish.
 
 ### Channel already reaches the ledger
 
