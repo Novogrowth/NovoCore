@@ -7,7 +7,7 @@ import gr.novotrade.novocore.core.api.asset.NewAsset;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.web.ListResponse;
-import gr.novotrade.novocore.core.web.Required;
+import gr.novotrade.novocore.core.api.shared.Required;
 import gr.novotrade.novocore.core.web.Requires;
 import gr.novotrade.novocore.core.api.shared.Rate;
 import java.time.LocalDate;

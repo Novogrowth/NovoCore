@@ -14,7 +14,7 @@ import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.PageRequest;
 import gr.novotrade.novocore.core.api.shared.SortDirection;
-import gr.novotrade.novocore.core.web.InvalidRequestException;
+import gr.novotrade.novocore.core.api.shared.InvalidInputException;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.web.Paging;
 import gr.novotrade.novocore.core.web.Requires;
@@ -190,7 +190,7 @@ class SalesController {
             LocalDate to) {
 
         if (customerId != null && salesInvoiceId != null) {
-            throw new InvalidRequestException(
+            throw new InvalidInputException(
                     "customerId and salesInvoiceId are alternative lookups; name one.");
         }
         if (salesInvoiceId != null) {
@@ -258,7 +258,7 @@ class SalesController {
 
     static LocalDate requireRange(LocalDate bound) {
         if (bound == null) {
-            throw new InvalidRequestException(
+            throw new InvalidInputException(
                     "a date range needs 'from' and 'to', or name a customerId instead");
         }
         return bound;

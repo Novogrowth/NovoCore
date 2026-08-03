@@ -5,7 +5,7 @@ import gr.novotrade.novocore.core.api.banking.BankTransferView;
 import gr.novotrade.novocore.core.api.banking.NewBankTransfer;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
-import gr.novotrade.novocore.core.web.InvalidRequestException;
+import gr.novotrade.novocore.core.api.shared.InvalidInputException;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.web.Requires;
 import gr.novotrade.novocore.core.web.ReversalCommand;
@@ -53,7 +53,7 @@ class BankTransferController {
             return ListResponse.of(transfers.involving(accountId));
         }
         if (from == null || to == null) {
-            throw new InvalidRequestException(
+            throw new InvalidInputException(
                     "a date range needs 'from' and 'to', or name an accountId instead");
         }
         return ListResponse.of(transfers.between(from, to));

@@ -8,7 +8,7 @@ import gr.novotrade.novocore.core.api.purchasing.PurchaseInvoiceView;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.shared.Money;
-import gr.novotrade.novocore.core.web.InvalidRequestException;
+import gr.novotrade.novocore.core.api.shared.InvalidInputException;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.web.Requires;
 import gr.novotrade.novocore.core.web.ReversalCommand;
@@ -147,7 +147,7 @@ class PurchaseInvoiceController {
 
     static LocalDate requireFrom(LocalDate from) {
         if (from == null) {
-            throw new InvalidRequestException(
+            throw new InvalidInputException(
                     "a date range needs 'from' and 'to', or name a supplierId instead");
         }
         return from;
@@ -155,7 +155,7 @@ class PurchaseInvoiceController {
 
     static LocalDate requireTo(LocalDate to) {
         if (to == null) {
-            throw new InvalidRequestException(
+            throw new InvalidInputException(
                     "a date range needs 'from' and 'to', or name a supplierId instead");
         }
         return to;

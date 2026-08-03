@@ -22,8 +22,8 @@ figure that cannot be measured is left blank with a reason, never filled with a 
 `Out` is tokens generated; `In` is input + cache-creation + cache-read — **read the warning under
 *How the actual figures were derived* before drawing any conclusion from that column.**
 
-**Current state, measured 2026-08-02:** **1,376 backend tests** (0 failures, 0 errors, 1 skipped,
-`mvn clean verify` exit 0), **307 frontend tests across 31 files**, **175 API operations**.
+**Current state, measured 2026-08-03 (after Q1):** **1,377 backend tests** (0 failures, 0 errors,
+1 skipped, `mvn clean verify` exit 0), **308 frontend tests across 31 files**, **176 API operations**.
 
 ---
 
@@ -90,7 +90,9 @@ frontend work that must land before any adapter is built.
 |   S2 | Column sorting, 5 screens               |     — |    0.7 |  216k | 🟢 Done         |
 |   F4 | Settings, VAT classes, UoM              |     — |    1.0 |  605k | 🟢 Done         |
 |   U1 | Roadmap unification + doc reconcile ᵘ¹  |     — |    1.0 |  253k | 🟢 Done         |
-|   Q1 | Backend queue: 4+6, 5, 1, 7, 8 ᵘ        |     — |        |       | 🔴 Not started  |
+|   Q1 | Backend queue: 4+6, 5, 1, 7 ᵘ           |     — |    1.5 |  208k | 🟢 Done         |
+|   8a | `@Mandatory` + generator + ArchUnit ᵈᵉᶜ |     — |        |       | 🟡 **Current**  |
+|   8b | Client regeneration, fixture reconcile ᵈᵉᶜ |  — |        |       | 🔴 Not started  |
 |   R1 | Document reference data (backend) ʳ     |     — |        |       | 🔴 Not started  |
 |   R2 | Document reference data (screens) ʳ²    |     — |        |       | 🔴 Not started  |
 |   R3 | Self-supply posting paths ˢ             |     — |        |       | ⚪ Placement TBD |
@@ -117,10 +119,15 @@ several of them are backend schema work rather than screens. Adding 8.0 across t
 present an estimate for the frontend as an estimate for the phase — so the F-row subtotal is stated
 separately instead, where a reader scanning a column of dashes will actually meet it.
 
-**Q1 is `🔴 Not started` and is nonetheless the next step to start.** The status column records work
-done, not queue position; the running order is in `PROGRESS.md` under *What is next, in one place*.
-**Nothing in the backend queue has been begun** — see ᵘ¹ and ᵘ for why this file said otherwise until
-2026-08-02.
+**Q1 is 🟢 Done (2026-08-03) and step 8a is `🟡 Current`.** The running order is in `PROGRESS.md`
+under *What is next, in one place*, and it is **Q1 → 8a → 8b → R1 → R2 → F5**. ⚠️ **8a and 8b are not
+new work invented here**: they are backend queue item 8, lifted out of Q1 and given their own rows so
+the placement decision is visible in the sequence rather than buried in a queue — see ᵈᵉᶜ.
+
+✅ **Every step through Q1 is verified on both legs, with one stated exception.** ⚠️ **Q1's live
+browser leg has not been run** — its four items are proved by the contract tests and by a probe
+against the real server, which is what has actually bitten, but the browser half of item 5's screen
+change is outstanding and is the owner's to run. Everything below describes the position through F4.
 
 ✅ **Every step through F4 is verified on both legs.** Each carries its own automated tests, and S1,
 S2 and F4 each also needed a live browser check against the running stack — **the owner ran all three
@@ -217,10 +224,14 @@ Nothing here is solved. Each is recorded so its absence reads as a decision rath
   packages data, the adapter hands it to Go, and the document comes back with its ΜΑΡΚ. So F5 as a
   data-entry screen is work that largely disappears once step 18 lands. The "F5 sets the pattern for
   F6–F8" argument is weaker than it looked.
-- **Should backend queue item 8 be promoted to first on severity?** 90 records with fields mandatory
-  in fact but invisible to the contract generator, on the boundary every adapter and module consumes.
-  Its sibling item 2 is what broke product creation for every user. **Not reordered pending the
-  owner's decision** — item 8 currently sits last in Q1's working order.
+- ✅ **~~Should backend queue item 8 be promoted to first on severity?~~ DECIDED 2026-08-03, and the
+  answer was neither.** It was **lifted out of Q1 entirely** and given its own numbered step, split
+  into **8a** (annotation, generator line, bidirectional ArchUnit cross-check, spec) and **8b**
+  (client regeneration, fixture reconciliation), **placed after Q1 and before R1**. Two reasons, both
+  pointing the same way: **R1 adds eight tables' worth of new records**, which should be written with
+  the enforcement already in place rather than retrofitted; and **every screen built afterwards
+  multiplies the fixture reconciliation**, so it is cheapest now and only gets worse. Never
+  concurrent with a frontend step. See ᵈᵉᶜ.
 - **Where D1–D5 and M0 sit.** All are core schema, all are cheap before real data and expensive after.
   M0 in particular — a trial import of real Manager.io data — is the highest-information test available
   and currently sits twenty steps away at step 24.
@@ -426,18 +437,62 @@ reconciliation rather than a build: most of the cost was reading `PROGRESS.md`, 
 primer and a README repeatedly, plus a full `mvn clean verify` and a live database session, to produce
 comparatively little text. Recorded without adjustment; it is data about what this kind of step costs.
 
-**ᵘ Q1 — the backend follow-up queue. Not started; nothing in it has been begun.** Of nine numbered
-items, **two are done (2 and 9)** and **one is closed as stale (3)** — all three from before Q1 was a
-step. The six that remain are worked as **five items**, because 4 and 6 are one anti-pattern and are
-done together. **Working order, as recorded in `PROGRESS.md`: 4+6, 5, 1, 7, 8.**
+**ᵘ Q1 — the backend follow-up queue. 🟢 Done, 2026-08-03.** Of nine numbered items, two were done
+(2 and 9) and one closed as stale (3) before Q1 existed as a step. **Item 8 left the queue and became
+its own step** (see ᵈᵉᶜ), so **Q1 is four items: 4+6, 5, 1, 7 — all four landed.**
 
-⚠️ **Item 8 is the highest-severity open item in the project and sits last in that order** — 90
-records with fields mandatory in fact but invisible to the contract generator. Its sibling, item 2, is
-what broke product creation. Whether to promote it is an open decision above; it is **not** reordered
-here.
+- **4+6** — one anti-pattern, fixed together. `Required` and `InvalidRequestException` moved from
+  `core.web` into `core-api`, the exception renamed **`InvalidInputException`**; the two retail-customer
+  rules enforced in `CustomerServiceImpl` where a caller reaches them; `NewUser`/`NewRole` guarded with
+  `Required.field`. Plus **item 4's part 2**, a sweep case for a *well-formed body a domain rule
+  refuses* — **proven by running it against the defect and watching it fail** before the fix landed.
+- **5** — `PATCH /api/roles/{id}/description`. `Role.description` had **no setter**, so it was
+  structurally unwritable rather than merely unrouted. Both frontend "there is no route" notes came
+  out with it, as that item said they would.
+- **1** — `InventoryController.writeOff` → `createWriteOff`, and `OpenApiSpecIT` now **refuses** to
+  write a duplicate `operationId` rather than emitting an invalid document. The `orval.config.ts`
+  workaround and the assertion pinning it were **deleted**.
+- **7** — the seven boolean primitives boxed with `Required.field`, **plus a latent eighth**
+  (`NewVatExemptionReason.inputVatDeductible`). ⚠️ **It carries a known, time-boxed regression that
+  8a closes** — see ᵈᵉᶜ.
 
 ⚠️ **The credit-note rename is not in this queue.** It belongs to **U1** — see ᵘ¹ for why the
-attribution was corrected. Q1 has no partial progress of any kind.
+attribution was corrected.
+
+**ᵈᵉᶜ Step 8 — declare every compact-constructor requirement.** Lifted out of Q1 on 2026-08-03 and
+given its own step **after Q1, before R1**, replacing the open decision *"should item 8 be promoted
+within Q1?"* The answer was neither promote nor leave last.
+
+- **8a** — a `@Mandatory` marker annotation in `core-api` (`…core.api.shared`, which is the only
+  module every request record can see); one line in `OpenApiSchema.recordSchema` reading it; and a
+  **bidirectional ArchUnit cross-check** on the compact constructor's bytecode — a guarded component
+  must carry the annotation, and an annotated one must be guarded. ⚠️ **The cross-check is not
+  optional.** Without it the annotation is ~289 hand-applied assertions that nothing verifies, which
+  is *a fact established by reading, then built upon* at scale.
+- **8b** — client regeneration and fixture reconciliation. This is the larger half by volume and is
+  where item 2's primitive sweep found 19 drifted fixtures from a much smaller change.
+
+⚠️ **8a is now load-bearing for a regression Q1 shipped deliberately, measured rather than reasoned.**
+Boxing the booleans (item 7) improved the *message* — `"serialTracked" is required and was not
+supplied.` instead of a field-less `Cannot map null into type boolean` — and removed the
+*declaration*, because `OpenApiSchema` marks a component required when it `isPrimitive()` and a boxed
+`Boolean` is not. **Schemas declaring `required` went 78 → 75 on 2026-08-03.** The server still
+refuses an omitted flag; what `tsc` no longer does is refuse a TypeScript caller that omits one.
+**The exposure window contains no frontend work** — the order is Q1 → 8a/8b → R1 → R2 → F5, and F5–F8
+are the steps that would send these bodies — and `product-create.tsx` still sends the field
+explicitly. Pinned in both directions by `spec-hygiene.test.ts`.
+
+**Measured, per the method below** — window `f143215` (U1's follow-up close-out, 2026-08-02 15:10)
+to this session's commit. **558 events, 1.49 h active against 21.43 h wall clock, 208k out, 76.0M
+in. Recorded as 1.5.** The wall figure spans a night; the 5-minute cap is what stops that counting,
+and the split shows it working — **1.40 h of the 1.49 is this session** (`c4003270`), the remainder
+being a previous session's tail and capped inter-session gaps. As with every row it **excludes its
+own close-out**, so read it as "at least".
+
+⚠️ **This row's `Out` is low for the amount of code changed** — 208k against 76.0M in — and that is
+the shape of a step whose expensive part was *reading to decide*: a 26-request probe, a full
+`mvn clean verify` run four times, and two rounds of measuring the guard population. The four fixes
+themselves are small diffs.
 
 **Item 3 is closed as stale.** It asked for an owner decision between a real search endpoint and
 relabelling the products filter box. **That decision was made and the work delivered by S1** on

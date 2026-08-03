@@ -36,6 +36,7 @@ import type {
   ProtectedField,
   RoleControllerCreate4xx,
   RoleControllerDeactivate4xx,
+  RoleControllerDescribe4xx,
   RoleControllerGrant4xx,
   RoleControllerHolders4xx,
   RoleControllerReactivate4xx,
@@ -44,6 +45,7 @@ import type {
   RoleControllerRole4xx,
   RoleControllerRoles4xx,
   RoleControllerRolesParams,
+  RoleDescriptionRequest,
   RoleView,
   Section
 } from '../../model';
@@ -354,6 +356,65 @@ const {mutation: mutationOptions} = options ?
         TContext
       > => {
       return useMutation(getRoleControllerDeactivateMutationOptions(options), queryClient);
+    }
+    export const roleControllerDescribe = (
+    id: number,
+    roleDescriptionRequest: RoleDescriptionRequest,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<RoleView>(
+      {url: `/api/roles/${id}/description`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: roleDescriptionRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getRoleControllerDescribeMutationOptions = <TError = RoleControllerDescribe4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof roleControllerDescribe>>, TError,{id: number;data: RoleDescriptionRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof roleControllerDescribe>>, TError,{id: number;data: RoleDescriptionRequest}, TContext> => {
+
+const mutationKey = ['roleControllerDescribe'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof roleControllerDescribe>>, {id: number;data: RoleDescriptionRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  roleControllerDescribe(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RoleControllerDescribeMutationResult = NonNullable<Awaited<ReturnType<typeof roleControllerDescribe>>>
+    export type RoleControllerDescribeMutationBody = RoleDescriptionRequest
+    export type RoleControllerDescribeMutationError = RoleControllerDescribe4xx
+
+    export const useRoleControllerDescribe = <TError = RoleControllerDescribe4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof roleControllerDescribe>>, TError,{id: number;data: RoleDescriptionRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof roleControllerDescribe>>,
+        TError,
+        {id: number;data: RoleDescriptionRequest},
+        TContext
+      > => {
+      return useMutation(getRoleControllerDescribeMutationOptions(options), queryClient);
     }
     export const roleControllerRestrictField = (
     id: number,

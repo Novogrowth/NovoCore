@@ -1,6 +1,7 @@
 package gr.novotrade.novocore.core.api.sales;
 
 import gr.novotrade.novocore.core.api.shared.Quantity;
+import gr.novotrade.novocore.core.api.shared.Required;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
 import java.util.Objects;
 
@@ -26,10 +27,11 @@ public record NewCreditNoteLine(
         long salesInvoiceLineId,
         Quantity quantity,
         UnitCost unitPrice,
-        boolean stockReturned,
+        Boolean stockReturned,
         String description) {
 
     public NewCreditNoteLine {
+        Required.field(stockReturned, "stockReturned");
         Objects.requireNonNull(quantity, "quantity");
         Objects.requireNonNull(unitPrice, "unitPrice");
         description = (description == null || description.isBlank()) ? null : description.trim();

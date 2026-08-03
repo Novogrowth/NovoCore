@@ -31,6 +31,7 @@ import type {
   InventoryControllerConsumptions4xx,
   InventoryControllerConsumptionsParams,
   InventoryControllerConsumptionsWithShortfall4xx,
+  InventoryControllerCreateWriteOff4xx,
   InventoryControllerLot4xx,
   InventoryControllerLots4xx,
   InventoryControllerLotsParams,
@@ -41,8 +42,7 @@ import type {
   InventoryControllerUnits4xx,
   InventoryControllerUnitsOfLot4xx,
   InventoryControllerUnitsParams,
-  InventoryControllerWriteOffGet4xx,
-  InventoryControllerWriteOffPost4xx,
+  InventoryControllerWriteOff4xx,
   InventoryControllerWriteOffs4xx,
   InventoryControllerWriteOffsParams,
   InventoryLotView,
@@ -974,7 +974,7 @@ export function useInventoryControllerWriteOffs<TData = Awaited<ReturnType<typeo
 
 
 
-export const inventoryControllerWriteOffPost = (
+export const inventoryControllerCreateWriteOff = (
     newStockWriteOff: NewStockWriteOff,
  signal?: AbortSignal
 ) => {
@@ -991,11 +991,11 @@ export const inventoryControllerWriteOffPost = (
 
 
 
-export const getInventoryControllerWriteOffPostMutationOptions = <TError = InventoryControllerWriteOffPost4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>, TError,{data: NewStockWriteOff}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>, TError,{data: NewStockWriteOff}, TContext> => {
+export const getInventoryControllerCreateWriteOffMutationOptions = <TError = InventoryControllerCreateWriteOff4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerCreateWriteOff>>, TError,{data: NewStockWriteOff}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerCreateWriteOff>>, TError,{data: NewStockWriteOff}, TContext> => {
 
-const mutationKey = ['inventoryControllerWriteOffPost'];
+const mutationKey = ['inventoryControllerCreateWriteOff'];
 const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -1005,10 +1005,10 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>, {data: NewStockWriteOff}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof inventoryControllerCreateWriteOff>>, {data: NewStockWriteOff}> = (props) => {
           const {data} = props ?? {};
 
-          return  inventoryControllerWriteOffPost(data,)
+          return  inventoryControllerCreateWriteOff(data,)
         }
 
 
@@ -1018,21 +1018,21 @@ const {mutation: mutationOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type InventoryControllerWriteOffPostMutationResult = NonNullable<Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>>
-    export type InventoryControllerWriteOffPostMutationBody = NewStockWriteOff
-    export type InventoryControllerWriteOffPostMutationError = InventoryControllerWriteOffPost4xx
+    export type InventoryControllerCreateWriteOffMutationResult = NonNullable<Awaited<ReturnType<typeof inventoryControllerCreateWriteOff>>>
+    export type InventoryControllerCreateWriteOffMutationBody = NewStockWriteOff
+    export type InventoryControllerCreateWriteOffMutationError = InventoryControllerCreateWriteOff4xx
 
-    export const useInventoryControllerWriteOffPost = <TError = InventoryControllerWriteOffPost4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>, TError,{data: NewStockWriteOff}, TContext>, }
+    export const useInventoryControllerCreateWriteOff = <TError = InventoryControllerCreateWriteOff4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerCreateWriteOff>>, TError,{data: NewStockWriteOff}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof inventoryControllerWriteOffPost>>,
+        Awaited<ReturnType<typeof inventoryControllerCreateWriteOff>>,
         TError,
         {data: NewStockWriteOff},
         TContext
       > => {
-      return useMutation(getInventoryControllerWriteOffPostMutationOptions(options), queryClient);
+      return useMutation(getInventoryControllerCreateWriteOffMutationOptions(options), queryClient);
     }
-    export const inventoryControllerWriteOffGet = (
+    export const inventoryControllerWriteOff = (
     id: number,
  signal?: AbortSignal
 ) => {
@@ -1047,66 +1047,66 @@ const {mutation: mutationOptions} = options ?
 
 
 
-export const getInventoryControllerWriteOffGetQueryKey = (id: number,) => {
+export const getInventoryControllerWriteOffQueryKey = (id: number,) => {
     return [
     `/api/inventory/write-offs/${id}`
     ] as const;
     }
 
 
-export const getInventoryControllerWriteOffGetQueryOptions = <TData = Awaited<ReturnType<typeof inventoryControllerWriteOffGet>>, TError = InventoryControllerWriteOffGet4xx>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOffGet>>, TError, TData>>, }
+export const getInventoryControllerWriteOffQueryOptions = <TData = Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError = InventoryControllerWriteOff4xx>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getInventoryControllerWriteOffGetQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getInventoryControllerWriteOffQueryKey(id);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof inventoryControllerWriteOffGet>>> = ({ signal }) => inventoryControllerWriteOffGet(id, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof inventoryControllerWriteOff>>> = ({ signal }) => inventoryControllerWriteOff(id, signal);
 
 
 
 
 
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOffGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type InventoryControllerWriteOffGetQueryResult = NonNullable<Awaited<ReturnType<typeof inventoryControllerWriteOffGet>>>
-export type InventoryControllerWriteOffGetQueryError = InventoryControllerWriteOffGet4xx
+export type InventoryControllerWriteOffQueryResult = NonNullable<Awaited<ReturnType<typeof inventoryControllerWriteOff>>>
+export type InventoryControllerWriteOffQueryError = InventoryControllerWriteOff4xx
 
 
-export function useInventoryControllerWriteOffGet<TData = Awaited<ReturnType<typeof inventoryControllerWriteOffGet>>, TError = InventoryControllerWriteOffGet4xx>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOffGet>>, TError, TData>> & Pick<
+export function useInventoryControllerWriteOff<TData = Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError = InventoryControllerWriteOff4xx>(
+ id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof inventoryControllerWriteOffGet>>,
+          Awaited<ReturnType<typeof inventoryControllerWriteOff>>,
           TError,
-          Awaited<ReturnType<typeof inventoryControllerWriteOffGet>>
+          Awaited<ReturnType<typeof inventoryControllerWriteOff>>
         > , 'initialData'
       >, }
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useInventoryControllerWriteOffGet<TData = Awaited<ReturnType<typeof inventoryControllerWriteOffGet>>, TError = InventoryControllerWriteOffGet4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOffGet>>, TError, TData>> & Pick<
+export function useInventoryControllerWriteOff<TData = Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError = InventoryControllerWriteOff4xx>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof inventoryControllerWriteOffGet>>,
+          Awaited<ReturnType<typeof inventoryControllerWriteOff>>,
           TError,
-          Awaited<ReturnType<typeof inventoryControllerWriteOffGet>>
+          Awaited<ReturnType<typeof inventoryControllerWriteOff>>
         > , 'initialData'
       >, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useInventoryControllerWriteOffGet<TData = Awaited<ReturnType<typeof inventoryControllerWriteOffGet>>, TError = InventoryControllerWriteOffGet4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOffGet>>, TError, TData>>, }
+export function useInventoryControllerWriteOff<TData = Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError = InventoryControllerWriteOff4xx>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError, TData>>, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useInventoryControllerWriteOffGet<TData = Awaited<ReturnType<typeof inventoryControllerWriteOffGet>>, TError = InventoryControllerWriteOffGet4xx>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOffGet>>, TError, TData>>, }
+export function useInventoryControllerWriteOff<TData = Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError = InventoryControllerWriteOff4xx>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError, TData>>, }
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getInventoryControllerWriteOffGetQueryOptions(id,options)
+  const queryOptions = getInventoryControllerWriteOffQueryOptions(id,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

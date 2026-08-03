@@ -171,8 +171,6 @@
   "roles.notBuilt": "Not built yet",
   "roles.notBuiltTitle": "This section can be granted, and there is nothing behind it yet. The grant is stored, so the permission is already in place when the feature arrives.",
   "roles.fullAccessBody": "This role has full access to everything, including sections added later. It carries no individual grants, which is why every row below reads Full.",
-  "roles.descriptionFixed": "Set when the role is created. There is no route to change it.",
-  "roles.descriptionOnlyNow": "This is the only chance to set it — there is no route to change a description afterwards.",
   "roles.createGrantsLater": "A new role grants nothing at all. Choosing its sections is the next step, on the role's own page — creating a role and granting it access are separate acts, each audited on its own.",
   "roles.column.name": "Name",
   "roles.column.description": "Description",

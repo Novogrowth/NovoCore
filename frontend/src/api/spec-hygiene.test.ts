@@ -33,7 +33,7 @@ describe('the committed OpenAPI spec', () => {
   const all = operations()
 
   it('describes the surface the client is generated from', () => {
-    expect(all.length).toBe(175)
+    expect(all.length).toBe(176)
   })
 
   it('declares a section and a level on every route', () => {
@@ -46,18 +46,27 @@ describe('the committed OpenAPI spec', () => {
     expect(undeclared.map((entry) => entry.route)).toEqual([])
   })
 
-  it('has exactly one known duplicate operationId, which is a backend defect', () => {
+  it('declares a unique operationId on every operation', () => {
     /*
-     * OpenAPI requires operationId to be unique. `InventoryController_writeOff` is used by both
-     * `POST /api/inventory/write-offs` and `GET /api/inventory/write-offs/{id}`, because
-     * OpenApiSpecIT derives the id from Controller_method and those are two Java methods of the
-     * same name. orval.config.ts works around it by suffixing the HTTP verb.
+     * **This test used to assert the opposite, and the change is the point.**
      *
-     * This assertion is written to fail in BOTH directions on purpose:
-     *   - a NEW collision appears  → the workaround silently renamed something else, and the
-     *     generated hook names moved without anyone deciding they should;
-     *   - this collision is FIXED  → the workaround is dead code, and this test says so instead
-     *     of leaving it to be found years later.
+     * It read *"has exactly one known duplicate operationId, which is a backend defect"* and pinned
+     * `InventoryController_writeOff` — used by both `POST /api/inventory/write-offs` and
+     * `GET /api/inventory/write-offs/{id}`, because OpenApiSpecIT derives the id from
+     * Controller_method and those were two Java methods of the same name. `orval.config.ts` worked
+     * around it by suffixing the HTTP verb, and this assertion was written to fail in BOTH
+     * directions — including on the day the collision became empty, so that somebody came back and
+     * deleted the workaround rather than leaving it to rot.
+     *
+     * **That day was 2026-08-03** (backend queue item 1) and this is that visit. The POST handler is
+     * `createWriteOff`; the read keeps the singular noun. More importantly the CAUSE is closed:
+     * `OpenApiSpecIT` now refuses to write a spec containing a duplicate, so this can no longer
+     * arrive silently. The de-duplication block in `orval.config.ts` is deleted.
+     *
+     * Kept rather than removed with it, because the two guards catch different things: the backend
+     * one stops an invalid spec being GENERATED, this one stops an invalid spec being CONSUMED —
+     * and the frontend is where the symptom actually appeared, as twenty duplicate-identifier
+     * errors in one generated file.
      */
     const byId = new Map<string, string[]>()
     for (const { route, operation } of all) {
@@ -67,12 +76,12 @@ describe('the committed OpenAPI spec', () => {
 
     const duplicates = [...byId.entries()]
       .filter(([, routes]) => routes.length > 1)
-      .map(([operationId]) => operationId)
+      .map(([operationId, routes]) => `${operationId} → ${routes.join(', ')}`)
 
     expect(
       duplicates,
-      'if this is now empty, the backend fixed it — delete the de-duplication block in orval.config.ts and this test',
-    ).toEqual(['InventoryController_writeOff'])
+      'OpenAPI requires operationId to be unique; orval will emit two hooks with one name and the client will not compile',
+    ).toEqual([])
   })
 
   it('declares every primitive component required, so a mandatory field is knowable from the contract', () => {
@@ -115,14 +124,44 @@ describe('the committed OpenAPI spec', () => {
     expect(declaring).toContain('UnitCost')
     expect(schemas.Money?.required).toEqual(['amount', 'currency'])
 
-    // The two that cost a screen between them, now declared rather than discovered.
-    expect(schemas.NewProduct?.required).toContain('serialTracked')
+    // The id half still holds and is the larger half: 20 `long` ids across the surface stay
+    // primitive deliberately, because a form always sends an id — it came from a select the
+    // operator had to choose.
     expect(schemas.NewUser?.required).toContain('roleId')
+
+    /*
+     * ⚠️ **`NewProduct.serialTracked` is NO LONGER declared required, and that is a KNOWN,
+     * TIME-BOXED REGRESSION rather than a drift.** Read this before "fixing" it.
+     *
+     * Backend queue item 7 (2026-08-03) boxed the seven boolean primitives, so the server now
+     * answers `"serialTracked" is required and was not supplied.` instead of the field-less
+     * `Cannot map null into type boolean` that broke product creation for every user. But
+     * `OpenApiSchema` declares a component required when it `isPrimitive()`, and a boxed `Boolean`
+     * is not — so the same edit that improved the MESSAGE removed the DECLARATION. Measured, not
+     * reasoned: schemas declaring `required` went 78 → 75.
+     *
+     * **What is lost is the compile-time catch, not the refusal.** The server still refuses an
+     * omitted flag, and more legibly than before. What `tsc` no longer does is refuse a TypeScript
+     * caller that omits one.
+     *
+     * **What closes it is step 8a**, the `@Mandatory` annotation read by the same generator — which
+     * is scheduled immediately after Q1 and BEFORE R1 precisely so this window is one step long.
+     * No screen is built inside that window: the order is Q1 → 8a/8b → R1 → R2 → F5, and F5–F8 are
+     * the steps that would send these bodies.
+     *
+     * ⚠️ **`product-create.tsx` must therefore keep sending `serialTracked` explicitly.** Its
+     * comment was updated on 2026-08-03; it had claimed omission was a compile error, which was
+     * true between 2026-08-01 and this change and is not true now.
+     */
+    expect(
+      schemas.NewProduct?.required,
+      'if serialTracked is declared again, 8a landed — delete this note and the explicit send in product-create.tsx',
+    ).not.toContain('serialTracked')
 
     expect(
       declaring.length,
       'the number of schemas declaring required fields changed — read the comment above before updating this number',
-    ).toBe(78)
+    ).toBe(75)
 
     // The guarded half is NOT declared, and this is what says so out loud.
     expect(

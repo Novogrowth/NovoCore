@@ -176,6 +176,10 @@ class TradingQuarterOverHttpIT {
                     "same — see GET /api/roles."),
             java.util.Map.entry("PATCH /api/roles/{id}/name",
                     "same — see GET /api/roles."),
+            java.util.Map.entry("PATCH /api/roles/{id}/description",
+                    "same — see GET /api/roles. Added by backend queue item 5 on 2026-08-03 and "
+                            + "driven end to end by UserRoleEndpointIT.roleLifecycle, including "
+                            + "the clear-by-blank case and the system-role refusal."),
             java.util.Map.entry("PUT /api/roles/{id}/grants/{section}",
                     "narrowing a grant ends the sessions of everyone holding the role, including "
                             + "the narrative's own. Covered by UserRoleEndpointIT, its eviction by "

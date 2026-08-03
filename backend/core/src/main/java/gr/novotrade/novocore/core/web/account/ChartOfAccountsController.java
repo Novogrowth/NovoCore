@@ -9,9 +9,9 @@ import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.SubLedgerType;
-import gr.novotrade.novocore.core.web.InvalidRequestException;
+import gr.novotrade.novocore.core.api.shared.InvalidInputException;
 import gr.novotrade.novocore.core.web.ListResponse;
-import gr.novotrade.novocore.core.web.Required;
+import gr.novotrade.novocore.core.api.shared.Required;
 import gr.novotrade.novocore.core.web.Requires;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -86,7 +86,7 @@ class ChartOfAccountsController {
                 + (subLedgerType == null ? 0 : 1)
                 + (Boolean.TRUE.equals(expectedToClear) ? 1 : 0);
         if (filters > 1) {
-            throw new InvalidRequestException(
+            throw new InvalidInputException(
                     "kind, subLedgerType and expectedToClear are alternative filters; name one.");
         }
 

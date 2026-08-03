@@ -274,6 +274,35 @@ class UserRoleEndpointIT {
                     "PATCH role name");
             assertThat(Json.text(renamed, "name")).isEqualTo("ADMIN_R_RENAMED");
 
+            // ⚠️ Backend queue item 5. This route did not exist until 2026-08-03, and the field was
+            // not merely unrouted: `Role.description` had no setter, so it was structurally
+            // unwritable after construction. The only correction for a typo was to create a second
+            // role, move every holder across and deactivate the first.
+            JsonNode described = Json.ok(
+                    owner.patchBody("/api/roles/" + id + "/description",
+                            Map.of("description", "Described over HTTP")),
+                    "PATCH role description");
+            assertThat(Json.text(described, "description")).isEqualTo("Described over HTTP");
+            assertThat(Json.text(described, "name"))
+                    .as("describing a role changes nothing else — it is not a general role edit")
+                    .isEqualTo("ADMIN_R_RENAMED");
+
+            // Blank clears it, because NewRole already permits a role with no description. The KEY
+            // is still required, which is what stops an empty body clearing one by accident — that
+            // case is covered by PermissionSweepIT.noRouteFailsOnAnEmptyBody across every route.
+            assertThat(Json.text(Json.ok(
+                    owner.patchBody("/api/roles/" + id + "/description",
+                            Map.of("description", "   ")),
+                    "PATCH role description, blank"), "description"))
+                    .isNull();
+
+            // A system role is refused here for the same reason it is refused everywhere else.
+            assertThat(owner.patchBody("/api/roles/" + roles.requireByName("OWNER").id()
+                            + "/description", Map.of("description", "nope"))
+                    .getStatusCode().is2xxSuccessful())
+                    .as("editableRole applies to a description too")
+                    .isFalse();
+
             JsonNode granted = Json.ok(
                     owner.putBody("/api/roles/" + id + "/grants/" + Section.CUSTOMERS,
                             Map.of("accessLevel", AccessLevel.VIEW)),

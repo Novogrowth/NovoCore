@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.product;
 
+import gr.novotrade.novocore.core.api.shared.Required;
 import java.util.Objects;
 
 /**
@@ -11,10 +12,11 @@ import java.util.Objects;
 public record NewUnitOfMeasure(
         String code,
         String name,
-        boolean fractionalQuantityAllowed,
+        Boolean fractionalQuantityAllowed,
         String mydataCode) {
 
     public NewUnitOfMeasure {
+        Required.field(fractionalQuantityAllowed, "fractionalQuantityAllowed");
         Objects.requireNonNull(code, "code");
         Objects.requireNonNull(name, "name");
     }

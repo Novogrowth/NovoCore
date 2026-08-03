@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.account;
 
+import gr.novotrade.novocore.core.api.shared.Required;
 import gr.novotrade.novocore.core.api.shared.SubLedgerType;
 import java.util.Objects;
 
@@ -27,9 +28,10 @@ public record NewAccount(
         AccountKind kind,
         SubLedgerType subLedgerType,
         long groupId,
-        boolean expectedToClear) {
+        Boolean expectedToClear) {
 
     public NewAccount {
+        Required.field(expectedToClear, "expectedToClear");
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(type, "type");
         Objects.requireNonNull(kind, "kind");

@@ -1,6 +1,6 @@
 package gr.novotrade.novocore.core.api.security;
 
-import java.util.Objects;
+import gr.novotrade.novocore.core.api.shared.Required;
 
 /**
  * Request to create a user account.
@@ -18,10 +18,25 @@ public record NewUser(
         String rawPassword,
         long roleId) {
 
+    /**
+     * ⚠️ <strong>These were {@code Objects.requireNonNull} until Q1 (2026-08-03)</strong> — the
+     * fifth confirmed instance of {@code CLAUDE.md}'s <em>a client's mistake raised as a programming
+     * error</em>, and the one that showed why the anti-pattern is not a web-layer phenomenon:
+     * {@link Required} lived in {@code core.web}, which this module cannot see, so the remedy was
+     * <em>structurally unreachable</em> from here. It moved down; these are the first use of it.
+     *
+     * <p>⚠️ <strong>{@code field} and deliberately not {@code text}</strong>, even though a blank
+     * username is also refused. {@code UserServiceImpl} already refuses all three as blank with
+     * messages naming the rule — <em>"Username must not be blank."</em>, <em>"Password must be at
+     * least 12 characters."</em> — and those are 422s a caller can act on, measured against the
+     * running server in Q1's probe. {@code Required.text} here would intercept them one layer
+     * earlier and answer a 400 saying less. <strong>Only the absent case was broken; only the absent
+     * case is changed.</strong>
+     */
     public NewUser {
-        Objects.requireNonNull(username, "username");
-        Objects.requireNonNull(displayName, "displayName");
-        Objects.requireNonNull(rawPassword, "rawPassword");
+        Required.field(username, "username");
+        Required.field(displayName, "displayName");
+        Required.field(rawPassword, "rawPassword");
     }
 
     /** Keeps the password out of logs and stack traces that print the record. */

@@ -2,6 +2,7 @@ package gr.novotrade.novocore.core.api.purchasing;
 
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
+import gr.novotrade.novocore.core.api.shared.Required;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
 import java.math.BigDecimal;
 import java.util.Currency;
@@ -45,10 +46,11 @@ public record NewPurchaseInvoiceLine(
         String description,
         Long vatClassId,
         Long vatExemptionReasonId,
-        boolean reverseCharge,
+        Boolean reverseCharge,
         List<GoodsReceiptMatch> matches) {
 
     public NewPurchaseInvoiceLine {
+        Required.field(reverseCharge, "reverseCharge");
         Objects.requireNonNull(type, "type");
         matches = matches == null ? List.of() : List.copyOf(matches);
         description = (description == null || description.isBlank()) ? null : description.trim();

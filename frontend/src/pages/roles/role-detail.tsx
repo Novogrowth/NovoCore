@@ -7,6 +7,7 @@ import {
   useRoleControllerDeactivate,
   useRoleControllerHolders,
   useRoleControllerReactivate,
+  useRoleControllerDescribe,
   useRoleControllerRename,
   useRoleControllerRole,
 } from '@/api/generated/endpoints/role/role'
@@ -19,7 +20,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 
 import { userColumns } from '@/pages/users/user-columns'
 
@@ -35,11 +35,12 @@ import { RoleGrants } from './role-grants'
  * `GET /api/roles/{id}/users` exists for exactly that, and includes deactivated accounts, because
  * they hold the role too and are equally in the way of retiring it.
  *
- * ⚠️ **The description is read-only, and that is the API rather than a decision here.** `NewRole`
- * takes a description and there is **no route that changes one** — no `PATCH …/description`
- * anywhere on the surface. So it is rendered as plain text with the reason beside it rather than
- * through `FieldEditor` with `editable: false`, which in this application means "not yours to edit"
- * and would tell an administrator something false. Queued as a backend item.
+ * The description is an ordinary `FieldEditor`. ⚠️ **It was read-only until 2026-08-03**, rendered
+ * as plain text with the reason beside it — deliberately NOT through `FieldEditor` with
+ * `editable: false`, because in this application that means *"not yours to edit"* and would have
+ * told a full-access administrator something false. There was simply no route: backend queue item
+ * 5, now `PATCH /api/roles/{id}/description`. Both notes came out with it, here and on the create
+ * form, which is what that item said would happen when it landed.
  */
 export function RoleDetail() {
   const { id } = useParams<{ id: string }>()
@@ -68,6 +69,7 @@ export function RoleDetail() {
   }
 
   const rename = useRoleControllerRename()
+  const describe = useRoleControllerDescribe()
   const deactivate = useRoleControllerDeactivate()
   const reactivate = useRoleControllerReactivate()
 
@@ -156,20 +158,26 @@ export function RoleDetail() {
             )}
           </FieldEditor>
 
-          {/* Plain text, not a FieldEditor: there is no route to change it. See the class note. */}
-          <div className="border-b py-2">
-            <div className="flex items-baseline justify-between gap-4">
-              <Label className="text-muted-foreground w-48 shrink-0 text-sm">
-                {t('roles.column.description')}
-              </Label>
-              <span className="flex-1 text-sm">{role.description ?? <UnsetValue />}</span>
-            </div>
-            {editable && (
-              <p className="text-muted-foreground mt-1 pl-52 text-sm">
-                {t('roles.descriptionFixed')}
-              </p>
+          <FieldEditor
+            label={t('roles.column.description')}
+            value={role.description ?? ''}
+            display={role.description ?? <UnsetValue />}
+            editable={editable}
+            {...(systemRole
+              ? { lockedReason: t('roles.locked.systemRole', { name: role.name ?? '' }) }
+              : {})}
+            onSave={async (description) => {
+              applyResponse(await describe.mutateAsync({ id: roleId, data: { description } }))
+            }}
+          >
+            {(draft, setDraft) => (
+              <Input
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                aria-label={t('roles.column.description')}
+              />
             )}
-          </div>
+          </FieldEditor>
         </CardContent>
       </Card>
 

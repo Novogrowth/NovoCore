@@ -39,8 +39,8 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | F4 | **Settings** — three config pages, VAT classes and units of measure, plus search and sorting | **Done** — migration **V30**, 4 GIN trigram indexes, `?search=` on 2 more routes, **22 sub-parts all with verdicts** (21 approved, 1 added mid-step), and `F4WriteContractIT` (15 tests) which **corrected a premise the step was built on**. Two findings. See below |
 | 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress. F0–F4, S1 and S2 done. ⚠️ Next is Q1 (the backend queue), then R1, then F5** — reprioritised 2026-08-02. Foundations `94e17cd`, Products `56e3726` + guards `28c4119` + brand pass, then the render-loop fix `3458ee6`, F0 (the seed pass), F1 Suppliers `b406b27`, F2 Customers `496c7be`, F3 Users & Roles `aea0e56`, then **S1** (search), **S2** (sorting) and **F4** (Settings). **307 frontend tests, 31 files, green.** Per-step detail in `docs/novocore-roadmap.md`; decisions and what each step left behind in *Step 16 — the frontend* below |
 
-**Tests, measured 2026-08-02: 1376 passing, 0 failing, 1 skipped, `mvn clean verify` exit 0; 175
-routes.** Counted from a local run on this machine. ⚠️ **Every other figure in this file is a
+**Tests, measured 2026-08-03 (after Q1): 1377 passing, 0 failing, 1 skipped, `mvn clean verify`
+exit 0; 176 routes. Frontend: 308 across 31 files.** Counted from a local run on this machine. ⚠️ **Every other figure in this file is a
 per-step count** — correct where it stands, wrong lifted out; this line is the current one. **F4 added 16** (1360 → 1376) and **no routes** — the two reference-data
 lists gained a *parameter*, not an operation, so the spec diff is **14 lines added and 0 removed**. The PostgreSQL 17 client tools are installed here, so `BackupIT`'s 16
 tests and the two backup legs run locally as well as on CI.
@@ -64,13 +64,18 @@ directly rather than trusting the line count: **0 removed, 37 added, 174 total.*
 
 ---
 
-## ▶ Next session — **Q1, the backend follow-up queue.** F4 is complete and fully verified
+## ▶ Next session — **step 8a**, the `@Mandatory` annotation. **Q1 is complete**
 
-⚠️ **This changed on 2026-08-02, and the previous version of this heading said F5.** The backend queue
-was prioritised ahead of F5 in a design conversation, and **that reprioritisation existed only in chat
-until now** — this file, the primer and the frontend roadmap all still said F5. It is the worked
-example for the new `CLAUDE.md` rule *"a decision reached in a design conversation gets the same
-close-out discipline as a build step."*
+⚠️ **Q1 finished on 2026-08-03 as FOUR items, not five.** Item 8 was lifted out of the queue and made
+its own numbered step — **8a** (annotation, generator, bidirectional ArchUnit cross-check, spec) and
+**8b** (client regeneration, fixture reconciliation) — **placed after Q1 and before R1**. That decision
+closed the standing open question *"should item 8 be promoted within Q1?"*, and the answer was neither
+promote nor leave last. Reasons in the roadmap under ᵈᵉᶜ.
+
+🎯 **8a is not optional housekeeping now: Q1 shipped a deliberate, measured regression that 8a closes.**
+Item 7 boxed the boolean primitives, which improved the refusal message and removed the `required`
+declaration from the spec (78 → 75 schemas declaring `required`, measured 2026-08-03). The window
+contains no frontend work by design. Full detail in the Q1 section below and in `spec-hygiene.test.ts`.
 
 **Read, in this order:** `CLAUDE.md` — including its new **document model** section, which governs
 everything from R1 onward → **`frontend/README.md`** (every frontend convention lives there, and
@@ -87,10 +92,11 @@ what they left behind.
 | **Substring search (S1)** | ✅ **Complete and live-verified.** Nothing outstanding |
 | **Sorting (S2)** | ✅ **Complete and live-verified.** Client-side, on all five list screens; the browser leg was run by the owner on 2026-08-01. Nothing outstanding |
 | **F4 — Settings** | ✅ **COMPLETE.** All 22 sub-parts have verdicts, none is "still open". Contract verified by the real backend; **browser leg run personally by the owner on 2026-08-01**. Nothing outstanding |
-| **Q1 — the backend follow-up queue** | 🔴 **NOT STARTED, and it is next** (changed 2026-08-02). **Five items to work through — 4+6, 5, 1, 7, 8** — covering the six open numbered rows, since 4 and 6 are one anti-pattern. Item 3 is closed as stale. ⚠️ **Nothing in this queue has been begun.** The credit-note rename belongs to **U1**, not here — see the reattribution below |
-| **R1 — document reference data** | 🔴 After Q1, and **before F5**, because F5's document model depends on it. Governed by `CLAUDE.md`'s new *document model* section and **ADR 0016** |
+| **Q1 — the backend follow-up queue** | ✅ **COMPLETE, 2026-08-03.** **Four items — 4+6, 5, 1, 7 — all four landed with verdicts.** Item 8 left the queue and became its own step (see below). The queue is now **empty of open numbered rows**; two new items were raised by the work and are listed under *What Q1 raised*. Backend 1,377 tests green, frontend 308 green |
+| **8a / 8b — declare every compact-constructor requirement** | 🟡 **8a IS NEXT.** Lifted out of Q1 on 2026-08-03, placed **before R1** so R1's eight tables' worth of new records are written with the enforcement in place rather than retrofitted. ⚠️ **8a also closes a regression Q1 shipped deliberately** — see item 7's verdict |
+| **R1 — document reference data** | 🔴 After 8a/8b, and **before F5**, because F5's document model depends on it. Governed by `CLAUDE.md`'s *document model* section and **ADR 0016** |
 | **F5 — Sales Invoice + Credit Note** | 🔴 **No longer next.** ⚠️ It decides the create/preview/commit pattern F6–F8 all reuse, so it is worth disproportionate scrutiny — but ⚠️ **see the open decision in the roadmap**: since documents arrive already issued, F5 before step 18 is a data-entry screen for documents created elsewhere, and much of it disappears when the Go adapter lands |
-| ⚠️ **Backend queue item 8 — promote to first?** | ⚖️ **OPEN, the owner's.** 90 records with fields mandatory in fact but invisible to the contract generator, on the boundary every adapter consumes. It currently sits **last**. Not reordered pending the decision |
+| ~~⚠️ **Backend queue item 8 — promote to first?**~~ | ✅ **DECIDED 2026-08-03, and the answer was neither.** Not promoted within Q1 and not left last: **lifted out of the queue** into its own step, split 8a/8b, placed after Q1 and before R1. The open decision is removed from the roadmap and replaced by the step |
 | ⚠️ `Supplier.code` / `Supplier.alias` / `Customer.code` | 📌 **The argument for doing this BEFORE F5 is now stronger**, not weaker: it blocks part of six rows of the search target list, and rows 8–10 are exactly the document screens F5–F7 build |
 | ⚠️ **Database sort order ≠ browser sort order** | 📌 **OPEN, and F4 did not close it.** F4 established *that* `el-GR-x-icu` was never applied; the database still orders by bytes under locale `C` while the browser orders by `Intl.Collator('el')`. Invisible only because no list pages on the server. **Whoever adds paging to a list screen owns this.** See the standing item below |
 | `Product.category` | 📌 Queued as **its own proposal**, requirement recorded, deliberately not started |
@@ -127,6 +133,128 @@ failure is how a build gains checks that get deleted the first time one is incon
 fallback — which is the **Java-default-locale knob's JavaScript twin**, and is the fifth instance of
 the same shape. Whichever way the decision goes, that assertion stays; it is not a down payment on
 option 1 and should not be read as one.
+
+## Q1 — the backend follow-up queue — 2026-08-03. Reconciled against the approved scope
+
+**Approved as decisions A–I plus a four-item work order. Every part below has a verdict; none is
+"still open".** Backend `mvn clean verify` exit 0, **1,377 tests, 0 failures, 1 skipped**
+(`LiveSeedTest`, as always). Frontend **308 tests across 31 files**, lint, build and knip green.
+**176 API operations** (was 175). All figures measured 2026-08-03.
+
+### 📋 The decisions, one line each
+
+| # | Decision | Verdict |
+|---|---|---|
+| A | Move `Required` + the exception into `core-api`, rename to drop "Request" | ✅ **Done.** Both now in `gr.novotrade.novocore.core.api.shared`; **`InvalidInputException`**. Name kept as proposed — it matches the 22 existing `Invalid…Exception` types in `core-api`. `InvalidCommandException` was considered and rejected: "command" is used in this codebase only for `ReversalCommand` and would read as applying to command-shaped records only. 26 files repointed. `WebExceptionHandler` keeps the mapping and now carries the 400-over-422 argument explicitly |
+| A | Record the *finding* in `CLAUDE.md`, next to the anti-pattern | ✅ **Done.** New subsection *"Five instances were not one confusion. They were two."* Group A (1, 3, 4) local slips with the remedy in reach; Group B (2, 5) remedy **structurally unreachable** from `core-api`. States that no guard could have found it and that the instance count was measuring the wrong thing |
+| B | Item 4 part 2 — a sweep case carrying a valid body a domain rule refuses | ✅ **Done.** `PermissionSweepIT.noDomainRuleRefusesAWellFormedBodyWithoutSayingWhy`, 8 cases, none of which creates anything. **Proven against the defect**: run with the fix disabled it reported both bare-400 sites; restored, green. Why it is not a fourth guard of the same kind is written into its javadoc and into `CLAUDE.md` — the other three probe *absent* input, this probes *present-and-wrong* |
+| C | Item 8 leaves Q1, becomes its own step 8a/8b, after Q1 and before R1 | ✅ **Done.** Roadmap rows added, footnote ᵈᵉᶜ carries both reasons, the open decision it replaced is struck through with the outcome. Q1 restated as four items in the roadmap, this file and the primer |
+| C | The bidirectional ArchUnit cross-check is part of 8a's design, not optional | ✅ **Done.** Recorded in ᵈᵉᶜ with the reason: without it the annotation is ~289 hand-applied assertions nothing verifies |
+| D | Record BOTH figure sets, do not overwrite | ✅ **Done.** See *The two counts* below. The 90 / 28 is kept with its basis; the 2026-08-03 scan is recorded beside it with its own basis and method |
+| E | The probe technique becomes a named practice in `CLAUDE.md` | ✅ **Done.** *"Named practice: the throwaway probe"*, including the two premise errors it caught this session and the instruction to **delete it afterwards** — a probe is evidence for a decision, not a test |
+| F | Correct item 4's imprecise description | ✅ **Done**, in the item 4 verdict below and in `CLAUDE.md` |
+| G | Correct item 6's two overstatements | ✅ **Done**, in the item 6 verdict below; also written into `NewRole`'s javadoc, which is where the next reader of that guard will be |
+| H | Item 5 is stronger than recorded — no setter | ✅ **Done.** Stated in `Role.describe`'s javadoc, in `RoleService.describe`, in the verdict below and in the IT |
+| I | Box the latent eighth, and first answer whether its create path is dead | ✅ **Done, and the answer is below under Q1-b.** Boxed |
+
+### 📋 The four work items
+
+| # | Item | Verdict |
+|---|---|---|
+| **4+6** | one anti-pattern, fixed together | ✅ **Done.** Item 4: both system-record rules now enforced in `CustomerServiceImpl`, answering **422 with the full reason** where they answered `400 "Bad request."`. Item 6: `NewUser` and `NewRole` use `Required.field`. Item 4's part 2 landed with them |
+| **4+6** | check whether anything else in `core-api` carries the same shape | ✅ **Done, and it found nothing more.** `SupplierView` and `AssetView` carry the same *kind* of invariant, but `SupplierServiceImpl.requireCoherentVatStatus` and `AssetServiceImpl.dispose` already refuse a caller with `InvalidSupplierException` / `InvalidAssetException` before the view is built — so those invariants are backstops, which is what `CustomerView`'s were supposed to be. **No instance 6** |
+| **5** | change a role's description, narrowly | ✅ **Done, both legs.** `PATCH /api/roles/{id}/description`, `RoleService.describe`, `Role.describe`, an audit entry, and `editableRole` so a system role is still refused. Frontend: an ordinary `FieldEditor`, **both "there is no route" notes removed** along with the two now-false i18n strings in EN and EL. Driven end to end by `UserRoleEndpointIT.roleLifecycle` against the real server, including the clear-by-blank case and the system-role refusal |
+| **1** | duplicate `operationId`, then delete the workaround | ✅ **Done, all three parts.** `InventoryController.writeOff` (POST) → `createWriteOff`; **`OpenApiSpecIT` now refuses** to write a duplicate rather than emitting an invalid document; `orval.config.ts` lines 59–83, 34 and 53–56 **deleted**, and `spec-hygiene.test.ts`'s duplicate assertion rewritten from pinning the defect to pinning the guarantee |
+| **7** | box the seven booleans plus the eighth | ⚠️ **Done, and it carries a known regression that 8a closes.** See the verdict below — it is the one thing this session did that made something worse as well as better |
+| **8** | — | ✅ **Explicitly out of Q1.** Design approved, build not scheduled this session; **nothing of 8a or 8b was written.** See decision C |
+
+### ⚠️ Item 7's verdict in full, because it is not a clean win
+
+**Measured, not reasoned.** Boxing a primitive changes what `OpenApiSchema` can see: it marks a
+component `required` when `isPrimitive()`, and a boxed `Boolean` is not one. So the same edit that
+turned `400 "Cannot map null into type boolean"` into `400 "serialTracked" is required and was not
+supplied.` **removed the field from the contract's `required` list.** Schemas declaring `required`
+went **78 → 75 (2026-08-03)**.
+
+- **What is lost:** the compile-time catch. `tsc` no longer refuses a TypeScript caller that omits one
+  of these eight flags.
+- **What is not lost:** the refusal. The server still refuses an omitted flag, and now says which.
+- **What closes it:** **8a**, which is why it is scheduled immediately after Q1 and before R1.
+- **Why the exposure is acceptable:** the order is Q1 → 8a/8b → R1 → R2 → F5, and **F5–F8 are the
+  steps that would send these bodies** — so no screen is written inside the window.
+  `product-create.tsx` still sends `serialTracked` explicitly, and its comment was corrected: it had
+  claimed omission was a compile error, which was true from 2026-08-01 until this change and is not
+  true now.
+- **Pinned in both directions** by `spec-hygiene.test.ts`, which now asserts `NewProduct.required`
+  does **not** contain `serialTracked`, and tells whoever sees that change to delete the note and the
+  explicit send.
+
+⚠️ **This is the trade the queue's own reasoning did not see.** Item 7 was recorded as "not urgent —
+`tsc` now refuses a TypeScript caller that omits one", which was true *because the field was
+primitive*. Boxing it is what removes that property. **Items 7 and 8 were coupled and the queue
+listed them as independent.**
+
+### 📋 What Q1 raised — two new items for the backend queue
+
+The queue is empty of its original numbered rows. These replace them.
+
+| # | Item | Raised |
+|---|---|---|
+| Q1-a | **Component schema names collide the same way `operationId` did, and nothing checks it.** `OpenApiSchema` registers a record under its **simple name**, so **seven** distinct `NameRequest` records across seven controllers resolve to **one** schema. They are structurally identical today, so the document is accidentally correct; the day one gains a field, six routes are described by the wrong shape with no warning. Closing it means renaming records or qualifying schema names across the surface, which regenerates the whole client — so it was **not** bolted onto item 1. ⚠️ **A new request record must not add an eighth**: `RoleController.RoleDescriptionRequest` is named apart for exactly this reason, and says so in its javadoc | 2026-08-03, while building item 5 |
+| Q1-b | **`VatExemptionReasonService.create` has no production caller.** Answering decision I: the seed is **Flyway SQL** (`V5`, `V8`), not this method, and `/api/vat-exemption-reasons` is **GET-only**. Its only callers are 12 sites in `VatExemptionReasonIT`. So it is exercised but unreachable from outside the core. ⚠️ **Not deleted** — the document-model decisions make exemption reasons the seed-only model, and two AADE codes (24, 28) plus the OSS/IOSS myDATA codes are still open with the accountant, so a create path may yet be wanted. **Decide it with R1**, which settles the seed-only pattern for document types | 2026-08-03, answering decision I |
+
+### 📊 The two counts, both kept — decision D
+
+⚠️ **Neither overwrites the other, and the difference is a counting basis rather than a disagreement.**
+
+| | Recorded before Q1 | Measured 2026-08-03 |
+|---|---:|---:|
+| Records guarding a reference-typed field in a compact constructor | **90** | **94** |
+| …of which request bodies | **28** | **48** |
+| Guarded components in total | — | **289** |
+| …guarded by `Objects.requireNonNull` | — | **269** |
+| …guarded by `Required.field` / `Required.text` | — | **20** |
+
+**Basis of the 2026-08-03 figures:** a heuristic source scan of every record in `core-api`, `core` and
+`app`, cross-referenced against the committed spec; it **includes** the four value types (`Money`,
+`UnitCost`, `Quantity`, `Rate`) and **counts nested line records** (`NewCreditNoteLine`,
+`NewPurchaseInvoiceLine`, …) as request-reachable. The earlier figures appear to count top-level
+request bodies only. **Settle with an exact count when 8a is scoped** — and that count should come
+from the generator's own reflection rather than from a regex, which is the same argument 8a's
+ArchUnit cross-check rests on.
+
+**The `requireNonNull` : `Required.*` ratio of 269 : 20 is the number worth carrying into 8a.** Most
+of those 269 are on **response** records and are correct there — they assert *we always set this*,
+which is our own invariant rather than a caller's obligation. They declare the same thing in a schema
+and mean something different in the code, which is exactly the judgement 8a cannot automate away.
+
+### 📋 What was proven against a real server rather than read
+
+Per the newly named practice. A throwaway `Q1ProbeIT` booted the real application over real HTTP
+against a real PostgreSQL, made **26 requests**, printed every status and body, and **was deleted**.
+
+- **It corrected item 4's description.** A bare `EXEMPT` on the retail customer answers **422** from a
+  *generic* rule applying to every customer; the retail rule is reached only when the body also
+  carries `vatExemptionReasonId`. ⚠️ **A sweep case written from the item's own wording would have
+  passed against the defect it existed for** — and the first draft of the new sweep case did exactly
+  that, until the probe's finding was applied to it.
+- **It corrected item 6's evidence.** `POST /api/users {}` fails on the primitive `roleId` before
+  reaching `requireNonNull`, so `noRouteFailsOnAnEmptyBody` was weaker evidence for item 6 than the
+  item claimed. `POST /api/roles {}` is the clean case, and `NewRole`'s javadoc now says so.
+- **It corrected item 6's severity.** The `requireNonNull` messages were **not** discarded — they
+  surfaced as `"Malformed request body: username"`. Wrong shape and wrong status class, and
+  actionable all the same.
+- **It corrected item 4's location.** The two rules are in **`CustomerView`**, a *response* record in
+  `core-api`, not in the `Customer` domain entity — so the approved remedy ("swap the exception type")
+  would have been wrong. A view is built only after the service accepted the change, so an incoherent
+  view really is our bug and `IllegalArgumentException` is right for it. **What was missing was any
+  check on the caller's path.** The invariants stayed; the rules are enforced in the service now.
+- **It caught two order-dependent cases in the new sweep**, written against a shared probe customer
+  that already carried a VAT number. They use a customer the test makes itself now. **A case that can
+  pass for a reason it is not about is worse than no case.**
+
+⚠️ **The live browser leg is the owner's, as always** — the Owner password is deliberately not in this
+repository. What is closed here is the *contract* question, on every route Q1 touched.
 
 ## U1 — roadmap unification & documentation reconciliation — 2026-08-02. Reconciled against the approved scope
 
@@ -5013,17 +5141,22 @@ was verified back to 8 products, all active, one user.
 ---
 ## Next action — read this first
 
-### ⚠️ The follow-up queue — 9 items: **6 open, 2 done (2 and 9), 1 closed as stale (3)**
+### ✅ The follow-up queue — all 9 numbered items are closed
 
-Each was raised by frontend work and none of the open ones is frontend work to fix.
+Each was raised by frontend work and none of them was frontend work to fix.
 
-> ### 🔴 Q1 has not been started. Nothing in this queue has been begun.
+> ### ✅ Q1 is COMPLETE — 2026-08-03. Four items: 4+6, 5, 1, 7.
 >
-> Items 2 and 9 were done, and item 3 closed as stale, **before Q1 existed as a step** — they are not
-> Q1 progress. The **credit-note rename is U1's**, not Q1's: it came from finding C1 on the committed
-> surface while reconciling the roadmap, not from this queue. Attributing it here made a cold read
-> report *"Q1 current, one of six landed"*, **which overstates progress on a queue that is
-> untouched.** Corrected 2026-08-02.
+> Items 2 and 9 were done, and item 3 closed as stale, **before Q1 existed as a step** — they were
+> never Q1 progress, and the **credit-note rename is U1's**. **Item 8 left the queue on 2026-08-03**
+> and became its own numbered step (8a / 8b), placed after Q1 and before R1, which is what closed the
+> standing open decision about promoting it.
+>
+> ⚠️ **The detail below is each item AS RAISED.** The verdicts, the corrections to two of these
+> write-ups, and the two new items Q1 raised are in *Q1 — the backend follow-up queue* above, which is
+> the current record. **Where the two disagree, the Q1 section is right** — items 4 and 6 in
+> particular are described imprecisely below, and both were corrected by a probe against the running
+> server.
 
 > ### ✅ Item 3 is closed as stale — reconciled 2026-08-02
 >
@@ -5056,17 +5189,17 @@ Each was raised by frontend work and none of the open ones is frontend work to f
 | # | Item | Priority | Raised |
 |---|---|---|---|
 | 2 | ✅ **DONE (primitive half), 2026-08-01** — the spec now declares every primitive component required, so a mandatory field is knowable from the contract. Items 7 and 8 carry what it deliberately did not close | — | 2026-07-31 |
-| 4 | **The retail customer's own VAT rules are raised as `IllegalArgumentException`**, so two routes answer `400 "Bad request."` and discard a complete explanation | With 2 — same family, and the guards structurally cannot reach it | 2026-07-31 |
-| 1 | `InventoryController_writeOff` — one `operationId` on two operations | After 2 | 2026-07-30 |
+| 4 | ✅ **DONE 2026-08-03.** ⚠️ Corrected while doing it: the rules live in **`CustomerView`**, a response record, not in the domain entity — so the fix was to enforce them in `CustomerServiceImpl` where a caller reaches them, not to change the type there. Both routes answer **422 with the reason** now | — | 2026-07-31 |
+| 1 | ✅ **DONE 2026-08-03.** POST handler → `createWriteOff`; `OpenApiSpecIT` now **refuses** to write a duplicate; the `orval.config.ts` workaround and the assertion pinning it were deleted | — | 2026-07-30 |
 | 3 | ✅ **CLOSED AS STALE, 2026-08-02** — no SKU search endpoint. The decision it waited on was made and the work delivered by **S1** on 2026-08-01; this row said otherwise for a week | — | 2026-07-31 |
-| 5 | **A role's `description` can be set at creation and never changed** — `NewRole` takes one, no `PATCH …/description` exists. The screen renders it read-only and says why | Small; with 2 or after | 2026-08-01 |
-| 6 | **`NewUser` and `NewRole` guard body fields with `Objects.requireNonNull`** — the **fifth** confirmed instance of *"a client's mistake raised as a programming error"* (disguise 2, recurring). Answers `400`, not `500` — proven by an existing sweep | With 4 — same anti-pattern | 2026-08-01 |
-| 7 | **Box the 7 boolean primitives with `Required.field`**, so the refusal names the field instead of saying "Cannot map null into type boolean" | After 2, which is done. Not urgent — `tsc` now refuses a TS caller that omits one | 2026-08-01 |
-| 8 | **Declare every compact-constructor requirement — requests AND responses** (scope widened and approved 2026-08-01). 90 records; 28 of them request bodies. Mandatory in fact, invisible to reflection; needs an annotation decision before it needs code. **This is what closes fixture drift** | Last of the backend three, and the highest-value of them on the response side | 2026-08-01 |
+| 5 | ✅ **DONE 2026-08-03**, both legs. `PATCH /api/roles/{id}/description`. ⚠️ Stronger than recorded: `Role.description` had **no setter**, so it was structurally unwritable, not merely unrouted. Both frontend notes and their two i18n strings came out with it | — | 2026-08-01 |
+| 6 | ✅ **DONE 2026-08-03**, with 4. Both use `Required.field`. ⚠️ Two corrections: the messages were **not** discarded (they surfaced as `"Malformed request body: username"`), and `POST /api/users {}` never reached these guards — the primitive `roleId` fails first, so `POST /api/roles {}` is the clean case | — | 2026-08-01 |
+| 7 | ⚠️ **DONE 2026-08-03, plus a latent eighth** (`NewVatExemptionReason.inputVatDeductible`). **And it carries a regression 8a closes**: a boxed `Boolean` is not primitive, so the same edit removed the `required` declaration — 78 → 75 schemas. The "not urgent, `tsc` refuses one" note was true *because* the field was primitive; boxing is what removes that | — | 2026-08-01 |
+| 8 | ➡️ **LEFT THIS QUEUE 2026-08-03** and became roadmap steps **8a** and **8b**, after Q1 and before R1. Design approved; **not built this session.** 90 records / 28 request bodies as recorded; a 2026-08-03 scan on a wider basis counts 94 / 48 — **both kept**, see *The two counts* above | — | 2026-08-01 |
 | 9 | ✅ **DONE 2026-08-01, frontend.** Shared `Me` fixture in `src/test/fixtures.ts` — invariant fields only; `role` and `sections` stay at the call site | — | 2026-08-01 |
 
-**Order to work in — five items covering all six open rows, none omitted (4 and 6 are one item). This
-is roadmap step Q1; it is next, and it is `🔴 Not started`.**
+**The order it was worked in — ✅ all four landed 2026-08-03. Item 8 was lifted out of the queue into
+its own step (8a / 8b) rather than being worked as item 5 of this list.**
 
 1. **4 and 6 together** — one anti-pattern, and 4's part 2 (give the sweep a case carrying a valid
    body a domain rule refuses) is what stops a sixth instance arriving the way these two did.
@@ -5074,14 +5207,15 @@ is roadmap step Q1; it is next, and it is `🔴 Not started`.**
    almost nothing.
 3. **1** — `operationId` collision; mechanical, and deleting the frontend workaround is part of it.
 4. **7** — box the 7 booleans. Not urgent: `tsc` now refuses a TypeScript caller that omits one.
-5. **8** — last, and needs an annotation design decided before any code is written.
+5. ~~**8**~~ — ✅ **removed from this list on 2026-08-03.** It is now roadmap steps **8a** and **8b**,
+   scheduled after Q1 and before R1. See *Q1 — the backend follow-up queue* above, decision C.
 
-*(Item 3 was fifth in the previous version of this list. It is closed as stale — see above.)*
+*(Item 3 was fifth in an earlier version of this list. It is closed as stale — see above.)*
 
-⚠️ **Item 8 sits last and is arguably the most severe thing in the project.** 90 records with fields
-mandatory in fact but invisible to the contract generator, on the API contract every adapter and
-module will consume. **Whether to promote it to first on severity is an open decision recorded in
-`docs/novocore-roadmap.md`, and it is the owner's.** It is deliberately **not** reordered here.
+⚠️ **Step 8 is the most severe open thing in the project, and Q1's item 7 made it load-bearing.**
+Boxing the seven booleans improved the refusal message and removed the `required` declaration from
+the spec (78 → 75 schemas, measured 2026-08-03). **8a restores it.** The full trade is written out
+under *Item 7's verdict in full* above.
 
 **The credit-note rename is NOT part of this queue** — it was listed here until 2026-08-02 and has
 been reattributed to **U1**, where it belongs. It came from finding **C1**, a naming-rule violation

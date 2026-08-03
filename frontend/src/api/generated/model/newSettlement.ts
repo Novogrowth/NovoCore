@@ -22,5 +22,5 @@ export interface NewSettlement {
   reference?: string;
   description?: string;
   allocations?: NewAllocation[];
-  remainderBecomesCustomerCredit: boolean;
+  remainderBecomesCustomerCredit?: boolean;
 }

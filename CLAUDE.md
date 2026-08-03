@@ -160,23 +160,93 @@ this*, the backend has to answer it") extends to configuration and not only to r
 
 **This bit three times inside step 15 alone**, in three different disguises:
 
-1. **`IllegalArgumentException` for parameter guidance** — seventeen messages across nine controllers, all thrown away. Fixed by `InvalidRequestException`.
+1. **`IllegalArgumentException` for parameter guidance** — seventeen messages across nine controllers, all thrown away. Fixed by `InvalidRequestException`, **renamed `InvalidInputException` and moved to `core-api` in Q1** — see the finding below.
 2. **`Objects.requireNonNull` on a request-body field** — sixteen routes answered `500` to a form submitted with something missing. Fixed by `Required.field` in the request record's compact constructor, which is also why `ReversalCommand` fixes six routes in one statement.
 3. **`IllegalArgumentException` for an id that names nothing** — four sites in the email slice, answering `400 "Bad request."` where every other route on the surface answers `404 "Not found."`. Fixed by `QueuedEmailNotFoundException` / `EmailAttachmentNotFoundException`.
 
-⚠️ **Those three are DISGUISES, not a total, and conflating the two counts has already made the backend queue contradict itself.** The running count of *instances* is separate and continues past step 15: **instance 4** is the retail customer's own rules thrown as `IllegalArgumentException` from the domain (found while reading the Customers API for F2), and **instance 5** is `Objects.requireNonNull` on `NewUser` and `NewRole` — disguise 2 recurring at a new site (found while reading the Users API for F3). Both are open, as items 4 and 6 in `PROGRESS.md`. **When you find another, it is instance 6, whichever disguise it wears.**
+⚠️ **Those three are DISGUISES, not a total, and conflating the two counts has already made the backend queue contradict itself.** The running count of *instances* is separate and continues past step 15: **instance 4** was the retail customer's own rules thrown as `IllegalArgumentException` (found while reading the Customers API for F2), and **instance 5** was `Objects.requireNonNull` on `NewUser` and `NewRole` — disguise 2 recurring at a new site (found while reading the Users API for F3). ✅ **Both were fixed in Q1 on 2026-08-03.** **When you find another, it is instance 6, whichever disguise it wears.**
 
-**Instance 5 says something about the step-15 sweep that is worth more than the fix**: that sweep was scoped to the **web layer**, and `NewUser`/`NewRole` live in **`core-api`**. The anti-pattern is not a web-layer phenomenon — a request record can sit anywhere, and the guards below cannot see most of them. Check `core-api` too.
+**Instance 5 says something about the step-15 sweep that is worth more than the fix**: that sweep was scoped to the **web layer**, and `NewUser`/`NewRole` live in **`core-api`**. The anti-pattern is not a web-layer phenomenon — a request record can sit anywhere, and the guards below cannot see most of them. Check `core-api` too. ⚠️ **And read the Q1 finding below before adding a fourth guard**: the reason `core-api` was never swept is that the vocabulary to sweep it *with* did not exist there.
 
-**The remedy is always to name the failure:** `InvalidRequestException` (the request is wrong, and say how), `Required.field` (a body field is missing), or the core's own `...NotFoundException` (the id names nothing). If a new one is needed, add it to `core-api` — `WebExceptionMappingTest` then *forces* it to be mapped, which is the point.
+⚠️ **Instance 4 was not where its own write-up said it was, which is its own small lesson.** The two rules live in **`CustomerView`** — a *response* record in `core-api` — not in the `Customer` domain entity. So the remedy was **not** "swap the exception type there": a view is built only after the service has accepted a change, so a view that cannot satisfy its invariants means *this codebase* assembled an incoherent record, and `IllegalArgumentException` is exactly right for that. **What was missing was any check on the path a caller takes.** The rules are enforced in `CustomerServiceImpl` now, where `deactivate` already checked the same flag; the view's invariants stayed, as the backstop they correctly are. **A response record's invariant and a caller-facing rule look identical in a diff and are opposites in intent.**
+
+**The remedy is always to name the failure:** `InvalidInputException` (the caller's input is wrong, and say how), `Required.field` (a body field is missing), or the core's own `...NotFoundException` (the id names nothing). If a new one is needed, add it to `core-api` — `WebExceptionMappingTest` then *forces* it to be mapped, which is the point.
+
+### ⚠️ Five instances were not one confusion. They were two — and only one was a mechanism gap
+
+**This is the finding from Q1 (2026-08-03), and it is worth more than the two fixes it produced.**
+Five instances of one named anti-pattern, three guards that all missed the last two, and the obvious
+conclusion — *add a fourth guard* — is wrong. Tracing **why the remedy was unused** rather than
+counting instances splits them cleanly:
+
+- **Group A — the wrong exception for a domain refusal or an unknown id** (instances 1, 3, 4). The
+  remedy existed, was in reach, and was *already used correctly in the neighbouring method*:
+  `CustomerServiceImpl.deactivate` throws `InvalidCustomerException` and answers 422 with its reason,
+  three methods from the two rules that answered a bare 400. **These are local slips.** No mechanism
+  was missing.
+- **Group B — a missing body field** (instances 2, 5). ⚠️ **`Required` and `InvalidRequestException`
+  lived in `core.web`. `NewUser` and `NewRole` live in `core-api`, which has zero production
+  dependencies by design.** The prescribed remedy was not merely unused at instance 5's site — **it
+  was structurally unreachable from it.** Instance 5 was not a lapse of attention. **It was the only
+  thing its author could have written.**
+
+**No guard could have found this**, and that is the point. `WebAuthorizationRulesTest` is scoped to
+`..core.web..`; the record is in `core-api`. A rule with a wider scope would not have helped either,
+because the fault was *a missing remedy, not a misused one* — there was nothing wrong to detect, only
+something absent.
+
+**The fix was placement, and the objection to it was a naming problem.** `Required` and the exception
+moved to `gr.novotrade.novocore.core.api.shared`, and the exception lost "Request" →
+**`InvalidInputException`**. *"The caller supplied a structurally incomplete command"* is not
+HTTP-specific — an adapter calling `UserService.create` with a null username has made exactly the
+mistake an HTTP client makes by omitting the key. **Only the word "request" and the 400 mapping were
+ever web-shaped**, and the mapping stayed in `WebExceptionHandler` where the argument for
+400-over-422 is written out. `WebExceptionMappingTest` now *forces* that mapping to exist, which is
+free enforcement the old placement did not get.
+
+⚠️ **The cheap alternative was considered and rejected**: having those records throw the
+`InvalidUserException` / `InvalidRoleException` that already sit beside them. Zero new dependencies,
+zero new concepts — and it would have answered **422 in `core-api` and 400 in `core.web` for the same
+mistake, decided by nothing but which module the record happens to live in.** An inconsistency with
+no argument behind it is the shape S1's reconciliation caught with `supplier.vat_number`.
+
+**The general rule: when one confusion recurs, ask whether the remedy was reachable from where the
+mistake was made. If it was not, the instance count is measuring the wrong thing.**
+
+### Named practice: the throwaway probe
+
+**When the question is behavioural — *what does the system actually answer?* — boot the real
+application over real HTTP against a real database in a throwaway integration test, print every
+status and body, read them, then delete it.** Reading the code answers what it *says*. The probe
+answers what it *does*. This is `CLAUDE.md`'s two reading-related anti-patterns met from the practical
+side, and it costs about ten minutes.
+
+**It earned its entry in Q1's Phase 0 by correcting two premises that careful reading had produced
+and would have been built on:**
+
+- Backend queue item 4 recorded that setting `EXEMPT` on the retail customer answers a bare 400. **It
+  answers 422**, from a *generic* rule that applies to every customer. The retail rule is reachable
+  only when the body **also** carries `vatExemptionReasonId` — so the sweep case written against the
+  item's own description would have passed against the defect it existed for.
+- Item 6 recorded `POST /api/users {}` as evidence about its `requireNonNull` guards. **That body
+  never reaches them** — the primitive `roleId` fails first. `POST /api/roles {}` is the clean case.
+
+**Both were found by a probe that printed 26 responses, and neither was findable by reading.** The
+same probe technique then proved the item 4 fix in both directions: the new sweep case was run
+against the defect first, watched to fail, and only then run against the fix.
+
+⚠️ **Delete it.** A probe is evidence for a decision, not a test — it asserts nothing, so leaving it
+behind adds runtime and implies coverage it does not provide. What survives is the *assertion* it
+justified, written into a real test.
 
 **Three layers guard it, and each catches what the others cannot:**
 
 - `WebAuthorizationRulesTest.clientMistakesAreNotProgrammingErrors` — no class in `..core.web..` may **construct** `IllegalArgumentException`. Build-time and precise; proven to fail against a probe. Blind to anything thrown below the web layer.
 - `PermissionSweepIT.noRouteRefusesWithoutSayingWhy` — every route, reads with no parameters and writes with no body, must not answer a bare `"Bad request."`. **This is what found instance 3**, in the service layer where the ArchUnit rule structurally cannot look.
 - `PermissionSweepIT.noRouteFailsOnAnEmptyBody` — no route may answer `5xx` to a missing field. Catches instance 2 whatever raised it: a `requireNonNull`, an unboxed null, an `orElseThrow` with the wrong supplier.
+- ✅ **`PermissionSweepIT.noDomainRuleRefusesAWellFormedBodyWithoutSayingWhy`** (added by Q1, 2026-08-03) — a curated table of bodies that **parse cleanly and are wrong only in the domain's terms**, each of which must be refused with its reason rather than a bare `"Bad request."`, a `5xx`, a `"Malformed request body"` — or an acceptance. **This is not a fourth guard of the same kind**, which is why it was worth adding: the three above all probe *absent* input, and this probes *present-and-wrong* input, the residual named in the next paragraph. It is what finally caught instance 4, and **it was proven by running it against the defect first and watching it fail.** ⚠️ **Every case creates nothing** — each acts on the seeded retail customer or on a record the class already makes, and each is refused. **When a rule is written that a caller can trip with a well-formed body, add a line to that table.**
 
-**What none of them can see, so watch for it in review:** a *wrong but non-empty* value — an unparseable enum, an id of the right shape naming another party's record, a date range running backwards. Those reach the handler and are only as good as the message written for them. And **`Objects.requireNonNull` is not banned anywhere**, deliberately: it is correct on our own arguments (`ListResponse` uses it properly) and no rule can tell a caller's omission from a programmer's, which is exactly the judgement a reviewer has to make.
+**What none of them can see, so watch for it in review:** a *wrong but non-empty* value whose route is **not in that table** — an unparseable enum, an id of the right shape naming another party's record, a date range running backwards. Those reach the handler and are only as good as the message written for them. And **`Objects.requireNonNull` is not banned anywhere**, deliberately: it is correct on our own arguments (`ListResponse` uses it properly, and so do the response records) and no rule can tell a caller's omission from a programmer's, which is exactly the judgement a reviewer has to make.
 
 ## The document model — Novocore does not issue, it records
 

@@ -65,8 +65,6 @@ export function RoleCreate() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
-            {/* Said here because there is no way to change it later — see `RoleDetail`. */}
-            <p className="text-muted-foreground text-sm">{t('roles.descriptionOnlyNow')}</p>
           </div>
 
           <p className="text-muted-foreground text-sm">{t('roles.createGrantsLater')}</p>

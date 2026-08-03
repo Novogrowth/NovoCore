@@ -4175,7 +4175,7 @@
         }
       },
       "post" : {
-        "operationId" : "InventoryController_writeOff",
+        "operationId" : "InventoryController_createWriteOff",
         "x-novocore-section" : "INVENTORY",
         "x-novocore-level" : "FULL",
         "requestBody" : {
@@ -6242,6 +6242,65 @@
         "responses" : {
           "204" : {
             "description" : "No Content"
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roles/{id}/description" : {
+      "patch" : {
+        "operationId" : "RoleController_describe",
+        "x-novocore-section" : "USERS_AND_ROLES",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RoleDescriptionRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RoleView"
+                }
+              }
+            }
           },
           "4XX" : {
             "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
@@ -10968,7 +11027,7 @@
       },
       "NewAccount" : {
         "type" : "object",
-        "required" : [ "groupId", "expectedToClear" ],
+        "required" : [ "groupId" ],
         "properties" : {
           "name" : {
             "type" : "string"
@@ -11101,7 +11160,7 @@
       },
       "NewCreditNoteLine" : {
         "type" : "object",
-        "required" : [ "salesInvoiceLineId", "stockReturned" ],
+        "required" : [ "salesInvoiceLineId" ],
         "properties" : {
           "salesInvoiceLineId" : {
             "type" : "integer",
@@ -11237,7 +11296,7 @@
       },
       "NewProduct" : {
         "type" : "object",
-        "required" : [ "unitOfMeasureId", "defaultVatClassId", "serialTracked" ],
+        "required" : [ "unitOfMeasureId", "defaultVatClassId" ],
         "properties" : {
           "sku" : {
             "type" : "string"
@@ -11305,7 +11364,6 @@
       },
       "NewPurchaseInvoiceLine" : {
         "type" : "object",
-        "required" : [ "reverseCharge" ],
         "properties" : {
           "type" : {
             "$ref" : "#/components/schemas/PurchaseLineType"
@@ -11442,7 +11500,7 @@
       },
       "NewSettlement" : {
         "type" : "object",
-        "required" : [ "partyId", "accountId", "remainderBecomesCustomerCredit" ],
+        "required" : [ "partyId", "accountId" ],
         "properties" : {
           "direction" : {
             "$ref" : "#/components/schemas/SettlementDirection"
@@ -11535,7 +11593,6 @@
       },
       "NewUnitOfMeasure" : {
         "type" : "object",
-        "required" : [ "fractionalQuantityAllowed" ],
         "properties" : {
           "code" : {
             "type" : "string"
@@ -12004,6 +12061,14 @@
           }
         }
       },
+      "RoleDescriptionRequest" : {
+        "type" : "object",
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          }
+        }
+      },
       "RoleRequest" : {
         "type" : "object",
         "properties" : {
@@ -12413,7 +12478,6 @@
       },
       "SerialTrackingRequest" : {
         "type" : "object",
-        "required" : [ "serialTracked" ],
         "properties" : {
           "serialTracked" : {
             "type" : "boolean"

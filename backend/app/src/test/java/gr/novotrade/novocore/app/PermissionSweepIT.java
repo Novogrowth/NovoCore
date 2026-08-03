@@ -3,6 +3,7 @@ package gr.novotrade.novocore.app;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import gr.novotrade.novocore.core.api.customer.CustomerService;
+import gr.novotrade.novocore.core.api.customer.CustomerSystemKey;
 import gr.novotrade.novocore.core.api.customer.NewCustomer;
 import gr.novotrade.novocore.core.api.product.NewProduct;
 import gr.novotrade.novocore.core.api.product.ProductService;
@@ -19,6 +20,7 @@ import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.supplier.NewSupplier;
 import gr.novotrade.novocore.core.api.supplier.SupplierService;
 import gr.novotrade.novocore.core.api.tax.VatClassService;
+import gr.novotrade.novocore.core.api.tax.VatExemptionReasonService;
 import gr.novotrade.novocore.core.api.tax.VatStatus;
 import gr.novotrade.novocore.core.testsupport.PostgresTestContainerConfiguration;
 import java.util.ArrayList;
@@ -114,6 +116,7 @@ class PermissionSweepIT {
     private static final String GRANTEE_USERNAME = "sweep.grantee";
     private static final String BODY_PROBE_USERNAME = "sweep.bodyprobe";
     private static final String BARE_REFUSAL_USERNAME = "sweep.barerefusal";
+    private static final String DOMAIN_REFUSAL_USERNAME = "sweep.domainrefusal";
     private static final String NO_GRANTS_USERNAME = "sweep.nogrants";
     private static final String PASSWORD = "role-password-long-enough";
 
@@ -133,6 +136,7 @@ class PermissionSweepIT {
     @Autowired private SupplierService suppliers;
     @Autowired private UnitOfMeasureService unitsOfMeasure;
     @Autowired private VatClassService vatClasses;
+    @Autowired private VatExemptionReasonService exemptionReasons;
 
     private ApiClient api;
     private long productId;
@@ -679,6 +683,134 @@ class PermissionSweepIT {
                         message describing it was written and then discarded — which is step 15's \
                         defect 5, and a route whose only correct usage cannot be discovered from its \
                         own error is one a frontend gets written against by guesswork.""")
+                .isEmpty();
+    }
+
+    // ===================================================================================
+    // Present-and-wrong: a well-formed body that a domain rule refuses
+    // ===================================================================================
+
+    /**
+     * <strong>Every one of these bodies parses. Each is then refused by a rule about the
+     * domain — and the refusal has to say which rule.</strong>
+     *
+     * <p>⚠️ <strong>This is not a fourth guard of the same kind, and the distinction is the whole
+     * reason it exists.</strong> The three that came before all probe <em>absent</em> input:
+     * {@code noRouteRefusesWithoutSayingWhy} sends reads with no parameters and writes with no body;
+     * {@code noRouteFailsOnAnEmptyBody} sends literally {@code "{}"}; and
+     * {@code WebAuthorizationRulesTest} looks at where an exception is constructed, not at what a
+     * caller receives. {@code CLAUDE.md} already names what none of them can see — <em>"a wrong but
+     * non-empty value… only as good as the message written for them"</em> — and this is that
+     * residual, asked of the server.
+     *
+     * <p><strong>Backend queue item 4 is what it is written from, and item 4 predicted it.</strong>
+     * Two rules protecting the retail walk-in customer existed only as invariants in
+     * {@code CustomerView}'s compact constructor, raised as {@code IllegalArgumentException} and
+     * therefore correctly discarded: {@code PATCH …/vat-number} answered {@code 400 "Bad request."}
+     * with a complete explanation thrown away. No sweep could find it, because reaching those rules
+     * needs a body that is <strong>valid in every structural sense</strong> and wrong only in the
+     * domain's terms. Item 4 said the fifth instance would otherwise be found "by someone poking at
+     * it by hand", and it was. This is the answer to that.
+     *
+     * <p>⚠️ <strong>Every case is chosen to create nothing.</strong> They act on the seeded retail
+     * customer and on the probe records this class already makes, and each is refused — so the
+     * database is in the state it started in. That is {@code CLAUDE.md}'s refusal trick: a domain
+     * refusal proves the body parsed, which a parser rejection would not.
+     *
+     * <p><strong>Adding a case is the point of the shape.</strong> When a rule is written that a
+     * caller can trip with a well-formed body, it belongs in this table — one line — and the build
+     * then holds it to explaining itself.
+     */
+    @Test
+    @DisplayName("a well-formed body a domain rule refuses is told which rule, not \"Bad request.\"")
+    void noDomainRuleRefusesAWellFormedBodyWithoutSayingWhy() {
+        RoleView grantee = roleWith(AccessLevel.FULL, "SWEEP_DOMAIN_REFUSAL_PROBE");
+        ApiClient.Session session = sessionFor(DOMAIN_REFUSAL_USERNAME, grantee.id());
+
+        long retail = customers.require(CustomerSystemKey.RETAIL_WALK_IN).id();
+
+        // ⚠️ Its OWN customer, plain DOMESTIC with no VAT number and no exemption reason. Writing
+        // these cases against probeCustomerId made two of them order-dependent — that record carries
+        // a VAT number, so "INTRA_EU_B2B needs one" was satisfied and the case passed by accident.
+        // A case that can pass for a reason it is not about is worse than no case.
+        long plain = customers.create(new NewCustomer(
+                "SWEEP — Domain refusal probe", null, null, null,
+                VatStatus.DOMESTIC, null, null)).id();
+
+        // ⚠️ The retail record's VAT-status rule is reachable only by a body that ALSO satisfies the
+        // generic coherence rule, which fires first. A bare EXEMPT answers 422 for EVERY customer —
+        // measured in Q1's Phase 0 probe — so this case would pass against the defect it exists for.
+        long anyReason = exemptionReasons.all().getFirst().id();
+
+        record Case(String what, String method, String path, String body) { }
+
+        List<Case> cases = List.of(
+                // Item 4, both halves. A system record's VAT treatment is fixed at DOMESTIC.
+                new Case("the retail customer cannot take a VAT status", "PATCH",
+                        "/api/customers/" + retail + "/vat-status",
+                        "{\"vatStatus\":\"EXEMPT\",\"vatExemptionReasonId\":" + anyReason + "}"),
+                new Case("the retail customer cannot hold a VAT number", "PATCH",
+                        "/api/customers/" + retail + "/vat-number",
+                        "{\"vatNumber\":\"094000437\"}"),
+                new Case("the retail customer cannot be deactivated", "POST",
+                        "/api/customers/" + retail + "/deactivate", ""),
+                // The neighbouring coherence rules, which were already right — kept so the two
+                // stay together and a regression in either is one failure rather than none.
+                new Case("EXEMPT needs an exemption reason", "PATCH",
+                        "/api/customers/" + plain + "/vat-status",
+                        "{\"vatStatus\":\"EXEMPT\"}"),
+                new Case("INTRA_EU_B2B needs a VAT number", "PATCH",
+                        "/api/customers/" + plain + "/vat-status",
+                        "{\"vatStatus\":\"INTRA_EU_B2B\"}"),
+                // A name that is present and blank — the case Required.field deliberately lets
+                // through so the service can name the rule instead.
+                new Case("a blank role name is refused by the rule, not by the parser", "POST",
+                        "/api/roles", "{\"name\":\"   \",\"description\":\"probe\"}"),
+                new Case("a taken role name says which name", "POST",
+                        "/api/roles", "{\"name\":\"Owner\",\"description\":\"probe\"}"),
+                // A system role cannot be renamed, and the reason is worth receiving.
+                new Case("a system role cannot be renamed", "PATCH",
+                        "/api/roles/" + roles.requireByName("OWNER").id() + "/name",
+                        "{\"name\":\"Something else\"}"));
+
+        List<String> unexplained = new ArrayList<>();
+        for (Case probe : cases) {
+            ResponseEntity<String> response = switch (probe.method()) {
+                case "PATCH" -> session.patch(probe.path(), probe.body());
+                case "POST" -> session.post(probe.path(), probe.body());
+                default -> throw new IllegalStateException("Unhandled method " + probe.method());
+            };
+            String body = response.getBody() == null ? "" : response.getBody();
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                unexplained.add(probe.what() + " — was ACCEPTED (" + response.getStatusCode()
+                        + "), so the rule this case exists for is not being applied: " + body);
+                continue;
+            }
+            if (response.getStatusCode().is5xxServerError()) {
+                unexplained.add(probe.what() + " — answered " + response.getStatusCode()
+                        + ", failing rather than refusing: " + body);
+                continue;
+            }
+            if (body.contains("\"detail\":\"Bad request.\"")) {
+                unexplained.add(probe.what() + " — answered " + response.getStatusCode()
+                        + " with no reason at all: " + body);
+                continue;
+            }
+            if (body.contains("Malformed request body")) {
+                unexplained.add(probe.what() + " — answered " + response.getStatusCode()
+                        + " claiming the body was malformed, when it parsed and a domain rule "
+                        + "refused it: " + body);
+            }
+        }
+
+        assertThat(unexplained)
+                .as("""
+                        A body that is well-formed and wrong only in the domain's terms, refused \
+                        without the caller being told which rule refused it. This is the residual \
+                        CLAUDE.md names and the three older guards structurally cannot reach: they \
+                        all ask what happens when something is MISSING, and this asks what happens \
+                        when something is PRESENT and wrong.""")
                 .isEmpty();
     }
 

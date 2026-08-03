@@ -133,6 +133,25 @@ class Role extends AuditableEntity {
         this.name = newName;
     }
 
+    /**
+     * ⚠️ <strong>This setter did not exist until Q1 (2026-08-03), which made the field
+     * structurally unwritable rather than merely unrouted.</strong>
+     *
+     * <p>Backend queue item 5: {@code NewRole} took a description, nothing could change it, and the
+     * only correction for a typo was to create a second role, move every holder across and
+     * deactivate the first. Nothing in this class, {@code RoleServiceImpl} or the step 16b proposal
+     * gave a reason for the asymmetry, and the parallel field on every other entity is editable.
+     *
+     * <p>A description is not a permission — changing it confers nothing — so none of the escalation
+     * guards that make role editing careful apply. {@code editableRole} still does, so a system role
+     * stays untouchable like every other role write.
+     *
+     * @param newDescription null to clear it, which is a state {@code NewRole} already permits
+     */
+    void describe(String newDescription) {
+        this.description = newDescription;
+    }
+
     /** {@link AccessLevel#NONE} removes the row rather than storing a grant that grants nothing. */
     void grant(Section section, AccessLevel accessLevel) {
         if (accessLevel == AccessLevel.NONE) {

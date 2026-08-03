@@ -69,18 +69,23 @@ export function ProductCreate() {
           ...(supplierId !== undefined ? { supplierId } : {}),
           ...(supplierSku.trim() ? { supplierSku: supplierSku.trim() } : {}),
           /*
-           * Required, and the contract now says so — this is no longer a workaround.
+           * ⚠️ Required in fact, and the contract does NOT currently say so. Load-bearing.
            *
-           * `NewProduct.serialTracked` is a primitive `boolean` on a Java record: Jackson passes an
-           * **absent** creator property to the constructor as null and
-           * `FAIL_ON_NULL_FOR_PRIMITIVES` refuses it, answering
+           * Omitting `serialTracked` broke product creation for every user: it was a primitive
+           * `boolean` on a Java record, Jackson passed an **absent** creator property to the
+           * constructor as null, and `FAIL_ON_NULL_FOR_PRIMITIVES` refused it with
            * `400 "Malformed request body: Cannot map null into type boolean"` before any handler
-           * runs. That broke product creation for every user, and the spec called the field
-           * optional, so the form was written correctly against a contract that was wrong.
+           * ran. The spec called the field optional, so this form was written correctly against a
+           * contract that was wrong.
            *
-           * Since 2026-08-01 the generator marks primitive components required, so the type is
-           * `serialTracked: boolean` and **omitting it is a compile error** rather than a runtime
-           * `400`. Left explicit because it must be sent, not because the types are untrustworthy.
+           * **This comment said "omitting it is a compile error" and that stopped being true on
+           * 2026-08-03.** Between 2026-08-01 and then it was: the generator marks *primitive*
+           * components required. Backend queue item 7 then boxed the field to `Boolean` so the
+           * refusal names it — `"serialTracked" is required and was not supplied.` — and a boxed
+           * component is not primitive, so the declaration went away with the bad message.
+           * `tsc` no longer refuses a caller that omits this. **Step 8a's `@Mandatory` annotation
+           * restores the declaration**; see `spec-hygiene.test.ts`, which pins the gap in both
+           * directions.
            *
            * `false` is not a default invented here: this form has no serial-tracking control, so
            * false is the only value it can honestly claim. A product is made serial-tracked

@@ -21,5 +21,5 @@ export interface NewProduct {
   sellingPrice?: Money;
   supplierId?: number;
   supplierSku?: string;
-  serialTracked: boolean;
+  serialTracked?: boolean;
 }

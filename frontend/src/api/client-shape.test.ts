@@ -91,14 +91,16 @@ describe('the generated client', () => {
   it('covers the whole surface', () => {
     // An anti-vacuity guard: if the generated output moved, every assertion below would pass
     // against an empty string and report a green build for a check that examined nothing.
-    expect(all.length).toBe(175)
+    expect(all.length).toBe(176)
     expect(source.length).toBeGreaterThan(100_000)
   })
 
   it('has writes to check, and knows how many', () => {
     // Stated as a number so that a route disappearing from the spec is visible here too.
-    // 51 POST, 31 PATCH, 7 PUT, 3 DELETE. Every one of them was a query before this was fixed.
-    expect(writes.length).toBe(93)
+    // 52 POST, 32 PATCH, 7 PUT, 3 DELETE as of 2026-08-03. Every one of them was a query before
+    // this was fixed. The 176th operation and the 94th write are the same one:
+    // `PATCH /api/roles/{id}/description`, backend queue item 5.
+    expect(writes.length).toBe(94)
     expect(reads.length).toBe(82)
   })
 

@@ -211,6 +211,32 @@ class RoleServiceImpl implements RoleService {
         return SecurityViews.toView(role);
     }
 
+    /**
+     * Backend queue item 5. {@code editableRole} rather than a bare lookup, so a system role is
+     * refused here for the same reason it is refused everywhere else a role is written.
+     *
+     * <p>A blank description clears it rather than being refused: {@code NewRole} already permits a
+     * null one, so "no description" is a state this entity can legitimately be in and there is
+     * nothing to tell the caller off about. The <em>key</em> is still required — see
+     * {@code RoleController.RoleDescriptionRequest} — so an empty body cannot clear it by accident.
+     */
+    @Override
+    @Transactional
+    public RoleView describe(long roleId, String description) {
+        Role role = editableRole(roleId, "be described");
+        String trimmed = description == null || description.isBlank() ? null : description.trim();
+
+        String previous = role.getDescription();
+        role.describe(trimmed);
+
+        auditLog.record("role.described", ENTITY_TYPE, String.valueOf(roleId), Map.of(
+                "name", role.getName(),
+                "from", previous == null ? "(none)" : previous,
+                "to", trimmed == null ? "(cleared)" : trimmed));
+
+        return SecurityViews.toView(role);
+    }
+
     @Override
     @Transactional
     public void deactivate(long roleId) {

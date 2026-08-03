@@ -1,6 +1,6 @@
 package gr.novotrade.novocore.core.api.security;
 
-import java.util.Objects;
+import gr.novotrade.novocore.core.api.shared.Required;
 
 /**
  * Request to create a custom role.
@@ -12,7 +12,18 @@ import java.util.Objects;
  */
 public record NewRole(String name, String description) {
 
+    /**
+     * ⚠️ <strong>{@code Objects.requireNonNull} until Q1 (2026-08-03)</strong> — see
+     * {@link NewUser} for why that was the only thing its author could have written, and
+     * {@code field} rather than {@code text} for why a blank name still reaches
+     * {@code RoleServiceImpl} and is refused there with a 422.
+     *
+     * <p>{@code POST /api/roles} with an empty body is the <em>clean</em> case for this guard, and
+     * worth knowing when reading {@code PermissionSweepIT.noRouteFailsOnAnEmptyBody}: on
+     * {@code POST /api/users} the primitive {@code roleId} fails first, so that route never reaches
+     * its own guard. This record has no primitive, so it does.
+     */
     public NewRole {
-        Objects.requireNonNull(name, "name");
+        Required.field(name, "name");
     }
 }

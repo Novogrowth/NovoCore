@@ -73,6 +73,24 @@ public interface RoleService {
     RoleView rename(long roleId, String newName);
 
     /**
+     * Changes what this role is for, in words. Confers nothing.
+     *
+     * <p>⚠️ <strong>Added in Q1 (2026-08-03), backend queue item 5.</strong> A description could be
+     * set at creation and never changed — there was no route, no service method, and no setter on
+     * the entity — so correcting a typo meant creating a second role, moving every holder across and
+     * deactivating the first. The asymmetry had no argument behind it anywhere in the code or in the
+     * step 16b proposal.
+     *
+     * <p><strong>Deliberately not general role editing.</strong> Name, grants and field
+     * restrictions each keep their own operation, because each is separately audited and two of them
+     * change what somebody can do. This one does not.
+     *
+     * @param description blank or null clears it, which is a state {@link NewRole} already permits
+     * @throws InvalidRoleException if the role is a system role
+     */
+    RoleView describe(long roleId, String description);
+
+    /**
      * @throws InvalidRoleException if the role is a system role, or if any user still holds it —
      *     deactivating a role silently revokes the access of everyone in it
      */

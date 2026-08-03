@@ -257,7 +257,48 @@ describe('the grant grid', () => {
     expect(within(await rowFor('Products')).getByRole('button', { name: 'None' })).toBeDisabled()
     expect(screen.getAllByRole('button', { name: /^Edit / })[0]).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Deactivate' })).toBeDisabled()
-    expect(screen.getByText(/is a system role and cannot be changed/i)).toBeInTheDocument()
+
+    // getAllByText, not getByText, and the change is the assertion getting STRONGER rather than
+    // being relaxed to pass. Until 2026-08-03 the description was plain text with no editor, so
+    // exactly one field carried this reason. It is a FieldEditor now (backend queue item 5), so
+    // both name and description carry it — and "both, not one" is the thing worth asserting: the
+    // new editor must be locked for a system role the same way the old one was.
+    expect(screen.getAllByText(/is a system role and cannot be changed/i)).toHaveLength(2)
+  })
+
+  it('changes a description, which had no route until backend queue item 5', async () => {
+    /*
+     * ⚠️ **This screen test is over `msw` and therefore proves the wiring, not the contract.**
+     * `CLAUDE.md`'s standing rule: a mock answers whatever it was told to. That the backend
+     * ACCEPTS this body is proved by `UserRoleEndpointIT`, against the real server.
+     *
+     * What it does prove, and what the two deleted notes were about: the description is editable
+     * at all, and the request goes to `PATCH /api/roles/{id}/description` rather than to the
+     * rename route with a stray key — which the server would silently ignore.
+     */
+    const sent: { path: string; body: unknown }[] = []
+    server.use(
+      http.patch('http://localhost/api/roles/:id/description', async ({ request, params }) => {
+        sent.push({ path: `/api/roles/${String(params.id)}/description`, body: await request.json() })
+        return HttpResponse.json({ ...custom, description: 'The till, corrected' })
+      }),
+    )
+
+    renderDetail(3)
+    await screen.findByRole('heading', { name: 'TEST-ROLE-SHOP' })
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Edit Description' }))
+    const field = screen.getByRole('textbox', { name: 'Description' })
+    await user.clear(field)
+    await user.type(field, 'The till, corrected')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(sent).toHaveLength(1))
+    expect(sent[0]).toEqual({
+      path: '/api/roles/3/description',
+      body: { description: 'The till, corrected' },
+    })
   })
 
   it('refuses to let you edit your own role, before sending anything', async () => {

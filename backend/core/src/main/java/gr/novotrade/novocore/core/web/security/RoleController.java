@@ -9,7 +9,7 @@ import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.security.UserService;
 import gr.novotrade.novocore.core.api.security.UserView;
 import gr.novotrade.novocore.core.web.ListResponse;
-import gr.novotrade.novocore.core.web.Required;
+import gr.novotrade.novocore.core.api.shared.Required;
 import gr.novotrade.novocore.core.web.Requires;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -131,6 +131,19 @@ class RoleController {
     }
 
     /**
+     * Backend queue item 5 — a description could be set once and never changed.
+     *
+     * <p>Separate from {@link #rename} rather than folded into a general role edit: the two are
+     * separately audited, and one of them is the identifier people refer to a role by.
+     */
+    @PatchMapping(path = "/api/roles/{id}/description",
+            consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Requires(section = Section.USERS_AND_ROLES, level = AccessLevel.FULL)
+    RoleView describe(@PathVariable long id, @RequestBody RoleDescriptionRequest request) {
+        return roles.describe(id, request.description());
+    }
+
+    /**
      * Sets this role's access to one section. {@link AccessLevel#NONE} removes the grant.
      *
      * <p>{@code PUT} rather than {@code POST} because it genuinely replaces one cell and is
@@ -192,6 +205,30 @@ class RoleController {
 
         NameRequest {
             Required.text(name, "name");
+        }
+    }
+
+    /**
+     * ⚠️ <strong>{@code RoleDescriptionRequest} and not {@code DescriptionRequest}, deliberately.</strong>
+     *
+     * <p>{@code OpenApiSchema} registers a component schema under the record's <em>simple name</em>,
+     * so two unrelated records sharing one produce a single schema and the second is silently
+     * described by the first. {@code TaxLookupController.DescriptionRequest} already exists. That is
+     * backend queue item 1's defect one layer over — an identifier collision the generator emits
+     * without complaining — and Q1 found seven {@code NameRequest} records already in it. They are
+     * structurally identical today, so the spec is accidentally correct; this one is named apart
+     * rather than adding an eighth to a set that is only safe by coincidence. Recorded as its own
+     * queue item.
+     *
+     * <p>{@code Required.field} and not {@code Required.text}: a role may legitimately have no
+     * description ({@code NewRole} permits null), so a blank value <em>clears</em> it. Requiring the
+     * key to be present is what stops an empty body clearing it by accident — the same hazard
+     * {@code RoleController.FieldRestrictionRequest}'s javadoc describes for a boxed boolean.
+     */
+    record RoleDescriptionRequest(String description) {
+
+        RoleDescriptionRequest {
+            Required.field(description, "description");
         }
     }
 

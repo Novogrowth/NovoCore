@@ -1,6 +1,7 @@
 package gr.novotrade.novocore.core.api.settlement;
 
 import gr.novotrade.novocore.core.api.shared.Money;
+import gr.novotrade.novocore.core.api.shared.Required;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
@@ -34,9 +35,10 @@ public record NewSettlement(
         String reference,
         String description,
         List<NewAllocation> allocations,
-        boolean remainderBecomesCustomerCredit) {
+        Boolean remainderBecomesCustomerCredit) {
 
     public NewSettlement {
+        Required.field(remainderBecomesCustomerCredit, "remainderBecomesCustomerCredit");
         Objects.requireNonNull(direction, "direction");
         Objects.requireNonNull(partyType, "partyType");
         Objects.requireNonNull(settlementDate, "settlementDate");

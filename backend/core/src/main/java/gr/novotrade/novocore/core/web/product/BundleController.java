@@ -9,7 +9,7 @@ import gr.novotrade.novocore.core.api.security.CurrentUser;
 import gr.novotrade.novocore.core.api.security.RoleView;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.web.ListResponse;
-import gr.novotrade.novocore.core.web.Required;
+import gr.novotrade.novocore.core.api.shared.Required;
 import gr.novotrade.novocore.core.web.Requires;
 import java.util.List;
 import org.springframework.http.HttpStatus;

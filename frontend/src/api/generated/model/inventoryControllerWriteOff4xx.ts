@@ -8,7 +8,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type InventoryControllerWriteOffPost4xx = {
+export type InventoryControllerWriteOff4xx = {
   status?: number;
   title?: string;
   detail?: string;

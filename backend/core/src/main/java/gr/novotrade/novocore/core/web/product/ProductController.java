@@ -10,8 +10,9 @@ import gr.novotrade.novocore.core.api.security.CurrentUser;
 import gr.novotrade.novocore.core.api.security.RoleView;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.shared.Money;
-import gr.novotrade.novocore.core.web.InvalidRequestException;
+import gr.novotrade.novocore.core.api.shared.InvalidInputException;
 import gr.novotrade.novocore.core.web.ListResponse;
+import gr.novotrade.novocore.core.api.shared.Required;
 import gr.novotrade.novocore.core.web.Requires;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -90,7 +91,7 @@ class ProductController {
         int lookups = (sku == null ? 0 : 1) + (ean == null ? 0 : 1) + (supplierId == null ? 0 : 1)
                 + (search == null ? 0 : 1);
         if (lookups > 1) {
-            throw new InvalidRequestException(
+            throw new InvalidInputException(
                     "sku, ean, supplierId and search are alternative lookups; name one.");
         }
 
@@ -297,6 +298,23 @@ class ProductController {
     record UnitOfMeasureRequest(long unitOfMeasureId) {
     }
 
-    record SerialTrackingRequest(boolean serialTracked) {
+    /**
+     * ⚠️ <strong>Boxed in Q1 (2026-08-03), backend queue item 7 — and this is the field whose
+     * primitive twin broke product creation for every user.</strong>
+     *
+     * <p>As a primitive it could not be null, so an omitted key was refused by
+     * {@code FAIL_ON_NULL_FOR_PRIMITIVES} before any handler ran, with a message naming no field:
+     * <em>"Cannot map null into type boolean"</em>. Boxed plus {@code Required.field} it answers
+     * <em>"serialTracked" is required and was not supplied.</em> — the shape
+     * {@link RoleController}'s {@code FieldRestrictionRequest} has had all along, and whose javadoc
+     * names the worse failure this also removes: had {@code FAIL_ON_NULL_FOR_PRIMITIVES} been off, an
+     * omitted flag would arrive as {@code false} and <strong>silently turn serial tracking off</strong>,
+     * answering 200. The 400 was the lucky outcome; boxing removes the luck.
+     */
+    record SerialTrackingRequest(Boolean serialTracked) {
+
+        SerialTrackingRequest {
+            Required.field(serialTracked, "serialTracked");
+        }
     }
 }

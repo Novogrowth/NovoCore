@@ -14,6 +14,6 @@ export interface NewCreditNoteLine {
   salesInvoiceLineId: number;
   quantity?: Quantity;
   unitPrice?: UnitCost;
-  stockReturned: boolean;
+  stockReturned?: boolean;
   description?: string;
 }

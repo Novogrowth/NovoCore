@@ -8,9 +8,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface NewUnitOfMeasure {
-  code?: string;
-  name?: string;
-  fractionalQuantityAllowed?: boolean;
-  mydataCode?: string;
+export interface RoleDescriptionRequest {
+  description?: string;
 }

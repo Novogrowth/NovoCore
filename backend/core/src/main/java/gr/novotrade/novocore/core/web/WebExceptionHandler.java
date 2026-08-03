@@ -56,6 +56,7 @@ import gr.novotrade.novocore.core.api.settings.SettingNotFoundException;
 import gr.novotrade.novocore.core.api.settings.SettingValueException;
 import gr.novotrade.novocore.core.api.settlement.InvalidSettlementException;
 import gr.novotrade.novocore.core.api.settlement.SettlementNotFoundException;
+import gr.novotrade.novocore.core.api.shared.InvalidInputException;
 import gr.novotrade.novocore.core.api.supplier.InvalidSupplierException;
 import gr.novotrade.novocore.core.api.supplier.SupplierNotFoundException;
 import gr.novotrade.novocore.core.api.tax.InvalidVatClassException;
@@ -336,8 +337,8 @@ class WebExceptionHandler {
         // from its compact constructor, which Jackson wraps in this exception. Its message is about
         // the field, not about the JSON — and the body parsed perfectly well — so it is reported as
         // itself rather than prefixed with a claim that the request was malformed.
-        if (cause instanceof InvalidRequestException missingField) {
-            return invalidRequest(missingField);
+        if (cause instanceof InvalidInputException missingField) {
+            return invalidInput(missingField);
         }
 
         String detail = cause.getMessage() == null
@@ -393,16 +394,30 @@ class WebExceptionHandler {
     }
 
     /**
-     * 400, <strong>carrying its message</strong>. The caller named a combination of query
-     * parameters the route cannot answer, and the message says which combinations it can.
+     * 400, <strong>carrying its message</strong>. The caller supplied an incomplete or unanswerable
+     * command — a required body field left out, or a combination of query parameters the route
+     * cannot answer — and the message says what a proper one looks like.
      *
      * <p>The counterpart to the generic 400 below, and the distinction is the whole point of the
      * two existing: this describes the <em>request</em>, which the caller already has, so echoing it
-     * discloses nothing while making the route usable. See {@link InvalidRequestException} for how
+     * discloses nothing while making the route usable. See {@link InvalidInputException} for how
      * seventeen such messages came to be discarded.
+     *
+     * <h2>⚠️ 400 and not 422, and this mapping is where that argument lives</h2>
+     *
+     * <p>{@link InvalidInputException} moved into {@code core-api} in Q1 (2026-08-03), because a
+     * caller supplying an incomplete command is not an HTTP-specific idea — an adapter calling
+     * {@code UserService.create} with a null username has made the same mistake. <strong>What stayed
+     * behind is this mapping, deliberately: the status is the web-shaped half.</strong>
+     *
+     * <p>{@code 400} because the caller can fix this by correcting what it sent. A {@code 422} on
+     * this surface means the request was understood and a <em>business rule</em> refused it, which
+     * is a different thing to tell a client — and the difference is exactly what Q1's probe measured
+     * on {@code POST /api/users}: an absent {@code username} is a 400, a blank one is a 422 saying
+     * <em>"Username must not be blank."</em> Those are two mistakes and they deserve two answers.
      */
-    @ExceptionHandler(InvalidRequestException.class)
-    ProblemDetail invalidRequest(InvalidRequestException exception) {
+    @ExceptionHandler(InvalidInputException.class)
+    ProblemDetail invalidInput(InvalidInputException exception) {
         log.info("Invalid request: {}", exception.getMessage());
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, message(exception));
     }

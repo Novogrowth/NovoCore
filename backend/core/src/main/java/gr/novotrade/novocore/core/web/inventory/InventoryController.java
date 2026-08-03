@@ -9,9 +9,9 @@ import gr.novotrade.novocore.core.api.inventory.StockLocation;
 import gr.novotrade.novocore.core.api.inventory.StockWriteOffView;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
-import gr.novotrade.novocore.core.web.InvalidRequestException;
+import gr.novotrade.novocore.core.api.shared.InvalidInputException;
 import gr.novotrade.novocore.core.web.ListResponse;
-import gr.novotrade.novocore.core.web.Required;
+import gr.novotrade.novocore.core.api.shared.Required;
 import gr.novotrade.novocore.core.web.Requires;
 import java.time.LocalDate;
 import java.util.List;
@@ -89,7 +89,7 @@ class InventoryController {
             @RequestParam(required = false) Boolean open) {
 
         if (productId != null && location != null) {
-            throw new InvalidRequestException(
+            throw new InvalidInputException(
                     "productId and location are alternative lookups; name one.");
         }
         if (location != null) {
@@ -100,7 +100,7 @@ class InventoryController {
                     ? inventory.openLotsOf(productId)
                     : inventory.lotsOf(productId));
         }
-        throw new InvalidRequestException("name a productId or a location");
+        throw new InvalidInputException("name a productId or a location");
     }
 
     @GetMapping(path = "/api/inventory/lots/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -151,7 +151,7 @@ class InventoryController {
         int lookups = (productId == null ? 0 : 1) + (location == null ? 0 : 1)
                 + (serialNumber == null ? 0 : 1);
         if (lookups != 1) {
-            throw new InvalidRequestException(
+            throw new InvalidInputException(
                     "name exactly one of productId, location or serialNumber");
         }
         if (serialNumber != null) {
@@ -191,7 +191,7 @@ class InventoryController {
             return ListResponse.of(inventory.consumptionsOf(productId));
         }
         if (from == null || to == null) {
-            throw new InvalidRequestException(
+            throw new InvalidInputException(
                     "a date range needs 'from' and 'to', or name a productId instead");
         }
         return ListResponse.of(inventory.consumptionsBetween(from, to));
@@ -233,7 +233,7 @@ class InventoryController {
             return ListResponse.of(inventory.writeOffsOf(lotId));
         }
         if (from == null || to == null) {
-            throw new InvalidRequestException(
+            throw new InvalidInputException(
                     "a date range needs 'from' and 'to', or name a lotId instead");
         }
         return ListResponse.of(inventory.writeOffsBetween(from, to));
@@ -251,12 +251,22 @@ class InventoryController {
      * <p>The reason is not optional and not free text: {@code SHRINKAGE} / {@code DAMAGE} /
      * {@code EXPIRY} / {@code OTHER}. Reportability is the whole argument for one write-off account
      * rather than three, and it disappears if the reason can be left off.
+     *
+     * <p>⚠️ <strong>{@code createWriteOff} and not {@code writeOff}, which is backend queue item
+     * 1.</strong> It was {@code writeOff}, the same name as the single read above, and
+     * {@code OpenApiSpecIT} derives an {@code operationId} as {@code Controller_method} — so the
+     * document declared one id for two operations, which OpenAPI forbids. Nothing complained: the
+     * defect surfaced when step 16 generated a TypeScript client from it and the output did not
+     * compile, twenty duplicate-identifier errors in one file. <strong>The read keeps the singular
+     * noun</strong>, matching {@code role}/{@code roles} and every other pair on this surface; the
+     * write takes the {@code create…} form {@code RoleController} and {@code UserController} already
+     * use. {@code OpenApiSpecIT} now refuses a duplicate rather than writing one out.
      */
     @PostMapping(path = "/api/inventory/write-offs",
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.INVENTORY, level = AccessLevel.FULL)
     @ResponseStatus(HttpStatus.CREATED)
-    StockWriteOffView writeOff(@RequestBody NewStockWriteOff request) {
+    StockWriteOffView createWriteOff(@RequestBody NewStockWriteOff request) {
         return inventory.writeOff(request);
     }
 

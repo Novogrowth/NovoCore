@@ -12,7 +12,7 @@ import gr.novotrade.novocore.core.api.shared.PageRequest;
 import gr.novotrade.novocore.core.api.shared.SortDirection;
 import gr.novotrade.novocore.core.api.shared.SubLedgerRef;
 import gr.novotrade.novocore.core.api.shared.SubLedgerType;
-import gr.novotrade.novocore.core.web.InvalidRequestException;
+import gr.novotrade.novocore.core.api.shared.InvalidInputException;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.web.Paging;
 import gr.novotrade.novocore.core.web.Requires;
@@ -153,7 +153,7 @@ class JournalController {
         try {
             return new JournalEntryFilter(from, to, accountId, source, ref);
         } catch (IllegalArgumentException backwards) {
-            throw new InvalidRequestException(backwards.getMessage());
+            throw new InvalidInputException(backwards.getMessage());
         }
     }
 
@@ -167,7 +167,7 @@ class JournalController {
      */
     private static void requireOrderedRange(LocalDate from, LocalDate to) {
         if (from != null && to != null && from.isAfter(to)) {
-            throw new InvalidRequestException(
+            throw new InvalidInputException(
                     "The date range runs backwards: from " + from + " is after to " + to
                             + ". Nothing can match it, so this is a mistake in the request rather "
                             + "than a period with no entries in it.");
@@ -177,7 +177,7 @@ class JournalController {
     /**
      * Both halves of a sub-ledger filter, or neither.
      *
-     * <p>Raised as an {@link InvalidRequestException} rather than an {@code IllegalArgumentException},
+     * <p>Raised as an {@link InvalidInputException} rather than an {@code IllegalArgumentException},
      * so the caller is told which half is missing instead of receiving a bare {@code "Bad request."} —
      * the named anti-pattern that bit three times in step 15 alone.
      */
@@ -186,7 +186,7 @@ class JournalController {
             return null;
         }
         if (type == null || id == null) {
-            throw new InvalidRequestException(
+            throw new InvalidInputException(
                     "A sub-ledger filter needs both 'subLedgerType' and 'subLedgerId'; got "
                             + (type == null ? "only an id" : "only a type")
                             + ". A type on its own would mean every customer, which is what omitting "

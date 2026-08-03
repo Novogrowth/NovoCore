@@ -273,10 +273,18 @@ class WebAuthorizationRulesTest {
      * a missing record. Same pattern as proxy self-invocation: it bit repeatedly, each time looking
      * like working code, and the remedy each time was the same one sentence.
      *
-     * <p>The remedy: {@link gr.novotrade.novocore.core.web.InvalidRequestException} when the
-     * <em>request</em> is wrong and the caller should be told how,
-     * {@code gr.novotrade.novocore.core.web.Required} for a missing body field, and the core's own
-     * {@code ...NotFoundException} when an id names nothing.
+     * <p>The remedy: {@link gr.novotrade.novocore.core.api.shared.InvalidInputException} when the
+     * caller's <em>input</em> is wrong and it should be told how,
+     * {@code gr.novotrade.novocore.core.api.shared.Required} for a missing body field, and the core's
+     * own {@code ...NotFoundException} when an id names nothing.
+     *
+     * <p>⚠️ <strong>Both moved from {@code core.web} into {@code core-api} in Q1 (2026-08-03), and
+     * the move is why this rule's scope is not the whole story.</strong> They were unreachable from
+     * {@code core-api}, which has no production dependencies — so the request records living there
+     * ({@code NewUser}, {@code NewRole}) guarded their fields with {@code Objects.requireNonNull}
+     * and produced the fifth instance of this anti-pattern. This rule could never have found it:
+     * {@code core-api} is outside {@code CORE_WEB}, and the fault was a missing remedy rather than a
+     * misused one. See {@code CLAUDE.md}, <em>Group A and Group B</em>.
      *
      * <p><strong>Narrow on purpose, and here is what it cannot see.</strong> It forbids
      * <em>constructing</em> the exception in this package, so catching one (as
@@ -300,7 +308,7 @@ class WebAuthorizationRulesTest {
                         + "wrong produces a valid-looking response with the explanation removed — "
                         + "which is exactly what happened to seventeen controller messages in step "
                         + "15's defect 5, and again to the outbox's unknown-id 404 in defect 9. Use "
-                        + "InvalidRequestException (the request is wrong, say how), Required.field "
+                        + "InvalidInputException (the request is wrong, say how), Required.field "
                         + "(a body field is missing), or the core's own ...NotFoundException (the id "
                         + "names nothing).");
 

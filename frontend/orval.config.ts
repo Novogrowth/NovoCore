@@ -31,7 +31,6 @@ export default defineConfig({
             operationId?: string
             tags?: string[]
           }
-          const operationsById = new Map<string, { operation: Operation; verb: string }[]>()
 
           for (const operations of Object.values(spec.paths ?? {})) {
             for (const [verb, operation] of Object.entries(operations ?? {})) {
@@ -49,38 +48,24 @@ export default defineConfig({
                     .toLowerCase(),
                 ]
               }
-
-              const existing = operationsById.get(op.operationId) ?? []
-              existing.push({ operation: op, verb: verb.toLowerCase() })
-              operationsById.set(op.operationId, existing)
             }
           }
 
           /*
-           * ⚠️ WORKAROUND FOR A DEFECT IN THE COMMITTED SPEC, not a generation preference.
+           * A de-duplication block stood here until 2026-08-03 and is deliberately gone.
            *
-           * OpenAPI requires operationId to be unique across the document, and
-           * `InventoryController_writeOff` is not: `POST /api/inventory/write-offs` and
-           * `GET /api/inventory/write-offs/{id}` are two Java methods of the same name, and
-           * OpenApiSpecIT derives the id as Controller_method. Generating from it produces two
-           * hooks with one name and the TypeScript does not compile.
+           * `InventoryController_writeOff` was the operationId of two operations — OpenAPI forbids
+           * it, orval produced two hooks with one name, and the TypeScript did not compile. This
+           * file worked around it by suffixing the HTTP verb. Backend queue item 1 fixed the cause:
+           * the POST handler is `createWriteOff`, and `OpenApiSpecIT` now REFUSES to write a spec
+           * containing a duplicate rather than emitting an invalid document silently.
            *
-           * The real fix is on the backend — either rename one method or have the generator
-           * disambiguate — and until it lands the collision is resolved here by suffixing the
-           * verb, deterministically for every member of the group so the result does not depend
-           * on the order operations appear in the file. `spec-hygiene.test.ts` fails when the set
-           * of collisions changes in either direction, including when it is finally empty.
+           * So the workaround is deleted rather than left dormant, along with the assertion in
+           * `spec-hygiene.test.ts` that pinned it — that test was written to fail in both
+           * directions, including on the day the collision became empty, and this is that day. A
+           * workaround outliving its cause is worse than either, because the next reader cannot
+           * tell whether it is load-bearing.
            */
-          for (const [operationId, group] of operationsById) {
-            if (group.length < 2) continue
-            console.warn(
-              `orval: operationId "${operationId}" is used by ${group.length} operations, ` +
-                `which OpenAPI forbids. Suffixing with the HTTP verb — see spec-hygiene.test.ts.`,
-            )
-            for (const { operation, verb } of group) {
-              operation.operationId = `${operationId}${verb.charAt(0).toUpperCase()}${verb.slice(1)}`
-            }
-          }
 
           return spec
         },

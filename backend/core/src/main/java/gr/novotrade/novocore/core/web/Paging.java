@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.web;
 
+import gr.novotrade.novocore.core.api.shared.InvalidInputException;
 import gr.novotrade.novocore.core.api.shared.PageRequest;
 import gr.novotrade.novocore.core.api.shared.SortDirection;
 
@@ -16,7 +17,7 @@ import gr.novotrade.novocore.core.api.shared.SortDirection;
  *
  * <p>That is exactly the shape {@code CLAUDE.md} names: <em>a client's mistake raised as a
  * programming error</em>, which bit three times inside step 15 alone. So every paged route funnels
- * through here, and here the failure is re-raised as {@link InvalidRequestException}, whose message
+ * through here, and here the failure is re-raised as {@link InvalidInputException}, whose message
  * does reach the caller. Left to each controller, this would be got right in most of them.
  *
  * <h2>The sort parameter is an enum at the boundary</h2>
@@ -37,7 +38,7 @@ public final class Paging {
      * @param sort the field to order by as a per-endpoint enum constant, or null for the list's
      *     natural order
      * @param direction which way, or null for ascending when sorted
-     * @throws InvalidRequestException if the numbers are out of range, <strong>carrying the reason
+     * @throws InvalidInputException if the numbers are out of range, <strong>carrying the reason
      *     the core gave</strong> rather than a bare "Bad request."
      */
     public static PageRequest of(
@@ -51,7 +52,7 @@ public final class Paging {
         } catch (IllegalArgumentException outOfRange) {
             // The core's message names the bound and why it exists, which is precisely what a
             // caller needs and precisely what a bare 400 would throw away.
-            throw new InvalidRequestException(outOfRange.getMessage());
+            throw new InvalidInputException(outOfRange.getMessage());
         }
     }
 }

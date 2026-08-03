@@ -208,6 +208,7 @@ class OpenApiSpecIT {
     private Map<String, Object> buildDocument() {
         OpenApiSchema schema = new OpenApiSchema();
         Map<String, Map<String, Object>> paths = new TreeMap<>();
+        Map<String, List<String>> routesByOperationId = new TreeMap<>();
 
         for (RequestMappingHandlerMapping mapping : handlerMappings) {
             for (Map.Entry<RequestMappingInfo, HandlerMethod> entry
@@ -222,13 +223,20 @@ class OpenApiSpecIT {
                         continue;
                     }
                     for (var method : entry.getKey().getMethodsCondition().getMethods()) {
+                        Map<String, Object> operation =
+                                operation(entry.getValue(), schema, pattern);
+                        routesByOperationId
+                                .computeIfAbsent((String) operation.get("operationId"),
+                                        key -> new ArrayList<>())
+                                .add(method.name() + " " + pattern);
                         paths.computeIfAbsent(pattern, key -> new TreeMap<>())
-                                .put(method.name().toLowerCase(java.util.Locale.ROOT),
-                                        operation(entry.getValue(), schema, pattern));
+                                .put(method.name().toLowerCase(java.util.Locale.ROOT), operation);
                     }
                 }
             }
         }
+
+        refuseDuplicateOperationIds(routesByOperationId);
 
         Map<String, Object> info = new LinkedHashMap<>();
         info.put("title", "NovoCore API");
@@ -248,6 +256,52 @@ class OpenApiSpecIT {
         document.put("paths", paths);
         document.put("components", components);
         return document;
+    }
+
+    /**
+     * <strong>A duplicate {@code operationId} fails the build instead of being written out.</strong>
+     *
+     * <p>⚠️ Backend queue item 1, and <strong>the half that mattered</strong>. The collision itself
+     * was one method name: {@code POST /api/inventory/write-offs} and
+     * {@code GET /api/inventory/write-offs/{id}} were both {@code InventoryController.writeOff}, and
+     * {@link #operation} derives the id as {@code Controller_method}. OpenAPI requires
+     * {@code operationId} to be unique across a document, so what this generator produced was
+     * <strong>an invalid spec that no conforming consumer can read</strong> — and it said nothing.
+     *
+     * <p>It was found by step 16 generating a TypeScript client from it: the output did not compile,
+     * twenty duplicate-identifier errors in one file. The frontend then carried a workaround in
+     * {@code orval.config.ts} suffixing the HTTP verb, pinned by a test written to fail in both
+     * directions. <strong>Both were deleted when this landed</strong> — a workaround outliving its
+     * cause is worse than either.
+     *
+     * <p>This is the same failure mode step 16a's drift check exists to prevent, one level down: a
+     * generator that quietly emits something wrong. The remedy is the one this class already applies
+     * to an unknown type — {@code OpenApiSchema.schemaFor} throws rather than guessing — and the
+     * message names the routes, because "there is a duplicate somewhere" is not actionable.
+     *
+     * <p>⚠️ <strong>What this deliberately does NOT check, and it is a real gap:</strong> component
+     * <em>schema</em> names collide the same way. {@code OpenApiSchema} registers a record under its
+     * simple name, and Q1 found <strong>seven</strong> distinct {@code NameRequest} records across
+     * seven controllers resolving to one schema. They are structurally identical today, so the
+     * document is accidentally correct; the day one of them gains a field, six routes are described
+     * by the wrong shape with no warning. Closing that means renaming records or qualifying schema
+     * names across the surface, which regenerates the whole client — so it is recorded as its own
+     * backend queue item rather than bolted on here.
+     */
+    private static void refuseDuplicateOperationIds(Map<String, List<String>> routesByOperationId) {
+        List<String> collisions = routesByOperationId.entrySet().stream()
+                .filter(entry -> entry.getValue().size() > 1)
+                .map(entry -> entry.getKey() + " → " + entry.getValue())
+                .toList();
+
+        if (!collisions.isEmpty()) {
+            throw new IllegalStateException(
+                    "The spec would declare one operationId for more than one operation, which "
+                            + "OpenAPI forbids and which produces a document no conforming client "
+                            + "can read — a generated TypeScript client will not compile. Rename "
+                            + "one of the controller methods; the id is Controller_method.\n  "
+                            + String.join("\n  ", collisions));
+        }
     }
 
     private Map<String, Object> operation(HandlerMethod handler, OpenApiSchema schema,

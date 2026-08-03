@@ -53,6 +53,23 @@ public record CustomerView(
         CustomerSystemKey systemKey,
         boolean active) {
 
+    /**
+     * ⚠️ <strong>These are {@code IllegalArgumentException} on purpose, and that is not the
+     * anti-pattern it looks like.</strong>
+     *
+     * <p>A {@code CustomerView} is a <em>response</em>: it is built only after the service has
+     * accepted a change, so a view that cannot satisfy these invariants means <em>this codebase</em>
+     * assembled an incoherent record — a programming error, which is exactly what the type means and
+     * what {@code WebExceptionHandler} is right to withhold from a caller.
+     *
+     * <p><strong>What went wrong in backend queue item 4 was that they were the only place the two
+     * system-record rules existed.</strong> A caller taking {@code PATCH …/vat-status} or
+     * {@code PATCH …/vat-number} reached them directly and got a bare {@code 400 "Bad request."}
+     * with a complete explanation discarded. Fixed in Q1 (2026-08-03) by checking both on the
+     * caller's path in {@code CustomerServiceImpl}, where a caller's mistake is refused with
+     * {@code InvalidCustomerException} and a 422 carrying its reason. These stayed, as the backstop
+     * they correctly are.
+     */
     public CustomerView {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(vatStatus, "vatStatus");

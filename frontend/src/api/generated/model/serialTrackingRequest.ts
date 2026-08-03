@@ -9,5 +9,5 @@
  */
 
 export interface SerialTrackingRequest {
-  serialTracked: boolean;
+  serialTracked?: boolean;
 }

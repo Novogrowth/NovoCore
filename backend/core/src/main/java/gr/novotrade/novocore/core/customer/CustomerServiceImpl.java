@@ -225,6 +225,7 @@ class CustomerServiceImpl implements CustomerService {
             throw new InvalidCustomerException(
                     "Another customer already has VAT number '" + normalised + "'.");
         }
+        requireSystemRecordMayHoldVatNumber(customer, normalised);
         requireCoherentVatStatus(customer.getName(), customer.getVatStatus(), normalised,
                 customer.getVatExemptionReasonId());
 
@@ -243,6 +244,7 @@ class CustomerServiceImpl implements CustomerService {
         Objects.requireNonNull(vatStatus, "vatStatus");
         Customer customer = load(id);
 
+        requireSystemRecordMayTakeVatStatus(customer, vatStatus);
         requireCoherentVatStatus(customer.getName(), vatStatus, customer.getVatNumber(),
                 vatExemptionReasonId);
 
@@ -308,6 +310,42 @@ class CustomerServiceImpl implements CustomerService {
 
     private Customer load(long id) {
         return repository.findById(id).orElseThrow(() -> new CustomerNotFoundException(id));
+    }
+
+    /**
+     * A system record's VAT treatment is fixed at {@link VatStatus#DOMESTIC}.
+     *
+     * <p>⚠️ <strong>Backend queue item 4, and the fix is not where the item said it was.</strong>
+     * This rule existed only as an invariant in {@link CustomerView}'s compact constructor, raised
+     * as an {@code IllegalArgumentException} — which {@code WebExceptionHandler} correctly discards,
+     * because that type means <em>our</em> code is wrong. So {@code PATCH …/vat-status} answered a
+     * bare {@code 400 "Bad request."} and threw away a complete explanation. The fourth confirmed
+     * instance of {@code CLAUDE.md}'s <em>a client's mistake raised as a programming error</em>.
+     *
+     * <p><strong>The remedy is to check it here, not to change the type there.</strong> The view is
+     * a response record: by the time one is built the service has already accepted the change, so an
+     * incoherent view really is a bug in this class and {@code IllegalArgumentException} is the right
+     * signal for it. What was missing was any check on the path a <em>caller</em> takes. That is the
+     * shape {@link #deactivate} already had for the same flag, three methods up.
+     */
+    private void requireSystemRecordMayTakeVatStatus(Customer customer, VatStatus vatStatus) {
+        if (customer.getSystemKey() != null && vatStatus != VatStatus.DOMESTIC) {
+            throw new InvalidCustomerException(
+                    "Customer '" + customer.getName() + "' carries system key "
+                            + customer.getSystemKey() + " and cannot be " + vatStatus
+                            + ". A system record's VAT treatment is fixed at DOMESTIC: it is not one "
+                            + "identifiable party, so it cannot make a claim about a party's status.");
+        }
+    }
+
+    /** The other half of item 4 — see {@link #requireSystemRecordMayTakeVatStatus}. */
+    private void requireSystemRecordMayHoldVatNumber(Customer customer, String vatNumber) {
+        if (customer.getSystemKey() != null && vatNumber != null) {
+            throw new InvalidCustomerException(
+                    "Customer '" + customer.getName() + "' carries system key "
+                            + customer.getSystemKey() + " and cannot hold a VAT number. A shared "
+                            + "anonymous record cannot hold one party's ΑΦΜ.");
+        }
     }
 
     /**

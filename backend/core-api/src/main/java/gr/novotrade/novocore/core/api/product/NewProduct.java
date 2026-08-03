@@ -1,6 +1,7 @@
 package gr.novotrade.novocore.core.api.product;
 
 import gr.novotrade.novocore.core.api.shared.Money;
+import gr.novotrade.novocore.core.api.shared.Required;
 import java.util.Objects;
 
 /**
@@ -43,9 +44,10 @@ public record NewProduct(
         Money sellingPrice,
         Long supplierId,
         String supplierSku,
-        boolean serialTracked) {
+        Boolean serialTracked) {
 
     public NewProduct {
+        Required.field(serialTracked, "serialTracked");
         Objects.requireNonNull(sku, "sku");
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(type, "type");

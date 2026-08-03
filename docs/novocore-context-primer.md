@@ -89,15 +89,38 @@ the summary.
   same time and for the same reason: it was a snapshot duplicating `PROGRESS.md` and the roadmap, and a
   second record that drifts is exactly what let the backend queue and the frontend roadmap disagree
   about item 3 for a week. **Regenerate a summary on demand rather than maintaining one.**
-- ⚠️ **The next step is Q1, the backend follow-up queue — not F5.** That reprioritisation was taken in
-  a design conversation and existed only in chat until 2026-08-02, while three documents still said F5.
-  It is the worked example for the new `CLAUDE.md` rule that a design decision gets the same close-out
-  discipline as a build step. **R1 (document reference data) comes after Q1 and before F5.**
-- ⚠️ **Q1 is `🔴 Not started` — nothing in that queue has been begun.** Five items to work through
-  (**4+6, 5, 1, 7, 8**, covering six open numbered rows). Items 2 and 9 were done and item 3 closed as
-  stale *before* Q1 was a step, and **the credit-note rename belongs to U1, not Q1** — it came from a
-  roadmap finding, not from the queue. Filed under Q1 until 2026-08-02, where it made a cold read
-  report *"Q1 current, one of six landed"* on an untouched queue.
+- ⚠️ **The next step is 8a.** The running order is **Q1 → 8a → 8b → R1 → R2 → F5**, and F5 is not next
+  for the same reason it was not next on 2026-08-02: the backend queue was prioritised ahead of it in a
+  design conversation that existed only in chat until then, while three documents still said F5. It is
+  the worked example for the `CLAUDE.md` rule that a design decision gets the same close-out discipline
+  as a build step.
+- ✅ **Q1 is DONE — 2026-08-03. Four items: 4+6, 5, 1, 7.** Items 2 and 9 were done and item 3 closed as
+  stale *before* Q1 was a step, and **the credit-note rename belongs to U1, not Q1**. What landed:
+  `Required` and the exception moved from `core.web` into `core-api` as **`InvalidInputException`**; the
+  two retail-customer rules enforced where a caller reaches them; `NewUser`/`NewRole` guarded with
+  `Required.field`; `PATCH /api/roles/{id}/description`; the duplicate `operationId` fixed, the
+  generator taught to **refuse** one, and the frontend workaround deleted; the eight boolean primitives
+  boxed.
+- ⚠️ **Backend queue item 8 left the queue and is now steps 8a / 8b, placed after Q1 and BEFORE R1.**
+  That closed the standing open decision *"should item 8 be promoted within Q1?"* — the answer was
+  neither promote nor leave last. **8a** is the `@Mandatory` annotation in `core-api`, one line in the
+  spec generator, and a **bidirectional ArchUnit cross-check** on the compact constructor's bytecode
+  (not optional: without it the annotation is ~289 hand-applied assertions nothing verifies). **8b** is
+  the client regeneration and fixture reconciliation. Never concurrent with a frontend step. **Reasons
+  for the placement:** R1 adds eight tables' worth of new records that should be written with the
+  enforcement in place, and every screen built afterwards multiplies 8b.
+- 🎯 **8a is load-bearing, not housekeeping.** Q1's item 7 boxed the boolean primitives, which improved
+  the refusal message (`"serialTracked" is required and was not supplied.`) and **removed the `required`
+  declaration from the spec**, because `OpenApiSchema` marks a component required when it
+  `isPrimitive()` and a boxed `Boolean` is not. **78 → 75 schemas declaring `required`, measured
+  2026-08-03.** The server still refuses; `tsc` no longer does. **No screen is built inside that
+  window** — F5–F8 are the steps that would send these bodies and they come after 8b. Pinned in both
+  directions by `spec-hygiene.test.ts`.
+- 📌 **Two new backend items were raised by Q1**, replacing the queue's original rows. **Q1-a:** spec
+  *schema* names collide exactly as `operationId` did — seven distinct `NameRequest` records resolve to
+  one schema, harmless only because they are identical today, and nothing checks it. **Q1-b:**
+  `VatExemptionReasonService.create` has no production caller (the seed is Flyway SQL; the route is
+  GET-only); **not deleted** — decide it with R1, which settles the seed-only pattern.
 - **`U` is a step-ID prefix**: *a session that changes documentation and governance and produces no
   production code.* **U1** is the roadmap unification and documentation reconciliation of 2026-08-02;
   **U2** (⚪ unscheduled) is the `PROGRESS.md` → `PROGRESS.md` + `HISTORY.md` split. Future
@@ -110,8 +133,8 @@ the summary.
   does recording a sales invoice recompute VAT, or store what the source document states? Answer it
   against the running system.** Precedence between product VAT class, island reduced-rate mapping and
   customer override is an open accountant decision, **needed for the island rates either way.**
-- **Measured 2026-08-02:** 1,376 backend tests (0 failures, 1 skipped, `mvn clean verify` exit 0), 307
-  frontend tests across 31 files, 175 API operations.
+- **Measured 2026-08-03 (after Q1):** 1,377 backend tests (0 failures, 1 skipped, `mvn clean verify`
+  exit 0), 308 frontend tests across 31 files, 176 API operations.
 
 - **Setup complete:** git repo at `https://github.com/Novogrowth/NovoCore.git`, working locally at `C:\Novocore` (moved off Google Drive — Drive's virtual filesystem was silently corrupting `node_modules` installs; git/GitHub is the only cross-machine sync mechanism now, never Drive).
 - **Frontend foundation built and verified:** Vite + React 19 + TypeScript, Tailwind v4 (CSS-first config), shadcn/ui (style `base-nova`), React Router + an app shell (sidebar + main + Outlet). **No longer untouched — step 16 is under way on top of it; see the step 16 bullet at the end of this list.**
@@ -304,7 +327,7 @@ in the answer and does nothing about the row still being **findable** by matchin
 discloses the value one character at a time, every step confirmed by a result the role is entitled
 to see. `ProductService.searchFor` therefore searches fewer columns for a restricted viewer. The
 consequence: **the same term can return fewer rows for a restricted role**, which is correct.
-- **✅ The spec now declares every primitive component required — backend item 2's primitive half, done 2026-08-01, before F4.** `OpenApiSchema.recordSchema` marks a record's primitive components required, which is **one rule accurate in both directions**: a primitive cannot be null, so on a request it is mandatory (`FAIL_ON_NULL_FOR_PRIMITIVES` refuses an absent one before any handler runs) and on a response it is always present. **2 → 78 schemas declare `required`; the spec diff is +76 lines and −0, with 174 operations unchanged; no production code was touched** — the generator lives in `src/test`. **`tsc` now refuses a create form that omits a mandatory field**, so `product-create.tsx`'s `serialTracked` is ordinary correct code rather than a workaround. Three things were checked before approving it: there is **one spec artefact and no live `/v3/api-docs`** (springdoc is not a dependency — zero springdoc/swagger entries in the deployed jar — and the 401 it returns is what Spring Security answers for *any* unmapped path); the redaction claim was **generalised from `ProductView` to all 53 response records carrying a primitive, with no exception** (nothing declares `@JsonInclude`, and the two withholding mechanisms null reference-typed fields or substitute a masked string); and the anti-pattern numbering was reconciled. ⚠️ **What it deliberately did not close:** 28 schemas require a *reference-typed* field inside a compact constructor, invisible to reflection — queued as item 8, with item 7 boxing the 7 boolean primitives so the refusal names the field. **All three were kept separate on purpose.**
+- **✅ The spec now declares every primitive component required — backend item 2's primitive half, done 2026-08-01, before F4.** `OpenApiSchema.recordSchema` marks a record's primitive components required, which is **one rule accurate in both directions**: a primitive cannot be null, so on a request it is mandatory (`FAIL_ON_NULL_FOR_PRIMITIVES` refuses an absent one before any handler runs) and on a response it is always present. **2 → 78 schemas declare `required`; the spec diff is +76 lines and −0, with 174 operations unchanged; no production code was touched** — the generator lives in `src/test`. ⚠️ **That made `tsc` refuse a create form omitting a mandatory field — and Q1's item 7 partially undid it on 2026-08-03.** Boxing the eight boolean flags so the refusal names them removed their `required` declaration, because a boxed `Boolean` is not a primitive: **78 → 75 schemas.** The 20 `long` ids are unaffected and still declared. `product-create.tsx` therefore still sends `serialTracked` explicitly and is load-bearing again until **8a** restores the declaration. Three things were checked before approving it: there is **one spec artefact and no live `/v3/api-docs`** (springdoc is not a dependency — zero springdoc/swagger entries in the deployed jar — and the 401 it returns is what Spring Security answers for *any* unmapped path); the redaction claim was **generalised from `ProductView` to all 53 response records carrying a primitive, with no exception** (nothing declares `@JsonInclude`, and the two withholding mechanisms null reference-typed fields or substitute a masked string); and the anti-pattern numbering was reconciled. ⚠️ **What it deliberately did not close:** 28 schemas require a *reference-typed* field inside a compact constructor, invisible to reflection — now roadmap steps **8a / 8b**, scheduled after Q1 and before R1. ✅ **Item 7 is done** (2026-08-03), boxing the 7 boolean primitives plus a latent eighth so the refusal names the field. **All three were kept separate on purpose — and items 7 and 8 turned out to be coupled after all**, which the queue's own reasoning did not see.
 - **🐛 The sweep's most useful finding was in our own tests.** It surfaced 19 type errors and **not one was in production code**: every screen test built a `Me` with no `active`, a `Role` with no `id`, a `UnitOfMeasureView`/`RoleView` with no `active` — **fixtures describing a response the server never sends.** The live probe shows `"active":true` on every `/api/me`. Nothing but the spec fix had ever noticed.
 - **🐛 F3's live probe corrected a backend item rather than merely passing.** `NewUser.roleId` is a primitive **`long`**, so `POST /api/users` with it omitted answers `400 "Cannot map null into type long"` naming no field — the same defect as `serialTracked`, which `PROGRESS.md` recorded as one of *exactly two* on the surface. **That count came from a grep for primitive `boolean`**: at least **22 request records carry a primitive**, and **0 of the 50 request-body schemas on the surface declare a `required` list**. Nothing has hit them because the screens that send those bodies do not exist yet — **F5 onwards is when they will, one at a time, exactly as Products did.** Backend item 2's priority is unchanged and its scope is now much larger. The contrast that settles the design, one route apart in the same probe run: the boxed `Boolean` + `Required.field` on `PUT …/field-restrictions/{field}` answers **`"restricted" is required and was not supplied."`**
 - **⚠️ `docker compose down -v` is expensive on this stack — use `docker/reset-trading-data.sql` instead.** `docker/.env` holds only the DB password, the site address and the backup encryption key; **the Google Drive client secrets and refresh tokens live in the `setting` table**, and `NOVOCORE_BOOTSTRAP_OWNER_*` are blank. So dropping the volume destroys the commissioned Drive credentials *and* the Owner account, neither reproducible from `.env`, and the consent flow has to be re-run including fresh destination folders. The reset script keeps Settings, Users, Roles, the Flyway lookups, the backup history and the audit log — **the last of these deliberately absent from its `TRUNCATE` list, because `TRUNCATE` does not fire the row trigger that makes it append-only.**

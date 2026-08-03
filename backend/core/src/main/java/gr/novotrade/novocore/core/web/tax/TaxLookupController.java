@@ -10,7 +10,7 @@ import gr.novotrade.novocore.core.api.tax.VatClassView;
 import gr.novotrade.novocore.core.api.tax.VatExemptionReasonService;
 import gr.novotrade.novocore.core.api.tax.VatExemptionReasonView;
 import gr.novotrade.novocore.core.web.ListResponse;
-import gr.novotrade.novocore.core.web.Required;
+import gr.novotrade.novocore.core.api.shared.Required;
 import gr.novotrade.novocore.core.web.Requires;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;

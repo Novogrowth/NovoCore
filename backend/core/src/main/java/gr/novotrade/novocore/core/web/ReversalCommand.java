@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.web;
 
+import gr.novotrade.novocore.core.api.shared.Required;
 import java.time.LocalDate;
 
 /**
