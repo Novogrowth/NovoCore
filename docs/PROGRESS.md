@@ -309,6 +309,248 @@ fallback — which is the **Java-default-locale knob's JavaScript twin**, and is
 the same shape. Whichever way the decision goes, that assertion stays; it is not a down payment on
 option 1 and should not be read as one.
 
+## ▶ R1 Phase 0 — what is TRUE of the system and the artefacts, 2026-08-03
+
+**This section is EVIDENCE, not decisions.** Every statement below was established by querying the
+running stack, parsing the committed spec, or reading the AADE artefacts — none of it by reading
+source and concluding. The decisions R1 took *in response* are in the R1 scope section; keeping them
+apart is deliberate, because a finding stays true when a decision is revisited.
+
+**How it was established.** Live PostgreSQL **17.10** in `novocore-postgres-1` (up 30h, healthy at
+the time of the queries) interrogated directly with `psql`; `docs/api/openapi.json` parsed; the
+`v2.0.1` XSD enumerations read as text; the ERP PDF's §8 annex map read and cross-checked. Phase 0
+was approved on 2026-08-03 with **all eleven premise corrections accepted**.
+
+### 📋 The eleven corrected premises, and what proved each
+
+| # | The premise as written | What is actually true | Proved by |
+|---|---|---|---|
+| 1 | Settlement methods are an entity with rows | **`SettlementMethod` is a Java `enum` in `core-api`.** No table, no row, no id, no `active` | `\d`-level sweep of all 47 live tables; `sales_invoice.settlement_method` is `varchar(30)` under a CHECK |
+| 2 | One settlement method (ACS) lacks a myDATA code | **Three do** — `ACS_COD`, `PAYPAL`, `STRIPE`. PayPal and Stripe were not mentioned at all | The enum's eight constants read against annex 8.12's eight statutory values |
+| 3 | `VatExemptionReasonService.create` is the only unreachable seed-only write path | **`ChargeTypeService` has six**, and `/api/charge-types` is `GET`-only | The committed spec (176 operations); `TaxLookupController` exposes GET only; no production caller |
+| 4 | Annex 8.7 `Κατηγορία Τελών` is the Fees list | **It is 22 statutory levies** — mobile telephony, plastic bags, subscription TV, hotel stays, restaurant/casino gross receipts. No delivery, no COD | Annex 8.7 read directly |
+| 5 | AADE codes 24 and 28 may be retired | **Both exist.** Annex 8.3 defines **31 codes with no gaps** | Annex 8.3 read directly — see below |
+| 6 | Self-supply is one concept | **AADE defines two document types**: `6.1 Στοιχείο Αυτοπαράδοσης` and `6.2 Στοιχείο Ιδιοχρησιμοποίησης` | `SimpleTypes-v2.0.1.xsd` `InvoiceType`; annex 8.1 |
+| 7 | Line prices are assumed to come from the product | **Nothing reads `product.selling_price` on the sales path.** `unitPrice` is caller-supplied and `@Mandatory` | Non-test reader sweep of `sellingPrice`; `SalesInvoiceServiceImpl.price(…)` reads the product only for `active` and `defaultVatClassId` |
+| 8 | Excluding a self-customer from reporting would touch reports | **No revenue, sales-by-customer or margin report exists anywhere** | `SalesInvoiceService` has listings only — `ofCustomer`, `between`, two paged variants, `withAcceptedRoundingDifference`, `totalRoundingBetween` |
+| 9 | The AADE artefact filenames were normalised | **They never were.** The README listed five short names, **none of which exist on disk** | `ls` of `docs/aade/v2.0.1/` |
+| 10 | The XSD splits sales and purchase document types | **One enumeration of 55 values covering both.** The split is Novocore's, from annex 8.1's group headings | `SimpleTypes-v2.0.1.xsd` `InvoiceType` |
+| 11 | `pdftotext` can read the annex tables | **It silently drifts code and description apart** in 8.2, 8.7, 8.8 and 8.13, producing plausible wrong pairs | Annex 8.2 extracted as `1 → 24%`, `2 → 24%/13%`, `3 → 13%/6%` — every pairing off by one. ⚠️ **Now a named anti-pattern in `CLAUDE.md`** |
+
+### 📊 `SettlementMethod` — the eight values as they stand, 2026-08-03
+
+**An enum, deliberately.** Its own javadoc: *"every value here has behaviour only NovoCore can
+supply — the cash limit, whether an invoice is born settled — so a row an operator added at runtime
+would be storable and unhandled."*
+
+| Value | `AccountSystemKey` | `settlesImmediately` | `subjectToCashLimit` | myDATA code (annex 8.12) |
+|---|---|:---:|:---:|---|
+| `CASH` | `CASH` | ✅ | ✅ | **3** Μετρητά |
+| `CARD_POS` | `PARTNER_CLEARING_POS` | ✅ | — | **7** POS / e-POS |
+| `SKROUTZ` | `PARTNER_CLEARING_SKROUTZ` | ✅ | — | **5** Επί Πιστώσει |
+| `ACS_COD` | `PARTNER_CLEARING_ACS` | ✅ | — | ⚠️ **none — open** |
+| `PAYPAL` | `PAYPAL` | ✅ | — | ⚠️ **none — open** |
+| `STRIPE` | `STRIPE` | ✅ | — | ⚠️ **none — open** |
+| `BANK_DEPOSIT` | *(none)* | — | — | **1** Επαγ. Λογαριασμός Ημεδαπής |
+| `ON_ACCOUNT` | *(none)* | — | — | **5** Επί Πιστώσει |
+
+⚠️ **PayPal and Stripe map to nothing obvious in an eight-value statutory list** — they are neither a
+domestic professional payment account, nor cash, cheque, credit, web banking, POS, nor IRIS. That is
+a finding about the list, not a gap in our knowledge of it.
+
+### 📊 `ChargeType` — shape, and why its income-only constraint is load-bearing
+
+`charge_type`, structure `V5`, seeded `V7`. Live rows on 2026-08-03: **`COD fee`** and **`Delivery`**,
+both VAT class 9 (24%), each pointing at its own income account.
+
+| Column | |
+|---|---|
+| `id` | bigserial |
+| `name` | varchar(120) NOT NULL **UNIQUE — this is the identity. There is no `abbreviation` and no `code`** |
+| `default_vat_class_id` | bigint NOT NULL → `vat_class` |
+| `income_account_id` | bigint NOT NULL → `account`, **constrained to `INCOME` in the service** |
+| `active` | boolean |
+
+⚠️ **`V5`'s argument for the constraint, quoted because it is the reason an expense side cannot
+simply be bolted on:** *"The courier fee we ourselves incur is an unrelated expense posting against
+Transportation costs, and the two being near-homonyms is exactly why the revenue side is modelled
+explicitly: netting one against the other understates revenue and cost together and leaves a gross
+margin that looks plausible while being wrong."* The service **refuses** a non-`INCOME` account, and
+`CONTRA_INCOME` too.
+
+⚠️ **`/api/charge-types` is `GET`-only.** `ChargeTypeService` declares `create`, `rename`,
+`changeDefaultVatClass`, `changeIncomeAccount`, `deactivate`, `reactivate` — **none has an HTTP route
+and none has a production caller.** `SalesInvoiceServiceImpl` and `TaxLookupController` inject the
+service and use only `require` / `all` / `active`.
+
+### 📊 `vat_exemption_reason` — 29 rows, and what the artefact says about them
+
+Live: **29 rows, 26 with a `mydata_code`, 3 NULL** (OSS/IOSS codes 29–31), `input_vat_deductible`
+**false on every row**.
+
+- ✅ **Every seeded description matches AADE's ν.5144/2024 column exactly.** The recodified article
+  numbering `V8` transcribed from Prosvasis Go's screen is now confirmed against the authority. **The
+  rows were right; the provenance was not.**
+- ⚠️ **Codes 24 and 28 exist and Novocore does not have them.** Annex 8.3 defines all 31 with no
+  gaps: `24 = Χωρίς ΦΠΑ - άρθρο 8 του Κώδικα ΦΠΑ`, `28 = Χωρίς ΦΠΑ – άρθρο 29 περ. β' παρ.1 του
+  Κώδικα ΦΠΑ, (Tax Free)`. **`V8`'s own header predicted exactly this**, asking for confirmation
+  against AADE's published table before the myDATA adapter — the artefact answers it, and it is two
+  `INSERT`s as `V8` said.
+- **Provenance was Go's screen, not the artefact**, and no spec version was recorded anywhere.
+
+### 📊 `sales_invoice` — 21 columns, and the whole-database sweep
+
+Read from `information_schema` on the live database. The 21: `id`, `customer_id`, `channel`,
+`settlement_method`, `document_number`, `invoice_date`, `description`, `stated_total`,
+`stated_total_currency`, `rounding_amount`, `rounding_amount_currency`, `rounding_needed_review`,
+`rounding_accepted_by`, `rounding_accepted_at`, `rounding_note`, `journal_entry_id`,
+`reversal_of_id`, and the four audit columns.
+
+| | |
+|---|---|
+| Human-facing document number | ✅ `document_number varchar(60) NOT NULL` — *"the number the issuing system printed"* |
+| Series | ❌ **nothing** |
+| ΜΑΡΚ / UID / QR URL / transmission status | ❌ **nothing** |
+
+⚠️ **The sweep, because its result is stronger than any single column check.** A
+`column_name ~* 'mark|uid|qr|series|branch|establishment|transmission|mydata|aade'` query across
+**all 47 tables** in the live database returns **exactly two columns**:
+`unit_of_measure.mydata_code` and `vat_exemption_reason.mydata_code`. That is the complete myDATA
+footprint of the schema as of 2026-08-03.
+
+Uniqueness on the number today is a **BEFORE INSERT OR UPDATE trigger** plus a partial unique index
+on `upper(document_number)` where `reversal_of_id IS NULL` — not a plain constraint, because whether
+a row is superseded depends on whether *another* row points at it.
+
+### 🔬 Stock: the evidence in full, with the negative control
+
+**Ten recorded sales invoices → ten `stock_consumption` rows → ten `stock_consumption_line` rows.**
+Every consumption's lot lines sum **exactly** to `quantity_filled`, checked row by row.
+
+| Consumption | Product | `quantity_filled` | Lot lines | Agrees |
+|---:|---:|---:|---|:---:|
+| 1 | 1 | 20.000000 | `1@9.000000` | ✅ |
+| 2 | 2 | 2.000000 | `3@70.000000` | ✅ |
+| 3 | 3 | 10.000000 | `4@1.000000` | ✅ |
+| 4 | 3 | 2.000000 | `4@1.000000` | ✅ |
+| 5 | 2 | 1.000000 | `3@70.000000` | ✅ |
+| 6 | 4 | 1.000000 | `5@900.000000` | ✅ |
+| 7 | 1 | 6.000000 | `1@10.149000` | ✅ |
+| 8 | 1 | 10.000000 | `1@10.149000` | ✅ |
+| 9 | 1 | 4.000000 | `1@9.000000` | ✅ |
+| 10 | 3 | 88.000000 | `4@1.000000` | ✅ |
+
+- **Consumption is unconditional for stocked goods.** `stock_consumption.source` is CHECK-constrained
+  to **`'SALES_INVOICE'` and nothing else**, and **`NewSalesInvoice` has no field that could suppress
+  consumption** — twelve components, none of them a stock flag.
+- **The three invoice lines with no consumption are explained, not anomalous:** one `CHARGE` line,
+  one `SERVICE` product (`TEST-PRODUCT-INSTALL-01`), and one `BUNDLE` (`TEST-PRODUCT-KIT-01`, whose
+  components consume separately through `sales_invoice_line_component`).
+- **Consumption 10 is Q17's negative stock, visible in real data:** 500 requested, **88 filled** —
+  allowed, flagged, never silent, exactly as ADR 0008 says.
+- ⭐ **The step-10 landed-cost re-costing is visible on lot 1.** Consumptions 1 and 9 took it out at
+  `9.000000`; consumptions 7 and 8 took it out at `10.149000`. **A lot's carrying cost moved between
+  them**, which is precisely why `stock_consumption_line` stores its own `unit_cost` rather than
+  recomputing from the lot. The data demonstrates the reason for the design.
+- The FIFO index is `inventory_lot (product_id, acquisition_date, id)`.
+
+⚠️ **The negative control was run and it fired.** The invariant checker was fed the ten real rows
+**plus one synthetic row** asserting `quantity_filled = 5.000000` against lot lines summing to
+`3.000000`. It reported **exactly that row and nothing else** (`id = -1`, `FLAGGED`). Without this,
+ten passes would be indistinguishable from a checker that was never evaluating anything —
+`CLAUDE.md`'s *every probe carries a negative control*, honoured rather than cited.
+
+### 📊 Settings — there is no company identity at all
+
+**33 live keys**: 16 backup, 8 email, 5 SMTP, 2 ledger rounding, 1 cash limit, 1 attachment size.
+**No ΑΦΜ, no company name, no address, no branch, no establishment.** The gap is wider than the
+question asked — the myDATA issuer branch number is one field of a company-identity block that does
+not exist.
+
+✅ **`setting_key`'s CHECK is `^[a-z0-9]+(\.[a-z0-9-]+)+$`**, so `company.branch-number` is a valid
+key shape **with no migration to the constraint**.
+
+### 📊 Stock movement outside a sales invoice
+
+**`stock_write_off` is the only non-sale stock-out.** Live: **3 rows, 3 journal lines** against
+`INVENTORY_WRITE_OFF`. It names a *lot* directly rather than a product, has no customer, no VAT, no
+document and no myDATA anything, and `journal_entry_id` is nullable because a zero-cost lot
+derecognises nothing.
+
+⚠️ **`WriteOffReason` has no internal-use value** — `SHRINKAGE | DAMAGE | EXPIRY | OTHER` — and
+**`V4`'s comment on the `Internal consumption` account says so deliberately:** *"Stock consumed by
+the business itself — staff coffee, demos, tastings. **Deliberately not a write-off: it is a real
+cost of operating, not a loss.**"* Reusing the write-off path for internal consumption would
+contaminate the shrinkage figure the single account exists to isolate.
+
+There is **no dispatch document, no transfer and no internal-issue document.**
+
+### 📊 Fixed assets — no cost path of any kind
+
+`Asset` carries `code`, `name`, `acquisition_date`, `depreciation_rate_percent`,
+`depreciation_start_date`, `status`, `disposal_date` — **no monetary field.** `AssetService` has
+thirteen methods and **none takes an amount.**
+
+⚠️ **Three account system keys are declared, seeded, and have never been posted to. Live journal-line
+counts, 2026-08-03:**
+
+| Account | System key | Journal lines |
+|---|---|---:|
+| Fixed assets at cost | `FIXED_ASSETS_AT_COST` | **0** |
+| Fixed assets accumulated depreciation | `FIXED_ASSETS_ACCUMULATED_DEPRECIATION` | **0** |
+| Depreciation | `DEPRECIATION_EXPENSE` | **0** |
+| Internal consumption | *(none)* | **0** |
+| Cost of service sold | *(none)* | **0** |
+| Cost of goods sold | `COST_OF_GOODS_SOLD` | 10 |
+| Inventory write-off / shrinkage | `INVENTORY_WRITE_OFF` | 3 |
+
+`FIXED_ASSETS_AT_COST` has **no production reference anywhere in the codebase** — it is declared in
+`AccountSystemKey` and nothing resolves it. **There is no inventory→asset path because there is no
+asset-cost posting path at all.**
+
+### 📊 Where a sales line's price comes from
+
+⚠️ **Caller-supplied.** `NewSalesInvoiceLine.unitPrice` is `@Mandatory`; `SalesInvoiceServiceImpl`
+reads the product only for `active` and `defaultVatClassId`. `product.selling_price` exists and its
+only non-test readers are `Product`, `ProductServiceImpl`, `ProductController`, `NewProduct` and
+`ProductView` — **the sales path is not among them.**
+
+⚠️ **The real obstacle is ordering, not a missing lookup.** `SalesInvoiceServiceImpl` runs
+**price → post → `consumeStock`**. FIFO lot selection happens *last*, so at pricing time the lot cost
+is not yet known. Anything that must price a line *from* lot cost is blocked on that sequence.
+
+### 📊 What a fourth sales channel costs today — measured, as evidence for the enum-vs-table question
+
+| | |
+|---|---|
+| Java | 1 constant in `SalesChannel`; **2** in `AccountSystemKey` |
+| Migration | 2 `account` rows (INCOME + CONTRA_INCOME); drop+recreate `account_system_key_known` (**29 → 31** values); drop+recreate `sales_invoice_channel_known` (3 → 4); plus `V17`'s `UPDATE … WHERE name = …` and verification `DO` block |
+| Spec / client | regeneration → `salesChannel.ts`, `accountSystemKey.ts`, `newSalesInvoice.ts`, `salesInvoiceView.ts`, `creditNoteView.ts` |
+| i18n | `enums.json` × 2 (EN, EL) |
+| **Total** | **7 production files + 1 migration + 2 locale files.** Additive, no data migration, no restatement |
+
+⚠️ **The cost is not the argument for a table**, and this measurement is recorded so the open decision
+is not taken on the wrong grounds. An operator-added channel needs two accounts to exist and
+`AccountSystemKey` to resolve them; a table relocates that problem rather than solving it. **If a
+table is ever right, the argument will be that channel stopped being one dimension** — which is the
+analysis-dimension question the roadmap already holds open.
+
+### 📌 The AADE artefacts — one record, in the README
+
+**The §8 annex map, the 21 XSD files, and which table carries which codification live in
+[`docs/aade/v2.0.1/README.md`](aade/v2.0.1/README.md)** and are deliberately **not** duplicated here.
+Two records of one table map is the drift this file has already paid for twice.
+
+What belongs here is what the artefacts *changed* about the project record: the four items under
+*"Four things this folder settled"* in that README — exemption codes 24 and 28 exist; the seeded
+descriptions are confirmed against ν.5144/2024; annex 8.7 is not the Fees list; and **Q38, the
+myDATA unit-of-measure codes, was never an accountant question — annex 8.13 is the published list it
+was waiting for.**
+
+⚠️ **`vat_class.code` (`'1410'`, `'1030'`, …) is Prosvasis Go's rate code, NOT AADE's VAT category
+from annex 8.2.** There is no myDATA code on a VAT class today in either direction. Recorded because
+the two are easy to conflate and nothing in the schema says otherwise.
+
 ## Q1 — the backend follow-up queue — 2026-08-03. Reconciled against the approved scope
 
 **Approved as decisions A–I plus a four-item work order. Every part below has a verdict.**
@@ -4435,12 +4677,24 @@ supplied and seeded, built as a runtime-editable entity; precedence rule stated 
 - **Q35** **AADE exemption codes 24 and 28 are absent from Go's list.** Confirm with the
   accountant whether AADE defines them and whether we need them, before the myDATA adapter is built
   (phase 7). If so it is two `INSERT`s, not a restructuring.
+  - ✅ **ANSWERED 2026-08-03 by the artefact, not by the accountant.** Annex 8.3 of the myDATA ERP
+    specification defines **all 31 codes with no gaps** — both exist, and it was **two `INSERT`s
+    exactly as predicted**. Seeded by **R1 F1**. ⚠️ What is still open is only
+    `input_vat_deductible` on those two rows, which is a tax judgement rather than a code-list fact.
+    **See the master list under *Waiting on the accountant*; this entry is kept for its history and
+    that list is the current one.**
 - **Q36** **The OSS and IOSS reasons (codes 29–31) have no myDATA code.** Seeded as NULL
   deliberately — **approved as built**, with phase 7 required to refuse transmission on a NULL
   rather than guess. The real values are to be confirmed with the accountant before then.
 - **Q38** *(new)* **The AADE myDATA unit-of-measure codes.** `unit_of_measure.mydata_code` exists
   and every row is NULL. Same shape and same phase-7 obligation as Q36. Add them to the accountant
   list alongside the exemption codes and the depreciation rates.
+  - ❌ **WITHDRAWN 2026-08-03 — this was never an accountant question.** Annex 8.13
+    `Είδος Ποσότητας` is the published list, and the reason Q38 was filed against a person is that
+    the artefact was not in the repository. Seeded by **R1 F3**. ⚠️ **The sentence above — "add them
+    to the accountant list alongside the exemption codes" — is how it happened**: the item was
+    grouped by *feeling* like the others rather than by anyone checking whether a source existed.
+    **See the master list under *Waiting on the accountant*, which is the current record.**
 - **Q37** **Customer and Supplier have no address fields.** Not needed while Go issues the
   invoices, but needed by phase 11 at the latest, and possibly sooner for courier vouchers in phase
   4. Also unasked: whether Customer and Supplier want human-facing codes (the internal id is a
@@ -6595,10 +6849,58 @@ What remains is operational, not a decision: the two destinations' folder ids an
 
 ### Waiting on the accountant, and blocking real data rather than code
 
+*Revised 2026-08-03 by R1's Phase 0. Three changes, and the shape of two of them is worth more than
+the items: **a question filed against a person because the artefact that answers it was not in the
+repository is not an accountant question.** Two of the four items below were exactly that.*
+
 - **Statutory depreciation rates per asset category**, plus the category taxonomy. The field exists and
-  is nullable; **do not create real assets with real values until these are confirmed.**
-- **AADE exemption codes 24 and 28** (Q35), **the OSS/IOSS myDATA codes** (Q36), and **the myDATA
-  unit-of-measure codes** (Q38) — all before phase 7, all NULL and fail-loud in the meantime.
+  is nullable; **do not create real assets with real values until these are confirmed.** *(Unchanged.)*
+- ~~**The myDATA unit-of-measure codes (Q38)**~~ — ❌ **REMOVED from this list, 2026-08-03. It was
+  never an accountant question.** `unit_of_measure.mydata_code` was NULL on all 8 rows and Q38 was
+  filed beside the exemption codes and the depreciation rates because nobody had a source.
+  **Annex 8.13 `Είδος Ποσότητας` of the myDATA ERP specification is that source and has been
+  published all along.** It sat on this list from step 3b until R1's Phase 0 put the artefact in the
+  repository. ⚠️ **Recorded as the finding rather than quietly struck**, because the same shape
+  applies to anything else on this list whose answer is a published table rather than a judgement.
+  Seeded by **R1 F3**.
+- **AADE exemption codes 24 and 28 (Q35)** — ✅ **the code-list half is ANSWERED by the artefact.**
+  `V8`'s header asked for confirmation against AADE's published table before phase 7; annex 8.3
+  defines **all 31 codes with no gaps**, so both exist and both are seeded by **R1 F1**. ⚠️ **What
+  remains on this list is narrower and genuinely the accountant's: is input VAT deductible on those
+  two rows?** `input_vat_deductible` is a tax judgement, not a code-list fact — the other 29 rows are
+  all `false` by transcription from Go and the artefact does not state it. **Both rows follow the
+  existing convention and are listed as needing confirmation.**
+- **The OSS/IOSS myDATA codes (Q36)** — **unchanged and still open.** Codes 29–31 have no myDATA
+  string in Go; seeded NULL deliberately, with phase 7 required to **refuse** transmission on a NULL
+  rather than guess.
+- 🆕 **⚠️ THE SELF-SUPPLY REVENUE LEG — added 2026-08-03 by R1's Phase 0. This is the question, not a
+  detail of one.** `Στοιχείο Αυτοπαράδοσης` (AADE `6.1`) and `Στοιχείο Ιδιοχρησιμοποίησης` (AADE
+  `6.2`) are seeded as document types by R1; **no posting rule is built and none should be until this
+  is answered.**
+
+  **The question: does a self-supply credit a dedicated revenue account at all, or is it a
+  contra-COGS / inventory reduction with no revenue leg?** Everything downstream — whether it is a
+  sales invoice at all, whether it needs a settlement method, whether it appears in revenue — follows
+  from the answer, which is why it is stated this way round.
+
+  ⚠️ **The near-misses are traps, and each fails for its own reason.** Recorded so nobody resolves
+  this by picking the closest-looking account:
+  - **The three channel `Sales` accounts** — wrong by construction. `SalesChannel`'s own javadoc says
+    channel figures answer a question about *customer* revenue; a self-supply through one would
+    corrupt exactly the per-channel revenue and return-rate figures **step 3 split them to protect.**
+  - **`Services`** — wrong. A self-supply is not a service.
+  - **`Other income`** — wrong for the subtlest reason: it is a *residual*, and putting a statutory
+    self-supply in a residual makes it unfindable in the one report where it must be visible.
+
+  **The expense side has a candidate and it is not a guess:** `Internal consumption` (General
+  Expenses, 0 journal lines) was seeded in `V4` with the comment *"staff coffee, demos, tastings —
+  deliberately not a write-off"*. It has waited since step 3 for exactly this.
+
+  ⚠️ **Also needed, and separable:** can deductibility differ between the two uses? Capitalising to
+  fixed assets is business use; internal consumption may or may not be. AADE's own split into `6.1`
+  and `6.2` is evidence that **one flag per document type** suffices, but
+  `vat_exemption_reason.input_vat_deductible` is the codebase's precedent and it is **per row**, so
+  this is not settled by analogy.
 
 ### Also still open, not blocking anything
 

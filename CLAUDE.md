@@ -112,6 +112,37 @@ same rule as *"a verification that answers its own request"*, arriving from the 
 is about a check that cannot see the answer, this one is about a conclusion reached without asking.
 **Both reduce to: the thing that decides is the thing that must answer.**
 
+### Named anti-pattern: the extractor answered, and it was not answering the question
+
+**⚠️ Found in R1's Phase 0, 2026-08-03, reading the AADE artefacts.** `pdftotext -layout` is the
+obvious way to read a specification PDF, and on the myDATA annexes it **silently drifts the code
+column and the description column apart by one or more rows.** Annexes **8.2, 8.7, 8.8 and 8.13** are
+all affected. The output is not empty, not truncated, not garbled-looking and not flagged — it is a
+clean two-column table of **code/description pairs that are confidently wrong.**
+
+Annex 8.2 extracted as `1 → 24%`, `2 → ΦΠΑ συντελεστής 24% / 13%`, `3 → ΦΠΑ συντελεστής 13% / 6%`.
+Every code is real, every description is real, and **every pairing is off by one.** Nothing about the
+text says so. A seed written from it would transmit the wrong VAT category to the tax authority under
+a code list that had been "read from the official artefact."
+
+**The rule, and it is mechanical rather than a matter of care:**
+
+- **Codes come from the XSD enumerations.** `SimpleTypes-v2.0.1.xsd` carries the same code sets as
+  flat `<xs:enumeration value="…"/>` lists. **There is no layout to lose**, so there is nothing for an
+  extractor to misalign. This is why the XSDs are in the repository unzipped.
+- **Greek descriptions come from a rasterised page, or from a human.** Never from a text dump of the
+  annex, and never from the extractor's pairing even when the pairing looks right — *especially* when
+  it looks right, because that is the only state it is ever observed in.
+- **A code list whose codes and descriptions came from the same text dump has one source, not two.**
+  Two sources that agree is evidence; one source read twice is not.
+
+**Why it belongs beside the entries above rather than in a README.** It is the same sentence as *the
+thing that answered was not the thing under test* and *a verification that answers its own request*,
+arriving from a third direction: **the tool answered, and what it answered was not what was asked.**
+Nothing failed. No exception, no exit code, no missing output — which is exactly why it needs a rule
+instead of attention. The artefact-specific detail lives in `docs/aade/v2.0.1/README.md`; the general
+practice lives here because **the next PDF codification will not be AADE's.**
+
 ### Named anti-pattern: a test environment configured unlike the real one
 
 **A test that runs against a differently-configured dependency is not testing the system; it is
