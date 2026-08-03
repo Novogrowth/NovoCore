@@ -46,7 +46,7 @@ import java.util.Objects;
  * strict as this one, and {@code RateAgreesWithTheDatabaseIT} holds them to it per value rather
  * than by assertion — the same arrangement as {@code journal_source_is_amendable}.
  */
-public record Rate(BigDecimal percent) implements Comparable<Rate> {
+public record Rate(@Mandatory BigDecimal percent) implements Comparable<Rate> {
 
     /**
      * Six decimals, matching the {@code numeric(19,6)} columns that store rates. A rate is a

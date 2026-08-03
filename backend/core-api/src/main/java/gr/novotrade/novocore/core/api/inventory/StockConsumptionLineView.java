@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.inventory;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
@@ -18,9 +19,9 @@ import java.util.Objects;
 public record StockConsumptionLineView(
         long id,
         long lotId,
-        Quantity quantity,
-        UnitCost unitCost,
-        Money cost) {
+        @Mandatory Quantity quantity,
+        @Mandatory UnitCost unitCost,
+        @Mandatory Money cost) {
 
     public StockConsumptionLineView {
         Objects.requireNonNull(quantity, "quantity");

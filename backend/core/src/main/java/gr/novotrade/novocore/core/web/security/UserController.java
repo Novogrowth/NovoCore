@@ -5,6 +5,7 @@ import gr.novotrade.novocore.core.api.security.NewUser;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.security.UserService;
 import gr.novotrade.novocore.core.api.security.UserView;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.api.shared.Required;
 import gr.novotrade.novocore.core.web.Requires;
@@ -184,7 +185,7 @@ class UserController {
     record SectionView(Section section, boolean available) {
     }
 
-    record DisplayNameRequest(String displayName) {
+    record DisplayNameRequest(@Mandatory String displayName) {
 
         DisplayNameRequest {
             Required.text(displayName, "displayName");
@@ -195,7 +196,7 @@ class UserController {
      * @param roleId boxed, not a primitive, so an omitted field is a 400 naming it rather than a 0
      *     that becomes "role 0 does not exist" — a 404 about a role nobody mentioned
      */
-    record RoleRequest(Long roleId) {
+    record RoleRequest(@Mandatory Long roleId) {
 
         RoleRequest {
             Required.field(roleId, "roleId");
@@ -206,7 +207,7 @@ class UserController {
      * The policy — 12 characters, no composition rules (Q29, NIST SP 800-63B) — is the core's to
      * state, so only presence is checked here.
      */
-    record PasswordRequest(String password) {
+    record PasswordRequest(@Mandatory String password) {
 
         PasswordRequest {
             Required.text(password, "password");

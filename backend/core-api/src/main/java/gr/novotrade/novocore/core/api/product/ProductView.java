@@ -3,6 +3,7 @@ package gr.novotrade.novocore.core.api.product;
 import gr.novotrade.novocore.core.api.security.ProtectedField;
 import gr.novotrade.novocore.core.api.security.RoleView;
 import gr.novotrade.novocore.core.api.security.Section;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
 import gr.novotrade.novocore.core.api.tax.VatClassPrecedence;
@@ -71,12 +72,12 @@ import java.util.Set;
  */
 public record ProductView(
         long id,
-        String sku,
+        @Mandatory String sku,
         String ean,
-        String name,
+        @Mandatory String name,
         String brand,
-        ProductType type,
-        UnitOfMeasureView unitOfMeasure,
+        @Mandatory ProductType type,
+        @Mandatory UnitOfMeasureView unitOfMeasure,
         long defaultVatClassId,
         Money sellingPrice,
         Long supplierId,
@@ -85,7 +86,7 @@ public record ProductView(
         boolean bundle,
         UnitCost lastPurchasePrice,
         boolean active,
-        Set<ProtectedField> hiddenFields) {
+        @Mandatory Set<ProtectedField> hiddenFields) {
 
     public ProductView {
         Objects.requireNonNull(sku, "sku");

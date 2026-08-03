@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.settlement;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.time.LocalDate;
 import java.util.Objects;
@@ -22,11 +23,11 @@ import java.util.Objects;
 public record CustomerCreditView(
         long id,
         long customerId,
-        String customerName,
+        @Mandatory String customerName,
         long settlementId,
-        LocalDate creditDate,
-        Money amount,
-        Money openAmount,
+        @Mandatory LocalDate creditDate,
+        @Mandatory Money amount,
+        @Mandatory Money openAmount,
         String description) {
 
     public CustomerCreditView {

@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.customer;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.tax.VatClassPrecedence;
 import gr.novotrade.novocore.core.api.tax.VatStatus;
 import java.util.Objects;
@@ -43,11 +44,11 @@ import java.util.Optional;
  */
 public record CustomerView(
         long id,
-        String name,
+        @Mandatory String name,
         String email,
         String phone,
         String vatNumber,
-        VatStatus vatStatus,
+        @Mandatory VatStatus vatStatus,
         Long vatClassOverrideId,
         Long vatExemptionReasonId,
         CustomerSystemKey systemKey,

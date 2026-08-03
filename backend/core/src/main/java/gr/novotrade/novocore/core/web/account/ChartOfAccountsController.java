@@ -7,6 +7,7 @@ import gr.novotrade.novocore.core.api.account.ChartOfAccountsService;
 import gr.novotrade.novocore.core.api.account.NewAccount;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.SubLedgerType;
 import gr.novotrade.novocore.core.api.shared.InvalidInputException;
@@ -203,7 +204,7 @@ class ChartOfAccountsController {
     }
 
     /** A complete ordering. Partial lists are refused by the service, not tolerated here. */
-    record OrderRequest(List<Long> idsInOrder) {
+    record OrderRequest(@Mandatory List<Long> idsInOrder) {
 
         OrderRequest {
             Required.field(idsInOrder, "idsInOrder");

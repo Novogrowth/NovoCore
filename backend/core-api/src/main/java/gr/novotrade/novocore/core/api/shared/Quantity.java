@@ -19,7 +19,7 @@ import java.util.Objects;
  * correction to a count. Whether stock is allowed to go negative in aggregate is a separate
  * policy question that belongs to the inventory service, not to this type.
  */
-public record Quantity(BigDecimal value) implements Comparable<Quantity> {
+public record Quantity(@Mandatory BigDecimal value) implements Comparable<Quantity> {
 
     /**
      * Decimal places for a quantity. Matches {@code numeric(19,6)} in the schema, and is

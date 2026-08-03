@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.product;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Required;
 import java.util.Objects;
 
@@ -10,9 +11,9 @@ import java.util.Objects;
  *     there; a composed substitute would be a fabricated code that later gets transmitted.
  */
 public record NewUnitOfMeasure(
-        String code,
-        String name,
-        Boolean fractionalQuantityAllowed,
+        @Mandatory String code,
+        @Mandatory String name,
+        @Mandatory Boolean fractionalQuantityAllowed,
         String mydataCode) {
 
     public NewUnitOfMeasure {

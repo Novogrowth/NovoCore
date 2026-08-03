@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.inventory;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
@@ -53,16 +54,16 @@ import java.util.Optional;
 public record InventoryLotView(
         long id,
         long productId,
-        String productSku,
+        @Mandatory String productSku,
         boolean serialTracked,
-        Quantity quantityReceived,
-        Quantity quantityRemaining,
-        UnitCost receivedUnitCost,
-        UnitCost allocatedLandedUnitCost,
-        LocalDate acquisitionDate,
+        @Mandatory Quantity quantityReceived,
+        @Mandatory Quantity quantityRemaining,
+        @Mandatory UnitCost receivedUnitCost,
+        @Mandatory UnitCost allocatedLandedUnitCost,
+        @Mandatory LocalDate acquisitionDate,
         LocalDate roastDate,
         StockLocation location,
-        List<SerializedUnitView> units,
+        @Mandatory List<SerializedUnitView> units,
         Long goodsReceiptLineId) {
 
     public InventoryLotView {

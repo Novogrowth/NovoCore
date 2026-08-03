@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.settlement;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.time.LocalDate;
 import java.util.Objects;
@@ -15,14 +16,14 @@ import java.util.Objects;
  *     receipt is being applied across several invoices.
  */
 public record OpenItem(
-        OpenItemRef ref,
-        String documentNumber,
-        LocalDate documentDate,
+        @Mandatory OpenItemRef ref,
+        @Mandatory String documentNumber,
+        @Mandatory LocalDate documentDate,
         long partyId,
-        String partyName,
-        Money grossAmount,
-        Money allocatedAmount,
-        Money openAmount) {
+        @Mandatory String partyName,
+        @Mandatory Money grossAmount,
+        @Mandatory Money allocatedAmount,
+        @Mandatory Money openAmount) {
 
     public OpenItem {
         Objects.requireNonNull(ref, "ref");

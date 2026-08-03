@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.supplier;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.tax.VatStatus;
 import java.util.Objects;
 import java.util.Optional;
@@ -24,11 +25,11 @@ import java.util.Optional;
  */
 public record SupplierView(
         long id,
-        String name,
+        @Mandatory String name,
         String email,
         String phone,
         String vatNumber,
-        VatStatus vatStatus,
+        @Mandatory VatStatus vatStatus,
         Long vatExemptionReasonId,
         boolean active) {
 

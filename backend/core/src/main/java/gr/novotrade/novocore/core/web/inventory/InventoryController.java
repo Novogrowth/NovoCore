@@ -10,6 +10,7 @@ import gr.novotrade.novocore.core.api.inventory.StockWriteOffView;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.shared.InvalidInputException;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.api.shared.Required;
 import gr.novotrade.novocore.core.web.Requires;
@@ -289,7 +290,7 @@ class InventoryController {
 
     // -------------------------------------------------------------------------------------------
 
-    record LocationRequest(StockLocation location) {
+    record LocationRequest(@Mandatory StockLocation location) {
 
         LocationRequest {
             Required.field(location, "location");
@@ -297,7 +298,7 @@ class InventoryController {
     }
 
     /** The note is genuinely optional; the date is not. */
-    record WriteOffReversalRequest(LocalDate reversalDate, String note) {
+    record WriteOffReversalRequest(@Mandatory LocalDate reversalDate, String note) {
 
         WriteOffReversalRequest {
             Required.field(reversalDate, "reversalDate");

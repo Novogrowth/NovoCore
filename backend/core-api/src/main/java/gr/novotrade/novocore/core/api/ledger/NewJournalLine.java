@@ -1,6 +1,7 @@
 package gr.novotrade.novocore.core.api.ledger;
 
 import gr.novotrade.novocore.core.api.account.BalanceSide;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.SubLedgerRef;
 import java.util.Objects;
@@ -29,8 +30,8 @@ import java.util.Optional;
  */
 public record NewJournalLine(
         long accountId,
-        BalanceSide side,
-        Money amount,
+        @Mandatory BalanceSide side,
+        @Mandatory Money amount,
         String description,
         SubLedgerRef subLedgerRef,
         VatDimension vat) {

@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.sales;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.util.List;
 import java.util.Objects;
@@ -52,15 +53,15 @@ import java.util.Objects;
  *     receivable even against a cash sale
  */
 public record CreditNotePreview(
-        List<CreditNotePreviewLine> lines,
-        Money net,
-        Money vat,
-        Money gross,
+        @Mandatory List<CreditNotePreviewLine> lines,
+        @Mandatory Money net,
+        @Mandatory Money vat,
+        @Mandatory Money gross,
         Money statedTotal,
-        Money roundingDifference,
-        Money roundingThreshold,
+        @Mandatory Money roundingDifference,
+        @Mandatory Money roundingThreshold,
         boolean roundingNeedsAcceptance,
-        Money payable) {
+        @Mandatory Money payable) {
 
     public CreditNotePreview {
         lines = List.copyOf(Objects.requireNonNull(lines, "lines"));

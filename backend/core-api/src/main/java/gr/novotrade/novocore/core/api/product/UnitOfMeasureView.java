@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.product;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import java.util.Objects;
 import java.util.Optional;
@@ -28,8 +29,8 @@ import java.util.Optional;
  */
 public record UnitOfMeasureView(
         long id,
-        String code,
-        String name,
+        @Mandatory String code,
+        @Mandatory String name,
         boolean fractionalQuantityAllowed,
         String mydataCode,
         boolean active) {

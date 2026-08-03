@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.sales;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
@@ -29,11 +30,11 @@ import java.util.Objects;
  *     choose. The count must equal {@link #quantity()}.
  */
 public record NewSalesInvoiceLine(
-        SalesLineType lineType,
+        @Mandatory SalesLineType lineType,
         Long productId,
         Long chargeTypeId,
-        Quantity quantity,
-        UnitCost unitPrice,
+        @Mandatory Quantity quantity,
+        @Mandatory UnitCost unitPrice,
         Long vatClassId,
         Long vatExemptionReasonId,
         List<String> serialNumbers,

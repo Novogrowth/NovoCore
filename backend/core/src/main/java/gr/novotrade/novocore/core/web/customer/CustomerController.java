@@ -5,6 +5,7 @@ import gr.novotrade.novocore.core.api.customer.CustomerView;
 import gr.novotrade.novocore.core.api.customer.NewCustomer;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.tax.VatStatus;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.api.shared.Required;
@@ -201,7 +202,7 @@ class CustomerController {
     record VatNumberRequest(String vatNumber) {
     }
 
-    record VatStatusRequest(VatStatus vatStatus, Long vatExemptionReasonId) {
+    record VatStatusRequest(@Mandatory VatStatus vatStatus, Long vatExemptionReasonId) {
 
         VatStatusRequest {
             // The exemption reason stays optional here: it is required only for EXEMPT, which is

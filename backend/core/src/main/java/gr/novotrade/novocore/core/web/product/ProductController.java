@@ -9,6 +9,7 @@ import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.CurrentUser;
 import gr.novotrade.novocore.core.api.security.RoleView;
 import gr.novotrade.novocore.core.api.security.Section;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.InvalidInputException;
 import gr.novotrade.novocore.core.web.ListResponse;
@@ -311,7 +312,7 @@ class ProductController {
      * omitted flag would arrive as {@code false} and <strong>silently turn serial tracking off</strong>,
      * answering 200. The 400 was the lucky outcome; boxing removes the luck.
      */
-    record SerialTrackingRequest(Boolean serialTracked) {
+    record SerialTrackingRequest(@Mandatory Boolean serialTracked) {
 
         SerialTrackingRequest {
             Required.field(serialTracked, "serialTracked");

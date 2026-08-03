@@ -32,7 +32,9 @@ import java.util.Objects;
  * <p>Currency is carried even though all Phase 1 logic is EUR-only; see ADR 0005 for why.
  * Arithmetic across two currencies throws — it never converts, and never silently picks one.
  */
-public record Money(BigDecimal amount, Currency currency) implements Comparable<Money> {
+public record Money(
+        @Mandatory BigDecimal amount,
+        @Mandatory Currency currency) implements Comparable<Money> {
 
     /** Decimal places for a posted monetary amount. Matches {@code numeric(19,2)} in the schema. */
     public static final int SCALE = 2;

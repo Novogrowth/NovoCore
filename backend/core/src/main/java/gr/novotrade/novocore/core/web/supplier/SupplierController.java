@@ -2,6 +2,7 @@ package gr.novotrade.novocore.core.web.supplier;
 
 import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.supplier.NewSupplier;
 import gr.novotrade.novocore.core.api.supplier.SupplierService;
 import gr.novotrade.novocore.core.api.supplier.SupplierView;
@@ -171,7 +172,7 @@ class SupplierController {
     record VatNumberRequest(String vatNumber) {
     }
 
-    record VatStatusRequest(VatStatus vatStatus, Long vatExemptionReasonId) {
+    record VatStatusRequest(@Mandatory VatStatus vatStatus, Long vatExemptionReasonId) {
 
         VatStatusRequest {
             Required.field(vatStatus, "vatStatus");

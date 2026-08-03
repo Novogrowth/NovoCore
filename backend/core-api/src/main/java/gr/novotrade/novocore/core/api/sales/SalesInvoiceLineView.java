@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.sales;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
@@ -22,22 +23,22 @@ import java.util.Optional;
 public record SalesInvoiceLineView(
         long id,
         int lineNumber,
-        SalesLineType lineType,
+        @Mandatory SalesLineType lineType,
         Long productId,
         String productSku,
         Long chargeTypeId,
         String chargeTypeName,
-        Quantity quantity,
-        UnitCost unitPrice,
-        Money netAmount,
-        Money vatAmount,
+        @Mandatory Quantity quantity,
+        @Mandatory UnitCost unitPrice,
+        @Mandatory Money netAmount,
+        @Mandatory Money vatAmount,
         Long vatClassId,
         VatClassSource vatClassSource,
         Long vatExemptionReasonId,
         Long stockConsumptionId,
-        List<String> soldSerialNumbers,
+        @Mandatory List<String> soldSerialNumbers,
         String description,
-        List<SalesInvoiceLineComponentView> components) {
+        @Mandatory List<SalesInvoiceLineComponentView> components) {
 
     public SalesInvoiceLineView {
         Objects.requireNonNull(lineType, "lineType");

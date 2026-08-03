@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.purchasing;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
@@ -31,13 +32,13 @@ public record FreightAllocationLineView(
         int lineNumber,
         long lotId,
         long productId,
-        String productSku,
-        Quantity quantityReceived,
-        Quantity quantityRemainingAtAllocation,
-        UnitCost receivedUnitCost,
-        Money capitalised,
-        Money variance,
-        UnitCost unitCostIncrease) {
+        @Mandatory String productSku,
+        @Mandatory Quantity quantityReceived,
+        @Mandatory Quantity quantityRemainingAtAllocation,
+        @Mandatory UnitCost receivedUnitCost,
+        @Mandatory Money capitalised,
+        @Mandatory Money variance,
+        @Mandatory UnitCost unitCostIncrease) {
 
     public FreightAllocationLineView {
         Objects.requireNonNull(productSku, "productSku");

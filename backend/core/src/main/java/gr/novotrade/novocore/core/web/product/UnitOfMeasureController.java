@@ -5,6 +5,7 @@ import gr.novotrade.novocore.core.api.product.UnitOfMeasureService;
 import gr.novotrade.novocore.core.api.product.UnitOfMeasureView;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.api.shared.Required;
 import gr.novotrade.novocore.core.web.Requires;
@@ -133,7 +134,7 @@ class UnitOfMeasureController {
 
     // -------------------------------------------------------------------------------------------
 
-    record NameRequest(String name) {
+    record NameRequest(@Mandatory String name) {
 
         NameRequest {
             Required.text(name, "name");
@@ -141,7 +142,7 @@ class UnitOfMeasureController {
     }
 
     /** The code as AADE publishes it, stored verbatim — never composed from a description. */
-    record MydataCodeRequest(String mydataCode) {
+    record MydataCodeRequest(@Mandatory String mydataCode) {
 
         MydataCodeRequest {
             Required.text(mydataCode, "mydataCode");
@@ -152,7 +153,7 @@ class UnitOfMeasureController {
      * @param allowed boxed, so an omitted field is a 400 naming it rather than arriving as
      *     {@code false} and silently forbidding fractional quantities on a unit nobody meant to change
      */
-    record FractionalQuantityRequest(Boolean allowed) {
+    record FractionalQuantityRequest(@Mandatory Boolean allowed) {
 
         FractionalQuantityRequest {
             Required.field(allowed, "allowed");

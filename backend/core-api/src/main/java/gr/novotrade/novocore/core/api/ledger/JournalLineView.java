@@ -2,6 +2,7 @@ package gr.novotrade.novocore.core.api.ledger;
 
 import gr.novotrade.novocore.core.api.account.AccountType;
 import gr.novotrade.novocore.core.api.account.BalanceSide;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.SubLedgerRef;
 import java.time.LocalDate;
@@ -32,15 +33,15 @@ import java.util.Optional;
 public record JournalLineView(
         long id,
         long entryId,
-        LocalDate entryDate,
-        JournalSource source,
-        String entryDescription,
+        @Mandatory LocalDate entryDate,
+        @Mandatory JournalSource source,
+        @Mandatory String entryDescription,
         int lineNumber,
         long accountId,
-        String accountName,
-        AccountType accountType,
-        BalanceSide side,
-        Money amount,
+        @Mandatory String accountName,
+        @Mandatory AccountType accountType,
+        @Mandatory BalanceSide side,
+        @Mandatory Money amount,
         String description,
         SubLedgerRef subLedgerRef,
         VatDimension vat) {

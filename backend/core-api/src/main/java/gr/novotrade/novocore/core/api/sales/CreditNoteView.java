@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.sales;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -19,19 +20,19 @@ import java.util.Optional;
 public record CreditNoteView(
         long id,
         long salesInvoiceId,
-        String salesInvoiceNumber,
+        @Mandatory String salesInvoiceNumber,
         long customerId,
-        String customerName,
-        SalesChannel channel,
+        @Mandatory String customerName,
+        @Mandatory SalesChannel channel,
         SettlementMethod settlementMethod,
-        String documentNumber,
-        LocalDate creditNoteDate,
+        @Mandatory String documentNumber,
+        @Mandatory LocalDate creditNoteDate,
         String description,
-        Money netTotal,
-        Money vatTotal,
-        Money grossTotal,
+        @Mandatory Money netTotal,
+        @Mandatory Money vatTotal,
+        @Mandatory Money grossTotal,
         Money statedTotal,
-        Money roundingAmount,
+        @Mandatory Money roundingAmount,
         boolean roundingNeededReview,
         String roundingAcceptedBy,
         Instant roundingAcceptedAt,
@@ -39,7 +40,7 @@ public record CreditNoteView(
         long journalEntryId,
         Long reversalOfCreditNoteId,
         Long reversedByCreditNoteId,
-        List<CreditNoteLineView> lines) {
+        @Mandatory List<CreditNoteLineView> lines) {
 
     public CreditNoteView {
         Objects.requireNonNull(salesInvoiceNumber, "salesInvoiceNumber");

@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.sales;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
@@ -30,11 +31,11 @@ public record CreditNotePreviewLine(
         Long productId,
         Long chargeTypeId,
         String description,
-        Quantity quantity,
-        UnitCost unitPrice,
-        Money net,
-        Money vat,
-        Money gross,
+        @Mandatory Quantity quantity,
+        @Mandatory UnitCost unitPrice,
+        @Mandatory Money net,
+        @Mandatory Money vat,
+        @Mandatory Money gross,
         Long vatClassId,
         boolean stockReturned) {
 

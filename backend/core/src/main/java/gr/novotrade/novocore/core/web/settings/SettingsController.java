@@ -5,6 +5,7 @@ import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.settings.SettingView;
 import gr.novotrade.novocore.core.api.settings.SettingsAdminService;
 import gr.novotrade.novocore.core.api.settings.SettingsCatalog;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.api.shared.Required;
 import gr.novotrade.novocore.core.web.Requires;
@@ -92,7 +93,7 @@ class SettingsController {
      *     message is about the request; several types would accept it as a valid-looking empty
      *     string, and "the SMTP host is now nothing" is not a change anybody means to make.
      */
-    record ValueRequest(String value) {
+    record ValueRequest(@Mandatory String value) {
 
         ValueRequest {
             Required.text(value, "value");

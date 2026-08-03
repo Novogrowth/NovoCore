@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.inventory;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
@@ -38,13 +39,13 @@ public record StockWriteOffView(
         long id,
         long lotId,
         long productId,
-        String productSku,
+        @Mandatory String productSku,
         Long serializedUnitId,
         String serialNumber,
-        Quantity quantity,
-        UnitCost unitCost,
-        WriteOffReason reason,
-        LocalDate writeOffDate,
+        @Mandatory Quantity quantity,
+        @Mandatory UnitCost unitCost,
+        @Mandatory WriteOffReason reason,
+        @Mandatory LocalDate writeOffDate,
         String note,
         Long journalEntryId,
         Money postedAmount,

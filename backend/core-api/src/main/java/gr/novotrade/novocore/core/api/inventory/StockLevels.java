@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.inventory;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -33,7 +34,7 @@ import java.util.Objects;
  * @param productId the product these levels are for
  * @param byLocation quantity at each {@link StockLocation}; never null, never partial
  */
-public record StockLevels(long productId, Map<StockLocation, Quantity> byLocation) {
+public record StockLevels(long productId, @Mandatory Map<StockLocation, Quantity> byLocation) {
 
     public StockLevels {
         Objects.requireNonNull(byLocation, "byLocation");

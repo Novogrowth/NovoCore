@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.ledger;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Rate;
 import java.math.RoundingMode;
@@ -23,12 +24,12 @@ import java.util.Objects;
  * @param ratePercent a percentage, not a fraction — 24% is {@code 24.000000}
  */
 public record VatTotal(
-        VatDirection direction,
+        @Mandatory VatDirection direction,
         long vatClassId,
-        String vatClassCode,
-        Rate ratePercent,
-        Money taxableBase,
-        Money vatAmount) {
+        @Mandatory String vatClassCode,
+        @Mandatory Rate ratePercent,
+        @Mandatory Money taxableBase,
+        @Mandatory Money vatAmount) {
 
     public VatTotal {
         Objects.requireNonNull(direction, "direction");

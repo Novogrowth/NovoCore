@@ -8,6 +8,7 @@ import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.CurrentUser;
 import gr.novotrade.novocore.core.api.security.RoleView;
 import gr.novotrade.novocore.core.api.security.Section;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.api.shared.Required;
 import gr.novotrade.novocore.core.web.Requires;
@@ -119,7 +120,7 @@ class BundleController {
     }
 
     /** The complete component list. A partial list would be a merge, which {@code define} is not. */
-    record ComponentsRequest(List<NewBundleComponent> components) {
+    record ComponentsRequest(@Mandatory List<NewBundleComponent> components) {
 
         ComponentsRequest {
             // An absent list is refused here; an empty one is refused by the service, which owns

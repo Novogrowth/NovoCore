@@ -1,6 +1,7 @@
 package gr.novotrade.novocore.core.api.purchasing;
 
 import gr.novotrade.novocore.core.api.inventory.StockLocation;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
 import java.time.LocalDate;
@@ -41,7 +42,7 @@ public record NewGoodsReceiptLine(
         Quantity quantity,
         List<String> serialNumbers,
         UnitCost unitCost,
-        StockLocation location,
+        @Mandatory StockLocation location,
         LocalDate roastDate,
         Long purchaseInvoiceLineId) {
 

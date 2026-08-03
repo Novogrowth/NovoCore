@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.purchasing;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
@@ -22,20 +23,20 @@ import java.util.Optional;
 public record PurchaseInvoiceLineView(
         long id,
         int lineNumber,
-        PurchaseLineType type,
+        @Mandatory PurchaseLineType type,
         Long productId,
         String productSku,
         Quantity quantity,
         UnitCost unitPrice,
         Long expenseAccountId,
-        Money netAmount,
+        @Mandatory Money netAmount,
         Long vatClassId,
-        Money vatAmount,
+        @Mandatory Money vatAmount,
         Long vatExemptionReasonId,
         boolean reverseCharge,
         String description,
-        Quantity matchedQuantity,
-        Quantity openQuantity) {
+        @Mandatory Quantity matchedQuantity,
+        @Mandatory Quantity openQuantity) {
 
     public PurchaseInvoiceLineView {
         Objects.requireNonNull(type, "type");

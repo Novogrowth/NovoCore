@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.ledger;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.time.LocalDate;
 import java.util.Objects;
@@ -43,12 +44,12 @@ import java.util.Optional;
  */
 public record JournalEntrySummaryView(
         long id,
-        LocalDate entryDate,
-        String description,
-        JournalSource source,
+        @Mandatory LocalDate entryDate,
+        @Mandatory String description,
+        @Mandatory JournalSource source,
         Long reversalOfEntryId,
         Long reversedByEntryId,
-        Money total,
+        @Mandatory Money total,
         int lineCount) {
 
     public JournalEntrySummaryView {

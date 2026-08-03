@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.account;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Required;
 import gr.novotrade.novocore.core.api.shared.SubLedgerType;
 import java.util.Objects;
@@ -23,12 +24,12 @@ import java.util.Objects;
  *     hardcoded list of accounts to watch
  */
 public record NewAccount(
-        String name,
-        AccountType type,
-        AccountKind kind,
+        @Mandatory String name,
+        @Mandatory AccountType type,
+        @Mandatory AccountKind kind,
         SubLedgerType subLedgerType,
         long groupId,
-        Boolean expectedToClear) {
+        @Mandatory Boolean expectedToClear) {
 
     public NewAccount {
         Required.field(expectedToClear, "expectedToClear");

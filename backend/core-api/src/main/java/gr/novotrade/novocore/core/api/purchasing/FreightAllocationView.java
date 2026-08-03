@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.purchasing;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.time.LocalDate;
 import java.util.List;
@@ -24,15 +25,15 @@ public record FreightAllocationView(
         long purchaseInvoiceLineId,
         long purchaseInvoiceId,
         String supplierInvoiceNumber,
-        LocalDate allocationDate,
+        @Mandatory LocalDate allocationDate,
         String description,
-        Money amount,
-        Money capitalised,
-        Money variance,
+        @Mandatory Money amount,
+        @Mandatory Money capitalised,
+        @Mandatory Money variance,
         long journalEntryId,
         Long reversalOfId,
         Long reversedByAllocationId,
-        List<FreightAllocationLineView> lines) {
+        @Mandatory List<FreightAllocationLineView> lines) {
 
     public FreightAllocationView {
         Objects.requireNonNull(allocationDate, "allocationDate");

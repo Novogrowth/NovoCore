@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.settlement;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.time.LocalDate;
 import java.util.List;
@@ -21,21 +22,21 @@ import java.util.Objects;
  */
 public record SettlementView(
         long id,
-        SettlementDirection direction,
-        PartyType partyType,
+        @Mandatory SettlementDirection direction,
+        @Mandatory PartyType partyType,
         long partyId,
-        String partyName,
+        @Mandatory String partyName,
         long accountId,
-        String accountName,
-        LocalDate settlementDate,
-        Money amount,
-        Money allocatedAmount,
-        Money unallocatedAmount,
+        @Mandatory String accountName,
+        @Mandatory LocalDate settlementDate,
+        @Mandatory Money amount,
+        @Mandatory Money allocatedAmount,
+        @Mandatory Money unallocatedAmount,
         String reference,
         String description,
         long journalEntryId,
         Long customerCreditId,
-        List<AllocationView> allocations) {
+        @Mandatory List<AllocationView> allocations) {
 
     public SettlementView {
         Objects.requireNonNull(direction, "direction");

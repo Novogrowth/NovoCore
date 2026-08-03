@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.purchasing;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.time.LocalDate;
 import java.util.LinkedHashSet;
@@ -39,10 +40,10 @@ import java.util.Set;
  */
 public record NewFreightAllocation(
         long purchaseInvoiceLineId,
-        Money amount,
-        LocalDate allocationDate,
+        @Mandatory Money amount,
+        @Mandatory LocalDate allocationDate,
         String description,
-        List<Long> lotIds) {
+        @Mandatory List<Long> lotIds) {
 
     public NewFreightAllocation {
         Objects.requireNonNull(amount, "amount");

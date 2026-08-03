@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.security;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
@@ -29,13 +30,13 @@ import java.util.Set;
  */
 public record RoleView(
         long id,
-        String name,
+        @Mandatory String name,
         String description,
         boolean fullAccess,
         boolean systemRole,
         boolean active,
-        Map<Section, AccessLevel> sectionGrants,
-        Set<ProtectedField> restrictedFields) {
+        @Mandatory Map<Section, AccessLevel> sectionGrants,
+        @Mandatory Set<ProtectedField> restrictedFields) {
 
     public RoleView {
         Objects.requireNonNull(name, "name");

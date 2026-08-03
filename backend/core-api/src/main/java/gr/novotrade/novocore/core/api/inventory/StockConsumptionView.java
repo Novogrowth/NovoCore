@@ -1,6 +1,7 @@
 package gr.novotrade.novocore.core.api.inventory;
 
 import gr.novotrade.novocore.core.api.ledger.JournalSource;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import java.time.LocalDate;
@@ -31,19 +32,19 @@ import java.util.Objects;
 public record StockConsumptionView(
         long id,
         long productId,
-        String productSku,
-        Quantity quantityRequested,
-        Quantity quantityFilled,
-        Quantity shortfallQuantity,
-        LocalDate consumptionDate,
-        JournalSource source,
+        @Mandatory String productSku,
+        @Mandatory Quantity quantityRequested,
+        @Mandatory Quantity quantityFilled,
+        @Mandatory Quantity shortfallQuantity,
+        @Mandatory LocalDate consumptionDate,
+        @Mandatory JournalSource source,
         String note,
-        Money totalCost,
+        @Mandatory Money totalCost,
         Long journalEntryId,
         Long reversalOfConsumptionId,
         Long reversedByConsumptionId,
         Long returnOfConsumptionId,
-        List<StockConsumptionLineView> lines) {
+        @Mandatory List<StockConsumptionLineView> lines) {
 
     public StockConsumptionView {
         Objects.requireNonNull(productSku, "productSku");

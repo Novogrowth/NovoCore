@@ -1,6 +1,7 @@
 package gr.novotrade.novocore.core.api.bundle;
 
 import gr.novotrade.novocore.core.api.product.UnitOfMeasureView;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import java.math.RoundingMode;
@@ -21,10 +22,10 @@ import java.util.Optional;
 public record BundleComponentView(
         long bundleProductId,
         long componentProductId,
-        String componentSku,
-        String componentName,
-        Quantity quantityPerBundle,
-        UnitOfMeasureView componentUnitOfMeasure,
+        @Mandatory String componentSku,
+        @Mandatory String componentName,
+        @Mandatory Quantity quantityPerBundle,
+        @Mandatory UnitOfMeasureView componentUnitOfMeasure,
         Money standalonePrice,
         boolean stocked,
         boolean componentActive) {

@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.charge;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import java.util.Objects;
 
 /**
@@ -8,7 +9,7 @@ import java.util.Objects;
  * @param incomeAccountId must be an {@code INCOME}-type account — see
  *     {@link ChargeTypeService#create}
  */
-public record NewChargeType(String name, long defaultVatClassId, long incomeAccountId) {
+public record NewChargeType(@Mandatory String name, long defaultVatClassId, long incomeAccountId) {
 
     public NewChargeType {
         Objects.requireNonNull(name, "name");

@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.settings;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import java.time.Instant;
 import java.util.Objects;
 
@@ -11,8 +12,8 @@ import java.util.Objects;
  * @param value the stored value, or {@link #REDACTED} when {@link #secret} is true
  */
 public record SettingView(
-        String key,
-        String value,
+        @Mandatory String key,
+        @Mandatory String value,
         boolean secret,
         String description,
         Instant updatedAt,

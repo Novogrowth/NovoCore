@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.settlement;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.util.Objects;
 
@@ -10,7 +11,7 @@ import java.util.Objects;
  * instalment is a smaller one, a bulk remittance is several against different invoices, and an
  * overpayment is the amount left over when they add up to less than the settlement.
  */
-public record NewAllocation(OpenItemRef target, Money amount) {
+public record NewAllocation(@Mandatory OpenItemRef target, @Mandatory Money amount) {
 
     public NewAllocation {
         Objects.requireNonNull(target, "target");

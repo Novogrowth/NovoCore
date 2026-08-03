@@ -1,6 +1,7 @@
 package gr.novotrade.novocore.core.api.purchasing;
 
 import gr.novotrade.novocore.core.api.inventory.StockLocation;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
@@ -25,14 +26,14 @@ public record GoodsReceiptLineView(
         int lineNumber,
         long productId,
         String productSku,
-        Quantity quantity,
-        UnitCost unitCost,
-        StockLocation location,
+        @Mandatory Quantity quantity,
+        @Mandatory UnitCost unitCost,
+        @Mandatory StockLocation location,
         long lotId,
-        List<String> serialNumbers,
+        @Mandatory List<String> serialNumbers,
         Long purchaseInvoiceLineId,
-        Quantity matchedQuantity,
-        Quantity openQuantity) {
+        @Mandatory Quantity matchedQuantity,
+        @Mandatory Quantity openQuantity) {
 
     public GoodsReceiptLineView {
         Objects.requireNonNull(quantity, "quantity");

@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.banking;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.time.LocalDate;
 import java.util.Objects;
@@ -8,11 +9,11 @@ import java.util.Objects;
 public record BankTransferView(
         long id,
         long fromAccountId,
-        String fromAccountName,
+        @Mandatory String fromAccountName,
         long toAccountId,
-        String toAccountName,
-        LocalDate transferDate,
-        Money amount,
+        @Mandatory String toAccountName,
+        @Mandatory LocalDate transferDate,
+        @Mandatory Money amount,
         String reference,
         String description,
         long journalEntryId) {

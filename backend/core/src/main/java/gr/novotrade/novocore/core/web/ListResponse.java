@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.web;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.PageResponse;
 import java.util.List;
 import java.util.Objects;
@@ -40,7 +41,7 @@ import java.util.Objects;
  * @param page present only on a paged list. Absent means "this is the whole list", which is a real
  *     answer for the two tiers that are bounded by something other than a page size.
  */
-public record ListResponse<T>(List<T> items, PageInfo page) {
+public record ListResponse<T>(@Mandatory List<T> items, PageInfo page) {
 
     public ListResponse {
         items = List.copyOf(Objects.requireNonNull(items, "items"));

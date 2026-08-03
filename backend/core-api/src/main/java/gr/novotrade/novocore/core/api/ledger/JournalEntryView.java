@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.ledger;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.time.LocalDate;
 import java.util.List;
@@ -19,12 +20,12 @@ import java.util.Optional;
  */
 public record JournalEntryView(
         long id,
-        LocalDate entryDate,
-        String description,
-        JournalSource source,
+        @Mandatory LocalDate entryDate,
+        @Mandatory String description,
+        @Mandatory JournalSource source,
         Long reversalOfEntryId,
         Long reversedByEntryId,
-        List<JournalLineView> lines) {
+        @Mandatory List<JournalLineView> lines) {
 
     public JournalEntryView {
         Objects.requireNonNull(entryDate, "entryDate");

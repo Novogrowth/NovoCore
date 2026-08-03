@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.sales;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.time.LocalDate;
 import java.util.List;
@@ -32,15 +33,15 @@ import java.util.Optional;
  */
 public record NewSalesInvoice(
         long customerId,
-        SalesChannel channel,
-        SettlementMethod settlementMethod,
+        @Mandatory SalesChannel channel,
+        @Mandatory SettlementMethod settlementMethod,
         String documentNumber,
-        LocalDate invoiceDate,
+        @Mandatory LocalDate invoiceDate,
         String description,
         Money statedTotal,
         String roundingAcceptedBy,
         String roundingNote,
-        List<NewSalesInvoiceLine> lines) {
+        @Mandatory List<NewSalesInvoiceLine> lines) {
 
     public NewSalesInvoice {
         Objects.requireNonNull(channel, "channel");

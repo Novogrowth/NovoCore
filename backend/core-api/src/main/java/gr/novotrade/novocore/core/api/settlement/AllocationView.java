@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.settlement;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.util.Objects;
 
@@ -19,11 +20,11 @@ import java.util.Objects;
  */
 public record AllocationView(
         long id,
-        AllocationSourceType sourceType,
+        @Mandatory AllocationSourceType sourceType,
         long sourceId,
-        OpenItemRef target,
+        @Mandatory OpenItemRef target,
         int allocationOrder,
-        Money amount) {
+        @Mandatory Money amount) {
 
     public AllocationView {
         Objects.requireNonNull(sourceType, "sourceType");

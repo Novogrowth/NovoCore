@@ -2,6 +2,7 @@ package gr.novotrade.novocore.core.api.ledger;
 
 import gr.novotrade.novocore.core.api.account.AccountType;
 import gr.novotrade.novocore.core.api.account.BalanceSide;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.time.LocalDate;
 import java.util.Objects;
@@ -23,11 +24,11 @@ import java.util.Objects;
  */
 public record AccountBalance(
         long accountId,
-        String accountName,
-        AccountType accountType,
-        Money debits,
-        Money credits,
-        LocalDate asOf) {
+        @Mandatory String accountName,
+        @Mandatory AccountType accountType,
+        @Mandatory Money debits,
+        @Mandatory Money credits,
+        @Mandatory LocalDate asOf) {
 
     public AccountBalance {
         Objects.requireNonNull(accountName, "accountName");

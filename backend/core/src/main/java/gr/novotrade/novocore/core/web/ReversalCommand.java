@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.web;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Required;
 import java.time.LocalDate;
 
@@ -26,7 +27,7 @@ import java.time.LocalDate;
  * @param reversalDate the date the reversing entry posts on — not necessarily the original's
  * @param reason why, in words, for whoever reads the ledger later
  */
-public record ReversalCommand(LocalDate reversalDate, String reason) {
+public record ReversalCommand(@Mandatory LocalDate reversalDate, @Mandatory String reason) {
 
     public ReversalCommand {
         Required.field(reversalDate, "reversalDate");

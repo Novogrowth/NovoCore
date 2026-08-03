@@ -18,7 +18,7 @@ import java.util.Objects;
  * so an existing line keeps the id it was posted with even after that customer is merged into
  * another. Reports resolve aliases at read time. Nothing here rewrites a posted reference.
  */
-public record SubLedgerRef(SubLedgerType type, long id) {
+public record SubLedgerRef(@Mandatory SubLedgerType type, long id) {
 
     public SubLedgerRef {
         Objects.requireNonNull(type, "type");

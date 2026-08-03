@@ -8,6 +8,7 @@ import gr.novotrade.novocore.core.api.security.RoleView;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.api.security.UserService;
 import gr.novotrade.novocore.core.api.security.UserView;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.api.shared.Required;
 import gr.novotrade.novocore.core.web.Requires;
@@ -201,7 +202,7 @@ class RoleController {
 
     // -------------------------------------------------------------------------------------------
 
-    record NameRequest(String name) {
+    record NameRequest(@Mandatory String name) {
 
         NameRequest {
             Required.text(name, "name");
@@ -225,14 +226,14 @@ class RoleController {
      * key to be present is what stops an empty body clearing it by accident — the same hazard
      * {@code RoleController.FieldRestrictionRequest}'s javadoc describes for a boxed boolean.
      */
-    record RoleDescriptionRequest(String description) {
+    record RoleDescriptionRequest(@Mandatory String description) {
 
         RoleDescriptionRequest {
             Required.field(description, "description");
         }
     }
 
-    record GrantRequest(AccessLevel accessLevel) {
+    record GrantRequest(@Mandatory AccessLevel accessLevel) {
 
         GrantRequest {
             Required.field(accessLevel, "accessLevel");
@@ -245,7 +246,7 @@ class RoleController {
      *     mentioned — a wrong answer that looks like a successful request, which is worse than the
      *     400 this produces instead.
      */
-    record FieldRestrictionRequest(Boolean restricted) {
+    record FieldRestrictionRequest(@Mandatory Boolean restricted) {
 
         FieldRestrictionRequest {
             Required.field(restricted, "restricted");

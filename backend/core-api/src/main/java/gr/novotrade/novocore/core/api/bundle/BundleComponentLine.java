@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.bundle;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import java.util.Objects;
@@ -20,10 +21,10 @@ import java.util.Objects;
 public record BundleComponentLine(
         long bundleProductId,
         long componentProductId,
-        String componentSku,
-        String componentName,
-        Quantity quantity,
-        Money allocatedAmount,
+        @Mandatory String componentSku,
+        @Mandatory String componentName,
+        @Mandatory Quantity quantity,
+        @Mandatory Money allocatedAmount,
         boolean stocked) {
 
     public BundleComponentLine {

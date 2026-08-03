@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.sales;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -27,17 +28,17 @@ import java.util.Optional;
 public record SalesInvoiceView(
         long id,
         long customerId,
-        String customerName,
-        SalesChannel channel,
-        SettlementMethod settlementMethod,
-        String documentNumber,
-        LocalDate invoiceDate,
+        @Mandatory String customerName,
+        @Mandatory SalesChannel channel,
+        @Mandatory SettlementMethod settlementMethod,
+        @Mandatory String documentNumber,
+        @Mandatory LocalDate invoiceDate,
         String description,
-        Money netTotal,
-        Money vatTotal,
-        Money grossTotal,
+        @Mandatory Money netTotal,
+        @Mandatory Money vatTotal,
+        @Mandatory Money grossTotal,
         Money statedTotal,
-        Money roundingAmount,
+        @Mandatory Money roundingAmount,
         boolean roundingNeededReview,
         String roundingAcceptedBy,
         Instant roundingAcceptedAt,
@@ -45,7 +46,7 @@ public record SalesInvoiceView(
         long journalEntryId,
         Long reversalOfInvoiceId,
         Long reversedByInvoiceId,
-        List<SalesInvoiceLineView> lines) {
+        @Mandatory List<SalesInvoiceLineView> lines) {
 
     public SalesInvoiceView {
         Objects.requireNonNull(customerName, "customerName");

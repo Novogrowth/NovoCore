@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.account;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.SubLedgerType;
 import java.util.Objects;
 import java.util.Optional;
@@ -21,13 +22,13 @@ import java.util.Optional;
 public record AccountView(
         long id,
         String code,
-        String name,
-        AccountType type,
-        AccountKind kind,
+        @Mandatory String name,
+        @Mandatory AccountType type,
+        @Mandatory AccountKind kind,
         SubLedgerType subLedgerType,
         AccountSystemKey systemKey,
         long groupId,
-        String groupName,
+        @Mandatory String groupName,
         int displayOrder,
         boolean active,
         boolean expectedToClear,

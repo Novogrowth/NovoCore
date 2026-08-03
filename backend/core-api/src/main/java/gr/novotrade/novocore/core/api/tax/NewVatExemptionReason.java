@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.tax;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Required;
 import java.util.Objects;
 
@@ -16,9 +17,9 @@ import java.util.Objects;
  */
 public record NewVatExemptionReason(
         int code,
-        String description,
+        @Mandatory String description,
         String mydataCode,
-        Boolean inputVatDeductible) {
+        @Mandatory Boolean inputVatDeductible) {
 
     public NewVatExemptionReason {
         Required.field(inputVatDeductible, "inputVatDeductible");

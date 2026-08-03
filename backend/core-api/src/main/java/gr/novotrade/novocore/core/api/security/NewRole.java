@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.security;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Required;
 
 /**
@@ -10,7 +11,7 @@ import gr.novotrade.novocore.core.api.shared.Required;
  * separate, individually audited acts, which is the more useful trail when the question later is
  * "when did this role gain access to Settings?"
  */
-public record NewRole(String name, String description) {
+public record NewRole(@Mandatory String name, String description) {
 
     /**
      * ⚠️ <strong>{@code Objects.requireNonNull} until Q1 (2026-08-03)</strong> — see

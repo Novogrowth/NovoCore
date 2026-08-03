@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.email;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -24,7 +25,7 @@ public record EmailMessage(
         List<String> bcc,
         String subject,
         String body,
-        EmailBodyFormat format,
+        @Mandatory EmailBodyFormat format,
         List<EmailAttachment> attachments) {
 
     /** Subjects longer than this are refused; RFC 5322 recommends far shorter lines still. */

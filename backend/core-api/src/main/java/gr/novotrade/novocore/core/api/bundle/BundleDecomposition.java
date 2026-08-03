@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.bundle;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import java.util.List;
@@ -25,10 +26,10 @@ import java.util.Objects;
  */
 public record BundleDecomposition(
         long bundleProductId,
-        String bundleSku,
-        Quantity bundleQuantity,
-        Money bundleTotal,
-        List<BundleComponentLine> componentLines) {
+        @Mandatory String bundleSku,
+        @Mandatory Quantity bundleQuantity,
+        @Mandatory Money bundleTotal,
+        @Mandatory List<BundleComponentLine> componentLines) {
 
     public BundleDecomposition {
         Objects.requireNonNull(bundleSku, "bundleSku");

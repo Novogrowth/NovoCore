@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.sales;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.Required;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
@@ -25,9 +26,9 @@ import java.util.Objects;
  */
 public record NewCreditNoteLine(
         long salesInvoiceLineId,
-        Quantity quantity,
-        UnitCost unitPrice,
-        Boolean stockReturned,
+        @Mandatory Quantity quantity,
+        @Mandatory UnitCost unitPrice,
+        @Mandatory Boolean stockReturned,
         String description) {
 
     public NewCreditNoteLine {

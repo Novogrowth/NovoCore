@@ -1,5 +1,7 @@
 package gr.novotrade.novocore.core.api.purchasing;
 
+import gr.novotrade.novocore.core.api.shared.ConditionallyMandatory;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.Required;
@@ -37,16 +39,26 @@ import java.util.Optional;
  *     takes its unit cost from it, which is why that direction can never produce a variance.
  */
 public record NewPurchaseInvoiceLine(
-        PurchaseLineType type,
+        @Mandatory PurchaseLineType type,
+        @ConditionallyMandatory(
+                "required only on an INVENTORY line, and forbidden on an EXPENSE one")
         Long productId,
+        @ConditionallyMandatory(
+                "required only on an INVENTORY line, and forbidden on an EXPENSE one")
         Quantity quantity,
+        @ConditionallyMandatory(
+                "required only on an INVENTORY line, and forbidden on an EXPENSE one")
         UnitCost unitPrice,
+        @ConditionallyMandatory(
+                "required only on an EXPENSE line, and forbidden on an INVENTORY one")
         Long expenseAccountId,
+        @ConditionallyMandatory(
+                "required only on an EXPENSE line, and forbidden on an INVENTORY one")
         Money amount,
         String description,
         Long vatClassId,
         Long vatExemptionReasonId,
-        Boolean reverseCharge,
+        @Mandatory Boolean reverseCharge,
         List<GoodsReceiptMatch> matches) {
 
     public NewPurchaseInvoiceLine {

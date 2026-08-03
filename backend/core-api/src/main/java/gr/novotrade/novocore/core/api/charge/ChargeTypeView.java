@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.charge;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import java.util.Objects;
 
 /**
@@ -20,7 +21,7 @@ import java.util.Objects;
  */
 public record ChargeTypeView(
         long id,
-        String name,
+        @Mandatory String name,
         long defaultVatClassId,
         long incomeAccountId,
         boolean active) {

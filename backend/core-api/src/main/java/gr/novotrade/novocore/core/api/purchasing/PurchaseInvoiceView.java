@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.purchasing;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.time.LocalDate;
 import java.util.List;
@@ -29,18 +30,18 @@ import java.util.Optional;
 public record PurchaseInvoiceView(
         long id,
         long supplierId,
-        String supplierName,
-        String supplierInvoiceNumber,
-        LocalDate invoiceDate,
+        @Mandatory String supplierName,
+        @Mandatory String supplierInvoiceNumber,
+        @Mandatory LocalDate invoiceDate,
         String description,
-        Money netTotal,
-        Money vatTotal,
-        Money grossTotal,
+        @Mandatory Money netTotal,
+        @Mandatory Money vatTotal,
+        @Mandatory Money grossTotal,
         Money variance,
         long journalEntryId,
         Long reversalOfInvoiceId,
         Long reversedByInvoiceId,
-        List<PurchaseInvoiceLineView> lines) {
+        @Mandatory List<PurchaseInvoiceLineView> lines) {
 
     public PurchaseInvoiceView {
         Objects.requireNonNull(supplierName, "supplierName");

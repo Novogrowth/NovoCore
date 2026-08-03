@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.security;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Required;
 
 /**
@@ -13,9 +14,9 @@ import gr.novotrade.novocore.core.api.shared.Required;
  * @param rawPassword checked against the password policy, then hashed. Never stored or logged.
  */
 public record NewUser(
-        String username,
-        String displayName,
-        String rawPassword,
+        @Mandatory String username,
+        @Mandatory String displayName,
+        @Mandatory String rawPassword,
         long roleId) {
 
     /**

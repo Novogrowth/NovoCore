@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.settlement;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Required;
 import java.time.LocalDate;
@@ -26,16 +27,16 @@ import java.util.Objects;
  *     nothing reconciles against it until the Bank Aggregator adapter exists.
  */
 public record NewSettlement(
-        SettlementDirection direction,
-        PartyType partyType,
+        @Mandatory SettlementDirection direction,
+        @Mandatory PartyType partyType,
         long partyId,
         long accountId,
-        LocalDate settlementDate,
-        Money amount,
+        @Mandatory LocalDate settlementDate,
+        @Mandatory Money amount,
         String reference,
         String description,
         List<NewAllocation> allocations,
-        Boolean remainderBecomesCustomerCredit) {
+        @Mandatory Boolean remainderBecomesCustomerCredit) {
 
     public NewSettlement {
         Required.field(remainderBecomesCustomerCredit, "remainderBecomesCustomerCredit");

@@ -18,7 +18,7 @@ import java.util.Objects;
  *     {@code items.size()} is the count of what arrived.
  * @param totalElements how many rows the whole list has
  */
-public record PageResponse<T>(List<T> items, int page, int size, long totalElements) {
+public record PageResponse<T>(@Mandatory List<T> items, int page, int size, long totalElements) {
 
     public PageResponse {
         items = List.copyOf(Objects.requireNonNull(items, "items"));

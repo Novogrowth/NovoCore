@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.settlement;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import java.util.Objects;
 
 /**
@@ -9,7 +10,7 @@ import java.util.Objects;
  * it cannot be a foreign key, and the type has to travel with the id or a bare number means nothing.
  * The referenced row is checked to exist by trigger, as a journal line's sub-ledger reference is.
  */
-public record OpenItemRef(OpenItemType type, long id) {
+public record OpenItemRef(@Mandatory OpenItemType type, long id) {
 
     public OpenItemRef {
         Objects.requireNonNull(type, "type");

@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.asset;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Rate;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -46,11 +47,11 @@ import java.util.Optional;
 public record AssetView(
         long id,
         String code,
-        String name,
-        LocalDate acquisitionDate,
+        @Mandatory String name,
+        @Mandatory LocalDate acquisitionDate,
         Rate depreciationRatePercent,
         LocalDate depreciationStartDate,
-        AssetStatus status,
+        @Mandatory AssetStatus status,
         LocalDate disposalDate) {
 
     /**

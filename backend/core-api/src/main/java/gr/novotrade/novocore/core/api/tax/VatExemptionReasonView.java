@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.tax;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -31,7 +32,7 @@ import java.util.Optional;
 public record VatExemptionReasonView(
         long id,
         int code,
-        String description,
+        @Mandatory String description,
         String mydataCode,
         boolean inputVatDeductible,
         boolean active) {

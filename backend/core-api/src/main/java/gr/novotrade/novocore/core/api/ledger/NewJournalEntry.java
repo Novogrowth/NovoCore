@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.ledger;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.time.LocalDate;
 import java.util.List;
@@ -29,11 +30,11 @@ import java.util.Optional;
  *     a UNIQUE constraint, not a check the service alone makes.
  */
 public record NewJournalEntry(
-        LocalDate entryDate,
+        @Mandatory LocalDate entryDate,
         String description,
-        JournalSource source,
+        @Mandatory JournalSource source,
         Long reversalOfEntryId,
-        List<NewJournalLine> lines) {
+        @Mandatory List<NewJournalLine> lines) {
 
     /** Two: an entry needs at least one debit and one credit to balance at a non-zero amount. */
     public static final int MINIMUM_LINES = 2;

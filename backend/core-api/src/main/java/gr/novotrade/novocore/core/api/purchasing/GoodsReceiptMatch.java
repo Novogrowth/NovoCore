@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.purchasing;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import java.util.Objects;
 
@@ -17,7 +18,7 @@ import java.util.Objects;
  * what the purchase price variance is computed across (ADR 0008): matched quantity valued at the
  * invoice price, less the same quantity valued at what the receipt put into stock.
  */
-public record GoodsReceiptMatch(long goodsReceiptLineId, Quantity quantity) {
+public record GoodsReceiptMatch(long goodsReceiptLineId, @Mandatory Quantity quantity) {
 
     public GoodsReceiptMatch {
         Objects.requireNonNull(quantity, "quantity");

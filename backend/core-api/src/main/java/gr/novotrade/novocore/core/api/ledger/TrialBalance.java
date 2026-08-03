@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.ledger;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.time.LocalDate;
 import java.util.Currency;
@@ -20,7 +21,10 @@ import java.util.Objects;
  *
  * @param asOf inclusive, cumulative from the beginning. There is no period locking (brief §6).
  */
-public record TrialBalance(LocalDate asOf, Currency currency, List<AccountBalance> balances) {
+public record TrialBalance(
+        @Mandatory LocalDate asOf,
+        @Mandatory Currency currency,
+        @Mandatory List<AccountBalance> balances) {
 
     public TrialBalance {
         Objects.requireNonNull(asOf, "asOf");

@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.purchasing;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
@@ -24,9 +25,9 @@ import java.util.Objects;
 public record NewGoodsReceipt(
         long supplierId,
         String deliveryNoteNumber,
-        LocalDate receiptDate,
+        @Mandatory LocalDate receiptDate,
         String description,
-        List<NewGoodsReceiptLine> lines) {
+        @Mandatory List<NewGoodsReceiptLine> lines) {
 
     public NewGoodsReceipt {
         Objects.requireNonNull(receiptDate, "receiptDate");

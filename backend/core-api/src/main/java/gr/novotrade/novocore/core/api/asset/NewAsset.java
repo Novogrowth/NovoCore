@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.asset;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Rate;
 import java.time.LocalDate;
 import java.util.Objects;
@@ -18,8 +19,8 @@ import java.util.Objects;
  */
 public record NewAsset(
         String code,
-        String name,
-        LocalDate acquisitionDate,
+        @Mandatory String name,
+        @Mandatory LocalDate acquisitionDate,
         Rate depreciationRatePercent,
         LocalDate depreciationStartDate) {
 

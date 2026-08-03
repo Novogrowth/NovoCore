@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.sales;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.util.List;
 import java.util.Objects;
@@ -76,15 +77,15 @@ import java.util.Objects;
  *     document the customer is holding
  */
 public record SalesInvoicePreview(
-        List<SalesInvoicePreviewLine> lines,
-        Money net,
-        Money vat,
-        Money gross,
+        @Mandatory List<SalesInvoicePreviewLine> lines,
+        @Mandatory Money net,
+        @Mandatory Money vat,
+        @Mandatory Money gross,
         Money statedTotal,
-        Money roundingDifference,
-        Money roundingThreshold,
+        @Mandatory Money roundingDifference,
+        @Mandatory Money roundingThreshold,
         boolean roundingNeedsAcceptance,
-        Money receivable) {
+        @Mandatory Money receivable) {
 
     public SalesInvoicePreview {
         lines = List.copyOf(Objects.requireNonNull(lines, "lines"));

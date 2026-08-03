@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.email;
 
+import gr.novotrade.novocore.core.api.shared.ConditionallyMandatory;
 import java.util.Objects;
 
 /**
@@ -42,7 +43,12 @@ import java.util.Objects;
  *
  * <p>The array is not copied, matching {@code AttachmentContent}. Treat the content as read-only.
  */
-public record EmailAttachment(Long attachmentId, String filename, String contentType,
+public record EmailAttachment(
+        Long attachmentId,
+        String filename,
+        String contentType,
+        @ConditionallyMandatory("required only when attachmentId is absent; forbidden when it is "
+                + "present, because a stored attachment must not also carry a copy")
         byte[] content) {
 
     /** What an attachment with no stated type is sent as. */

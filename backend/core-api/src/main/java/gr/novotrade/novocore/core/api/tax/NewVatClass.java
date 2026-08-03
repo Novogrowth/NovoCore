@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.tax;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Rate;
 import java.util.Objects;
 
@@ -13,7 +14,10 @@ import java.util.Objects;
  *
  * @param ratePercent a percentage — 24% is {@code Rate.of("24")}, not {@code 0.24}
  */
-public record NewVatClass(String code, String description, Rate ratePercent) {
+public record NewVatClass(
+        @Mandatory String code,
+        @Mandatory String description,
+        @Mandatory Rate ratePercent) {
 
     public NewVatClass {
         Objects.requireNonNull(code, "code");

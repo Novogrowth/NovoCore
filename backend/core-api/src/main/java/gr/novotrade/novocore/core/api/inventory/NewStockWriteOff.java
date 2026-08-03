@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.inventory;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import java.time.LocalDate;
 import java.util.Objects;
@@ -31,8 +32,8 @@ public record NewStockWriteOff(
         long lotId,
         Long serializedUnitId,
         Quantity quantity,
-        WriteOffReason reason,
-        LocalDate writeOffDate,
+        @Mandatory WriteOffReason reason,
+        @Mandatory LocalDate writeOffDate,
         String note) {
 
     public NewStockWriteOff {

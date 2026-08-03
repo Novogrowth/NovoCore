@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.sales;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.time.LocalDate;
 import java.util.List;
@@ -22,12 +23,12 @@ import java.util.Optional;
 public record NewCreditNote(
         long salesInvoiceId,
         String documentNumber,
-        LocalDate creditNoteDate,
+        @Mandatory LocalDate creditNoteDate,
         String description,
         Money statedTotal,
         String roundingAcceptedBy,
         String roundingNote,
-        List<NewCreditNoteLine> lines) {
+        @Mandatory List<NewCreditNoteLine> lines) {
 
     public NewCreditNote {
         Objects.requireNonNull(creditNoteDate, "creditNoteDate");

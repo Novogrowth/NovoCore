@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.bundle;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import java.util.Objects;
 
@@ -10,7 +11,7 @@ import java.util.Objects;
  *     component's unit of measure allows a fraction — 250 grams of coffee in a gift set is fine, two
  *     and a half grinders is a typing mistake.
  */
-public record NewBundleComponent(long componentProductId, Quantity quantity) {
+public record NewBundleComponent(long componentProductId, @Mandatory Quantity quantity) {
 
     public NewBundleComponent {
         Objects.requireNonNull(quantity, "quantity");

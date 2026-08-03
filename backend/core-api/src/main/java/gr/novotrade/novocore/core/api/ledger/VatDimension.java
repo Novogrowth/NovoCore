@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.ledger;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import java.util.Objects;
 
@@ -31,7 +32,7 @@ import java.util.Objects;
  * @param taxableBase the net amount the rate was applied to. Strictly positive: a zero base produces no
  *     VAT and therefore no line, and a reversal mirrors the base unchanged while flipping the side.
  */
-public record VatDimension(long vatClassId, Money taxableBase) {
+public record VatDimension(long vatClassId, @Mandatory Money taxableBase) {
 
     public VatDimension {
         Objects.requireNonNull(taxableBase, "taxableBase");

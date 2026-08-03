@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.account;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import java.util.List;
 import java.util.Objects;
 
@@ -21,9 +22,9 @@ import java.util.Objects;
  */
 public record AccountGroupView(
         long id,
-        String name,
+        @Mandatory String name,
         int displayOrder,
-        List<AccountView> accounts) {
+        @Mandatory List<AccountView> accounts) {
 
     public AccountGroupView {
         Objects.requireNonNull(name, "name");

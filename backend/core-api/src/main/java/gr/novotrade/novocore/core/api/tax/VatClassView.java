@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.tax;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Rate;
 import java.math.BigDecimal;
@@ -27,9 +28,9 @@ import java.util.Optional;
  */
 public record VatClassView(
         long id,
-        String code,
-        String description,
-        Rate ratePercent,
+        @Mandatory String code,
+        @Mandatory String description,
+        @Mandatory Rate ratePercent,
         Long reducedCounterpartId,
         boolean active) {
 

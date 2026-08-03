@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.sales;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import java.util.Objects;
@@ -26,9 +27,9 @@ public record SalesInvoiceLineComponentView(
         long id,
         int componentNumber,
         long productId,
-        String productSku,
-        Quantity quantity,
-        Money allocatedAmount,
+        @Mandatory String productSku,
+        @Mandatory Quantity quantity,
+        @Mandatory Money allocatedAmount,
         Long stockConsumptionId) {
 
     public SalesInvoiceLineComponentView {

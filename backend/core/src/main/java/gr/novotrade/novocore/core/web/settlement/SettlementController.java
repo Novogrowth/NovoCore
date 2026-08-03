@@ -10,6 +10,7 @@ import gr.novotrade.novocore.core.api.settlement.OpenItem;
 import gr.novotrade.novocore.core.api.settlement.PartyType;
 import gr.novotrade.novocore.core.api.settlement.SettlementService;
 import gr.novotrade.novocore.core.api.settlement.SettlementView;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.InvalidInputException;
 import gr.novotrade.novocore.core.web.ListResponse;
@@ -222,7 +223,7 @@ class SettlementController {
 
     // -------------------------------------------------------------------------------------------
 
-    record AllocationsRequest(List<NewAllocation> allocations) {
+    record AllocationsRequest(@Mandatory List<NewAllocation> allocations) {
 
         AllocationsRequest {
             Required.field(allocations, "allocations");

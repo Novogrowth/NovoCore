@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.security;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -24,10 +25,10 @@ import java.util.Optional;
  */
 public record UserView(
         long id,
-        String username,
-        String displayName,
+        @Mandatory String username,
+        @Mandatory String displayName,
         String language,
-        RoleView role,
+        @Mandatory RoleView role,
         boolean active) {
 
     public UserView {

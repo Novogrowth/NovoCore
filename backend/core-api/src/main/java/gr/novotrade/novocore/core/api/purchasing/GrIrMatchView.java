@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.purchasing;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
 import java.math.BigDecimal;
@@ -26,9 +27,9 @@ public record GrIrMatchView(
         long purchaseInvoiceLineId,
         long goodsReceiptLineId,
         long lotId,
-        Quantity quantity,
-        UnitCost receiptUnitCost,
-        UnitCost invoiceUnitPrice) {
+        @Mandatory Quantity quantity,
+        @Mandatory UnitCost receiptUnitCost,
+        @Mandatory UnitCost invoiceUnitPrice) {
 
     public GrIrMatchView {
         Objects.requireNonNull(quantity, "quantity");

@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.inventory;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
 import java.util.Objects;
 import java.util.Optional;
@@ -35,10 +36,10 @@ public record SerializedUnitView(
         long id,
         long lotId,
         long productId,
-        String serialNumber,
-        SerializedUnitStatus status,
-        StockLocation location,
-        UnitCost unitCost,
+        @Mandatory String serialNumber,
+        @Mandatory SerializedUnitStatus status,
+        @Mandatory StockLocation location,
+        @Mandatory UnitCost unitCost,
         Long soldToCustomerId,
         Long soldOnInvoiceLineId) {
 

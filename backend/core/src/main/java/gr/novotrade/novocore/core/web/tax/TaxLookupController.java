@@ -4,6 +4,7 @@ import gr.novotrade.novocore.core.api.charge.ChargeTypeService;
 import gr.novotrade.novocore.core.api.charge.ChargeTypeView;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.tax.NewVatClass;
 import gr.novotrade.novocore.core.api.tax.VatClassService;
 import gr.novotrade.novocore.core.api.tax.VatClassView;
@@ -185,14 +186,14 @@ class TaxLookupController {
 
     // -------------------------------------------------------------------------------------------
 
-    record DescriptionRequest(String description) {
+    record DescriptionRequest(@Mandatory String description) {
 
         DescriptionRequest {
             Required.text(description, "description");
         }
     }
 
-    record ReducedCounterpartRequest(Long reducedCounterpartId) {
+    record ReducedCounterpartRequest(@Mandatory Long reducedCounterpartId) {
 
         ReducedCounterpartRequest {
             Required.field(reducedCounterpartId, "reducedCounterpartId");

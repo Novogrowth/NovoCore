@@ -1,6 +1,7 @@
 package gr.novotrade.novocore.core.api.inventory;
 
 import gr.novotrade.novocore.core.api.ledger.JournalSource;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import java.time.LocalDate;
 import java.util.List;
@@ -37,9 +38,9 @@ import java.util.Optional;
  */
 public record NewStockConsumption(
         long productId,
-        Quantity quantity,
-        LocalDate consumptionDate,
-        JournalSource source,
+        @Mandatory Quantity quantity,
+        @Mandatory LocalDate consumptionDate,
+        @Mandatory JournalSource source,
         String note,
         List<String> serialNumbers,
         SaleReference saleReference) {

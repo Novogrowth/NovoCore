@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.supplier;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.tax.VatStatus;
 import java.util.Objects;
 
@@ -16,11 +17,11 @@ import java.util.Objects;
  *     common case.
  */
 public record NewSupplier(
-        String name,
+        @Mandatory String name,
         String email,
         String phone,
         String vatNumber,
-        VatStatus vatStatus,
+        @Mandatory VatStatus vatStatus,
         Long vatExemptionReasonId) {
 
     public NewSupplier {

@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.product;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Required;
 import java.util.Objects;
@@ -34,17 +35,17 @@ import java.util.Objects;
  *     {@code BundleService.define} sets both in one transaction so a bundle never exists empty.
  */
 public record NewProduct(
-        String sku,
+        @Mandatory String sku,
         String ean,
-        String name,
+        @Mandatory String name,
         String brand,
-        ProductType type,
+        @Mandatory ProductType type,
         long unitOfMeasureId,
         long defaultVatClassId,
         Money sellingPrice,
         Long supplierId,
         String supplierSku,
-        Boolean serialTracked) {
+        @Mandatory Boolean serialTracked) {
 
     public NewProduct {
         Required.field(serialTracked, "serialTracked");

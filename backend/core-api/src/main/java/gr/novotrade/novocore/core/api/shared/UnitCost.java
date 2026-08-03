@@ -35,7 +35,9 @@ import java.util.Objects;
  *
  * <p>Currency is carried for ADR 0005's reason, and arithmetic never crosses two of them.
  */
-public record UnitCost(BigDecimal value, Currency currency) implements Comparable<UnitCost> {
+public record UnitCost(
+        @Mandatory BigDecimal value,
+        @Mandatory Currency currency) implements Comparable<UnitCost> {
 
     /**
      * Decimal places for a unit cost. Matches {@code numeric(19,6)} in the schema, and matches

@@ -6,6 +6,7 @@ import gr.novotrade.novocore.core.api.asset.AssetView;
 import gr.novotrade.novocore.core.api.asset.NewAsset;
 import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.api.shared.Required;
 import gr.novotrade.novocore.core.web.Requires;
@@ -174,7 +175,7 @@ class AssetController {
     record DepreciationStartDateRequest(LocalDate depreciationStartDate) {
     }
 
-    record DisposalRequest(LocalDate disposalDate) {
+    record DisposalRequest(@Mandatory LocalDate disposalDate) {
 
         DisposalRequest {
             // Required exactly when the asset is disposed — the definitional pairing this route

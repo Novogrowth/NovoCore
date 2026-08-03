@@ -1,5 +1,6 @@
 package gr.novotrade.novocore.core.api.inventory;
 
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.UnitCost;
 import java.time.LocalDate;
@@ -33,10 +34,10 @@ import java.util.Objects;
 public record NewInventoryLot(
         long productId,
         Quantity quantity,
-        UnitCost unitCost,
-        LocalDate acquisitionDate,
+        @Mandatory UnitCost unitCost,
+        @Mandatory LocalDate acquisitionDate,
         LocalDate roastDate,
-        StockLocation location,
+        @Mandatory StockLocation location,
         List<String> serialNumbers,
         Long goodsReceiptLineId) {
 
