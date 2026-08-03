@@ -245,13 +245,9 @@ still true; a wrong one is worse than none. The same sentence covers the conditi
 reason **at the field**, not an exemption list inside the test. A future reader who finds a guarded
 component without `@Mandatory` must be able to see why without reconstructing it.
 
-**3. ⚠️ A probe that is expected to FAIL is safer than one expected to pass.** 8a's third probe
-reported PASS and was worthless: a `git checkout` had reverted the *uncommitted* work the probe was
-run against, the resulting file did not compile, the build error was swallowed by a `| tail -3`, and
-the test answered from the **previously installed jar**. Every observation was true. It was caught
-only because a probe designed to fail and reporting success is loud — **reverse it and the same
-mistake ships silently.** This is *the thing that answered was not the thing under test* at the scale
-of one command, and the remedy is the same: confirm the build succeeded before believing the test.
+**3. A probe of this rule reported PASS while measuring nothing**, which is where the two
+requirements under *the throwaway probe* came from — **a negative control, and never piping a build.**
+Stated once, there, rather than twice.
 
 ### Named practice: the throwaway probe
 
@@ -271,9 +267,50 @@ and would have been built on:**
 - Item 6 recorded `POST /api/users {}` as evidence about its `requireNonNull` guards. **That body
   never reaches them** — the primitive `roleId` fails first. `POST /api/roles {}` is the clean case.
 
-**Both were found by a probe that printed 26 responses, and neither was findable by reading.** The
-same probe technique then proved the item 4 fix in both directions: the new sweep case was run
-against the defect first, watched to fail, and only then run against the fix.
+**Both were found by a probe that printed 26 responses, and neither was findable by reading.**
+
+#### ⚠️ Two requirements. A probe that does not meet them is not evidence
+
+**These are preconditions of trusting a probe's result, not advice about writing better ones.** A
+probe exists to be believed — that is its whole purpose — so the question *"could this have reported
+what it reported while measuring nothing?"* has to be answerable before the result is used.
+
+**1. Every probe carries a negative control — a case designed to FAIL.**
+
+**A probe with only positive cases cannot distinguish *the thing works* from *the thing was never
+there*.** Both produce the same output. Add at least one case that must fail, and treat its failing
+as the evidence that the probe is measuring anything at all: if the negative control passes, **every
+other result in that run is void**, including the ones that looked right.
+
+⚠️ **This is not hypothetical and the margin was one case.** In 8a, four conditions lined up at
+once — an uncommitted change reverted by a `git checkout`, a file that then did not compile, a build
+error swallowed by a pipe (see requirement 2), and `architecture-tests` answering from a
+**previously installed jar** — and the probe reported **PASS**. Every individual observation was
+true. It was caught **only** because that particular case was designed to fail and reported success,
+which is loud. **Reverse the polarity and the identical mistake ships in silence**, because nothing
+ever prompts a second look at a pass. It is *the thing that answered was not the thing under test*,
+at the scale of one shell command.
+
+**The worked examples are already in this file, and they are this requirement rather than three
+separate habits:** the item 4 sweep case was run against the defect first, watched to fail, and only
+then run against the fix; `WebAuthorizationRulesTest.clientMistakesAreNotProgrammingErrors` and
+`PermissionSweepIT.noDomainRuleRefusesAWellFormedBodyWithoutSayingWhy` were each proven the same way.
+⚠️ **Those three have the new *guard* as the subject — does it catch the defect. This requirement has
+the *probe* as the subject — is the apparatus alive.** The second is the more general and the easier
+to skip, because a green run feels like an answer.
+
+**2. A piped build hides its own failure. Do not pipe one, or set `-o pipefail`.**
+
+**The mechanism, because the instruction on its own is forgettable and the mechanism is not:** a
+shell pipeline's exit status is the exit status of its **last** command. `mvn … | tail -3` therefore
+returns `tail`'s status — `0`, essentially always — and the build's own non-zero status is discarded
+before anything can test it. ⚠️ **And the filter destroys the evidence in the same stroke:** the
+compiler error that would have been read instead is exactly what `tail -3` cut off. So the failure is
+invisible to a script *and* to a human reading the output, which is why it survives both.
+
+**Either `set -o pipefail` in any script that pipes a build, or do not pipe the build.** When a probe
+depends on a fresh artefact — and one that rebuilds a module before testing it always does —
+**confirm the build succeeded on its own terms before believing anything the test then says.**
 
 ⚠️ **Delete it.** A probe is evidence for a decision, not a test — it asserts nothing, so leaving it
 behind adds runtime and implies coverage it does not provide. What survives is the *assertion* it

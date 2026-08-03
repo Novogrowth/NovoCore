@@ -224,9 +224,13 @@ practice Q1 established. Four probes, all reverted:
 resulting file did not compile, the `-q` build's error was swallowed by a `| tail -3`, and
 `architecture-tests` answered from the **previously installed jar**. Every observation was true and
 none of it was evidence. This is `CLAUDE.md`'s *the thing that answered was not the thing under
-test*, at the scale of one command — caught only because a probe that is supposed to fail and
-reports PASS is loud. **A probe expected to fail is safer than one expected to pass**, and that is
-worth remembering the next time one is written the other way round.
+test*, at the scale of one command — caught only because that case was designed to fail, and a case
+designed to fail reporting success is loud.
+
+➡️ **This is the occurrence; the rules it produced are in `CLAUDE.md` under *the throwaway probe*,
+and they are stated there only** — **every probe carries a negative control**, and **a piped build
+hides its own failure**. Recorded here as the evidence rather than restated as a rule, because two
+records of one rule is the drift that let backend item 3 contradict itself for a week.
 
 ### 📌 Two design items 8a recorded and deliberately did not fix (decision H, 2026-08-03)
 
