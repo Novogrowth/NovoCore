@@ -110,7 +110,7 @@ class SupplierController {
     @PatchMapping(path = "/api/suppliers/{id}/name",
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.SUPPLIERS, level = AccessLevel.FULL)
-    SupplierView rename(@PathVariable long id, @RequestBody NameRequest request) {
+    SupplierView rename(@PathVariable long id, @RequestBody SupplierNameRequest request) {
         return suppliers.rename(id, request.name());
     }
 
@@ -118,14 +118,14 @@ class SupplierController {
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.SUPPLIERS, level = AccessLevel.FULL)
     SupplierView changeContactDetails(
-            @PathVariable long id, @RequestBody ContactDetailsRequest request) {
+            @PathVariable long id, @RequestBody SupplierContactDetailsRequest request) {
         return suppliers.changeContactDetails(id, request.email(), request.phone());
     }
 
     @PatchMapping(path = "/api/suppliers/{id}/vat-number",
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.SUPPLIERS, level = AccessLevel.FULL)
-    SupplierView changeVatNumber(@PathVariable long id, @RequestBody VatNumberRequest request) {
+    SupplierView changeVatNumber(@PathVariable long id, @RequestBody SupplierVatNumberRequest request) {
         return suppliers.changeVatNumber(id, request.vatNumber());
     }
 
@@ -143,7 +143,7 @@ class SupplierController {
     @PatchMapping(path = "/api/suppliers/{id}/vat-status",
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.SUPPLIERS, level = AccessLevel.FULL)
-    SupplierView changeVatStatus(@PathVariable long id, @RequestBody VatStatusRequest request) {
+    SupplierView changeVatStatus(@PathVariable long id, @RequestBody SupplierVatStatusRequest request) {
         return suppliers.changeVatStatus(id, request.vatStatus(), request.vatExemptionReasonId());
     }
 
@@ -163,18 +163,18 @@ class SupplierController {
 
     // -------------------------------------------------------------------------------------------
 
-    record NameRequest(String name) {
+    record SupplierNameRequest(String name) {
     }
 
-    record ContactDetailsRequest(String email, String phone) {
+    record SupplierContactDetailsRequest(String email, String phone) {
     }
 
-    record VatNumberRequest(String vatNumber) {
+    record SupplierVatNumberRequest(String vatNumber) {
     }
 
-    record VatStatusRequest(@Mandatory VatStatus vatStatus, Long vatExemptionReasonId) {
+    record SupplierVatStatusRequest(@Mandatory VatStatus vatStatus, Long vatExemptionReasonId) {
 
-        VatStatusRequest {
+        SupplierVatStatusRequest {
             Required.field(vatStatus, "vatStatus");
         }
     }

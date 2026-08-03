@@ -12,11 +12,11 @@ import type { Money } from './money';
 
 export interface JournalEntrySummaryView {
   id: number;
-  entryDate?: string;
-  description?: string;
-  source?: JournalSource;
+  entryDate: string;
+  description: string;
+  source: JournalSource;
   reversalOfEntryId?: number;
   reversedByEntryId?: number;
-  total?: Money;
+  total: Money;
   lineCount: number;
 }

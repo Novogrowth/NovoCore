@@ -11,5 +11,5 @@ import type { Money } from './money';
 
 export interface VatDimension {
   vatClassId: number;
-  taxableBase?: Money;
+  taxableBase: Money;
 }

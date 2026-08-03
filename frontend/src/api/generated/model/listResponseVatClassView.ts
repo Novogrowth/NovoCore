@@ -11,6 +11,6 @@ import type { PageInfo } from './pageInfo';
 import type { VatClassView } from './vatClassView';
 
 export interface ListResponseVatClassView {
-  items?: VatClassView[];
+  items: VatClassView[];
   page?: PageInfo;
 }

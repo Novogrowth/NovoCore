@@ -16,11 +16,11 @@ export interface CreditNotePreviewLine {
   productId?: number;
   chargeTypeId?: number;
   description?: string;
-  quantity?: Quantity;
-  unitPrice?: UnitCost;
-  net?: Money;
-  vat?: Money;
-  gross?: Money;
+  quantity: Quantity;
+  unitPrice: UnitCost;
+  net: Money;
+  vat: Money;
+  gross: Money;
   vatClassId?: number;
   stockReturned: boolean;
 }

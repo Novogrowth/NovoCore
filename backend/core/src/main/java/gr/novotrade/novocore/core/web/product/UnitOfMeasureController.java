@@ -90,7 +90,7 @@ class UnitOfMeasureController {
     @PatchMapping(path = "/api/units-of-measure/{id}/name",
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.PRODUCTS, level = AccessLevel.FULL)
-    UnitOfMeasureView rename(@PathVariable long id, @RequestBody NameRequest request) {
+    UnitOfMeasureView rename(@PathVariable long id, @RequestBody UnitOfMeasureNameRequest request) {
         return unitsOfMeasure.rename(id, request.name());
     }
 
@@ -134,9 +134,9 @@ class UnitOfMeasureController {
 
     // -------------------------------------------------------------------------------------------
 
-    record NameRequest(@Mandatory String name) {
+    record UnitOfMeasureNameRequest(@Mandatory String name) {
 
-        NameRequest {
+        UnitOfMeasureNameRequest {
             Required.text(name, "name");
         }
     }

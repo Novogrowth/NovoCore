@@ -11,6 +11,6 @@ import type { BundleComponentView } from './bundleComponentView';
 import type { PageInfo } from './pageInfo';
 
 export interface ListResponseBundleComponentView {
-  items?: BundleComponentView[];
+  items: BundleComponentView[];
   page?: PageInfo;
 }

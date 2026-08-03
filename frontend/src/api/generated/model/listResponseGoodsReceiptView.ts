@@ -11,6 +11,6 @@ import type { GoodsReceiptView } from './goodsReceiptView';
 import type { PageInfo } from './pageInfo';
 
 export interface ListResponseGoodsReceiptView {
-  items?: GoodsReceiptView[];
+  items: GoodsReceiptView[];
   page?: PageInfo;
 }

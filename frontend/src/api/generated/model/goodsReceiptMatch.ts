@@ -11,5 +11,5 @@ import type { Quantity } from './quantity';
 
 export interface GoodsReceiptMatch {
   goodsReceiptLineId: number;
-  quantity?: Quantity;
+  quantity: Quantity;
 }

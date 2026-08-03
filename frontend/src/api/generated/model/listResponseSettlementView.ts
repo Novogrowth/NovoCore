@@ -11,6 +11,6 @@ import type { PageInfo } from './pageInfo';
 import type { SettlementView } from './settlementView';
 
 export interface ListResponseSettlementView {
-  items?: SettlementView[];
+  items: SettlementView[];
   page?: PageInfo;
 }

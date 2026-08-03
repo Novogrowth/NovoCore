@@ -11,6 +11,6 @@ import type { PageInfo } from './pageInfo';
 import type { StockWriteOffView } from './stockWriteOffView';
 
 export interface ListResponseStockWriteOffView {
-  items?: StockWriteOffView[];
+  items: StockWriteOffView[];
   page?: PageInfo;
 }

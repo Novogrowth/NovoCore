@@ -127,7 +127,7 @@ class RoleController {
     @PatchMapping(path = "/api/roles/{id}/name",
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.USERS_AND_ROLES, level = AccessLevel.FULL)
-    RoleView rename(@PathVariable long id, @RequestBody NameRequest request) {
+    RoleView rename(@PathVariable long id, @RequestBody RoleNameRequest request) {
         return roles.rename(id, request.name());
     }
 
@@ -202,9 +202,9 @@ class RoleController {
 
     // -------------------------------------------------------------------------------------------
 
-    record NameRequest(@Mandatory String name) {
+    record RoleNameRequest(@Mandatory String name) {
 
-        NameRequest {
+        RoleNameRequest {
             Required.text(name, "name");
         }
     }
@@ -216,10 +216,16 @@ class RoleController {
      * so two unrelated records sharing one produce a single schema and the second is silently
      * described by the first. {@code TaxLookupController.DescriptionRequest} already exists. That is
      * backend queue item 1's defect one layer over — an identifier collision the generator emits
-     * without complaining — and Q1 found seven {@code NameRequest} records already in it. They are
-     * structurally identical today, so the spec is accidentally correct; this one is named apart
-     * rather than adding an eighth to a set that is only safe by coincidence. Recorded as its own
-     * queue item.
+     * without complaining — and when this was written Q1 had found seven {@code NameRequest} records
+     * already in it, which is why this one was named apart rather than adding an eighth to a set that
+     * was only safe by coincidence.
+     *
+     * <p><strong>8a closed that, and the guard is no longer a matter of remembering.</strong> The
+     * seven — plus {@code ContactDetailsRequest}, {@code VatNumberRequest} and
+     * {@code VatStatusRequest}, three more collisions Q1 had not found — were renamed apart on
+     * 2026-08-03, and {@code OpenApiSchema} now <em>refuses</em> to register two different records
+     * under one schema name. The naming convention here is the one 8a settled on: entity prefix,
+     * which is what this record was already doing.
      *
      * <p>{@code Required.field} and not {@code Required.text}: a role may legitimately have no
      * description ({@code NewRole} permits null), so a blank value <em>clears</em> it. Requiring the

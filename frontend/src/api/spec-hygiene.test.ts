@@ -84,34 +84,48 @@ describe('the committed OpenAPI spec', () => {
     ).toEqual([])
   })
 
-  it('declares every primitive component required, so a mandatory field is knowable from the contract', () => {
+  it('declares every mandatory component required, primitives by inference and the rest by declaration', () => {
     /*
-     * **This test used to assert the opposite, and the change is the point.**
+     * **This test has now been rewritten twice, and each rewrite is a step of the same argument.**
      *
-     * It read: *"declares required fields on nothing but Money and UnitCost, which is why a body can
-     * be refused for a field the types call optional"* — pinning a defect rather than a guarantee,
-     * and written to fail in both directions so that the day the backend started describing its
-     * bodies, somebody came back here. **That day was 2026-08-01** and this is that visit.
+     * v1 pinned a defect: *"declares required fields on nothing but Money and UnitCost, which is why
+     * a body can be refused for a field the types call optional"*. v2 (2026-08-01) recorded the
+     * primitive half landing, and said in writing that the guarded half was still missing. **This is
+     * v3, 2026-08-03, and the guarded half has landed** — which is exactly the visit v2 was written
+     * to provoke.
      *
-     * What changed: `OpenApiSchema.recordSchema` now marks a record's **primitive** components
-     * required. A primitive cannot be null, so on a request it is mandatory —
-     * `FAIL_ON_NULL_FOR_PRIMITIVES` refuses an absent one before any handler runs, which is what
-     * broke product creation for every user (`NewProduct.serialTracked`) and would have broken
-     * account creation the same way (`NewUser.roleId`) — and on a response it is always present, so
-     * the same rule is accurate in both directions.
+     * The contract is now built from two rules rather than one:
+     *   - a **primitive** component is required **by inference**. It cannot be null, so on a request
+     *     `FAIL_ON_NULL_FOR_PRIMITIVES` refuses an absent one before any handler runs — the defect
+     *     that broke product creation for every user — and on a response it is always present.
+     *   - a **reference-typed** component required by a compact constructor is required **by
+     *     declaration**: `@Mandatory`, read by the same generator, cross-checked against the
+     *     canonical constructor's bytecode by `MandatoryDeclarationRulesTest` so the declaration
+     *     cannot drift from the guard.
      *
-     * **What is still NOT declared, so nobody reads this test as "the contract is now complete":**
-     * a reference-typed field that a compact constructor requires (`Required.field` /
-     * `requireNonNull`) is mandatory in fact and invisible to the generator, because reflection
-     * cannot see inside a constructor body. 28 schemas have one. `NewRole.name` is the readable
-     * example: `NewRole` declares no `required` list at all, and sending `{}` to `POST /api/roles`
-     * is still refused. That half is queued as its own backend item.
+     * **What that bought, and it is why the number below moved so far:** 339 always-present
+     * components across 114 records were described as optional and are not any more. 204 of them are
+     * on **response** views, so `tsc` now enforces test-fixture completeness — the third row of
+     * backend item 9's table, the one no frontend test could ever close honestly because every other
+     * candidate source of truth about the wire is hand-authored.
+     *
+     * **What is still NOT declared, deliberately, so nobody reads this as "the contract is now
+     * complete":**
+     *   - a component whose requirement is **conditional** carries `@ConditionallyMandatory` and is
+     *     left out. `NewPurchaseInvoiceLine` has five such fields of which at most three can ever be
+     *     present, selected by `type`; no `required` list can express that, and pretending otherwise
+     *     would publish a contract contradicting itself.
+     *   - a component made mandatory by an inline `if (x === null) throw` is invisible to the
+     *     cross-check and therefore not declared. `EmailMessage.subject` and `.body` are the known
+     *     cases; neither is on this surface.
+     *
+     * Both leave the list **incomplete rather than wrong**, which is the right side of that trade.
      *
      * Still written to fail in both directions:
      *   - the count drops → the generator stopped declaring something it used to, and a client can
      *     once again omit a field that is mandatory in fact;
-     *   - the count climbs a lot → the guarded half landed, and the frontend can stop working around
-     *     it (see `product-create.tsx`, which sends `serialTracked` explicitly).
+     *   - the count climbs → something new was declared, and it is worth one look to confirm it is
+     *     genuinely never absent rather than merely usually set.
      */
     const schemas = spec.components.schemas as Record<string, { required?: string[] }>
     const declaring = Object.entries(schemas)
@@ -130,43 +144,66 @@ describe('the committed OpenAPI spec', () => {
     expect(schemas.NewUser?.required).toContain('roleId')
 
     /*
-     * ⚠️ **`NewProduct.serialTracked` is NO LONGER declared required, and that is a KNOWN,
-     * TIME-BOXED REGRESSION rather than a drift.** Read this before "fixing" it.
+     * ⚠️ **Item 7's regression is CLOSED, and this block is what proves it by name rather than by
+     * count.** Between 2026-08-01 and 2026-08-03 these eight flags were declared required by
+     * accident of being primitives; Q1's item 7 boxed them to improve the refusal message
+     * (`"serialTracked" is required and was not supplied.` instead of a field-less `Cannot map null
+     * into type boolean`) and removed the declaration as a side effect, taking schemas declaring
+     * `required` from 78 to 75. 8a put the declaration back deliberately.
      *
-     * Backend queue item 7 (2026-08-03) boxed the seven boolean primitives, so the server now
-     * answers `"serialTracked" is required and was not supplied.` instead of the field-less
-     * `Cannot map null into type boolean` that broke product creation for every user. But
-     * `OpenApiSchema` declares a component required when it `isPrimitive()`, and a boxed `Boolean`
-     * is not — so the same edit that improved the MESSAGE removed the DECLARATION. Measured, not
-     * reasoned: schemas declaring `required` went 78 → 75.
+     * **Checked individually and not through the total**, because a count cannot say WHICH field
+     * came back — and the whole failure this closes was one specific field on one specific form.
      *
-     * **What is lost is the compile-time catch, not the refusal.** The server still refuses an
-     * omitted flag, and more legibly than before. What `tsc` no longer does is refuse a TypeScript
-     * caller that omits one.
-     *
-     * **What closes it is step 8a**, the `@Mandatory` annotation read by the same generator — which
-     * is scheduled immediately after Q1 and BEFORE R1 precisely so this window is one step long.
-     * No screen is built inside that window: the order is Q1 → 8a/8b → R1 → R2 → F5, and F5–F8 are
-     * the steps that would send these bodies.
-     *
-     * ⚠️ **`product-create.tsx` must therefore keep sending `serialTracked` explicitly.** Its
-     * comment was updated on 2026-08-03; it had claimed omission was a compile error, which was
-     * true between 2026-08-01 and this change and is not true now.
+     * ⚠️ **Seven, not eight.** The eighth boxed boolean is
+     * `NewVatExemptionReason.inputVatDeductible`, and it has no schema here at all:
+     * `/api/vat-exemption-reasons` is GET-only, so the record never reaches this document. It is
+     * confirmed annotated and guarded on the backend instead, by
+     * `MandatoryDeclarationRulesTest`. Documents saying "the eight" were corrected on 2026-08-03.
+     */
+    const boxedBooleans: [string, string][] = [
+      ['NewProduct', 'serialTracked'],
+      ['SerialTrackingRequest', 'serialTracked'],
+      ['NewUnitOfMeasure', 'fractionalQuantityAllowed'],
+      ['NewAccount', 'expectedToClear'],
+      ['NewSettlement', 'remainderBecomesCustomerCredit'],
+      ['NewCreditNoteLine', 'stockReturned'],
+      ['NewPurchaseInvoiceLine', 'reverseCharge'],
+    ]
+    for (const [schema, field] of boxedBooleans) {
+      expect(
+        schemas[schema]?.required,
+        `${schema}.${field} is refused by the server when omitted; if the contract stops saying so, tsc stops refusing a caller that omits it — which is exactly what broke product creation`,
+      ).toContain(field)
+    }
+
+    /*
+     * The guarded half, which v2 of this test asserted was MISSING. `NewRole.name` is required by
+     * `Required.text` in its compact constructor, is invisible to reflection, and is now declared
+     * because `@Mandatory` says so and the bytecode cross-check agrees.
      */
     expect(
-      schemas.NewProduct?.required,
-      'if serialTracked is declared again, 8a landed — delete this note and the explicit send in product-create.tsx',
-    ).not.toContain('serialTracked')
+      schemas.NewRole?.required,
+      'NewRole.name is required by its compact constructor; 8a is what made that knowable from the contract',
+    ).toContain('name')
+
+    /*
+     * ⚠️ **The four schema-name collisions Q1-a raised are split, and this is the one that was
+     * never merely latent.** Seven distinct `NameRequest` records across seven controllers resolved
+     * to ONE schema serving NINE operations. Two of them guard `name` and five do not — so the
+     * moment 8a declared guards, the single merged schema would have been wrong for at least two of
+     * the nine whichever way it went. `OpenApiSchema.claim` now refuses a collision outright.
+     */
+    expect(schemas.NameRequest, 'the merged NameRequest schema must no longer exist').toBeUndefined()
+    expect(schemas.RoleNameRequest?.required).toContain('name')
+    expect(schemas.UnitOfMeasureNameRequest?.required).toContain('name')
+    expect(
+      schemas.CustomerNameRequest?.required,
+      'CustomerController.NameRequest has no compact constructor, so its name is NOT required — which is the disagreement the merged schema was hiding',
+    ).toBeUndefined()
 
     expect(
       declaring.length,
       'the number of schemas declaring required fields changed — read the comment above before updating this number',
-    ).toBe(75)
-
-    // The guarded half is NOT declared, and this is what says so out loud.
-    expect(
-      schemas.NewRole?.required,
-      'NewRole.name is required by its compact constructor and cannot be seen by reflection — if this is now declared, the guarded half landed',
-    ).toBeUndefined()
+    ).toBe(143)
   })
 })

@@ -39,12 +39,30 @@ const viewer: Me = aUser({
   sections: [{ section: Section.USERS_AND_ROLES, level: AccessLevel.VIEW, available: true }],
 })
 
+/**
+ * ⚠️ `sectionGrants` and `restrictedFields` are here because 8a made them required, not because this
+ * test reads them. `RoleView` carries both on every response — `SecurityViews.toView` copies them
+ * unconditionally — and until the `@Mandatory` declaration landed the generated type made them
+ * optional, so a fixture could omit them and still typecheck while claiming to be a role.
+ *
+ * Both are empty and that is the OWNER role's real shape: a full-access role holds FULL everywhere
+ * **by the flag rather than by grant rows**, which is the rule `RoleService.grant` is written
+ * against.
+ */
 const kostas: UserView = {
   id: 3,
   username: 'kostas',
   displayName: 'Kostas',
   language: 'el',
-  role: { id: 1, name: 'OWNER', fullAccess: true, systemRole: true, active: true },
+  role: {
+    id: 1,
+    name: 'OWNER',
+    fullAccess: true,
+    systemRole: true,
+    active: true,
+    sectionGrants: {},
+    restrictedFields: [],
+  },
   active: true,
 }
 

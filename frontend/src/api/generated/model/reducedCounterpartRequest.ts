@@ -9,5 +9,5 @@
  */
 
 export interface ReducedCounterpartRequest {
-  reducedCounterpartId?: number;
+  reducedCounterpartId: number;
 }

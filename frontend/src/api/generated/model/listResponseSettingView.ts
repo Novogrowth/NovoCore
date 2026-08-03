@@ -11,6 +11,6 @@ import type { PageInfo } from './pageInfo';
 import type { SettingView } from './settingView';
 
 export interface ListResponseSettingView {
-  items?: SettingView[];
+  items: SettingView[];
   page?: PageInfo;
 }

@@ -16,7 +16,7 @@ export interface NewGoodsReceiptLine {
   quantity?: Quantity;
   serialNumbers?: string[];
   unitCost?: UnitCost;
-  location?: StockLocation;
+  location: StockLocation;
   roastDate?: string;
   purchaseInvoiceLineId?: number;
 }

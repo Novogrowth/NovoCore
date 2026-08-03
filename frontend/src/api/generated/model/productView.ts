@@ -15,12 +15,12 @@ import type { UnitOfMeasureView } from './unitOfMeasureView';
 
 export interface ProductView {
   id: number;
-  sku?: string;
+  sku: string;
   ean?: string;
-  name?: string;
+  name: string;
   brand?: string;
-  type?: ProductType;
-  unitOfMeasure?: UnitOfMeasureView;
+  type: ProductType;
+  unitOfMeasure: UnitOfMeasureView;
   defaultVatClassId: number;
   sellingPrice?: Money;
   supplierId?: number;
@@ -29,5 +29,5 @@ export interface ProductView {
   bundle: boolean;
   lastPurchasePrice?: UnitCost;
   active: boolean;
-  hiddenFields?: ProtectedField[];
+  hiddenFields: ProtectedField[];
 }

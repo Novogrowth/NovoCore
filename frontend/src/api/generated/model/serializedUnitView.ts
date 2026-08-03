@@ -15,10 +15,10 @@ export interface SerializedUnitView {
   id: number;
   lotId: number;
   productId: number;
-  serialNumber?: string;
-  status?: SerializedUnitStatus;
-  location?: StockLocation;
-  unitCost?: UnitCost;
+  serialNumber: string;
+  status: SerializedUnitStatus;
+  location: StockLocation;
+  unitCost: UnitCost;
   soldToCustomerId?: number;
   soldOnInvoiceLineId?: number;
 }

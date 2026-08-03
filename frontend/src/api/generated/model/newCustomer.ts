@@ -10,11 +10,11 @@
 import type { VatStatus } from './vatStatus';
 
 export interface NewCustomer {
-  name?: string;
+  name: string;
   email?: string;
   phone?: string;
   vatNumber?: string;
-  vatStatus?: VatStatus;
+  vatStatus: VatStatus;
   vatClassOverrideId?: number;
   vatExemptionReasonId?: number;
 }

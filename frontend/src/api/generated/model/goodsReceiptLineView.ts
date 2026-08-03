@@ -16,12 +16,12 @@ export interface GoodsReceiptLineView {
   lineNumber: number;
   productId: number;
   productSku?: string;
-  quantity?: Quantity;
-  unitCost?: UnitCost;
-  location?: StockLocation;
+  quantity: Quantity;
+  unitCost: UnitCost;
+  location: StockLocation;
   lotId: number;
-  serialNumbers?: string[];
+  serialNumbers: string[];
   purchaseInvoiceLineId?: number;
-  matchedQuantity?: Quantity;
-  openQuantity?: Quantity;
+  matchedQuantity: Quantity;
+  openQuantity: Quantity;
 }

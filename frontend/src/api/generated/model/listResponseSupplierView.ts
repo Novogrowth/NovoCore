@@ -11,6 +11,6 @@ import type { PageInfo } from './pageInfo';
 import type { SupplierView } from './supplierView';
 
 export interface ListResponseSupplierView {
-  items?: SupplierView[];
+  items: SupplierView[];
   page?: PageInfo;
 }

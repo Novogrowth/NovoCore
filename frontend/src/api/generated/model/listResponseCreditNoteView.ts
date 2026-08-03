@@ -11,6 +11,6 @@ import type { CreditNoteView } from './creditNoteView';
 import type { PageInfo } from './pageInfo';
 
 export interface ListResponseCreditNoteView {
-  items?: CreditNoteView[];
+  items: CreditNoteView[];
   page?: PageInfo;
 }

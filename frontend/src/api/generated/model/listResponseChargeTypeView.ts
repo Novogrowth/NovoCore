@@ -11,6 +11,6 @@ import type { ChargeTypeView } from './chargeTypeView';
 import type { PageInfo } from './pageInfo';
 
 export interface ListResponseChargeTypeView {
-  items?: ChargeTypeView[];
+  items: ChargeTypeView[];
   page?: PageInfo;
 }

@@ -9,8 +9,8 @@
  */
 
 export interface NewUnitOfMeasure {
-  code?: string;
-  name?: string;
-  fractionalQuantityAllowed?: boolean;
+  code: string;
+  name: string;
+  fractionalQuantityAllowed: boolean;
   mydataCode?: string;
 }

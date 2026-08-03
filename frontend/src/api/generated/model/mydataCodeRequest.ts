@@ -9,5 +9,5 @@
  */
 
 export interface MydataCodeRequest {
-  mydataCode?: string;
+  mydataCode: string;
 }

@@ -11,7 +11,7 @@ import type { AccountView } from './accountView';
 
 export interface AccountGroupView {
   id: number;
-  name?: string;
+  name: string;
   displayOrder: number;
-  accounts?: AccountView[];
+  accounts: AccountView[];
 }

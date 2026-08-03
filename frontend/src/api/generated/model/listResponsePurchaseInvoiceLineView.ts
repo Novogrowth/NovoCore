@@ -11,6 +11,6 @@ import type { PageInfo } from './pageInfo';
 import type { PurchaseInvoiceLineView } from './purchaseInvoiceLineView';
 
 export interface ListResponsePurchaseInvoiceLineView {
-  items?: PurchaseInvoiceLineView[];
+  items: PurchaseInvoiceLineView[];
   page?: PageInfo;
 }

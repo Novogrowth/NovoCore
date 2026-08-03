@@ -30,7 +30,6 @@ import type {
   BrandRequest,
   EanRequest,
   ListResponseProductView,
-  NameRequest,
   NewProduct,
   ProductControllerChangeBrand4xx,
   ProductControllerChangeEan4xx,
@@ -47,6 +46,7 @@ import type {
   ProductControllerReactivate4xx,
   ProductControllerRename4xx,
   ProductControllerStock4xx,
+  ProductNameRequest,
   ProductView,
   SellingPriceRequest,
   SerialTrackingRequest,
@@ -483,7 +483,7 @@ const {mutation: mutationOptions} = options ?
     }
     export const productControllerRename = (
     id: number,
-    nameRequest: NameRequest,
+    productNameRequest: ProductNameRequest,
  signal?: AbortSignal
 ) => {
 
@@ -491,7 +491,7 @@ const {mutation: mutationOptions} = options ?
       return apiMutator<ProductView>(
       {url: `/api/products/${id}/name`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: nameRequest, signal
+      data: productNameRequest, signal
     },
       );
     }
@@ -500,8 +500,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getProductControllerRenameMutationOptions = <TError = ProductControllerRename4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof productControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof productControllerRename>>, TError,{id: number;data: NameRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof productControllerRename>>, TError,{id: number;data: ProductNameRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof productControllerRename>>, TError,{id: number;data: ProductNameRequest}, TContext> => {
 
 const mutationKey = ['productControllerRename'];
 const {mutation: mutationOptions} = options ?
@@ -513,7 +513,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof productControllerRename>>, {id: number;data: NameRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof productControllerRename>>, {id: number;data: ProductNameRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  productControllerRename(id,data,)
@@ -527,15 +527,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type ProductControllerRenameMutationResult = NonNullable<Awaited<ReturnType<typeof productControllerRename>>>
-    export type ProductControllerRenameMutationBody = NameRequest
+    export type ProductControllerRenameMutationBody = ProductNameRequest
     export type ProductControllerRenameMutationError = ProductControllerRename4xx
 
     export const useProductControllerRename = <TError = ProductControllerRename4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof productControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof productControllerRename>>, TError,{id: number;data: ProductNameRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof productControllerRename>>,
         TError,
-        {id: number;data: NameRequest},
+        {id: number;data: ProductNameRequest},
         TContext
       > => {
       return useMutation(getProductControllerRenameMutationOptions(options), queryClient);

@@ -13,9 +13,9 @@ import type { OpenItemRef } from './openItemRef';
 
 export interface AllocationView {
   id: number;
-  sourceType?: AllocationSourceType;
+  sourceType: AllocationSourceType;
   sourceId: number;
-  target?: OpenItemRef;
+  target: OpenItemRef;
   allocationOrder: number;
-  amount?: Money;
+  amount: Money;
 }

@@ -12,11 +12,11 @@ import type { SalesLineType } from './salesLineType';
 import type { UnitCost } from './unitCost';
 
 export interface NewSalesInvoiceLine {
-  lineType?: SalesLineType;
+  lineType: SalesLineType;
   productId?: number;
   chargeTypeId?: number;
-  quantity?: Quantity;
-  unitPrice?: UnitCost;
+  quantity: Quantity;
+  unitPrice: UnitCost;
   vatClassId?: number;
   vatExemptionReasonId?: number;
   serialNumbers?: string[];

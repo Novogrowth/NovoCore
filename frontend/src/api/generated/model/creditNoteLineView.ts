@@ -17,10 +17,10 @@ export interface CreditNoteLineView {
   salesInvoiceLineId: number;
   productId?: number;
   productSku?: string;
-  quantity?: Quantity;
-  unitPrice?: UnitCost;
-  netAmount?: Money;
-  vatAmount?: Money;
+  quantity: Quantity;
+  unitPrice: UnitCost;
+  netAmount: Money;
+  vatAmount: Money;
   vatClassId?: number;
   vatExemptionReasonId?: number;
   stockReturned: boolean;

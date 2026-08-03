@@ -1,5 +1,7 @@
 package gr.novotrade.novocore.app.openapi;
 
+import gr.novotrade.novocore.core.api.shared.ConditionallyMandatory;
+import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.Rate;
@@ -66,6 +68,9 @@ final class OpenApiSchema {
 
     /** Named component schemas, by schema name. Sorted so the written document is stable. */
     private final Map<String, Map<String, Object>> components = new TreeMap<>();
+
+    /** Which type claimed each schema name, so a second claimant fails rather than being ignored. */
+    private final Map<String, Class<?>> owners = new HashMap<>();
 
     Map<String, Map<String, Object>> components() {
         return components;
@@ -200,15 +205,19 @@ final class OpenApiSchema {
 
     private Map<String, Object> classSchema(Class<?> raw, String context) {
         if (Money.class.equals(raw)) {
+            claim("Money", raw, context);
             return register("Money", () -> amountSchema("amount", "12.50", "two decimals"));
         }
         if (UnitCost.class.equals(raw)) {
+            claim("UnitCost", raw, context);
             return register("UnitCost", () -> amountSchema("unit cost", "12.505000", "six decimals"));
         }
         if (Quantity.class.equals(raw)) {
+            claim("Quantity", raw, context);
             return register("Quantity", () -> bareDecimalSchema("quantity", "3.000000"));
         }
         if (Rate.class.equals(raw)) {
+            claim("Rate", raw, context);
             return register("Rate", () -> bareDecimalSchema("percentage rate", "24.000000"));
         }
 
@@ -258,6 +267,7 @@ final class OpenApiSchema {
                             + "value type, added in step 15a for exactly this. Wrap it.");
         }
         if (raw.isEnum()) {
+            claim(raw.getSimpleName(), raw, context);
             return register(raw.getSimpleName(), () -> {
                 Map<String, Object> schema = type("string");
                 schema.put("enum", java.util.Arrays.stream(raw.getEnumConstants())
@@ -311,16 +321,31 @@ final class OpenApiSchema {
      * {@code SettingView} substitutes a masked {@code String} for a secret's value. Swept across all
      * 53 response records carrying a primitive, with no exception.
      *
-     * <p><strong>What is still not declared, deliberately:</strong> a reference-typed component that
-     * a compact constructor requires ({@code Required.field} / {@code requireNonNull}) is mandatory
-     * in fact and invisible here, because reflection cannot see inside a constructor body. Declaring
-     * those needs an annotation on the component and is queued separately — see {@code PROGRESS.md}
-     * item 2. This method deliberately does not guess at them: a {@code required} list that is
-     * incomplete is still true, while one that is wrong is worse than none.
+     * <h2>{@code @Mandatory} is the other half, and it is declared rather than inferred</h2>
+     *
+     * <p>A reference-typed component required by a compact constructor ({@code Required.field},
+     * {@code Required.text}, {@code Objects.requireNonNull}) is mandatory in exactly the same sense
+     * and <strong>invisible to reflection</strong>, because reflection cannot see inside a
+     * constructor body. Until 8a (2026-08-03) this method deliberately did not guess at them, and the
+     * spec described 339 always-present components as optional.
+     *
+     * <p>{@link Mandatory} closes it by declaring what cannot be inferred, and
+     * {@code MandatoryDeclarationRulesTest} reads the canonical constructor's bytecode to fail the
+     * build in both directions — so the declaration cannot drift from the guard. The two rules
+     * together are the {@code required} list: a primitive by inference, a reference type by
+     * declaration.
+     *
+     * <p>⚠️ <strong>What is still not declared:</strong> a component whose requirement is
+     * <em>conditional</em> carries {@link ConditionallyMandatory} instead and is deliberately left
+     * out — {@code NewPurchaseInvoiceLine} has five such fields of which at most three can ever be
+     * present, and no {@code required} list can say that. And a component made mandatory by an inline
+     * {@code if (x == null) throw} is invisible to the cross-check, so it is not declared either.
+     * Both leave the list incomplete rather than wrong, which is the right side of that trade.
      */
     private Map<String, Object> recordSchema(Class<?> raw, String name,
             Map<String, Type> substitutions, String context) {
 
+        claim(name, raw, context);
         if (!components.containsKey(name)) {
             // Reserved before recursing, so a record referring to itself terminates.
             components.put(name, ordered());
@@ -330,7 +355,8 @@ final class OpenApiSchema {
             for (RecordComponent component : raw.getRecordComponents()) {
                 properties.put(component.getName(), schemaFor(component.getGenericType(),
                         substitutions, context + " → " + name + "." + component.getName()));
-                if (component.getType().isPrimitive()) {
+                if (component.getType().isPrimitive()
+                        || component.isAnnotationPresent(Mandatory.class)) {
                     required.add(component.getName());
                 }
             }
@@ -352,6 +378,47 @@ final class OpenApiSchema {
             java.util.function.Supplier<Map<String, Object>> schema) {
         components.computeIfAbsent(name, key -> schema.get());
         return ref(name);
+    }
+
+    /**
+     * <strong>Two different types may not share a component schema name.</strong> The second would
+     * be silently described by the first — the same failure as a duplicate {@code operationId}, one
+     * layer down, and quieter: a duplicate id produces a client that does not compile, while this
+     * produces one that compiles and is wrong.
+     *
+     * <p>⚠️ <strong>Q1 raised this and understated it.</strong> It recorded seven distinct
+     * {@code NameRequest} records resolving to one schema, "structurally identical today, so the
+     * document is accidentally correct". Measured on 2026-08-03 there were <strong>four</strong>
+     * collisions, not one — {@code NameRequest} ×7 across 9 operations, plus
+     * {@code ContactDetailsRequest}, {@code VatNumberRequest} and {@code VatStatusRequest} ×2 each:
+     * 13 records collapsing into 4 schemas over 15 operations.
+     *
+     * <p><strong>And "identical today" stopped being true the moment 8a ran.</strong> Two of the
+     * seven {@code NameRequest} records guarded {@code name} with {@code Required.text} and five did
+     * not, so {@code @Mandatory} lands on two of them — the single merged schema would have declared
+     * {@code name} required for nine operations of which five do not require it, or optional for two
+     * that do. <strong>8a did not merely coincide with this defect; 8a is what would have created
+     * it.</strong> All 13 were renamed apart in the same commit.
+     *
+     * <p>Scoped to what reaches the spec, deliberately. Service-internal records collide too —
+     * {@code CreditNoteServiceImpl.Computation} and {@code SalesInvoiceServiceImpl.Computation}, and
+     * the same pair of {@code Rounding} records — and are <strong>known and left alone</strong>:
+     * they describe no contract, so failing the build on them would force a rename for nothing,
+     * which is how a rule earns the reputation that gets it deleted. If either ever reaches the
+     * surface, this fires then, when it means something.
+     */
+    private void claim(String name, Class<?> raw, String context) {
+        Class<?> existing = owners.putIfAbsent(name, raw);
+        if (existing != null && !existing.equals(raw)) {
+            throw new IllegalStateException(
+                    "Two different types would be published as the component schema '" + name
+                            + "', so one of them would be described by the other's shape and nothing "
+                            + "would say so:\n  " + existing.getName() + "\n  " + raw.getName()
+                            + "\nRename one of the records. The convention on this surface is an "
+                            + "entity prefix — CustomerNameRequest, SupplierNameRequest — and "
+                            + "RoleController.RoleDescriptionRequest is the worked example. Reached "
+                            + "via: " + context);
+        }
     }
 
     private static Map<String, Object> ref(String name) {

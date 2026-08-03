@@ -9,5 +9,5 @@
  */
 
 export interface DisposalRequest {
-  disposalDate?: string;
+  disposalDate: string;
 }

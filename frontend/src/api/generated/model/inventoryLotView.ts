@@ -15,15 +15,15 @@ import type { UnitCost } from './unitCost';
 export interface InventoryLotView {
   id: number;
   productId: number;
-  productSku?: string;
+  productSku: string;
   serialTracked: boolean;
-  quantityReceived?: Quantity;
-  quantityRemaining?: Quantity;
-  receivedUnitCost?: UnitCost;
-  allocatedLandedUnitCost?: UnitCost;
-  acquisitionDate?: string;
+  quantityReceived: Quantity;
+  quantityRemaining: Quantity;
+  receivedUnitCost: UnitCost;
+  allocatedLandedUnitCost: UnitCost;
+  acquisitionDate: string;
   roastDate?: string;
   location?: StockLocation;
-  units?: SerializedUnitView[];
+  units: SerializedUnitView[];
   goodsReceiptLineId?: number;
 }

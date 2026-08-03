@@ -11,6 +11,6 @@ import type { AssetView } from './assetView';
 import type { PageInfo } from './pageInfo';
 
 export interface ListResponseAssetView {
-  items?: AssetView[];
+  items: AssetView[];
   page?: PageInfo;
 }

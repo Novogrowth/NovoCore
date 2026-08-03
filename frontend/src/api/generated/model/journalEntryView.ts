@@ -12,10 +12,10 @@ import type { JournalSource } from './journalSource';
 
 export interface JournalEntryView {
   id: number;
-  entryDate?: string;
-  description?: string;
-  source?: JournalSource;
+  entryDate: string;
+  description: string;
+  source: JournalSource;
   reversalOfEntryId?: number;
   reversedByEntryId?: number;
-  lines?: JournalLineView[];
+  lines: JournalLineView[];
 }

@@ -89,13 +89,15 @@ the summary.
   same time and for the same reason: it was a snapshot duplicating `PROGRESS.md` and the roadmap, and a
   second record that drifts is exactly what let the backend queue and the frontend roadmap disagree
   about item 3 for a week. **Regenerate a summary on demand rather than maintaining one.**
-- ⚠️ **The next step is 8a.** The running order is **Q1 → 8a → 8b → R1 → R2 → F5**, and F5 is not next
-  for the same reason it was not next on 2026-08-02: the backend queue was prioritised ahead of it in a
-  design conversation that existed only in chat until then, while three documents still said F5. It is
-  the worked example for the `CLAUDE.md` rule that a design decision gets the same close-out discipline
-  as a build step.
-- ✅ **Q1 is BUILT AND LIVE-VERIFIED — 2026-08-03. Four items: 4+6, 5, 1, 7.** ⚠️ **Not "fully
-  closed":** item 7's regression is open and 8a closes it. **The owner's browser leg passed** on all
+- ⚠️ **The next step is R1.** The running order is now **R1 → R2 → F5**. Q1 and 8a are both done
+  (2026-08-03); **8b dropped to ⚪ optional** and is off the critical path. F5 is still not next for
+  the reason it was not next on 2026-08-02: the backend queue was prioritised ahead of it in a design
+  conversation that existed only in chat until then, while three documents still said F5. It is the
+  worked example for the `CLAUDE.md` rule that a design decision gets the same close-out discipline as
+  a build step.
+- ✅ **Q1 is FULLY CLOSED — 2026-08-03. Four items: 4+6, 5, 1, 7.** It read "built and live-verified,
+  deliberately not closed" for one day, because item 7's regression was outstanding; **8a shut it**.
+  **The owner's browser leg passed** on all
   four checks — the description saved on role 3, cleared to its placeholder, role 1 (OWNER) showed the
   editor disabled with the system-role reason exactly as Name does, and product creation still worked
   (item 7's boxed `serialTracked`, proved from a form rather than from a test). Items 2 and 9 were done and item 3 closed as
@@ -105,28 +107,55 @@ the summary.
   `Required.field`; `PATCH /api/roles/{id}/description`; the duplicate `operationId` fixed, the
   generator taught to **refuse** one, and the frontend workaround deleted; the eight boolean primitives
   boxed.
-- ⚠️ **Backend queue item 8 left the queue and is now steps 8a / 8b, placed after Q1 and BEFORE R1.**
-  That closed the standing open decision *"should item 8 be promoted within Q1?"* — the answer was
-  neither promote nor leave last. **8a** is the `@Mandatory` annotation in `core-api`, one line in the
-  spec generator, and a **bidirectional ArchUnit cross-check** on the compact constructor's bytecode
-  (not optional: without it the annotation is ~289 hand-applied assertions nothing verifies). **8b** is
-  the client regeneration and fixture reconciliation. Never concurrent with a frontend step. **Reasons
-  for the placement:** R1 adds eight tables' worth of new records that should be written with the
-  enforcement in place, and every screen built afterwards multiplies 8b.
-- 🎯 **8a is load-bearing, not housekeeping.** Q1's item 7 boxed the boolean primitives, which improved
-  the refusal message (`"serialTracked" is required and was not supplied.`) and **removed the `required`
-  declaration from the spec**, because `OpenApiSchema` marks a component required when it
-  `isPrimitive()` and a boxed `Boolean` is not. **78 → 75 schemas declaring `required`, measured
-  2026-08-03.** The server still refuses; `tsc` no longer does. **No screen is built inside that
-  window** — F5–F8 are the steps that would send these bodies and they come after 8b. Pinned in both
-  directions by `spec-hygiene.test.ts`.
-- 📌 **Two new backend items were raised by Q1, and neither is a free-floating queue row.**
-  **Q1-a** — spec *schema* names collide exactly as `operationId` did, seven distinct `NameRequest`
-  records resolving to one schema, harmless only because they are identical today — is **folded into
-  8a**, because schema naming is a generator concern and 8a already regenerates the spec; its client
-  fallout lands in 8b. **Q1-b** — `VatExemptionReasonService.create` has no production caller (the
-  seed is Flyway SQL; the route is GET-only) — **stays open, to decide with R1**, which settles the
-  seed-only pattern.
+- ✅ **Step 8a is DONE — 2026-08-03, two commits.** `@Mandatory` says a record component is never
+  absent; `OpenApiSchema` reads it exactly as it reads `isPrimitive()`, and the two together are the
+  `required` list. **339 components across 114 records and 105 files**, measured from the canonical
+  constructors' bytecode. Spec: **75 → 143 schemas declaring `required`**. Backend **1,381** tests,
+  frontend **308**, typecheck/lint/knip/build green.
+  - ⚠️ **The cross-check is ASM + reflection, NOT ArchUnit**, and every document saying otherwise was
+    corrected. `getMethodCallsFromSelf()` carries no argument information — it cannot say *which*
+    component a guard applies to — and it mis-attributes lambda-body calls: **342 reported against
+    340 actually in the constructors**, the difference being two `requireNonNull`s inside
+    `StockLevels`'s `forEach`. ArchUnit supplies class discovery and the failure idiom;
+    `org.springframework.asm` (already on the classpath) does the attribution.
+  - **`@ConditionallyMandatory(reason)` covers the 6 guards that are conditional** —
+    `NewPurchaseInvoiceLine` ×5, `EmailAttachment.content`. The reason is required and lives **at the
+    field**, so a reader finding a guarded component without `@Mandatory` can see why rather than
+    concluding somebody forgot.
+  - ⚠️ **The declared set is a LOWER BOUND.** Only three guard forms are visible; a component made
+    mandatory by an inline `if (x == null) throw` is not (`EmailMessage.subject`/`.body`, neither
+    spec-visible). *"Every `@Mandatory` component is guarded"* must never be read as *"every mandatory
+    component is annotated."*
+  - **The main prize is the response side** — 204 of the 339 components. orval renders a required
+    field **non-optional**, so `tsc` now enforces test-fixture completeness, which is the one thing no
+    frontend test could close honestly (every other candidate source of truth about the wire is
+    hand-authored). Proven by running the real generator against a modified spec, not by reading its
+    output.
+- ✅ **Item 7's regression is CLOSED.** Q1 boxed the boolean primitives, improving the refusal message
+  (`"serialTracked" is required and was not supplied.`) and **removing the `required` declaration**,
+  because a boxed `Boolean` is not `isPrimitive()`: **78 → 75** on 2026-08-03, and **75 → 143** when 8a
+  landed the same day. ⚠️ **Seven of the eight boxed flags, not eight** — `NewVatExemptionReason`
+  has no schema (`/api/vat-exemption-reasons` is GET-only), so it is confirmed annotated and guarded
+  in the backend instead. The seven are asserted **by name** in `spec-hygiene.test.ts`; a count could
+  not have said which one came back.
+- ⚠️ **The 8a/8b boundary moved, and the cause was CI.** The approved split left `main` red:
+  `frontend.yml` triggers on `docs/api/openapi.json`, which 8a exists to change, and that workflow
+  both runs `spec-hygiene.test.ts` and diffs the regenerated client. Deferring the spec is no escape —
+  `OpenApiSpecIT` fails on spec drift. **Established by simulating all of 8b in an isolated
+  `git worktree`: 420 generated files changed, 1 TypeScript error, 1 failing test, 307/308 still
+  passing.** So the regeneration moved into 8a and **8b is now ⚪ optional consumer cleanup**, not a
+  correctness step. ⚠️ **The test-account decision attaches to 8b and should be settled before it
+  starts.**
+- 📌 **Q1-a is closed; Q1-b is the only thing still open from Q1.**
+  **Q1-a** — schema-name collisions — landed in 8a, and **its recorded justification was replaced**:
+  the reason was economics (one regeneration instead of two), and the real reason is correctness.
+  There were **four** collisions rather than the one Q1 recorded (13 records → 4 schemas → 15
+  operations), and `NameRequest`'s seven records **differ in exactly the property 8a publishes** — two
+  guard `name`, five do not — so **8a would have created the defect rather than coinciding with it.**
+  All four were split and `OpenApiSchema.claim` now refuses a collision, **scoped to the spec**; the
+  two service-internal collisions (`Computation`, `Rounding`) are known and deliberately left alone.
+  **Q1-b** — `VatExemptionReasonService.create` has no production caller (the seed is Flyway SQL; the
+  route is GET-only) — **stays open, to decide with R1**, which settles the seed-only pattern.
 - ⚠️ **Rebuilding the app image is now an UNCONDITIONAL precondition of handing a live leg to the
   owner** (`CLAUDE.md`, close-out). Q1's first browser attempt answered
   `404 "No static resource api/roles/3/description"` against an image built **26 hours before the
@@ -144,7 +173,8 @@ the summary.
   on?"* is a support precondition.
 - ⚖️ **Recorded, not acted on: a dedicated non-owner test account** with credentials in a gitignored
   local env file, so live legs do not need the owner. Trade-off: a working credential on disk, under a
-  hard rule that it exists only on a dev stack. **Not needed for 8a** (no browser leg); **8b is the
+  hard rule that it exists only on a dev stack. **It was not needed for 8a** (no browser leg — tests
+  and `tsc` were the whole of its verification); **8b is the
   first step that might want one.** Owner's call.
 - **`U` is a step-ID prefix**: *a session that changes documentation and governance and produces no
   production code.* **U1** is the roadmap unification and documentation reconciliation of 2026-08-02;
@@ -158,8 +188,10 @@ the summary.
   does recording a sales invoice recompute VAT, or store what the source document states? Answer it
   against the running system.** Precedence between product VAT class, island reduced-rate mapping and
   customer override is an open accountant decision, **needed for the island rates either way.**
-- **Measured 2026-08-03 (after Q1):** 1,377 backend tests (0 failures, 1 skipped, `mvn clean verify`
-  exit 0), 308 frontend tests across 31 files, 176 API operations.
+- **Measured 2026-08-03 (after 8a):** 1,381 backend tests (0 failures, 1 skipped, `mvn clean verify`
+  exit 0), 308 frontend tests across 31 files, **176 API operations and 196 schemas, of which 143
+  declare `required`**. 8a added 4 backend tests and **no routes** — it changed what the spec *says*
+  about existing operations, not which operations exist.
 
 - **Setup complete:** git repo at `https://github.com/Novogrowth/NovoCore.git`, working locally at `C:\Novocore` (moved off Google Drive — Drive's virtual filesystem was silently corrupting `node_modules` installs; git/GitHub is the only cross-machine sync mechanism now, never Drive).
 - **Frontend foundation built and verified:** Vite + React 19 + TypeScript, Tailwind v4 (CSS-first config), shadcn/ui (style `base-nova`), React Router + an app shell (sidebar + main + Outlet). **No longer untouched — step 16 is under way on top of it; see the step 16 bullet at the end of this list.**

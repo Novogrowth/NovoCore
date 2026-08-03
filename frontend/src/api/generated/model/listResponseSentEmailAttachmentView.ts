@@ -11,6 +11,6 @@ import type { PageInfo } from './pageInfo';
 import type { SentEmailAttachmentView } from './sentEmailAttachmentView';
 
 export interface ListResponseSentEmailAttachmentView {
-  items?: SentEmailAttachmentView[];
+  items: SentEmailAttachmentView[];
   page?: PageInfo;
 }

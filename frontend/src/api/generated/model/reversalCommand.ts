@@ -9,6 +9,6 @@
  */
 
 export interface ReversalCommand {
-  reversalDate?: string;
-  reason?: string;
+  reversalDate: string;
+  reason: string;
 }

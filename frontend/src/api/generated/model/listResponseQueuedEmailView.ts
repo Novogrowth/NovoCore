@@ -11,6 +11,6 @@ import type { PageInfo } from './pageInfo';
 import type { QueuedEmailView } from './queuedEmailView';
 
 export interface ListResponseQueuedEmailView {
-  items?: QueuedEmailView[];
+  items: QueuedEmailView[];
   page?: PageInfo;
 }

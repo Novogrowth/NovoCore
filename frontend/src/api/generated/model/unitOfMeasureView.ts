@@ -10,8 +10,8 @@
 
 export interface UnitOfMeasureView {
   id: number;
-  code?: string;
-  name?: string;
+  code: string;
+  name: string;
   fractionalQuantityAllowed: boolean;
   mydataCode?: string;
   active: boolean;

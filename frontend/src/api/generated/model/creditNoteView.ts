@@ -15,19 +15,19 @@ import type { SettlementMethod } from './settlementMethod';
 export interface CreditNoteView {
   id: number;
   salesInvoiceId: number;
-  salesInvoiceNumber?: string;
+  salesInvoiceNumber: string;
   customerId: number;
-  customerName?: string;
-  channel?: SalesChannel;
+  customerName: string;
+  channel: SalesChannel;
   settlementMethod?: SettlementMethod;
-  documentNumber?: string;
-  creditNoteDate?: string;
+  documentNumber: string;
+  creditNoteDate: string;
   description?: string;
-  netTotal?: Money;
-  vatTotal?: Money;
-  grossTotal?: Money;
+  netTotal: Money;
+  vatTotal: Money;
+  grossTotal: Money;
   statedTotal?: Money;
-  roundingAmount?: Money;
+  roundingAmount: Money;
   roundingNeededReview: boolean;
   roundingAcceptedBy?: string;
   roundingAcceptedAt?: string;
@@ -35,5 +35,5 @@ export interface CreditNoteView {
   journalEntryId: number;
   reversalOfCreditNoteId?: number;
   reversedByCreditNoteId?: number;
-  lines?: CreditNoteLineView[];
+  lines: CreditNoteLineView[];
 }

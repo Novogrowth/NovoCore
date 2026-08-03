@@ -9,8 +9,8 @@
  */
 
 export interface SettingView {
-  key?: string;
-  value?: string;
+  key: string;
+  value: string;
   secret: boolean;
   description?: string;
   updatedAt?: string;

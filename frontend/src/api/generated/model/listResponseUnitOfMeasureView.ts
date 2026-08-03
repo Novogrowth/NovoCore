@@ -11,6 +11,6 @@ import type { PageInfo } from './pageInfo';
 import type { UnitOfMeasureView } from './unitOfMeasureView';
 
 export interface ListResponseUnitOfMeasureView {
-  items?: UnitOfMeasureView[];
+  items: UnitOfMeasureView[];
   page?: PageInfo;
 }

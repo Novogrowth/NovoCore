@@ -108,7 +108,7 @@ class AssetController {
     @PatchMapping(path = "/api/assets/{id}/name",
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.FIXED_ASSETS, level = AccessLevel.FULL)
-    AssetView rename(@PathVariable long id, @RequestBody NameRequest request) {
+    AssetView rename(@PathVariable long id, @RequestBody AssetNameRequest request) {
         return assets.rename(id, request.name());
     }
 
@@ -165,7 +165,7 @@ class AssetController {
 
     // -------------------------------------------------------------------------------------------
 
-    record NameRequest(String name) {
+    record AssetNameRequest(String name) {
     }
 
     /** A percentage: 10 means 10%. Null means the statutory rate is still unknown. */

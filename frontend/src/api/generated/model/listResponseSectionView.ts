@@ -11,6 +11,6 @@ import type { PageInfo } from './pageInfo';
 import type { SectionView } from './sectionView';
 
 export interface ListResponseSectionView {
-  items?: SectionView[];
+  items: SectionView[];
   page?: PageInfo;
 }

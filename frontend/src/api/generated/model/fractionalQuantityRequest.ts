@@ -9,5 +9,5 @@
  */
 
 export interface FractionalQuantityRequest {
-  allowed?: boolean;
+  allowed: boolean;
 }

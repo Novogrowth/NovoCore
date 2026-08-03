@@ -11,6 +11,6 @@ import type { InventoryLotView } from './inventoryLotView';
 import type { PageInfo } from './pageInfo';
 
 export interface ListResponseInventoryLotView {
-  items?: InventoryLotView[];
+  items: InventoryLotView[];
   page?: PageInfo;
 }

@@ -11,6 +11,6 @@ import type { AccountView } from './accountView';
 import type { PageInfo } from './pageInfo';
 
 export interface ListResponseAccountView {
-  items?: AccountView[];
+  items: AccountView[];
   page?: PageInfo;
 }

@@ -9,6 +9,6 @@
  */
 
 export interface WriteOffReversalRequest {
-  reversalDate?: string;
+  reversalDate: string;
   note?: string;
 }

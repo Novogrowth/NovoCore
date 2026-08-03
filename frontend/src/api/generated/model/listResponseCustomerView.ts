@@ -11,6 +11,6 @@ import type { CustomerView } from './customerView';
 import type { PageInfo } from './pageInfo';
 
 export interface ListResponseCustomerView {
-  items?: CustomerView[];
+  items: CustomerView[];
   page?: PageInfo;
 }

@@ -16,13 +16,13 @@ export interface StockWriteOffView {
   id: number;
   lotId: number;
   productId: number;
-  productSku?: string;
+  productSku: string;
   serializedUnitId?: number;
   serialNumber?: string;
-  quantity?: Quantity;
-  unitCost?: UnitCost;
-  reason?: WriteOffReason;
-  writeOffDate?: string;
+  quantity: Quantity;
+  unitCost: UnitCost;
+  reason: WriteOffReason;
+  writeOffDate: string;
   note?: string;
   journalEntryId?: number;
   postedAmount?: Money;

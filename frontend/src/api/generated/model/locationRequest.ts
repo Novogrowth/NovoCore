@@ -10,5 +10,5 @@
 import type { StockLocation } from './stockLocation';
 
 export interface LocationRequest {
-  location?: StockLocation;
+  location: StockLocation;
 }

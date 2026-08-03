@@ -9,6 +9,6 @@
  */
 
 export interface NewRole {
-  name?: string;
+  name: string;
   description?: string;
 }

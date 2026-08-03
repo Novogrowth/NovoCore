@@ -9,5 +9,5 @@
  */
 
 export interface OrderRequest {
-  idsInOrder?: number[];
+  idsInOrder: number[];
 }

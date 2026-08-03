@@ -14,7 +14,7 @@ export interface NewStockWriteOff {
   lotId: number;
   serializedUnitId?: number;
   quantity?: Quantity;
-  reason?: WriteOffReason;
-  writeOffDate?: string;
+  reason: WriteOffReason;
+  writeOffDate: string;
   note?: string;
 }

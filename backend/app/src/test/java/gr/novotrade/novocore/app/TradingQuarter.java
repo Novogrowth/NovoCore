@@ -1240,7 +1240,7 @@ final class TradingQuarter {
     record ReversalBody(LocalDate reversalDate, String reason) {
     }
 
-    /** Mirrors the {@code NameRequest} several controllers declare. */
+    /** Mirrors the per-entity {@code …NameRequest} records the controllers declare. */
     record NameBody(String name) {
     }
 
@@ -1248,11 +1248,11 @@ final class TradingQuarter {
     record OrderBody(List<Long> idsInOrder) {
     }
 
-    /** Mirrors the {@code VatNumberRequest} on Customer and Supplier. */
+    /** Mirrors {@code CustomerVatNumberRequest} and {@code SupplierVatNumberRequest}. */
     record VatNumberBody(String vatNumber) {
     }
 
-    /** Mirrors the {@code VatStatusRequest} on Customer and Supplier. */
+    /** Mirrors {@code CustomerVatStatusRequest} and {@code SupplierVatStatusRequest}. */
     record VatStatusBody(VatStatus vatStatus, Long vatExemptionReasonId) {
     }
 

@@ -9,8 +9,8 @@
  */
 
 export interface NewUser {
-  username?: string;
-  displayName?: string;
-  rawPassword?: string;
+  username: string;
+  displayName: string;
+  rawPassword: string;
   roleId: number;
 }

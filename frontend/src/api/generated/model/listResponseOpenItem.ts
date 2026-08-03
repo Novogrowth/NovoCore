@@ -11,6 +11,6 @@ import type { OpenItem } from './openItem';
 import type { PageInfo } from './pageInfo';
 
 export interface ListResponseOpenItem {
-  items?: OpenItem[];
+  items: OpenItem[];
   page?: PageInfo;
 }

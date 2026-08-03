@@ -11,6 +11,6 @@ import type { JournalEntrySummaryView } from './journalEntrySummaryView';
 import type { PageInfo } from './pageInfo';
 
 export interface ListResponseJournalEntrySummaryView {
-  items?: JournalEntrySummaryView[];
+  items: JournalEntrySummaryView[];
   page?: PageInfo;
 }

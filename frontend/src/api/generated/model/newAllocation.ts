@@ -11,6 +11,6 @@ import type { Money } from './money';
 import type { OpenItemRef } from './openItemRef';
 
 export interface NewAllocation {
-  target?: OpenItemRef;
-  amount?: Money;
+  target: OpenItemRef;
+  amount: Money;
 }

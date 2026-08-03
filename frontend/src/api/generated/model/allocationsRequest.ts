@@ -10,5 +10,5 @@
 import type { NewAllocation } from './newAllocation';
 
 export interface AllocationsRequest {
-  allocations?: NewAllocation[];
+  allocations: NewAllocation[];
 }

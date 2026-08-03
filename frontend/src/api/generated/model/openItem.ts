@@ -11,12 +11,12 @@ import type { Money } from './money';
 import type { OpenItemRef } from './openItemRef';
 
 export interface OpenItem {
-  ref?: OpenItemRef;
-  documentNumber?: string;
-  documentDate?: string;
+  ref: OpenItemRef;
+  documentNumber: string;
+  documentDate: string;
   partyId: number;
-  partyName?: string;
-  grossAmount?: Money;
-  allocatedAmount?: Money;
-  openAmount?: Money;
+  partyName: string;
+  grossAmount: Money;
+  allocatedAmount: Money;
+  openAmount: Money;
 }

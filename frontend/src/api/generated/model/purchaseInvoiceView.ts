@@ -13,16 +13,16 @@ import type { PurchaseInvoiceLineView } from './purchaseInvoiceLineView';
 export interface PurchaseInvoiceView {
   id: number;
   supplierId: number;
-  supplierName?: string;
-  supplierInvoiceNumber?: string;
-  invoiceDate?: string;
+  supplierName: string;
+  supplierInvoiceNumber: string;
+  invoiceDate: string;
   description?: string;
-  netTotal?: Money;
-  vatTotal?: Money;
-  grossTotal?: Money;
+  netTotal: Money;
+  vatTotal: Money;
+  grossTotal: Money;
   variance?: Money;
   journalEntryId: number;
   reversalOfInvoiceId?: number;
   reversedByInvoiceId?: number;
-  lines?: PurchaseInvoiceLineView[];
+  lines: PurchaseInvoiceLineView[];
 }

@@ -11,6 +11,6 @@ import type { PageInfo } from './pageInfo';
 import type { SalesInvoiceView } from './salesInvoiceView';
 
 export interface ListResponseSalesInvoiceView {
-  items?: SalesInvoiceView[];
+  items: SalesInvoiceView[];
   page?: PageInfo;
 }

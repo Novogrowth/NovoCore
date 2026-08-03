@@ -11,13 +11,13 @@ import type { CreditNotePreviewLine } from './creditNotePreviewLine';
 import type { Money } from './money';
 
 export interface CreditNotePreview {
-  lines?: CreditNotePreviewLine[];
-  net?: Money;
-  vat?: Money;
-  gross?: Money;
+  lines: CreditNotePreviewLine[];
+  net: Money;
+  vat: Money;
+  gross: Money;
   statedTotal?: Money;
-  roundingDifference?: Money;
-  roundingThreshold?: Money;
+  roundingDifference: Money;
+  roundingThreshold: Money;
   roundingNeedsAcceptance: boolean;
-  payable?: Money;
+  payable: Money;
 }

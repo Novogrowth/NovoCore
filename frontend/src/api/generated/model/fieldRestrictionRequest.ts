@@ -9,5 +9,5 @@
  */
 
 export interface FieldRestrictionRequest {
-  restricted?: boolean;
+  restricted: boolean;
 }

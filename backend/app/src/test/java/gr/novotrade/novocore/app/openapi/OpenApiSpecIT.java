@@ -279,14 +279,11 @@ class OpenApiSpecIT {
      * to an unknown type — {@code OpenApiSchema.schemaFor} throws rather than guessing — and the
      * message names the routes, because "there is a duplicate somewhere" is not actionable.
      *
-     * <p>⚠️ <strong>What this deliberately does NOT check, and it is a real gap:</strong> component
-     * <em>schema</em> names collide the same way. {@code OpenApiSchema} registers a record under its
-     * simple name, and Q1 found <strong>seven</strong> distinct {@code NameRequest} records across
-     * seven controllers resolving to one schema. They are structurally identical today, so the
-     * document is accidentally correct; the day one of them gains a field, six routes are described
-     * by the wrong shape with no warning. Closing that means renaming records or qualifying schema
-     * names across the surface, which regenerates the whole client — so it is recorded as its own
-     * backend queue item rather than bolted on here.
+     * <p>✅ <strong>Component <em>schema</em> names are guarded too, since 8a (2026-08-03).</strong>
+     * This method's javadoc used to record that gap as a queue item; it is closed, and the check
+     * lives in {@code OpenApiSchema.claim} because that is where a name is claimed. See it for what
+     * the measurement found — four collisions rather than the one Q1 recorded, and why 8a would have
+     * <em>created</em> the defect rather than merely coinciding with it.
      */
     private static void refuseDuplicateOperationIds(Map<String, List<String>> routesByOperationId) {
         List<String> collisions = routesByOperationId.entrySet().stream()

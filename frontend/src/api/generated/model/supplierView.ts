@@ -11,11 +11,11 @@ import type { VatStatus } from './vatStatus';
 
 export interface SupplierView {
   id: number;
-  name?: string;
+  name: string;
   email?: string;
   phone?: string;
   vatNumber?: string;
-  vatStatus?: VatStatus;
+  vatStatus: VatStatus;
   vatExemptionReasonId?: number;
   active: boolean;
 }

@@ -12,11 +12,11 @@ import type { Money } from './money';
 export interface BankTransferView {
   id: number;
   fromAccountId: number;
-  fromAccountName?: string;
+  fromAccountName: string;
   toAccountId: number;
-  toAccountName?: string;
-  transferDate?: string;
-  amount?: Money;
+  toAccountName: string;
+  transferDate: string;
+  amount: Money;
   reference?: string;
   description?: string;
   journalEntryId: number;

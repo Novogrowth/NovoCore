@@ -14,13 +14,13 @@ import type { SettlementMethod } from './settlementMethod';
 
 export interface NewSalesInvoice {
   customerId: number;
-  channel?: SalesChannel;
-  settlementMethod?: SettlementMethod;
+  channel: SalesChannel;
+  settlementMethod: SettlementMethod;
   documentNumber?: string;
-  invoiceDate?: string;
+  invoiceDate: string;
   description?: string;
   statedTotal?: Money;
   roundingAcceptedBy?: string;
   roundingNote?: string;
-  lines?: NewSalesInvoiceLine[];
+  lines: NewSalesInvoiceLine[];
 }

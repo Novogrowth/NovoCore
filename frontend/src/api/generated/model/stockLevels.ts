@@ -11,5 +11,5 @@ import type { StockLevelsByLocation } from './stockLevelsByLocation';
 
 export interface StockLevels {
   productId: number;
-  byLocation?: StockLevelsByLocation;
+  byLocation: StockLevelsByLocation;
 }

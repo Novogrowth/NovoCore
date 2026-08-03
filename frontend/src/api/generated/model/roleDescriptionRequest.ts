@@ -9,5 +9,5 @@
  */
 
 export interface RoleDescriptionRequest {
-  description?: string;
+  description: string;
 }

@@ -11,5 +11,5 @@ import type { Quantity } from './quantity';
 
 export interface NewBundleComponent {
   componentProductId: number;
-  quantity?: Quantity;
+  quantity: Quantity;
 }

@@ -16,11 +16,11 @@ export interface FreightAllocationLineView {
   lineNumber: number;
   lotId: number;
   productId: number;
-  productSku?: string;
-  quantityReceived?: Quantity;
-  quantityRemainingAtAllocation?: Quantity;
-  receivedUnitCost?: UnitCost;
-  capitalised?: Money;
-  variance?: Money;
-  unitCostIncrease?: UnitCost;
+  productSku: string;
+  quantityReceived: Quantity;
+  quantityRemainingAtAllocation: Quantity;
+  receivedUnitCost: UnitCost;
+  capitalised: Money;
+  variance: Money;
+  unitCostIncrease: UnitCost;
 }

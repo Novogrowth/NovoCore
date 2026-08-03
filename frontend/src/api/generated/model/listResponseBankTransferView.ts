@@ -11,6 +11,6 @@ import type { BankTransferView } from './bankTransferView';
 import type { PageInfo } from './pageInfo';
 
 export interface ListResponseBankTransferView {
-  items?: BankTransferView[];
+  items: BankTransferView[];
   page?: PageInfo;
 }

@@ -11,15 +11,15 @@ import type { Money } from './money';
 import type { ProductType } from './productType';
 
 export interface NewProduct {
-  sku?: string;
+  sku: string;
   ean?: string;
-  name?: string;
+  name: string;
   brand?: string;
-  type?: ProductType;
+  type: ProductType;
   unitOfMeasureId: number;
   defaultVatClassId: number;
   sellingPrice?: Money;
   supplierId?: number;
   supplierSku?: string;
-  serialTracked?: boolean;
+  serialTracked: boolean;
 }

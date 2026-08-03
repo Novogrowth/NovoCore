@@ -11,6 +11,6 @@ import type { PageInfo } from './pageInfo';
 import type { StockConsumptionView } from './stockConsumptionView';
 
 export interface ListResponseStockConsumptionView {
-  items?: StockConsumptionView[];
+  items: StockConsumptionView[];
   page?: PageInfo;
 }

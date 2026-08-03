@@ -27,10 +27,9 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  ContactDetailsRequest,
   ListResponseSupplierView,
-  NameRequest,
   NewSupplier,
+  SupplierContactDetailsRequest,
   SupplierControllerByVatNumber4xx,
   SupplierControllerChangeContactDetails4xx,
   SupplierControllerChangeVatNumber4xx,
@@ -44,9 +43,10 @@ import type {
   SupplierControllerSupplier4xx,
   SupplierControllerSuppliers4xx,
   SupplierControllerSuppliersParams,
-  SupplierView,
-  VatNumberRequest,
-  VatStatusRequest
+  SupplierNameRequest,
+  SupplierVatNumberRequest,
+  SupplierVatStatusRequest,
+  SupplierView
 } from '../../model';
 
 import { apiMutator } from '../../../http';
@@ -475,7 +475,7 @@ export function useSupplierControllerSupplier<TData = Awaited<ReturnType<typeof 
 
 export const supplierControllerChangeContactDetails = (
     id: number,
-    contactDetailsRequest: ContactDetailsRequest,
+    supplierContactDetailsRequest: SupplierContactDetailsRequest,
  signal?: AbortSignal
 ) => {
 
@@ -483,7 +483,7 @@ export const supplierControllerChangeContactDetails = (
       return apiMutator<SupplierView>(
       {url: `/api/suppliers/${id}/contact-details`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: contactDetailsRequest, signal
+      data: supplierContactDetailsRequest, signal
     },
       );
     }
@@ -492,8 +492,8 @@ export const supplierControllerChangeContactDetails = (
 
 
 export const getSupplierControllerChangeContactDetailsMutationOptions = <TError = SupplierControllerChangeContactDetails4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError,{id: number;data: ContactDetailsRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError,{id: number;data: ContactDetailsRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError,{id: number;data: SupplierContactDetailsRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError,{id: number;data: SupplierContactDetailsRequest}, TContext> => {
 
 const mutationKey = ['supplierControllerChangeContactDetails'];
 const {mutation: mutationOptions} = options ?
@@ -505,7 +505,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, {id: number;data: ContactDetailsRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, {id: number;data: SupplierContactDetailsRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  supplierControllerChangeContactDetails(id,data,)
@@ -519,15 +519,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type SupplierControllerChangeContactDetailsMutationResult = NonNullable<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>>
-    export type SupplierControllerChangeContactDetailsMutationBody = ContactDetailsRequest
+    export type SupplierControllerChangeContactDetailsMutationBody = SupplierContactDetailsRequest
     export type SupplierControllerChangeContactDetailsMutationError = SupplierControllerChangeContactDetails4xx
 
     export const useSupplierControllerChangeContactDetails = <TError = SupplierControllerChangeContactDetails4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError,{id: number;data: ContactDetailsRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>, TError,{id: number;data: SupplierContactDetailsRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof supplierControllerChangeContactDetails>>,
         TError,
-        {id: number;data: ContactDetailsRequest},
+        {id: number;data: SupplierContactDetailsRequest},
         TContext
       > => {
       return useMutation(getSupplierControllerChangeContactDetailsMutationOptions(options), queryClient);
@@ -590,7 +590,7 @@ const {mutation: mutationOptions} = options ?
     }
     export const supplierControllerRename = (
     id: number,
-    nameRequest: NameRequest,
+    supplierNameRequest: SupplierNameRequest,
  signal?: AbortSignal
 ) => {
 
@@ -598,7 +598,7 @@ const {mutation: mutationOptions} = options ?
       return apiMutator<SupplierView>(
       {url: `/api/suppliers/${id}/name`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: nameRequest, signal
+      data: supplierNameRequest, signal
     },
       );
     }
@@ -607,8 +607,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getSupplierControllerRenameMutationOptions = <TError = SupplierControllerRename4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof supplierControllerRename>>, TError,{id: number;data: NameRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerRename>>, TError,{id: number;data: SupplierNameRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof supplierControllerRename>>, TError,{id: number;data: SupplierNameRequest}, TContext> => {
 
 const mutationKey = ['supplierControllerRename'];
 const {mutation: mutationOptions} = options ?
@@ -620,7 +620,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof supplierControllerRename>>, {id: number;data: NameRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof supplierControllerRename>>, {id: number;data: SupplierNameRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  supplierControllerRename(id,data,)
@@ -634,15 +634,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type SupplierControllerRenameMutationResult = NonNullable<Awaited<ReturnType<typeof supplierControllerRename>>>
-    export type SupplierControllerRenameMutationBody = NameRequest
+    export type SupplierControllerRenameMutationBody = SupplierNameRequest
     export type SupplierControllerRenameMutationError = SupplierControllerRename4xx
 
     export const useSupplierControllerRename = <TError = SupplierControllerRename4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerRename>>, TError,{id: number;data: SupplierNameRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof supplierControllerRename>>,
         TError,
-        {id: number;data: NameRequest},
+        {id: number;data: SupplierNameRequest},
         TContext
       > => {
       return useMutation(getSupplierControllerRenameMutationOptions(options), queryClient);
@@ -705,7 +705,7 @@ const {mutation: mutationOptions} = options ?
     }
     export const supplierControllerChangeVatNumber = (
     id: number,
-    vatNumberRequest: VatNumberRequest,
+    supplierVatNumberRequest: SupplierVatNumberRequest,
  signal?: AbortSignal
 ) => {
 
@@ -713,7 +713,7 @@ const {mutation: mutationOptions} = options ?
       return apiMutator<SupplierView>(
       {url: `/api/suppliers/${id}/vat-number`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: vatNumberRequest, signal
+      data: supplierVatNumberRequest, signal
     },
       );
     }
@@ -722,8 +722,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getSupplierControllerChangeVatNumberMutationOptions = <TError = SupplierControllerChangeVatNumber4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError,{id: number;data: VatNumberRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError,{id: number;data: VatNumberRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError,{id: number;data: SupplierVatNumberRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError,{id: number;data: SupplierVatNumberRequest}, TContext> => {
 
 const mutationKey = ['supplierControllerChangeVatNumber'];
 const {mutation: mutationOptions} = options ?
@@ -735,7 +735,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, {id: number;data: VatNumberRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, {id: number;data: SupplierVatNumberRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  supplierControllerChangeVatNumber(id,data,)
@@ -749,22 +749,22 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type SupplierControllerChangeVatNumberMutationResult = NonNullable<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>>
-    export type SupplierControllerChangeVatNumberMutationBody = VatNumberRequest
+    export type SupplierControllerChangeVatNumberMutationBody = SupplierVatNumberRequest
     export type SupplierControllerChangeVatNumberMutationError = SupplierControllerChangeVatNumber4xx
 
     export const useSupplierControllerChangeVatNumber = <TError = SupplierControllerChangeVatNumber4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError,{id: number;data: VatNumberRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>, TError,{id: number;data: SupplierVatNumberRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof supplierControllerChangeVatNumber>>,
         TError,
-        {id: number;data: VatNumberRequest},
+        {id: number;data: SupplierVatNumberRequest},
         TContext
       > => {
       return useMutation(getSupplierControllerChangeVatNumberMutationOptions(options), queryClient);
     }
     export const supplierControllerChangeVatStatus = (
     id: number,
-    vatStatusRequest: VatStatusRequest,
+    supplierVatStatusRequest: SupplierVatStatusRequest,
  signal?: AbortSignal
 ) => {
 
@@ -772,7 +772,7 @@ const {mutation: mutationOptions} = options ?
       return apiMutator<SupplierView>(
       {url: `/api/suppliers/${id}/vat-status`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: vatStatusRequest, signal
+      data: supplierVatStatusRequest, signal
     },
       );
     }
@@ -781,8 +781,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getSupplierControllerChangeVatStatusMutationOptions = <TError = SupplierControllerChangeVatStatus4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError,{id: number;data: VatStatusRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError,{id: number;data: VatStatusRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError,{id: number;data: SupplierVatStatusRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError,{id: number;data: SupplierVatStatusRequest}, TContext> => {
 
 const mutationKey = ['supplierControllerChangeVatStatus'];
 const {mutation: mutationOptions} = options ?
@@ -794,7 +794,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, {id: number;data: VatStatusRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, {id: number;data: SupplierVatStatusRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  supplierControllerChangeVatStatus(id,data,)
@@ -808,15 +808,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type SupplierControllerChangeVatStatusMutationResult = NonNullable<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>>
-    export type SupplierControllerChangeVatStatusMutationBody = VatStatusRequest
+    export type SupplierControllerChangeVatStatusMutationBody = SupplierVatStatusRequest
     export type SupplierControllerChangeVatStatusMutationError = SupplierControllerChangeVatStatus4xx
 
     export const useSupplierControllerChangeVatStatus = <TError = SupplierControllerChangeVatStatus4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError,{id: number;data: VatStatusRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>, TError,{id: number;data: SupplierVatStatusRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof supplierControllerChangeVatStatus>>,
         TError,
-        {id: number;data: VatStatusRequest},
+        {id: number;data: SupplierVatStatusRequest},
         TContext
       > => {
       return useMutation(getSupplierControllerChangeVatStatusMutationOptions(options), queryClient);

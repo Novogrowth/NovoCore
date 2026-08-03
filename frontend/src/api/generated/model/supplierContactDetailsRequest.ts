@@ -7,9 +7,8 @@
  * Every monetary amount, unit cost, quantity and rate is a STRING, never a JSON number. Sending a number where one of these is expected is refused.
  * OpenAPI spec version: 0.1.0
  */
-import type { VatStatus } from './vatStatus';
 
-export interface VatStatusRequest {
-  vatStatus?: VatStatus;
-  vatExemptionReasonId?: number;
+export interface SupplierContactDetailsRequest {
+  email?: string;
+  phone?: string;
 }

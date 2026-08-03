@@ -12,10 +12,10 @@ import type { Money } from './money';
 export interface CustomerCreditView {
   id: number;
   customerId: number;
-  customerName?: string;
+  customerName: string;
   settlementId: number;
-  creditDate?: string;
-  amount?: Money;
-  openAmount?: Money;
+  creditDate: string;
+  amount: Money;
+  openAmount: Money;
   description?: string;
 }

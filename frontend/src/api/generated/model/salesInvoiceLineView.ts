@@ -17,20 +17,20 @@ import type { VatClassSource } from './vatClassSource';
 export interface SalesInvoiceLineView {
   id: number;
   lineNumber: number;
-  lineType?: SalesLineType;
+  lineType: SalesLineType;
   productId?: number;
   productSku?: string;
   chargeTypeId?: number;
   chargeTypeName?: string;
-  quantity?: Quantity;
-  unitPrice?: UnitCost;
-  netAmount?: Money;
-  vatAmount?: Money;
+  quantity: Quantity;
+  unitPrice: UnitCost;
+  netAmount: Money;
+  vatAmount: Money;
   vatClassId?: number;
   vatClassSource?: VatClassSource;
   vatExemptionReasonId?: number;
   stockConsumptionId?: number;
-  soldSerialNumbers?: string[];
+  soldSerialNumbers: string[];
   description?: string;
-  components?: SalesInvoiceLineComponentView[];
+  components: SalesInvoiceLineComponentView[];
 }

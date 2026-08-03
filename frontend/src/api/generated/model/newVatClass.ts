@@ -10,7 +10,7 @@
 import type { Rate } from './rate';
 
 export interface NewVatClass {
-  code?: string;
-  description?: string;
-  ratePercent?: Rate;
+  code: string;
+  description: string;
+  ratePercent: Rate;
 }

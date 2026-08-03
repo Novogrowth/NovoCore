@@ -11,7 +11,7 @@
 export interface VatExemptionReasonView {
   id: number;
   code: number;
-  description?: string;
+  description: string;
   mydataCode?: string;
   inputVatDeductible: boolean;
   active: boolean;

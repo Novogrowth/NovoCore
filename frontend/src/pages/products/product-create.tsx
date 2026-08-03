@@ -69,7 +69,7 @@ export function ProductCreate() {
           ...(supplierId !== undefined ? { supplierId } : {}),
           ...(supplierSku.trim() ? { supplierSku: supplierSku.trim() } : {}),
           /*
-           * ⚠️ Required in fact, and the contract does NOT currently say so. Load-bearing.
+           * ⚠️ Required, and since 8a the contract says so — omitting it is a compile error again.
            *
            * Omitting `serialTracked` broke product creation for every user: it was a primitive
            * `boolean` on a Java record, Jackson passed an **absent** creator property to the
@@ -78,14 +78,15 @@ export function ProductCreate() {
            * ran. The spec called the field optional, so this form was written correctly against a
            * contract that was wrong.
            *
-           * **This comment said "omitting it is a compile error" and that stopped being true on
-           * 2026-08-03.** Between 2026-08-01 and then it was: the generator marks *primitive*
-           * components required. Backend queue item 7 then boxed the field to `Boolean` so the
-           * refusal names it — `"serialTracked" is required and was not supplied.` — and a boxed
-           * component is not primitive, so the declaration went away with the bad message.
-           * `tsc` no longer refuses a caller that omits this. **Step 8a's `@Mandatory` annotation
-           * restores the declaration**; see `spec-hygiene.test.ts`, which pins the gap in both
-           * directions.
+           * **The compile-time catch has been true, then false, then true again, and the middle
+           * stretch is worth remembering.** From 2026-08-01 the generator marked *primitive*
+           * components required, so `tsc` refused a caller that omitted this. Q1's item 7 then boxed
+           * the field to `Boolean` so the refusal would name it — `"serialTracked" is required and
+           * was not supplied.` — and **a boxed component is not primitive, so the declaration went
+           * away with the bad message**: two days in which the server refused an omission and
+           * nothing on this side did. 8a's `@Mandatory` restores it by declaring what reflection
+           * cannot infer. `spec-hygiene.test.ts` now pins the seven boxed flags **by name**, because
+           * a count could not have said which one came back.
            *
            * `false` is not a default invented here: this form has no serial-tracking control, so
            * false is the only value it can honestly claim. A product is made serial-tracked

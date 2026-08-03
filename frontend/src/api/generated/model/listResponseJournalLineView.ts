@@ -11,6 +11,6 @@ import type { JournalLineView } from './journalLineView';
 import type { PageInfo } from './pageInfo';
 
 export interface ListResponseJournalLineView {
-  items?: JournalLineView[];
+  items: JournalLineView[];
   page?: PageInfo;
 }

@@ -10,6 +10,6 @@
 import type { OpenItemType } from './openItemType';
 
 export interface OpenItemRef {
-  type?: OpenItemType;
+  type: OpenItemType;
   id: number;
 }

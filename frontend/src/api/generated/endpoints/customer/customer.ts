@@ -27,7 +27,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  ContactDetailsRequest,
+  CustomerContactDetailsRequest,
   CustomerControllerByVatNumber4xx,
   CustomerControllerChangeContactDetails4xx,
   CustomerControllerChangeVatClassOverride4xx,
@@ -42,13 +42,13 @@ import type {
   CustomerControllerMatchSuggestionsParams,
   CustomerControllerReactivate4xx,
   CustomerControllerRename4xx,
+  CustomerNameRequest,
+  CustomerVatNumberRequest,
+  CustomerVatStatusRequest,
   CustomerView,
   ListResponseCustomerView,
-  NameRequest,
   NewCustomer,
-  VatClassOverrideRequest,
-  VatNumberRequest,
-  VatStatusRequest
+  VatClassOverrideRequest
 } from '../../model';
 
 import { apiMutator } from '../../../http';
@@ -477,7 +477,7 @@ export function useCustomerControllerCustomer<TData = Awaited<ReturnType<typeof 
 
 export const customerControllerChangeContactDetails = (
     id: number,
-    contactDetailsRequest: ContactDetailsRequest,
+    customerContactDetailsRequest: CustomerContactDetailsRequest,
  signal?: AbortSignal
 ) => {
 
@@ -485,7 +485,7 @@ export const customerControllerChangeContactDetails = (
       return apiMutator<CustomerView>(
       {url: `/api/customers/${id}/contact-details`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: contactDetailsRequest, signal
+      data: customerContactDetailsRequest, signal
     },
       );
     }
@@ -494,8 +494,8 @@ export const customerControllerChangeContactDetails = (
 
 
 export const getCustomerControllerChangeContactDetailsMutationOptions = <TError = CustomerControllerChangeContactDetails4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customerControllerChangeContactDetails>>, TError,{id: number;data: ContactDetailsRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof customerControllerChangeContactDetails>>, TError,{id: number;data: ContactDetailsRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customerControllerChangeContactDetails>>, TError,{id: number;data: CustomerContactDetailsRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof customerControllerChangeContactDetails>>, TError,{id: number;data: CustomerContactDetailsRequest}, TContext> => {
 
 const mutationKey = ['customerControllerChangeContactDetails'];
 const {mutation: mutationOptions} = options ?
@@ -507,7 +507,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof customerControllerChangeContactDetails>>, {id: number;data: ContactDetailsRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof customerControllerChangeContactDetails>>, {id: number;data: CustomerContactDetailsRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  customerControllerChangeContactDetails(id,data,)
@@ -521,15 +521,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CustomerControllerChangeContactDetailsMutationResult = NonNullable<Awaited<ReturnType<typeof customerControllerChangeContactDetails>>>
-    export type CustomerControllerChangeContactDetailsMutationBody = ContactDetailsRequest
+    export type CustomerControllerChangeContactDetailsMutationBody = CustomerContactDetailsRequest
     export type CustomerControllerChangeContactDetailsMutationError = CustomerControllerChangeContactDetails4xx
 
     export const useCustomerControllerChangeContactDetails = <TError = CustomerControllerChangeContactDetails4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customerControllerChangeContactDetails>>, TError,{id: number;data: ContactDetailsRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customerControllerChangeContactDetails>>, TError,{id: number;data: CustomerContactDetailsRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof customerControllerChangeContactDetails>>,
         TError,
-        {id: number;data: ContactDetailsRequest},
+        {id: number;data: CustomerContactDetailsRequest},
         TContext
       > => {
       return useMutation(getCustomerControllerChangeContactDetailsMutationOptions(options), queryClient);
@@ -592,7 +592,7 @@ const {mutation: mutationOptions} = options ?
     }
     export const customerControllerRename = (
     id: number,
-    nameRequest: NameRequest,
+    customerNameRequest: CustomerNameRequest,
  signal?: AbortSignal
 ) => {
 
@@ -600,7 +600,7 @@ const {mutation: mutationOptions} = options ?
       return apiMutator<CustomerView>(
       {url: `/api/customers/${id}/name`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: nameRequest, signal
+      data: customerNameRequest, signal
     },
       );
     }
@@ -609,8 +609,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCustomerControllerRenameMutationOptions = <TError = CustomerControllerRename4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customerControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof customerControllerRename>>, TError,{id: number;data: NameRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customerControllerRename>>, TError,{id: number;data: CustomerNameRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof customerControllerRename>>, TError,{id: number;data: CustomerNameRequest}, TContext> => {
 
 const mutationKey = ['customerControllerRename'];
 const {mutation: mutationOptions} = options ?
@@ -622,7 +622,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof customerControllerRename>>, {id: number;data: NameRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof customerControllerRename>>, {id: number;data: CustomerNameRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  customerControllerRename(id,data,)
@@ -636,15 +636,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CustomerControllerRenameMutationResult = NonNullable<Awaited<ReturnType<typeof customerControllerRename>>>
-    export type CustomerControllerRenameMutationBody = NameRequest
+    export type CustomerControllerRenameMutationBody = CustomerNameRequest
     export type CustomerControllerRenameMutationError = CustomerControllerRename4xx
 
     export const useCustomerControllerRename = <TError = CustomerControllerRename4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customerControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customerControllerRename>>, TError,{id: number;data: CustomerNameRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof customerControllerRename>>,
         TError,
-        {id: number;data: NameRequest},
+        {id: number;data: CustomerNameRequest},
         TContext
       > => {
       return useMutation(getCustomerControllerRenameMutationOptions(options), queryClient);
@@ -766,7 +766,7 @@ const {mutation: mutationOptions} = options ?
     }
     export const customerControllerChangeVatNumber = (
     id: number,
-    vatNumberRequest: VatNumberRequest,
+    customerVatNumberRequest: CustomerVatNumberRequest,
  signal?: AbortSignal
 ) => {
 
@@ -774,7 +774,7 @@ const {mutation: mutationOptions} = options ?
       return apiMutator<CustomerView>(
       {url: `/api/customers/${id}/vat-number`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: vatNumberRequest, signal
+      data: customerVatNumberRequest, signal
     },
       );
     }
@@ -783,8 +783,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCustomerControllerChangeVatNumberMutationOptions = <TError = CustomerControllerChangeVatNumber4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customerControllerChangeVatNumber>>, TError,{id: number;data: VatNumberRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof customerControllerChangeVatNumber>>, TError,{id: number;data: VatNumberRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customerControllerChangeVatNumber>>, TError,{id: number;data: CustomerVatNumberRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof customerControllerChangeVatNumber>>, TError,{id: number;data: CustomerVatNumberRequest}, TContext> => {
 
 const mutationKey = ['customerControllerChangeVatNumber'];
 const {mutation: mutationOptions} = options ?
@@ -796,7 +796,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof customerControllerChangeVatNumber>>, {id: number;data: VatNumberRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof customerControllerChangeVatNumber>>, {id: number;data: CustomerVatNumberRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  customerControllerChangeVatNumber(id,data,)
@@ -810,22 +810,22 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CustomerControllerChangeVatNumberMutationResult = NonNullable<Awaited<ReturnType<typeof customerControllerChangeVatNumber>>>
-    export type CustomerControllerChangeVatNumberMutationBody = VatNumberRequest
+    export type CustomerControllerChangeVatNumberMutationBody = CustomerVatNumberRequest
     export type CustomerControllerChangeVatNumberMutationError = CustomerControllerChangeVatNumber4xx
 
     export const useCustomerControllerChangeVatNumber = <TError = CustomerControllerChangeVatNumber4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customerControllerChangeVatNumber>>, TError,{id: number;data: VatNumberRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customerControllerChangeVatNumber>>, TError,{id: number;data: CustomerVatNumberRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof customerControllerChangeVatNumber>>,
         TError,
-        {id: number;data: VatNumberRequest},
+        {id: number;data: CustomerVatNumberRequest},
         TContext
       > => {
       return useMutation(getCustomerControllerChangeVatNumberMutationOptions(options), queryClient);
     }
     export const customerControllerChangeVatStatus = (
     id: number,
-    vatStatusRequest: VatStatusRequest,
+    customerVatStatusRequest: CustomerVatStatusRequest,
  signal?: AbortSignal
 ) => {
 
@@ -833,7 +833,7 @@ const {mutation: mutationOptions} = options ?
       return apiMutator<CustomerView>(
       {url: `/api/customers/${id}/vat-status`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: vatStatusRequest, signal
+      data: customerVatStatusRequest, signal
     },
       );
     }
@@ -842,8 +842,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCustomerControllerChangeVatStatusMutationOptions = <TError = CustomerControllerChangeVatStatus4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customerControllerChangeVatStatus>>, TError,{id: number;data: VatStatusRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof customerControllerChangeVatStatus>>, TError,{id: number;data: VatStatusRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customerControllerChangeVatStatus>>, TError,{id: number;data: CustomerVatStatusRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof customerControllerChangeVatStatus>>, TError,{id: number;data: CustomerVatStatusRequest}, TContext> => {
 
 const mutationKey = ['customerControllerChangeVatStatus'];
 const {mutation: mutationOptions} = options ?
@@ -855,7 +855,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof customerControllerChangeVatStatus>>, {id: number;data: VatStatusRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof customerControllerChangeVatStatus>>, {id: number;data: CustomerVatStatusRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  customerControllerChangeVatStatus(id,data,)
@@ -869,15 +869,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CustomerControllerChangeVatStatusMutationResult = NonNullable<Awaited<ReturnType<typeof customerControllerChangeVatStatus>>>
-    export type CustomerControllerChangeVatStatusMutationBody = VatStatusRequest
+    export type CustomerControllerChangeVatStatusMutationBody = CustomerVatStatusRequest
     export type CustomerControllerChangeVatStatusMutationError = CustomerControllerChangeVatStatus4xx
 
     export const useCustomerControllerChangeVatStatus = <TError = CustomerControllerChangeVatStatus4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customerControllerChangeVatStatus>>, TError,{id: number;data: VatStatusRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customerControllerChangeVatStatus>>, TError,{id: number;data: CustomerVatStatusRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof customerControllerChangeVatStatus>>,
         TError,
-        {id: number;data: VatStatusRequest},
+        {id: number;data: CustomerVatStatusRequest},
         TContext
       > => {
       return useMutation(getCustomerControllerChangeVatStatusMutationOptions(options), queryClient);

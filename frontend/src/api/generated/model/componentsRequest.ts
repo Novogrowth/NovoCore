@@ -10,5 +10,5 @@
 import type { NewBundleComponent } from './newBundleComponent';
 
 export interface ComponentsRequest {
-  components?: NewBundleComponent[];
+  components: NewBundleComponent[];
 }

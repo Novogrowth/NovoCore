@@ -9,5 +9,5 @@
  */
 
 export interface RoleRequest {
-  roleId?: number;
+  roleId: number;
 }

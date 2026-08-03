@@ -30,7 +30,6 @@ import type {
   FractionalQuantityRequest,
   ListResponseUnitOfMeasureView,
   MydataCodeRequest,
-  NameRequest,
   NewUnitOfMeasure,
   UnitOfMeasureControllerChangeFractionalQuantityAllowed4xx,
   UnitOfMeasureControllerCreate4xx,
@@ -41,6 +40,7 @@ import type {
   UnitOfMeasureControllerUnitsOfMeasure4xx,
   UnitOfMeasureControllerUnitsOfMeasureParams,
   UnitOfMeasureControllerWithoutMydataCode4xx,
+  UnitOfMeasureNameRequest,
   UnitOfMeasureView
 } from '../../model';
 
@@ -471,7 +471,7 @@ const {mutation: mutationOptions} = options ?
     }
     export const unitOfMeasureControllerRename = (
     id: number,
-    nameRequest: NameRequest,
+    unitOfMeasureNameRequest: UnitOfMeasureNameRequest,
  signal?: AbortSignal
 ) => {
 
@@ -479,7 +479,7 @@ const {mutation: mutationOptions} = options ?
       return apiMutator<UnitOfMeasureView>(
       {url: `/api/units-of-measure/${id}/name`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: nameRequest, signal
+      data: unitOfMeasureNameRequest, signal
     },
       );
     }
@@ -488,8 +488,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getUnitOfMeasureControllerRenameMutationOptions = <TError = UnitOfMeasureControllerRename4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError,{id: number;data: NameRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError,{id: number;data: UnitOfMeasureNameRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError,{id: number;data: UnitOfMeasureNameRequest}, TContext> => {
 
 const mutationKey = ['unitOfMeasureControllerRename'];
 const {mutation: mutationOptions} = options ?
@@ -501,7 +501,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, {id: number;data: NameRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, {id: number;data: UnitOfMeasureNameRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  unitOfMeasureControllerRename(id,data,)
@@ -515,15 +515,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type UnitOfMeasureControllerRenameMutationResult = NonNullable<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>>
-    export type UnitOfMeasureControllerRenameMutationBody = NameRequest
+    export type UnitOfMeasureControllerRenameMutationBody = UnitOfMeasureNameRequest
     export type UnitOfMeasureControllerRenameMutationError = UnitOfMeasureControllerRename4xx
 
     export const useUnitOfMeasureControllerRename = <TError = UnitOfMeasureControllerRename4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unitOfMeasureControllerRename>>, TError,{id: number;data: UnitOfMeasureNameRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof unitOfMeasureControllerRename>>,
         TError,
-        {id: number;data: NameRequest},
+        {id: number;data: UnitOfMeasureNameRequest},
         TContext
       > => {
       return useMutation(getUnitOfMeasureControllerRenameMutationOptions(options), queryClient);

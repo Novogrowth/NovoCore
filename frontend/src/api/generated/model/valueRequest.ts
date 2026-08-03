@@ -9,5 +9,5 @@
  */
 
 export interface ValueRequest {
-  value?: string;
+  value: string;
 }

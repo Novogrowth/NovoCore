@@ -166,7 +166,7 @@ class ProductController {
     @PatchMapping(path = "/api/products/{id}/name",
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.PRODUCTS, level = AccessLevel.FULL)
-    ProductView rename(@PathVariable long id, @RequestBody NameRequest request) {
+    ProductView rename(@PathVariable long id, @RequestBody ProductNameRequest request) {
         return products.rename(id, request.name()).redactedFor(viewer());
     }
 
@@ -275,7 +275,7 @@ class ProductController {
         return product.map(List::of).orElseGet(List::of);
     }
 
-    record NameRequest(String name) {
+    record ProductNameRequest(String name) {
     }
 
     /** Null clears the price, which is how "not priced yet" is said. Zero is refused. */

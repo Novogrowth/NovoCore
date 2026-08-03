@@ -13,10 +13,10 @@ import type { Rate } from './rate';
 export interface AssetView {
   id: number;
   code?: string;
-  name?: string;
-  acquisitionDate?: string;
+  name: string;
+  acquisitionDate: string;
   depreciationRatePercent?: Rate;
   depreciationStartDate?: string;
-  status?: AssetStatus;
+  status: AssetStatus;
   disposalDate?: string;
 }

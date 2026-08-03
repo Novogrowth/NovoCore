@@ -11,6 +11,6 @@ import type { CustomerCreditView } from './customerCreditView';
 import type { PageInfo } from './pageInfo';
 
 export interface ListResponseCustomerCreditView {
-  items?: CustomerCreditView[];
+  items: CustomerCreditView[];
   page?: PageInfo;
 }

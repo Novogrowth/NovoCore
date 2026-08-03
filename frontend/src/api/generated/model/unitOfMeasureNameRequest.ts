@@ -8,7 +8,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface ContactDetailsRequest {
-  email?: string;
-  phone?: string;
+export interface UnitOfMeasureNameRequest {
+  name: string;
 }

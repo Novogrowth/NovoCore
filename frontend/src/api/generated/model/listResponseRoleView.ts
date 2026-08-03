@@ -11,6 +11,6 @@ import type { PageInfo } from './pageInfo';
 import type { RoleView } from './roleView';
 
 export interface ListResponseRoleView {
-  items?: RoleView[];
+  items: RoleView[];
   page?: PageInfo;
 }

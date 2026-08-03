@@ -11,9 +11,9 @@ import type { Rate } from './rate';
 
 export interface VatClassView {
   id: number;
-  code?: string;
-  description?: string;
-  ratePercent?: Rate;
+  code: string;
+  description: string;
+  ratePercent: Rate;
   reducedCounterpartId?: number;
   active: boolean;
 }

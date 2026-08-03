@@ -126,7 +126,7 @@ class CustomerController {
     @PatchMapping(path = "/api/customers/{id}/name",
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.CUSTOMERS, level = AccessLevel.FULL)
-    CustomerView rename(@PathVariable long id, @RequestBody NameRequest request) {
+    CustomerView rename(@PathVariable long id, @RequestBody CustomerNameRequest request) {
         return customers.rename(id, request.name());
     }
 
@@ -135,14 +135,14 @@ class CustomerController {
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.CUSTOMERS, level = AccessLevel.FULL)
     CustomerView changeContactDetails(
-            @PathVariable long id, @RequestBody ContactDetailsRequest request) {
+            @PathVariable long id, @RequestBody CustomerContactDetailsRequest request) {
         return customers.changeContactDetails(id, request.email(), request.phone());
     }
 
     @PatchMapping(path = "/api/customers/{id}/vat-number",
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.CUSTOMERS, level = AccessLevel.FULL)
-    CustomerView changeVatNumber(@PathVariable long id, @RequestBody VatNumberRequest request) {
+    CustomerView changeVatNumber(@PathVariable long id, @RequestBody CustomerVatNumberRequest request) {
         return customers.changeVatNumber(id, request.vatNumber());
     }
 
@@ -157,7 +157,7 @@ class CustomerController {
     @PatchMapping(path = "/api/customers/{id}/vat-status",
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.CUSTOMERS, level = AccessLevel.FULL)
-    CustomerView changeVatStatus(@PathVariable long id, @RequestBody VatStatusRequest request) {
+    CustomerView changeVatStatus(@PathVariable long id, @RequestBody CustomerVatStatusRequest request) {
         return customers.changeVatStatus(
                 id, request.vatStatus(), request.vatExemptionReasonId());
     }
@@ -193,18 +193,18 @@ class CustomerController {
 
     // -------------------------------------------------------------------------------------------
 
-    record NameRequest(String name) {
+    record CustomerNameRequest(String name) {
     }
 
-    record ContactDetailsRequest(String email, String phone) {
+    record CustomerContactDetailsRequest(String email, String phone) {
     }
 
-    record VatNumberRequest(String vatNumber) {
+    record CustomerVatNumberRequest(String vatNumber) {
     }
 
-    record VatStatusRequest(@Mandatory VatStatus vatStatus, Long vatExemptionReasonId) {
+    record CustomerVatStatusRequest(@Mandatory VatStatus vatStatus, Long vatExemptionReasonId) {
 
-        VatStatusRequest {
+        CustomerVatStatusRequest {
             // The exemption reason stays optional here: it is required only for EXEMPT, which is
             // the service's rule to state, with the message about VAT that goes with it.
             Required.field(vatStatus, "vatStatus");

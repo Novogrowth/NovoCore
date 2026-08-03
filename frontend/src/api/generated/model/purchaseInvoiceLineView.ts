@@ -15,18 +15,18 @@ import type { UnitCost } from './unitCost';
 export interface PurchaseInvoiceLineView {
   id: number;
   lineNumber: number;
-  type?: PurchaseLineType;
+  type: PurchaseLineType;
   productId?: number;
   productSku?: string;
   quantity?: Quantity;
   unitPrice?: UnitCost;
   expenseAccountId?: number;
-  netAmount?: Money;
+  netAmount: Money;
   vatClassId?: number;
-  vatAmount?: Money;
+  vatAmount: Money;
   vatExemptionReasonId?: number;
   reverseCharge: boolean;
   description?: string;
-  matchedQuantity?: Quantity;
-  openQuantity?: Quantity;
+  matchedQuantity: Quantity;
+  openQuantity: Quantity;
 }

@@ -11,6 +11,6 @@ import type { FreightAllocationView } from './freightAllocationView';
 import type { PageInfo } from './pageInfo';
 
 export interface ListResponseFreightAllocationView {
-  items?: FreightAllocationView[];
+  items: FreightAllocationView[];
   page?: PageInfo;
 }

@@ -11,8 +11,8 @@ import type { Money } from './money';
 
 export interface NewFreightAllocation {
   purchaseInvoiceLineId: number;
-  amount?: Money;
-  allocationDate?: string;
+  amount: Money;
+  allocationDate: string;
   description?: string;
-  lotIds?: number[];
+  lotIds: number[];
 }

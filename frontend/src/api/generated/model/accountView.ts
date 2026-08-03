@@ -15,13 +15,13 @@ import type { SubLedgerType } from './subLedgerType';
 export interface AccountView {
   id: number;
   code?: string;
-  name?: string;
-  type?: AccountType;
-  kind?: AccountKind;
+  name: string;
+  type: AccountType;
+  kind: AccountKind;
   subLedgerType?: SubLedgerType;
   systemKey?: AccountSystemKey;
   groupId: number;
-  groupName?: string;
+  groupName: string;
   displayOrder: number;
   active: boolean;
   expectedToClear: boolean;

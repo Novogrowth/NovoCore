@@ -132,21 +132,21 @@ class ChartOfAccountsController {
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.CHART_OF_ACCOUNTS, level = AccessLevel.FULL)
     @ResponseStatus(HttpStatus.CREATED)
-    AccountGroupView createGroup(@RequestBody NameRequest request) {
+    AccountGroupView createGroup(@RequestBody ChartOfAccountsNameRequest request) {
         return chartOfAccounts.createGroup(request.name());
     }
 
     @PatchMapping(path = "/api/accounts/{id}/name",
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.CHART_OF_ACCOUNTS, level = AccessLevel.FULL)
-    AccountView renameAccount(@PathVariable long id, @RequestBody NameRequest request) {
+    AccountView renameAccount(@PathVariable long id, @RequestBody ChartOfAccountsNameRequest request) {
         return chartOfAccounts.renameAccount(id, request.name());
     }
 
     @PatchMapping(path = "/api/account-groups/{id}/name",
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.CHART_OF_ACCOUNTS, level = AccessLevel.FULL)
-    AccountGroupView renameGroup(@PathVariable long id, @RequestBody NameRequest request) {
+    AccountGroupView renameGroup(@PathVariable long id, @RequestBody ChartOfAccountsNameRequest request) {
         return chartOfAccounts.renameGroup(id, request.name());
     }
 
@@ -200,7 +200,7 @@ class ChartOfAccountsController {
     // -------------------------------------------------------------------------------------------
 
     /** A rename or a create-by-name. */
-    record NameRequest(String name) {
+    record ChartOfAccountsNameRequest(String name) {
     }
 
     /** A complete ordering. Partial lists are refused by the service, not tolerated here. */

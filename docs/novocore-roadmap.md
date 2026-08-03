@@ -4,7 +4,7 @@
 deleted on 2026-08-02; neither file should be recreated. Backend and frontend are one sequence
 because they no longer proceed independently — several steps below span both.
 
-**Legend:** 🟢 Done · 🟡 **Current** · 🔴 Not started · ⚪ Placement proposed, not decided
+**Legend:** 🟢 Done · 🟡 **Current** · 🔴 Not started · ⚪ Placement proposed, not decided, or optional
 
 **Step IDs are deliberately not renumbered.** `0`–`16b` (backend), `F0`–`F11` (frontend) and `S1`/`S2`
 keep the identifiers used in `PROGRESS.md`, commit messages and every ADR. New work takes new prefixes
@@ -22,8 +22,9 @@ figure that cannot be measured is left blank with a reason, never filled with a 
 `Out` is tokens generated; `In` is input + cache-creation + cache-read — **read the warning under
 *How the actual figures were derived* before drawing any conclusion from that column.**
 
-**Current state, measured 2026-08-03 (after Q1):** **1,377 backend tests** (0 failures, 0 errors,
-1 skipped, `mvn clean verify` exit 0), **308 frontend tests across 31 files**, **176 API operations**.
+**Current state, measured 2026-08-03 (after 8a):** **1,381 backend tests** (0 failures, 0 errors,
+1 skipped, `mvn clean verify` exit 0), **308 frontend tests across 31 files**, **176 API operations
+and 196 schemas, 143 of which declare `required`**.
 
 ---
 
@@ -90,10 +91,10 @@ frontend work that must land before any adapter is built.
 |   S2 | Column sorting, 5 screens               |     — |    0.7 |  216k | 🟢 Done         |
 |   F4 | Settings, VAT classes, UoM              |     — |    1.0 |  605k | 🟢 Done         |
 |   U1 | Roadmap unification + doc reconcile ᵘ¹  |     — |    1.0 |  253k | 🟢 Done         |
-|   Q1 | Backend queue: 4+6, 5, 1, 7 ᵘ           |     — |    1.5 |  208k | 🟢 Done ⚠️ᶜᵒⁿᵈ  |
-|   8a | `@Mandatory`, schema names, ArchUnit ᵈᵉᶜ |     — |        |       | 🟡 **Current**  |
-|   8b | Client regeneration, fixture reconcile ᵈᵉᶜ |  — |        |       | 🔴 Not started  |
-|   R1 | Document reference data (backend) ʳ     |     — |        |       | 🔴 Not started  |
+|   Q1 | Backend queue: 4+6, 5, 1, 7 ᵘ           |     — |    1.5 |  208k | 🟢 Done         |
+|   8a | `@Mandatory`, schema names, bytecode rule ᵈᵉᶜ | — |  1.3 |  314k | 🟢 Done         |
+|   8b | Consumer cleanup — optional ᵈᵉᶜ         |     — |        |       | ⚪ Optional      |
+|   R1 | Document reference data (backend) ʳ     |     — |        |       | 🟡 **Current**  |
 |   R2 | Document reference data (screens) ʳ²    |     — |        |       | 🔴 Not started  |
 |   R3 | Self-supply posting paths ˢ             |     — |        |       | ⚪ Placement TBD |
 |   D1 | Supplier/customer codes + alias         |     — |        |       | ⚪ Placement TBD |
@@ -119,10 +120,13 @@ several of them are backend schema work rather than screens. Adding 8.0 across t
 present an estimate for the frontend as an estimate for the phase — so the F-row subtotal is stated
 separately instead, where a reader scanning a column of dashes will actually meet it.
 
-**Q1 is 🟢 Done (2026-08-03) and step 8a is `🟡 Current`.** The running order is in `PROGRESS.md`
-under *What is next, in one place*, and it is **Q1 → 8a → 8b → R1 → R2 → F5**. ⚠️ **8a and 8b are not
-new work invented here**: they are backend queue item 8, lifted out of Q1 and given their own rows so
-the placement decision is visible in the sequence rather than buried in a queue — see ᵈᵉᶜ.
+**Q1 and 8a are both 🟢 Done (2026-08-03) and step R1 is `🟡 Current`.** The running order is in
+`PROGRESS.md` under *What is next, in one place*, and it is now **R1 → R2 → F5**. ⚠️ **8a and 8b were
+not new work invented here**: they are backend queue item 8, lifted out of Q1 and given their own rows
+so the placement decision is visible in the sequence rather than buried in a queue — see ᵈᵉᶜ.
+
+⚠️ **8b dropped from 🔴 Not started to ⚪ Optional on 2026-08-03, and the reason was measured rather
+than judged** — see ᵈᵉᶜ. It is no longer on the critical path, so **R1 follows 8a directly.**
 
 ✅ **Every step through Q1 is verified on both legs, with one stated exception.** ⚠️ **Q1's live
 browser leg has not been run** — its four items are proved by the contract tests and by a probe
@@ -226,8 +230,10 @@ Nothing here is solved. Each is recorded so its absence reads as a decision rath
   F6–F8" argument is weaker than it looked.
 - ✅ **~~Should backend queue item 8 be promoted to first on severity?~~ DECIDED 2026-08-03, and the
   answer was neither.** It was **lifted out of Q1 entirely** and given its own numbered step, split
-  into **8a** (annotation, generator line, bidirectional ArchUnit cross-check, spec) and **8b**
-  (client regeneration, fixture reconciliation), **placed after Q1 and before R1**. Two reasons, both
+  into **8a** (annotation, generator line, bidirectional bytecode cross-check, spec) and **8b**
+  (client regeneration, fixture reconciliation), **placed after Q1 and before R1**. ⚠️ Both halves of
+  that description were later corrected by measurement: the cross-check is **ASM + reflection, not
+  ArchUnit**, and the 8a/8b boundary moved because it left `main` red — see ᵈᵉᶜ. Two reasons, both
   pointing the same way: **R1 adds eight tables' worth of new records**, which should be written with
   the enforcement already in place rather than retrofitted; and **every screen built afterwards
   multiplies the fixture reconciliation**, so it is cheapest now and only gets worse. Never
@@ -452,11 +458,13 @@ reconciliation rather than a build: most of the cost was reading `PROGRESS.md`, 
 primer and a README repeatedly, plus a full `mvn clean verify` and a live database session, to produce
 comparatively little text. Recorded without adjustment; it is data about what this kind of step costs.
 
-**ᶜᵒⁿᵈ Q1 is done and NOT fully closed, and the distinction is deliberate.** All four items landed
-and **the owner's live browser leg passed on 2026-08-03** (see ᵘ). What remains open is **item 7's
-regression** — boxing the booleans removed their `required` declaration from the spec — and **8a is
-what closes it.** Q1 must not read as fully closed while that is outstanding, which is why the status
-carries a marker rather than a plain 🟢.
+**ᶜᵒⁿᵈ ✅ RESOLVED, 2026-08-03 — this footnote's marker is gone from Q1's row.** It read: *"Q1 is done
+and NOT fully closed, and the distinction is deliberate … what remains open is item 7's regression,
+and 8a is what closes it."* **8a closed it the following day**, so the row carries a plain 🟢.
+⚠️ **Kept rather than deleted, because the device worked.** Stating a residual in the *status marker*
+rather than in a paragraph underneath is what made the next session treat it as an acceptance
+criterion instead of as background. Reuse it; do not let a step with something outstanding read as a
+plain 🟢.
 
 **ᵘ Q1 — the backend follow-up queue. 🟢 Done, 2026-08-03.** Of nine numbered items, two were done
 (2 and 9) and one closed as stale (3) before Q1 existed as a step. **Item 8 left the queue and became
@@ -474,8 +482,8 @@ its own step** (see ᵈᵉᶜ), so **Q1 is four items: 4+6, 5, 1, 7 — all four
   write a duplicate `operationId` rather than emitting an invalid document. The `orval.config.ts`
   workaround and the assertion pinning it were **deleted**.
 - **7** — the seven boolean primitives boxed with `Required.field`, **plus a latent eighth**
-  (`NewVatExemptionReason.inputVatDeductible`). ⚠️ **It carries a known, time-boxed regression that
-  8a closes** — see ᵈᵉᶜ.
+  (`NewVatExemptionReason.inputVatDeductible`). ✅ **The regression it carried was closed by 8a the
+  next day** — see ᵈᵉᶜ. ⚠️ Only **seven** could be confirmed in the spec; the eighth has no schema.
 
 ✅ **The live browser leg passed on 2026-08-03**, run personally by the owner after the app image
 was rebuilt (see ᵗʰᶦⁿ). Four checks: the description **saved** on role 3; **cleared** to its unset
@@ -500,34 +508,90 @@ commissioned Drive tokens and the Owner account.
 given its own step **after Q1, before R1**, replacing the open decision *"should item 8 be promoted
 within Q1?"* The answer was neither promote nor leave last.
 
-- **8a** — a `@Mandatory` marker annotation in `core-api` (`…core.api.shared`, which is the only
-  module every request record can see); one line in `OpenApiSchema.recordSchema` reading it; and a
-  **bidirectional ArchUnit cross-check** on the compact constructor's bytecode — a guarded component
-  must carry the annotation, and an annotated one must be guarded. ⚠️ **The cross-check is not
-  optional.** Without it the annotation is ~289 hand-applied assertions that nothing verifies, which
-  is *a fact established by reading, then built upon* at scale.
-  - ➕ **Q1-a is folded in here, not scheduled separately.** `OpenApiSchema` registers a component
-    schema under the record's **simple name**, so seven distinct `NameRequest` records across seven
-    controllers resolve to **one** schema — accidentally correct today because they are identical,
-    and silently wrong the day one gains a field. It belongs to 8a because **schema naming is a
-    generator concern and 8a already regenerates the spec**; doing it as its own step pays that
-    regeneration twice. The generator should refuse a collision the way it now refuses a duplicate
-    `operationId`. ⚠️ Meanwhile **a new request record must not add an eighth** —
-    `RoleController.RoleDescriptionRequest` is named apart for exactly this reason.
-- **8b** — client regeneration and fixture reconciliation. This is the larger half by volume and is
-  where item 2's primitive sweep found 19 drifted fixtures from a much smaller change. **Q1-a's
-  fallout lands here too**: renaming schemas renames generated TypeScript types, so the two arrive in
-  the same regeneration rather than in two.
+✅ **8a is DONE (2026-08-03). Its boundary with 8b moved during Phase 0, and the cause was CI.**
 
-⚠️ **8a is now load-bearing for a regression Q1 shipped deliberately, measured rather than reasoned.**
-Boxing the booleans (item 7) improved the *message* — `"serialTracked" is required and was not
-supplied.` instead of a field-less `Cannot map null into type boolean` — and removed the
-*declaration*, because `OpenApiSchema` marks a component required when it `isPrimitive()` and a boxed
-`Boolean` is not. **Schemas declaring `required` went 78 → 75 on 2026-08-03.** The server still
-refuses an omitted flag; what `tsc` no longer does is refuse a TypeScript caller that omits one.
-**The exposure window contains no frontend work** — the order is Q1 → 8a/8b → R1 → R2 → F5, and F5–F8
-are the steps that would send these bodies — and `product-create.tsx` still sends the field
-explicitly. Pinned in both directions by `spec-hygiene.test.ts`.
+**The approved split was *8a = annotation + generator + rule + spec + schema names; 8b = client
+regeneration + fixture reconciliation*, and that boundary could not exist without a red `main`.**
+`.github/workflows/frontend.yml` triggers on `docs/api/openapi.json` — the one file 8a exists to
+change — and that workflow both runs `spec-hygiene.test.ts`, which pinned three assertions to the
+pre-8a state, and regenerates the client and diffs it against the committed one. Deferring the spec
+instead is not an escape: `OpenApiSpecIT` fails the build on spec drift. So the regeneration and its
+two fixes moved into 8a.
+
+⚠️ **This was established by simulating the whole of 8b in an isolated `git worktree`, not by
+predicting it.** The guard-derived `required` lists were applied to a spec copy, `npm run
+api:generate` was run, then `tsc -b --force` and the full vitest suite. **420 generated files
+changed, 1 TypeScript error, 1 failing test, 307 of 308 tests still passing** — so the second half
+was never a session's work, and item 9's claim that the fixture backlog is *measured at zero* held.
+The working tree was never touched.
+
+- **8a, as built** — `@Mandatory` and `@ConditionallyMandatory(reason)` in
+  `…core.api.shared` (the only module every request record can see); one line in
+  `OpenApiSchema.recordSchema` reading the first; the bidirectional cross-check; **339 components
+  declared across 114 records and 105 files**; Q1-a's four collisions split; the spec regenerated
+  (75 → **143** schemas declaring `required`); the client regenerated; `spec-hygiene.test.ts`
+  rewritten and one `RoleView` fixture completed.
+- **8b — now ⚪ optional, and not a correctness step.** What remains is *taking advantage* of the new
+  contract: removing `?.`/`??` guards on view fields that can no longer be undefined, and similar
+  consumer tidying. **Trigger: whenever a screen touching those fields is next opened** — there is no
+  reason to do it as a standalone pass. ⚠️ **The dedicated non-owner test-account decision attaches
+  here and should be settled BEFORE 8b starts, not during it**: 8b is the first change whose breakage
+  would show in a browser rather than in a test.
+
+⚠️ **The mechanism was NOT ArchUnit, and this footnote said it was.** ArchUnit supplies class
+discovery and the failure idiom; `org.springframework.asm` plus reflection does the attribution.
+Two measured reasons: `JavaCodeUnit.getMethodCallsFromSelf()` carries **no argument information**, so
+it can say a constructor guards something and never *which component*; and it **mis-attributes
+lambda-body calls to the enclosing constructor** — it reports **342** guard calls where the
+constructors' bytecode contains **340**, the two extra being `requireNonNull`s inside
+`StockLevels`'s `byLocation.forEach(…)`, which constrain map entries rather than components. That is
+the blind spot `CLAUDE.md` already names under proxy self-invocation. No new dependency was needed.
+
+⚠️ **The cross-check was not optional and remains the load-bearing half.** Without it the annotation
+is 339 hand-applied assertions that nothing verifies — *a fact established by reading, then built
+upon*, at the scale of a whole API surface. All three rules were **proven by running them against
+probes and watching them fail** before being trusted.
+
+➕ **Q1-a landed here, and its recorded justification was WRONG and has been replaced.** The reason
+given was economics — *schema naming is a generator concern and 8a already regenerates the spec, so
+scheduling it separately pays that regeneration twice*. **The real reason is correctness.**
+`OpenApiSchema` registered a component under the record's simple name, and Q1 recorded seven
+`NameRequest` records as "structurally identical today, so the document is accidentally correct".
+Measured on 2026-08-03: there were **four** collisions rather than one — `NameRequest` ×7 serving
+**nine** operations, plus `ContactDetailsRequest`, `VatNumberRequest` and `VatStatusRequest` ×2 each,
+so 13 records collapsing into 4 schemas over 15 operations. And **"identical today" stopped being
+true the moment 8a ran**: two of the seven guard `name` with `Required.text` and five do not, so the
+single merged schema would have declared `name` required for nine operations of which five do not
+require it, or optional for two that do. **8a did not coincide with the defect; 8a would have created
+it.** An economics argument invites someone to re-litigate the bundling on cost grounds later; a
+correctness one does not. All four were split, including the three still identical — a schema that
+is correct by coincidence is one nobody notices becoming wrong. `OpenApiSchema.claim` now refuses a
+collision, **scoped to what reaches the spec**: `CreditNoteServiceImpl.Computation` /
+`SalesInvoiceServiceImpl.Computation` and the matching `Rounding` pair collide too and are
+**known and deliberately left alone**, because failing a build on a name that describes no contract
+forces a rename for nothing, which is how a rule earns the reputation that gets it deleted.
+
+**Measured, per the method below** — window `3044139` (Q1's close-out, 2026-08-03 13:33) to this
+session's commit. **542 events, 1.33 h active against 1.36 h wall clock, 314k out, 81.9M in.
+Recorded as 1.3.** Wall and active are nearly equal here, which is what a single uninterrupted
+session looks like — unlike Q1's row, where the 5-minute cap was doing real work across a night. As
+with every row it **excludes its own close-out**, so read it as "at least".
+
+⚠️ **This row's `Out` is the highest of any step so far (314k) and its `In` the second highest**, and
+that is the shape of a step whose cost is *review* rather than construction: 105 files read by
+category, four probes run and reverted, one worktree simulation, and two full `mvn clean verify`
+runs. The code written is small. Recorded without adjustment.
+
+✅ **Item 7's regression is CLOSED.** Boxing the booleans (Q1 item 7) improved the *message* —
+`"serialTracked" is required and was not supplied.` instead of a field-less `Cannot map null into
+type boolean` — and removed the *declaration*, because `OpenApiSchema` marks a component required
+when it `isPrimitive()` and a boxed `Boolean` is not: schemas declaring `required` went **78 → 75**
+on 2026-08-03, and **75 → 143** when 8a landed the same day. ⚠️ **Seven of the eight, not eight.**
+`NewVatExemptionReason.inputVatDeductible` has **no schema at all** — `/api/vat-exemption-reasons` is
+GET-only, which is Q1-b's finding arriving from the other side — so it is confirmed annotated and
+guarded in the backend instead. The seven that do have schemas are asserted **by name** in
+`spec-hygiene.test.ts`, because a count cannot say which field came back. Documents saying "the
+eight" were corrected.
 
 **Measured, per the method below** — window `f143215` (U1's follow-up close-out, 2026-08-02 15:10)
 to this session's commit. **558 events, 1.49 h active against 21.43 h wall clock, 208k out, 76.0M

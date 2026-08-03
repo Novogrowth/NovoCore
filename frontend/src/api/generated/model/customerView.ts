@@ -12,11 +12,11 @@ import type { VatStatus } from './vatStatus';
 
 export interface CustomerView {
   id: number;
-  name?: string;
+  name: string;
   email?: string;
   phone?: string;
   vatNumber?: string;
-  vatStatus?: VatStatus;
+  vatStatus: VatStatus;
   vatClassOverrideId?: number;
   vatExemptionReasonId?: number;
   systemKey?: CustomerSystemKey;

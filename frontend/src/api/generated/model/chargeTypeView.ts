@@ -10,7 +10,7 @@
 
 export interface ChargeTypeView {
   id: number;
-  name?: string;
+  name: string;
   defaultVatClassId: number;
   incomeAccountId: number;
   active: boolean;

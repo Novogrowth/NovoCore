@@ -13,13 +13,13 @@ import type { Money } from './money';
 export interface GoodsReceiptView {
   id: number;
   supplierId: number;
-  supplierName?: string;
+  supplierName: string;
   deliveryNoteNumber?: string;
-  receiptDate?: string;
+  receiptDate: string;
   description?: string;
-  totalValue?: Money;
+  totalValue: Money;
   journalEntryId?: number;
   reversalOfReceiptId?: number;
   reversedByReceiptId?: number;
-  lines?: GoodsReceiptLineView[];
+  lines: GoodsReceiptLineView[];
 }

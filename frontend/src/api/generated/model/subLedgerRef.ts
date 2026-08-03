@@ -10,6 +10,6 @@
 import type { SubLedgerType } from './subLedgerType';
 
 export interface SubLedgerRef {
-  type?: SubLedgerType;
+  type: SubLedgerType;
   id: number;
 }

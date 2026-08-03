@@ -11,9 +11,9 @@ import type { RoleView } from './roleView';
 
 export interface UserView {
   id: number;
-  username?: string;
-  displayName?: string;
+  username: string;
+  displayName: string;
   language?: string;
-  role?: RoleView;
+  role: RoleView;
   active: boolean;
 }

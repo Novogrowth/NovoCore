@@ -15,17 +15,17 @@ import type { StockConsumptionLineView } from './stockConsumptionLineView';
 export interface StockConsumptionView {
   id: number;
   productId: number;
-  productSku?: string;
-  quantityRequested?: Quantity;
-  quantityFilled?: Quantity;
-  shortfallQuantity?: Quantity;
-  consumptionDate?: string;
-  source?: JournalSource;
+  productSku: string;
+  quantityRequested: Quantity;
+  quantityFilled: Quantity;
+  shortfallQuantity: Quantity;
+  consumptionDate: string;
+  source: JournalSource;
   note?: string;
-  totalCost?: Money;
+  totalCost: Money;
   journalEntryId?: number;
   reversalOfConsumptionId?: number;
   reversedByConsumptionId?: number;
   returnOfConsumptionId?: number;
-  lines?: StockConsumptionLineView[];
+  lines: StockConsumptionLineView[];
 }

@@ -15,7 +15,7 @@ export interface GrIrMatchView {
   purchaseInvoiceLineId: number;
   goodsReceiptLineId: number;
   lotId: number;
-  quantity?: Quantity;
-  receiptUnitCost?: UnitCost;
-  invoiceUnitPrice?: UnitCost;
+  quantity: Quantity;
+  receiptUnitCost: UnitCost;
+  invoiceUnitPrice: UnitCost;
 }

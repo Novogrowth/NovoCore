@@ -11,6 +11,6 @@ import type { PageInfo } from './pageInfo';
 import type { VatExemptionReasonView } from './vatExemptionReasonView';
 
 export interface ListResponseVatExemptionReasonView {
-  items?: VatExemptionReasonView[];
+  items: VatExemptionReasonView[];
   page?: PageInfo;
 }

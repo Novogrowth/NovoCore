@@ -11,6 +11,6 @@ import type { PageInfo } from './pageInfo';
 import type { UserView } from './userView';
 
 export interface ListResponseUserView {
-  items?: UserView[];
+  items: UserView[];
   page?: PageInfo;
 }

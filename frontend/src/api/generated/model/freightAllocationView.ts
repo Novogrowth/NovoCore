@@ -15,13 +15,13 @@ export interface FreightAllocationView {
   purchaseInvoiceLineId: number;
   purchaseInvoiceId: number;
   supplierInvoiceNumber?: string;
-  allocationDate?: string;
+  allocationDate: string;
   description?: string;
-  amount?: Money;
-  capitalised?: Money;
-  variance?: Money;
+  amount: Money;
+  capitalised: Money;
+  variance: Money;
   journalEntryId: number;
   reversalOfId?: number;
   reversedByAllocationId?: number;
-  lines?: FreightAllocationLineView[];
+  lines: FreightAllocationLineView[];
 }

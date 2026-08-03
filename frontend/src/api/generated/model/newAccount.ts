@@ -12,10 +12,10 @@ import type { AccountType } from './accountType';
 import type { SubLedgerType } from './subLedgerType';
 
 export interface NewAccount {
-  name?: string;
-  type?: AccountType;
-  kind?: AccountKind;
+  name: string;
+  type: AccountType;
+  kind: AccountKind;
   subLedgerType?: SubLedgerType;
   groupId: number;
-  expectedToClear?: boolean;
+  expectedToClear: boolean;
 }

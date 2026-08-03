@@ -213,6 +213,46 @@ no argument behind it is the shape S1's reconciliation caught with `supplier.vat
 **The general rule: when one confusion recurs, ask whether the remedy was reachable from where the
 mistake was made. If it was not, the instance count is measuring the wrong thing.**
 
+### ⚠️ A contract must not promise what nothing refuses — and the check must be able to see which field
+
+**This is 8a's finding (2026-08-03), and the part worth keeping is not the annotation.**
+
+`@Mandatory` declares that a record component is never absent, because **reflection cannot see inside
+a constructor body** and so `OpenApiSchema` could only ever infer it for primitives. 339 components
+across 114 records were mandatory in fact and described as optional, and the generated TypeScript
+made every one of them `T | undefined`. That much is ordinary. Three things about it are not:
+
+**1. The declaration is worthless without a cross-check, and the obvious tool cannot do it.**
+Several hundred hand-applied assertions that nothing verifies is *a fact established by reading, then
+built upon* at the scale of an API surface — and the second direction is the dangerous one: a field
+wrongly declared mandatory lets every consumer dereference it without a check, and **nothing anywhere
+refuses the body that omits it.** ⚠️ **ArchUnit cannot express this rule.**
+`JavaCodeUnit.getMethodCallsFromSelf()` carries **no argument information** — it can say a
+constructor guards *something* and never *which component* — and it **attributes lambda-body calls to
+the enclosing code unit**, reporting 342 guard calls where the constructors' bytecode contains 340.
+That second half is the blind spot this file already names under proxy self-invocation, met from a
+new direction. `MandatoryDeclarationRulesTest` uses `org.springframework.asm` plus reflection, with
+ArchUnit reduced to class discovery. **When a rule needs to know what a call was applied to, ArchUnit
+is the wrong instrument; check before designing around it.**
+
+**2. A declared set derived from guards is a LOWER BOUND, and saying so is load-bearing.** Only
+`Required.field`, `Required.text` and `Objects.requireNonNull` are visible; a component made
+mandatory by an inline `if (x == null) throw` is not. **"Every `@Mandatory` component is guarded"
+must never be read as "every mandatory component is annotated."** An incomplete `required` list is
+still true; a wrong one is worse than none. The same sentence covers the conditional case:
+`NewPurchaseInvoiceLine` has five components of which at most three can ever be present, selected by
+`type`, and **no `required` list can express that** — so they carry `@ConditionallyMandatory` with a
+reason **at the field**, not an exemption list inside the test. A future reader who finds a guarded
+component without `@Mandatory` must be able to see why without reconstructing it.
+
+**3. ⚠️ A probe that is expected to FAIL is safer than one expected to pass.** 8a's third probe
+reported PASS and was worthless: a `git checkout` had reverted the *uncommitted* work the probe was
+run against, the resulting file did not compile, the build error was swallowed by a `| tail -3`, and
+the test answered from the **previously installed jar**. Every observation was true. It was caught
+only because a probe designed to fail and reporting success is loud — **reverse it and the same
+mistake ships silently.** This is *the thing that answered was not the thing under test* at the scale
+of one command, and the remedy is the same: confirm the build succeeded before believing the test.
+
 ### Named practice: the throwaway probe
 
 **When the question is behavioural — *what does the system actually answer?* — boot the real

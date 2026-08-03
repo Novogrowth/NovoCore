@@ -14,10 +14,10 @@ import type { UnitOfMeasureView } from './unitOfMeasureView';
 export interface BundleComponentView {
   bundleProductId: number;
   componentProductId: number;
-  componentSku?: string;
-  componentName?: string;
-  quantityPerBundle?: Quantity;
-  componentUnitOfMeasure?: UnitOfMeasureView;
+  componentSku: string;
+  componentName: string;
+  quantityPerBundle: Quantity;
+  componentUnitOfMeasure: UnitOfMeasureView;
   standalonePrice?: Money;
   stocked: boolean;
   componentActive: boolean;

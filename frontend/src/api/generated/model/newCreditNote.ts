@@ -13,10 +13,10 @@ import type { NewCreditNoteLine } from './newCreditNoteLine';
 export interface NewCreditNote {
   salesInvoiceId: number;
   documentNumber?: string;
-  creditNoteDate?: string;
+  creditNoteDate: string;
   description?: string;
   statedTotal?: Money;
   roundingAcceptedBy?: string;
   roundingNote?: string;
-  lines?: NewCreditNoteLine[];
+  lines: NewCreditNoteLine[];
 }

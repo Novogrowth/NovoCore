@@ -10,5 +10,5 @@
 import type { AccessLevel } from './accessLevel';
 
 export interface GrantRequest {
-  accessLevel?: AccessLevel;
+  accessLevel: AccessLevel;
 }

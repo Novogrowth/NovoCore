@@ -14,8 +14,8 @@ export interface SalesInvoiceLineComponentView {
   id: number;
   componentNumber: number;
   productId: number;
-  productSku?: string;
-  quantity?: Quantity;
-  allocatedAmount?: Money;
+  productSku: string;
+  quantity: Quantity;
+  allocatedAmount: Money;
   stockConsumptionId?: number;
 }

@@ -31,7 +31,6 @@ import type {
   GrantRequest,
   ListResponseRoleView,
   ListResponseUserView,
-  NameRequest,
   NewRole,
   ProtectedField,
   RoleControllerCreate4xx,
@@ -46,6 +45,7 @@ import type {
   RoleControllerRoles4xx,
   RoleControllerRolesParams,
   RoleDescriptionRequest,
+  RoleNameRequest,
   RoleView,
   Section
 } from '../../model';
@@ -538,7 +538,7 @@ const {mutation: mutationOptions} = options ?
     }
     export const roleControllerRename = (
     id: number,
-    nameRequest: NameRequest,
+    roleNameRequest: RoleNameRequest,
  signal?: AbortSignal
 ) => {
 
@@ -546,7 +546,7 @@ const {mutation: mutationOptions} = options ?
       return apiMutator<RoleView>(
       {url: `/api/roles/${id}/name`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: nameRequest, signal
+      data: roleNameRequest, signal
     },
       );
     }
@@ -555,8 +555,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getRoleControllerRenameMutationOptions = <TError = RoleControllerRename4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof roleControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof roleControllerRename>>, TError,{id: number;data: NameRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof roleControllerRename>>, TError,{id: number;data: RoleNameRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof roleControllerRename>>, TError,{id: number;data: RoleNameRequest}, TContext> => {
 
 const mutationKey = ['roleControllerRename'];
 const {mutation: mutationOptions} = options ?
@@ -568,7 +568,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof roleControllerRename>>, {id: number;data: NameRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof roleControllerRename>>, {id: number;data: RoleNameRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  roleControllerRename(id,data,)
@@ -582,15 +582,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type RoleControllerRenameMutationResult = NonNullable<Awaited<ReturnType<typeof roleControllerRename>>>
-    export type RoleControllerRenameMutationBody = NameRequest
+    export type RoleControllerRenameMutationBody = RoleNameRequest
     export type RoleControllerRenameMutationError = RoleControllerRename4xx
 
     export const useRoleControllerRename = <TError = RoleControllerRename4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof roleControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof roleControllerRename>>, TError,{id: number;data: RoleNameRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof roleControllerRename>>,
         TError,
-        {id: number;data: NameRequest},
+        {id: number;data: RoleNameRequest},
         TContext
       > => {
       return useMutation(getRoleControllerRenameMutationOptions(options), queryClient);

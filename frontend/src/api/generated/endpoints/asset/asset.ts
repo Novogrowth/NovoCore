@@ -39,12 +39,12 @@ import type {
   AssetControllerReinstate4xx,
   AssetControllerRename4xx,
   AssetControllerWithoutDepreciationRate4xx,
+  AssetNameRequest,
   AssetView,
   DepreciationRateRequest,
   DepreciationStartDateRequest,
   DisposalRequest,
   ListResponseAssetView,
-  NameRequest,
   NewAsset
 } from '../../model';
 
@@ -736,7 +736,7 @@ const {mutation: mutationOptions} = options ?
     }
     export const assetControllerRename = (
     id: number,
-    nameRequest: NameRequest,
+    assetNameRequest: AssetNameRequest,
  signal?: AbortSignal
 ) => {
 
@@ -744,7 +744,7 @@ const {mutation: mutationOptions} = options ?
       return apiMutator<AssetView>(
       {url: `/api/assets/${id}/name`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: nameRequest, signal
+      data: assetNameRequest, signal
     },
       );
     }
@@ -753,8 +753,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getAssetControllerRenameMutationOptions = <TError = AssetControllerRename4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assetControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof assetControllerRename>>, TError,{id: number;data: NameRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assetControllerRename>>, TError,{id: number;data: AssetNameRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof assetControllerRename>>, TError,{id: number;data: AssetNameRequest}, TContext> => {
 
 const mutationKey = ['assetControllerRename'];
 const {mutation: mutationOptions} = options ?
@@ -766,7 +766,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assetControllerRename>>, {id: number;data: NameRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assetControllerRename>>, {id: number;data: AssetNameRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  assetControllerRename(id,data,)
@@ -780,15 +780,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type AssetControllerRenameMutationResult = NonNullable<Awaited<ReturnType<typeof assetControllerRename>>>
-    export type AssetControllerRenameMutationBody = NameRequest
+    export type AssetControllerRenameMutationBody = AssetNameRequest
     export type AssetControllerRenameMutationError = AssetControllerRename4xx
 
     export const useAssetControllerRename = <TError = AssetControllerRename4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assetControllerRename>>, TError,{id: number;data: NameRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assetControllerRename>>, TError,{id: number;data: AssetNameRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof assetControllerRename>>,
         TError,
-        {id: number;data: NameRequest},
+        {id: number;data: AssetNameRequest},
         TContext
       > => {
       return useMutation(getAssetControllerRenameMutationOptions(options), queryClient);

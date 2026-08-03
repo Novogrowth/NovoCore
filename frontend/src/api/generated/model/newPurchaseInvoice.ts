@@ -12,7 +12,7 @@ import type { NewPurchaseInvoiceLine } from './newPurchaseInvoiceLine';
 export interface NewPurchaseInvoice {
   supplierId: number;
   supplierInvoiceNumber?: string;
-  invoiceDate?: string;
+  invoiceDate: string;
   description?: string;
-  lines?: NewPurchaseInvoiceLine[];
+  lines: NewPurchaseInvoiceLine[];
 }

@@ -11,8 +11,8 @@ import type { Rate } from './rate';
 
 export interface NewAsset {
   code?: string;
-  name?: string;
-  acquisitionDate?: string;
+  name: string;
+  acquisitionDate: string;
   depreciationRatePercent?: Rate;
   depreciationStartDate?: string;
 }

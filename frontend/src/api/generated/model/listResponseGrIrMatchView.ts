@@ -11,6 +11,6 @@ import type { GrIrMatchView } from './grIrMatchView';
 import type { PageInfo } from './pageInfo';
 
 export interface ListResponseGrIrMatchView {
-  items?: GrIrMatchView[];
+  items: GrIrMatchView[];
   page?: PageInfo;
 }

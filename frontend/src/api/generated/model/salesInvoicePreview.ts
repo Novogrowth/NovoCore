@@ -11,13 +11,13 @@ import type { Money } from './money';
 import type { SalesInvoicePreviewLine } from './salesInvoicePreviewLine';
 
 export interface SalesInvoicePreview {
-  lines?: SalesInvoicePreviewLine[];
-  net?: Money;
-  vat?: Money;
-  gross?: Money;
+  lines: SalesInvoicePreviewLine[];
+  net: Money;
+  vat: Money;
+  gross: Money;
   statedTotal?: Money;
-  roundingDifference?: Money;
-  roundingThreshold?: Money;
+  roundingDifference: Money;
+  roundingThreshold: Money;
   roundingNeedsAcceptance: boolean;
-  receivable?: Money;
+  receivable: Money;
 }

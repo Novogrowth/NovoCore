@@ -44,9 +44,9 @@ import type {
   ChartOfAccountsControllerReorderAccounts4xx,
   ChartOfAccountsControllerReorderGroups4xx,
   ChartOfAccountsControllerSettlementTargets4xx,
+  ChartOfAccountsNameRequest,
   ListResponseAccountGroupView,
   ListResponseAccountView,
-  NameRequest,
   NewAccount,
   OrderRequest
 } from '../../model';
@@ -158,7 +158,7 @@ export function useChartOfAccountsControllerGroups<TData = Awaited<ReturnType<ty
 
 
 export const chartOfAccountsControllerCreateGroup = (
-    nameRequest: NameRequest,
+    chartOfAccountsNameRequest: ChartOfAccountsNameRequest,
  signal?: AbortSignal
 ) => {
 
@@ -166,7 +166,7 @@ export const chartOfAccountsControllerCreateGroup = (
       return apiMutator<AccountGroupView>(
       {url: `/api/account-groups`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
-      data: nameRequest, signal
+      data: chartOfAccountsNameRequest, signal
     },
       );
     }
@@ -175,8 +175,8 @@ export const chartOfAccountsControllerCreateGroup = (
 
 
 export const getChartOfAccountsControllerCreateGroupMutationOptions = <TError = ChartOfAccountsControllerCreateGroup4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError,{data: NameRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError,{data: NameRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError,{data: ChartOfAccountsNameRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError,{data: ChartOfAccountsNameRequest}, TContext> => {
 
 const mutationKey = ['chartOfAccountsControllerCreateGroup'];
 const {mutation: mutationOptions} = options ?
@@ -188,7 +188,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, {data: NameRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, {data: ChartOfAccountsNameRequest}> = (props) => {
           const {data} = props ?? {};
 
           return  chartOfAccountsControllerCreateGroup(data,)
@@ -202,15 +202,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type ChartOfAccountsControllerCreateGroupMutationResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>>
-    export type ChartOfAccountsControllerCreateGroupMutationBody = NameRequest
+    export type ChartOfAccountsControllerCreateGroupMutationBody = ChartOfAccountsNameRequest
     export type ChartOfAccountsControllerCreateGroupMutationError = ChartOfAccountsControllerCreateGroup4xx
 
     export const useChartOfAccountsControllerCreateGroup = <TError = ChartOfAccountsControllerCreateGroup4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError,{data: NameRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>, TError,{data: ChartOfAccountsNameRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof chartOfAccountsControllerCreateGroup>>,
         TError,
-        {data: NameRequest},
+        {data: ChartOfAccountsNameRequest},
         TContext
       > => {
       return useMutation(getChartOfAccountsControllerCreateGroupMutationOptions(options), queryClient);
@@ -334,7 +334,7 @@ const {mutation: mutationOptions} = options ?
     }
     export const chartOfAccountsControllerRenameGroup = (
     id: number,
-    nameRequest: NameRequest,
+    chartOfAccountsNameRequest: ChartOfAccountsNameRequest,
  signal?: AbortSignal
 ) => {
 
@@ -342,7 +342,7 @@ const {mutation: mutationOptions} = options ?
       return apiMutator<AccountGroupView>(
       {url: `/api/account-groups/${id}/name`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: nameRequest, signal
+      data: chartOfAccountsNameRequest, signal
     },
       );
     }
@@ -351,8 +351,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getChartOfAccountsControllerRenameGroupMutationOptions = <TError = ChartOfAccountsControllerRenameGroup4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError,{id: number;data: NameRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError,{id: number;data: NameRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError,{id: number;data: ChartOfAccountsNameRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError,{id: number;data: ChartOfAccountsNameRequest}, TContext> => {
 
 const mutationKey = ['chartOfAccountsControllerRenameGroup'];
 const {mutation: mutationOptions} = options ?
@@ -364,7 +364,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, {id: number;data: NameRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, {id: number;data: ChartOfAccountsNameRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  chartOfAccountsControllerRenameGroup(id,data,)
@@ -378,15 +378,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type ChartOfAccountsControllerRenameGroupMutationResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>>
-    export type ChartOfAccountsControllerRenameGroupMutationBody = NameRequest
+    export type ChartOfAccountsControllerRenameGroupMutationBody = ChartOfAccountsNameRequest
     export type ChartOfAccountsControllerRenameGroupMutationError = ChartOfAccountsControllerRenameGroup4xx
 
     export const useChartOfAccountsControllerRenameGroup = <TError = ChartOfAccountsControllerRenameGroup4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError,{id: number;data: NameRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>, TError,{id: number;data: ChartOfAccountsNameRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof chartOfAccountsControllerRenameGroup>>,
         TError,
-        {id: number;data: NameRequest},
+        {id: number;data: ChartOfAccountsNameRequest},
         TContext
       > => {
       return useMutation(getChartOfAccountsControllerRenameGroupMutationOptions(options), queryClient);
@@ -766,7 +766,7 @@ const {mutation: mutationOptions} = options ?
     }
     export const chartOfAccountsControllerRenameAccount = (
     id: number,
-    nameRequest: NameRequest,
+    chartOfAccountsNameRequest: ChartOfAccountsNameRequest,
  signal?: AbortSignal
 ) => {
 
@@ -774,7 +774,7 @@ const {mutation: mutationOptions} = options ?
       return apiMutator<AccountView>(
       {url: `/api/accounts/${id}/name`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: nameRequest, signal
+      data: chartOfAccountsNameRequest, signal
     },
       );
     }
@@ -783,8 +783,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getChartOfAccountsControllerRenameAccountMutationOptions = <TError = ChartOfAccountsControllerRenameAccount4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError,{id: number;data: NameRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError,{id: number;data: NameRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError,{id: number;data: ChartOfAccountsNameRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError,{id: number;data: ChartOfAccountsNameRequest}, TContext> => {
 
 const mutationKey = ['chartOfAccountsControllerRenameAccount'];
 const {mutation: mutationOptions} = options ?
@@ -796,7 +796,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, {id: number;data: NameRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, {id: number;data: ChartOfAccountsNameRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  chartOfAccountsControllerRenameAccount(id,data,)
@@ -810,15 +810,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type ChartOfAccountsControllerRenameAccountMutationResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>>
-    export type ChartOfAccountsControllerRenameAccountMutationBody = NameRequest
+    export type ChartOfAccountsControllerRenameAccountMutationBody = ChartOfAccountsNameRequest
     export type ChartOfAccountsControllerRenameAccountMutationError = ChartOfAccountsControllerRenameAccount4xx
 
     export const useChartOfAccountsControllerRenameAccount = <TError = ChartOfAccountsControllerRenameAccount4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError,{id: number;data: NameRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>, TError,{id: number;data: ChartOfAccountsNameRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof chartOfAccountsControllerRenameAccount>>,
         TError,
-        {id: number;data: NameRequest},
+        {id: number;data: ChartOfAccountsNameRequest},
         TContext
       > => {
       return useMutation(getChartOfAccountsControllerRenameAccountMutationOptions(options), queryClient);

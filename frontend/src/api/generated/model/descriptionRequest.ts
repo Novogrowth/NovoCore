@@ -9,5 +9,5 @@
  */
 
 export interface DescriptionRequest {
-  description?: string;
+  description: string;
 }

@@ -11,6 +11,6 @@ import type { PageInfo } from './pageInfo';
 import type { SerializedUnitView } from './serializedUnitView';
 
 export interface ListResponseSerializedUnitView {
-  items?: SerializedUnitView[];
+  items: SerializedUnitView[];
   page?: PageInfo;
 }
