@@ -41,12 +41,23 @@ export interface SettingSpec {
   readonly key: string
   readonly kind: SettingKind
   /**
-   * Readable and **never writable**, with the reason.
+   * Readable and **never writable**, with the reason — and the reason is the field, not a boolean.
    *
-   * ⚠️ Exactly one setting is this, and it is not a placeholder for "not built yet". See
-   * `cash.payment.limit` below.
+   * ⚠️ Neither value is a placeholder for "not built yet", and they are two reasons rather than one
+   * because they answer an administrator's "why can't I edit this?" differently:
+   *
+   * - `statutory` — a law sets it. `cash.payment.limit` is €500 under N. 5301/2026, and a screen
+   *   that raised it would make breaking the law a two-click operation.
+   * - `derived` — the value *describes* something else this system did, so editing it would make it
+   *   describe something untrue. `aade.spec-version` records which AADE artefacts Flyway seeded the
+   *   statutory codifications from; typing a newer version into it would not update a single row,
+   *   it would only make the marker lie about the rows that are there.
+   *
+   * ⚠️ They were briefly collapsed into one during R1a and `settings-catalogue.test.ts` caught it,
+   * which is exactly what that test's own comment predicted would happen: a second key acquiring
+   * the flag because it was a convenient way to say "not editable".
    */
-  readonly readOnlyReason?: 'statutory'
+  readonly readOnlyReason?: 'statutory' | 'derived'
   /**
    * Write-only. The value is never returned — not even redacted-with-a-length — so the screen can
    * report whether one is configured and nothing more.
@@ -93,8 +104,19 @@ const spec = (
 
 /**
  * Documents & Rounding — how money is rounded, what a cash payment may be, how large an attachment
- * may be. Four keys that share no namespace and do belong on one page: they are the settings an
- * administrator reviews when asking "how does this system handle a document".
+ * may be, and since R1a what this installation issues documents *as*. Six keys that share no
+ * namespace and do belong on one page: they are the settings an administrator reviews when asking
+ * "how does this system handle a document".
+ *
+ * ⚠️ **R1a's two keys are here rather than on a "Company" page of their own, deliberately.** A page
+ * with two fields behind a permanent menu item is the empty screen F4 dropped a General page to
+ * avoid, and both keys answer the page's own question: the branch number is what a document is
+ * issued from, and the spec version is which AADE codification its document types came from.
+ *
+ * ⚠️ **The gap is wider than these two keys and is not filled here.** There is no ΑΦΜ, no company
+ * name and no address in settings at all — the myDATA issuer branch number is one field of a
+ * company-identity block that does not exist. Recorded, because inventing the rest of it is a
+ * design decision rather than a screen.
  */
 export const DOCUMENT_SETTINGS: readonly SettingSpec[] = [
   spec(SettingsCatalog.LEDGER_ROUNDING_THRESHOLD, 'ledger.rounding.threshold', 'EUR_AMOUNT'),
@@ -116,6 +138,24 @@ export const DOCUMENT_SETTINGS: readonly SettingSpec[] = [
     readOnlyReason: 'statutory',
   }),
   spec(SettingsCatalog.ATTACHMENT_MAX_SIZE_BYTES, 'attachment.max-size-bytes', 'POSITIVE_INTEGER'),
+  /*
+   * The establishment number documents are issued from. Head office is `0` — AADE's own convention,
+   * not a placeholder — which is why the kind is TEXT and not POSITIVE_INTEGER: a positive-integer
+   * field would refuse the correct value for most installations, and nothing computes with it.
+   */
+  spec(SettingsCatalog.COMPANY_BRANCH_NUMBER, 'company.branch-number', 'TEXT'),
+  /*
+   * ⚠️ Read-only as `derived`, NOT as `statutory`, and the distinction is not pedantry.
+   *
+   * The value **describes what Flyway seeded** — which annex tables the 55 AADE invoice types and
+   * the 31 exemption reasons were read from. Editing it through a form would not update a single
+   * row; it would only make the marker claim a version the rows do not correspond to, which is
+   * strictly worse than having no marker, because the marker exists so that "are we behind AADE?"
+   * has an answer. It moves when a migration moves the seed.
+   */
+  spec(SettingsCatalog.AADE_SPEC_VERSION, 'aade.spec-version', 'TEXT', {
+    readOnlyReason: 'derived',
+  }),
 ]
 
 /**

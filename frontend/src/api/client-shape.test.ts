@@ -91,17 +91,23 @@ describe('the generated client', () => {
   it('covers the whole surface', () => {
     // An anti-vacuity guard: if the generated output moved, every assertion below would pass
     // against an empty string and report a green build for a check that examined nothing.
-    expect(all.length).toBe(176)
+    expect(all.length).toBe(230)
     expect(source.length).toBeGreaterThan(100_000)
   })
 
   it('has writes to check, and knows how many', () => {
     // Stated as a number so that a route disappearing from the spec is visible here too.
-    // 52 POST, 32 PATCH, 7 PUT, 3 DELETE as of 2026-08-03. Every one of them was a query before
-    // this was fixed. The 176th operation and the 94th write are the same one:
-    // `PATCH /api/roles/{id}/description`, backend queue item 5.
-    expect(writes.length).toBe(94)
-    expect(reads.length).toBe(82)
+    // 70 POST, 40 PATCH, 16 PUT, 8 DELETE as of 2026-08-03, after R1a. Every write was a query
+    // before that was fixed.
+    //
+    // R1a added 54 operations (176 → 230) and 40 writes (94 → 134): 5 on the AADE invoice-type
+    // codification, 3 on VAT exemption reasons (which became a statutory codification and gained
+    // the three operations that contract permits), 11 each on the two document-type lists, 10 on
+    // the sales series and 8 on the purchase series — the difference between those two being the
+    // channel PUT/DELETE pair, which purchases deliberately do not have — and 6 on delivery
+    // methods.
+    expect(writes.length).toBe(134)
+    expect(reads.length).toBe(96)
   })
 
   it('wires every write as a mutation', () => {

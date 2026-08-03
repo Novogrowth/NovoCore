@@ -1,5 +1,13 @@
 package gr.novotrade.novocore.core.web;
 
+import gr.novotrade.novocore.core.api.codification.AadeInvoiceTypeNotFoundException;
+import gr.novotrade.novocore.core.api.codification.InvalidAadeInvoiceTypeException;
+import gr.novotrade.novocore.core.api.document.DeliveryMethodNotFoundException;
+import gr.novotrade.novocore.core.api.document.DocumentSeriesNotFoundException;
+import gr.novotrade.novocore.core.api.document.DocumentTypeNotFoundException;
+import gr.novotrade.novocore.core.api.document.InvalidDeliveryMethodException;
+import gr.novotrade.novocore.core.api.document.InvalidDocumentSeriesException;
+import gr.novotrade.novocore.core.api.document.InvalidDocumentTypeException;
 import gr.novotrade.novocore.core.api.account.AccountGroupNotFoundException;
 import gr.novotrade.novocore.core.api.account.AccountNotFoundException;
 import gr.novotrade.novocore.core.api.account.InvalidAccountException;
@@ -136,6 +144,7 @@ class WebExceptionHandler {
      * caller probing ids.
      */
     @ExceptionHandler({
+        AadeInvoiceTypeNotFoundException.class,
         AccountGroupNotFoundException.class,
         AccountNotFoundException.class,
         AssetNotFoundException.class,
@@ -143,6 +152,9 @@ class WebExceptionHandler {
         ChargeTypeNotFoundException.class,
         CreditNoteNotFoundException.class,
         CustomerNotFoundException.class,
+        DeliveryMethodNotFoundException.class,
+        DocumentSeriesNotFoundException.class,
+        DocumentTypeNotFoundException.class,
         EmailAttachmentNotFoundException.class,
         FreightAllocationNotFoundException.class,
         GoodsReceiptNotFoundException.class,
@@ -179,6 +191,7 @@ class WebExceptionHandler {
      */
     @ExceptionHandler({
         BundleNotDecomposableException.class,
+        InvalidAadeInvoiceTypeException.class,
         InvalidAccountException.class,
         InvalidAssetException.class,
         InvalidBankTransferException.class,
@@ -186,6 +199,9 @@ class WebExceptionHandler {
         InvalidChargeTypeException.class,
         InvalidCreditNoteException.class,
         InvalidCustomerException.class,
+        InvalidDeliveryMethodException.class,
+        InvalidDocumentSeriesException.class,
+        InvalidDocumentTypeException.class,
         InvalidFreightAllocationException.class,
         InvalidGoodsReceiptException.class,
         InvalidInventoryLotException.class,

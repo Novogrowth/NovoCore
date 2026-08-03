@@ -111,6 +111,36 @@ public final class SettingKeys {
     /** The value that means "never prune" — spelled out rather than encoded as blank or zero. */
     public static final String RETENTION_FOREVER = "FOREVER";
 
+    /**
+     * The establishment (branch) number this installation issues documents from. Head office is
+     * {@code "0"}, which is AADE's own convention rather than a placeholder.
+     *
+     * <p>⚠️ <strong>Deliberately not under a {@code mydata.*} key.</strong> A branch number is a
+     * fact about this company that myDATA happens to ask for; naming it after the consumer would
+     * put every other consumer of the same fact in the wrong namespace.
+     *
+     * <p>⚠️ <strong>Never a constant in code.</strong> An establishment number that lives in a Java
+     * field cannot be corrected by the person who knows it is wrong.
+     *
+     * <p>📌 It is also the first field of a <em>company identity block that does not exist</em>:
+     * there is no ΑΦΜ, no company name and no address in settings as of R1a. That gap is wider than
+     * this key and is recorded rather than quietly filled.
+     */
+    public static final String COMPANY_BRANCH_NUMBER = "company.branch-number";
+
+    /**
+     * Which AADE myDATA specification version the seeded statutory codifications correspond to —
+     * {@code "v2.0.1"}, whose artefacts are in {@code docs/aade/v2.0.1/}.
+     *
+     * <p>Without it, <em>"are we behind AADE?"</em> is a question with no answer: the code lists
+     * live in versioned PDFs and XSDs rather than behind any live API, and they do change between
+     * versions.
+     *
+     * <p>⚠️ The future diff check <strong>alerts a human and never auto-applies.</strong> A code
+     * list that updated itself would silently change what already-transmitted documents claim.
+     */
+    public static final String AADE_SPEC_VERSION = "aade.spec-version";
+
     private SettingKeys() {
     }
 }

@@ -407,15 +407,28 @@ class F4WriteContractIT {
         }
 
         @Test
-        @DisplayName("the unmapped list is a real outstanding item — every seeded unit is in it")
+        @DisplayName("the unmapped list is a real outstanding item — and R1a shortened it, not closed it")
         void everySeededUnitIsUnmapped() {
             // Q38. The screen surfaces this as a standing to-do banner rather than a debug panel,
             // and the count it shows is this one.
+            //
+            // ⚠️ This assertion USED TO name all eight seeded units, because "the verified AADE unit
+            // code list has not been supplied". ⭐ It had been published all along — annex 8.13,
+            // cross-checked against QuantityType in SimpleTypes-v2.0.1.xsd (xs:int, 1..7). R1a
+            // mapped the four that map with certainty and left four open, each for its own reason:
+            //
+            //   GRAM, MILLILITRE — AADE's list has NO SUB-UNITS. Mapping GRAM to 2 (Κιλά) would
+            //     transmit a quantity wrong by a factor of a thousand.
+            //   SET, PACK — a genuine judgement between 1 (Τεμάχια) and 7 (Τεμάχια_Λοιπές
+            //     Περιπτώσεις), and the choice changes what is transmitted.
+            //
+            // ⭐ So Q38 needs sharpening rather than closing: the artefact answered the half nobody
+            // could answer without it, and the remaining half genuinely IS the accountant's.
             assertThat(codes(Json.ok(
                             owner.get("/api/units-of-measure/without-mydata-code"),
                             "GET /api/units-of-measure/without-mydata-code")))
-                    .contains("PIECE", "KILOGRAM", "GRAM", "LITRE", "MILLILITRE", "METRE", "SET",
-                            "PACK");
+                    .contains("GRAM", "MILLILITRE", "SET", "PACK")
+                    .doesNotContain("PIECE", "KILOGRAM", "LITRE", "METRE");
         }
     }
 

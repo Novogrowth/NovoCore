@@ -11,6 +11,7 @@ import type { Money } from './money';
 import type { SalesChannel } from './salesChannel';
 import type { SalesInvoiceLineView } from './salesInvoiceLineView';
 import type { SettlementMethod } from './settlementMethod';
+import type { TransmissionStatus } from './transmissionStatus';
 
 export interface SalesInvoiceView {
   id: number;
@@ -33,5 +34,11 @@ export interface SalesInvoiceView {
   journalEntryId: number;
   reversalOfInvoiceId?: number;
   reversedByInvoiceId?: number;
+  mark?: number;
+  uid?: string;
+  qrUrl?: string;
+  transmissionStatus: TransmissionStatus;
+  seriesId?: number;
+  seriesAbbreviation?: string;
   lines: SalesInvoiceLineView[];
 }

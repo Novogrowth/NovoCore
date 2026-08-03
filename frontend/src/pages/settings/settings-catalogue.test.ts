@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import { SettingsCatalog } from '@/api/generated/model'
+import el from '@/i18n/locales/el/common.json'
+import en from '@/i18n/locales/en/common.json'
 
 import {
   ALL_SETTINGS,
@@ -32,12 +34,54 @@ describe('the settings catalogue', () => {
     expect(new Set(ALL_SETTINGS.map((entry) => entry.key)).size).toBe(ALL_SETTINGS.length)
   })
 
-  it('has exactly one never-writable key, and it is the statutory cash limit', () => {
-    // Not a count for its own sake. `cash.payment.limit` having no write route is a decision with a
-    // statute behind it; a second key acquiring `readOnlyReason` would mean somebody used it as a
-    // convenient way to say "not built yet", which is the distinction this whole screen turns on.
-    const readOnly = ALL_SETTINGS.filter((entry) => entry.readOnlyReason !== undefined)
-    expect(readOnly.map((entry) => entry.key)).toEqual(['cash.payment.limit'])
+  it('names every never-writable key AND why, so the flag cannot become "not built yet"', () => {
+    /*
+     * Not a count for its own sake. `cash.payment.limit` having no write route is a decision with a
+     * statute behind it, and this test exists so that a second key acquiring `readOnlyReason` is a
+     * failure somebody has to look at rather than a silent widening.
+     *
+     * ⚠️ It did its job during R1a. `aade.spec-version` was added carrying `'statutory'` — reusing
+     * the flag because it was the one that existed — and this assertion failed. A specification
+     * version is not set by law; it is DERIVED from what a migration seeded, and editing it would
+     * not change a single row, only make the marker lie about the rows that are there. So the
+     * reason is a second value rather than the same one, and the screen shows a different
+     * explanation for each.
+     *
+     * Asserted as key→reason PAIRS and not as a list of keys: a list would have gone green the
+     * moment the wrong reason was attached to the right key, which is exactly the mistake made.
+     */
+    const readOnly = ALL_SETTINGS.filter((entry) => entry.readOnlyReason !== undefined).map(
+      (entry) => [entry.key, entry.readOnlyReason] as const,
+    )
+
+    expect(readOnly).toEqual([
+      ['cash.payment.limit', 'statutory'],
+      ['aade.spec-version', 'derived'],
+    ])
+  })
+
+  it.each([
+    ['en', en],
+    ['el', el],
+  ])('has a %s label for every key, so none falls back to its dotted name', (_locale, bundle) => {
+    /*
+     * ⚠️ Added by R1a, because the fallback is SILENT and that is the whole problem.
+     *
+     * `SettingRow` resolves its label with `t('settings.key.<dotted key>', { defaultValue: key })`,
+     * so a key with no translation renders as `company.branch-number` on the screen and in the
+     * "Edit …" button's accessible name. Nothing errors, nothing warns, and the row looks like a
+     * row somebody forgot to finish — which is exactly what R1a shipped for one commit until a
+     * screen test happened to assert a button by name.
+     *
+     * ⚠️ It is deliberately NOT covered by `enum-labels.test.ts`. That one checks the
+     * `SettingsCatalog.*` enum labels, which are a different set of strings used in a different
+     * place; both existed for these two keys and only one of them was the one the row reads.
+     */
+    const missing = ALL_SETTINGS.map((entry) => `settings.key.${entry.key}`).filter(
+      (key) => !(key in bundle),
+    )
+
+    expect(missing, `add these to src/i18n/locales/${_locale}/common.json`).toEqual([])
   })
 
   it('has exactly one write-only key, and it is the SMTP password', () => {

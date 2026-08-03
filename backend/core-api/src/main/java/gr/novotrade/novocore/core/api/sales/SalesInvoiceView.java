@@ -46,6 +46,12 @@ public record SalesInvoiceView(
         long journalEntryId,
         Long reversalOfInvoiceId,
         Long reversedByInvoiceId,
+        Long mark,
+        String uid,
+        String qrUrl,
+        @Mandatory TransmissionStatus transmissionStatus,
+        Long seriesId,
+        String seriesAbbreviation,
         @Mandatory List<SalesInvoiceLineView> lines) {
 
     public SalesInvoiceView {
@@ -58,7 +64,26 @@ public record SalesInvoiceView(
         Objects.requireNonNull(vatTotal, "vatTotal");
         Objects.requireNonNull(grossTotal, "grossTotal");
         Objects.requireNonNull(roundingAmount, "roundingAmount");
+        Objects.requireNonNull(transmissionStatus, "transmissionStatus");
         lines = List.copyOf(Objects.requireNonNull(lines, "lines"));
+    }
+
+    /**
+     * AADE's ΜΑΡΚ, when the document carries one.
+     *
+     * <p>⚠️ <strong>Empty is the normal state as of R1a and says nothing is wrong.</strong> Novocore
+     * never obtains a ΜΑΡΚ itself — the document receives one at issuance, through Prosvasis Go
+     * today and a certified Πάροχος at step 40 — and nothing in R1a records one. Present exactly
+     * when {@link #transmissionStatus()} is {@link TransmissionStatus#TRANSMITTED}, which the
+     * database enforces rather than leaves to convention.
+     */
+    public Optional<Long> markIfAny() {
+        return Optional.ofNullable(mark);
+    }
+
+    /** The numbering series, when one is known. Empty on every invoice recorded before R1b. */
+    public Optional<Long> seriesIdIfAny() {
+        return Optional.ofNullable(seriesId);
     }
 
     public boolean isReversal() {

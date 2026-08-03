@@ -84,23 +84,48 @@ class UnitOfMeasureIT extends AbstractCoreIntegrationTest {
     }
 
     @Test
-    @DisplayName("no myDATA unit code was invented — every seeded unit has none")
+    @DisplayName("⚠️ four units carry annex 8.13's code and four deliberately do not")
     void noGuessedMydataCodes() {
-        // Same stance as the OSS/IOSS exemption reasons in V8. The verified AADE unit list has not
-        // been supplied, and a plausible wrong code is invisible where an absent one is not.
-        assertThat(units.withoutMydataCode()).extracting(UnitOfMeasureView::code)
-                .containsAll(SEEDED_CODES);
-        assertThat(seeded()).allSatisfy(unit ->
-                assertThat(unit.mydataCodeIfAny()).isEmpty());
+        // ⚠️ THIS TEST WAS REWRITTEN IN R1a, and its previous form was correct when written: it
+        // asserted that EVERY seeded unit had no myDATA code, because "the verified AADE unit list
+        // has not been supplied". ⭐ It had been published all along — annex 8.13, cross-checked
+        // against QuantityType in SimpleTypes-v2.0.1.xsd, which is xs:int restricted to 1..7.
+        //
+        // ⚠️ SEVEN AADE codes, EIGHT NovoCore units, and they do not line up. The stance the old
+        // test protected is unchanged and is what decides the other four:
+        //
+        //   1 Τεμάχια   2 Κιλά   3 Λίτρα   4 Μέτρα
+        //   5 Τετραγωνικά Μέτρα   6 Κυβικά Μέτρα   7 Τεμάχια_Λοιπές Περιπτώσεις
+        assertThat(units.requireByCode("PIECE").requireMydataCode()).isEqualTo("1");
+        assertThat(units.requireByCode("KILOGRAM").requireMydataCode()).isEqualTo("2");
+        assertThat(units.requireByCode("LITRE").requireMydataCode()).isEqualTo("3");
+        assertThat(units.requireByCode("METRE").requireMydataCode()).isEqualTo("4");
 
-        UnitOfMeasureView piece = units.requireByCode("PIECE");
-        assertThat(piece.mydataCodeIfAny()).isEmpty();
+        // ⚠️ The four that are still open, and each is a DIFFERENT kind of gap rather than the same
+        // one four times:
+        //
+        //   GRAM, MILLILITRE — AADE'S LIST HAS NO SUB-UNITS. Mapping GRAM to 2 (Κιλά) would
+        //     transmit a quantity wrong by a factor of a thousand: invisible here, a compliance
+        //     defect there. There is no code to map them to and no amount of deciding produces one.
+        //   SET, PACK — a genuine judgement between 1 (Τεμάχια) and 7 (Τεμάχια_Λοιπές Περιπτώσεις).
+        //     Both readings are defensible and the choice changes what is transmitted, so
+        //     "auto-resolve only what is genuinely certain" says this is not certain.
+        assertThat(units.withoutMydataCode()).extracting(UnitOfMeasureView::code)
+                .contains("GRAM", "MILLILITRE", "SET", "PACK")
+                .doesNotContain("PIECE", "KILOGRAM", "LITRE", "METRE");
+
+        // ⭐ So Q38's lesson needs sharpening rather than closing. The artefact answered the half
+        // nobody could answer without it; the remaining half genuinely IS the accountant's. The
+        // failure was filing the whole question against a person because the document that answers
+        // most of it was not in the repository.
+        UnitOfMeasureView gram = units.requireByCode("GRAM");
+        assertThat(gram.mydataCodeIfAny()).isEmpty();
 
         // Phase 7's obligation, enforced here rather than left as a comment: transmission must fail
         // naming the unit, not send a blank or a code composed on the spot.
         assertThatExceptionOfType(IllegalStateException.class)
-                .isThrownBy(piece::requireMydataCode)
-                .withMessageContaining("PIECE")
+                .isThrownBy(gram::requireMydataCode)
+                .withMessageContaining("GRAM")
                 .withMessageContaining("cannot be transmitted");
     }
 

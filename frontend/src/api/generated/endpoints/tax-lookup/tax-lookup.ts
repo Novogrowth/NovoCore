@@ -37,16 +37,20 @@ import type {
   TaxLookupControllerChargeTypesParams,
   TaxLookupControllerClearReducedCounterpart4xx,
   TaxLookupControllerCreateVatClass4xx,
+  TaxLookupControllerDeactivateExemptionReason4xx,
   TaxLookupControllerDeactivateVatClass4xx,
+  TaxLookupControllerDescribeExemptionReason4xx,
   TaxLookupControllerDescribeVatClass4xx,
   TaxLookupControllerExemptionReasons4xx,
   TaxLookupControllerExemptionReasonsParams,
   TaxLookupControllerMapReducedCounterpart4xx,
+  TaxLookupControllerReactivateExemptionReason4xx,
   TaxLookupControllerReactivateVatClass4xx,
   TaxLookupControllerVatClass4xx,
   TaxLookupControllerVatClasses4xx,
   TaxLookupControllerVatClassesParams,
-  VatClassView
+  VatClassView,
+  VatExemptionReasonView
 } from '../../model';
 
 import { apiMutator } from '../../../http';
@@ -760,3 +764,174 @@ export function useTaxLookupControllerExemptionReasons<TData = Awaited<ReturnTyp
 
 
 
+export const taxLookupControllerDeactivateExemptionReason = (
+    id: number,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<void>(
+      {url: `/api/vat-exemption-reasons/${id}/deactivate`, method: 'POST', signal
+    },
+      );
+    }
+
+
+
+
+export const getTaxLookupControllerDeactivateExemptionReasonMutationOptions = <TError = TaxLookupControllerDeactivateExemptionReason4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerDeactivateExemptionReason>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerDeactivateExemptionReason>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['taxLookupControllerDeactivateExemptionReason'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof taxLookupControllerDeactivateExemptionReason>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  taxLookupControllerDeactivateExemptionReason(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TaxLookupControllerDeactivateExemptionReasonMutationResult = NonNullable<Awaited<ReturnType<typeof taxLookupControllerDeactivateExemptionReason>>>
+
+    export type TaxLookupControllerDeactivateExemptionReasonMutationError = TaxLookupControllerDeactivateExemptionReason4xx
+
+    export const useTaxLookupControllerDeactivateExemptionReason = <TError = TaxLookupControllerDeactivateExemptionReason4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerDeactivateExemptionReason>>, TError,{id: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof taxLookupControllerDeactivateExemptionReason>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getTaxLookupControllerDeactivateExemptionReasonMutationOptions(options), queryClient);
+    }
+    export const taxLookupControllerDescribeExemptionReason = (
+    id: number,
+    descriptionRequest: DescriptionRequest,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<VatExemptionReasonView>(
+      {url: `/api/vat-exemption-reasons/${id}/description`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: descriptionRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getTaxLookupControllerDescribeExemptionReasonMutationOptions = <TError = TaxLookupControllerDescribeExemptionReason4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerDescribeExemptionReason>>, TError,{id: number;data: DescriptionRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerDescribeExemptionReason>>, TError,{id: number;data: DescriptionRequest}, TContext> => {
+
+const mutationKey = ['taxLookupControllerDescribeExemptionReason'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof taxLookupControllerDescribeExemptionReason>>, {id: number;data: DescriptionRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  taxLookupControllerDescribeExemptionReason(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TaxLookupControllerDescribeExemptionReasonMutationResult = NonNullable<Awaited<ReturnType<typeof taxLookupControllerDescribeExemptionReason>>>
+    export type TaxLookupControllerDescribeExemptionReasonMutationBody = DescriptionRequest
+    export type TaxLookupControllerDescribeExemptionReasonMutationError = TaxLookupControllerDescribeExemptionReason4xx
+
+    export const useTaxLookupControllerDescribeExemptionReason = <TError = TaxLookupControllerDescribeExemptionReason4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerDescribeExemptionReason>>, TError,{id: number;data: DescriptionRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof taxLookupControllerDescribeExemptionReason>>,
+        TError,
+        {id: number;data: DescriptionRequest},
+        TContext
+      > => {
+      return useMutation(getTaxLookupControllerDescribeExemptionReasonMutationOptions(options), queryClient);
+    }
+    export const taxLookupControllerReactivateExemptionReason = (
+    id: number,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<void>(
+      {url: `/api/vat-exemption-reasons/${id}/reactivate`, method: 'POST', signal
+    },
+      );
+    }
+
+
+
+
+export const getTaxLookupControllerReactivateExemptionReasonMutationOptions = <TError = TaxLookupControllerReactivateExemptionReason4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerReactivateExemptionReason>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerReactivateExemptionReason>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['taxLookupControllerReactivateExemptionReason'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof taxLookupControllerReactivateExemptionReason>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  taxLookupControllerReactivateExemptionReason(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TaxLookupControllerReactivateExemptionReasonMutationResult = NonNullable<Awaited<ReturnType<typeof taxLookupControllerReactivateExemptionReason>>>
+
+    export type TaxLookupControllerReactivateExemptionReasonMutationError = TaxLookupControllerReactivateExemptionReason4xx
+
+    export const useTaxLookupControllerReactivateExemptionReason = <TError = TaxLookupControllerReactivateExemptionReason4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taxLookupControllerReactivateExemptionReason>>, TError,{id: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof taxLookupControllerReactivateExemptionReason>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getTaxLookupControllerReactivateExemptionReasonMutationOptions(options), queryClient);
+    }

@@ -95,6 +95,15 @@ class VatExemptionReason extends AuditableEntity {
         return active;
     }
 
+    /**
+     * Corrects the label. The code and the myDATA string have no mutator and never will: the
+     * myDATA string is what goes on the wire, so changing one in place would retroactively alter
+     * what every document already transmitted under it appears to have declared.
+     */
+    void describe(String newDescription) {
+        this.description = newDescription;
+    }
+
     void setActive(boolean nowActive) {
         this.active = nowActive;
     }

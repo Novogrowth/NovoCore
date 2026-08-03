@@ -200,14 +200,26 @@ class PermissionSweepIT {
 
         rules.put("purchasing", startingWith(Section.PURCHASING,
                 "/api/purchase-invoices", "/api/purchase-invoice-lines", "/api/goods-receipts",
-                "/api/goods-receipt-lines", "/api/freight-allocations"));
-        rules.put("sales", startingWith(Section.SALES, "/api/sales-invoices", "/api/credit-notes"));
+                "/api/goods-receipt-lines", "/api/freight-allocations",
+                "/api/purchase-document-types", "/api/purchase-document-series"));
+        // R1a's document reference data. Sales and purchase document types and series follow the
+        // documents they describe rather than sitting under Settings, on the principle
+        // UnitOfMeasureController states: a section is about who needs to see something. Delivery
+        // methods are chosen when a sale is recorded, so they are here too.
+        rules.put("sales", startingWith(Section.SALES,
+                "/api/sales-invoices", "/api/credit-notes", "/api/sales-document-types",
+                "/api/sales-document-series", "/api/delivery-methods"));
         rules.put("settlements", startingWith(Section.SETTLEMENTS,
                 "/api/settlements", "/api/bank-transfers", "/api/allocations", "/api/open-items",
                 "/api/customer-credits"));
         rules.put("suppliers", startingWith(Section.SUPPLIERS, "/api/suppliers"));
+        // /api/aade-invoice-types is TAX_AND_CHARGES rather than Sales or Purchasing, although a
+        // document form is what reads it: it is a tax authority's list exactly like the exemption
+        // reasons, and BOTH a sales and a purchase document form need it — so neither of those
+        // sections could hold it without the other losing access.
         rules.put("tax and charges", startingWith(Section.TAX_AND_CHARGES,
-                "/api/vat-classes", "/api/vat-exemption-reasons", "/api/charge-types"));
+                "/api/vat-classes", "/api/vat-exemption-reasons", "/api/charge-types",
+                "/api/aade-invoice-types"));
 
         // /api/sections is the catalogue of sections a role editor renders its grid from, so it
         // belongs with role administration rather than being a section of its own. It reports only

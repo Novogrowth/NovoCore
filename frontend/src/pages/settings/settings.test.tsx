@@ -22,7 +22,8 @@ import { DocumentSettings, EmailSettings, RetentionSettings } from './settings-p
  *   and a disabled control invites a hunt for the permission that unlocks it.
  * - **`smtp.password` never shows a value**, because the backend never sends one. The screen may say
  *   whether one is configured and nothing more.
- * - **There is no General page.** All 18 keys land on these three.
+ * - **There is no General page.** All 20 keys land on these three — R1a's `company.branch-number`
+ *   and `aade.spec-version` went onto Documents rather than earning a page with two fields on it.
  */
 
 const owner: Me = aUser({
@@ -43,8 +44,10 @@ const setting = (key: string, value: string, extra: Partial<SettingView> = {}): 
 
 /** The shape `GET /api/settings` returns — all 18, sorted by dotted key as the service sorts them. */
 const settings: SettingView[] = [
+  setting('aade.spec-version', 'v2.0.1'),
   setting('attachment.max-size-bytes', '26214400'),
   setting('cash.payment.limit', '500.00'),
+  setting('company.branch-number', '0'),
   setting('email.dispatch.batch-size', '20'),
   setting('email.max-attempts', '5'),
   setting('email.retention.inline-attachment-days', '90'),
@@ -109,7 +112,7 @@ describe('the settings screens', () => {
     expect(screen.queryByText('Rounding threshold')).not.toBeInTheDocument()
   })
 
-  it('renders the statutory cash limit with no edit control at all', async () => {
+  it('renders the two never-writable keys with no edit control, and distinct reasons', async () => {
     renderPage(() => <DocumentSettings />)
     await screen.findByText('500.00')
 
@@ -123,6 +126,25 @@ describe('the settings screens', () => {
      */
     expect(screen.queryByRole('button', { name: 'Edit Cash payment limit' })).not.toBeInTheDocument()
     expect(screen.getByText('Statutory')).toBeInTheDocument()
+
+    /*
+     * ⚠️ R1a's `aade.spec-version` is the same absence for a DIFFERENT reason, and the screen says
+     * which. It is not set by law; it records which AADE artefacts a migration seeded the statutory
+     * codifications from, so editing it would not change a row — it would only make the marker lie
+     * about the rows that are there.
+     *
+     * Both badges are asserted in one test on purpose: the failure worth catching is the two
+     * collapsing into one word, and that is only visible when both are on screen together.
+     */
+    expect(
+      screen.queryByRole('button', { name: 'Edit AADE specification version' }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText('Derived')).toBeInTheDocument()
+
+    // The branch number IS editable — it is an ordinary fact about the company that somebody may
+    // have to correct, and an establishment number nobody can change is the shape R1a avoided by
+    // keeping it out of a Java constant.
+    expect(screen.getByRole('button', { name: 'Edit Branch number' })).toBeInTheDocument()
 
     // And the neighbouring writable rows DO have one — otherwise this test would pass on a page
     // that rendered no buttons at all.

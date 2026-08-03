@@ -88,11 +88,12 @@ class TaxLookupController {
     }
 
     /**
-     * The AADE exemption reasons — 29 real rows in the recodified article numbering.
+     * The AADE exemption reasons — 31 rows in the recodified article numbering.
      *
      * <p>Note that {@code mydataCode} is nullable and NULL means "no mapping exists" rather than
-     * "not filled in yet" — the OSS/IOSS reasons genuinely have none. A phase 7 transmission must
-     * refuse a NULL rather than composing a substitute; a picker here may show them all.
+     * "not filled in yet" — the OSS/IOSS reasons genuinely have none, and R1a added codes 24 and 28
+     * with none either. A phase 7 transmission must refuse a NULL rather than composing a
+     * substitute; a picker here may show them all.
      */
     @GetMapping(path = "/api/vat-exemption-reasons", produces = MediaType.APPLICATION_JSON_VALUE)
     ListResponse<VatExemptionReasonView> exemptionReasons(
@@ -117,10 +118,19 @@ class TaxLookupController {
     // -------------------------------------------------------------------------------------------
     // Administering VAT classes — step 16b
     //
-    // Charge types and exemption reasons stay read-only. Their services have write operations, and
-    // exposing them is a separate decision: the 29 exemption reasons are AADE's list rather than
-    // ours, and a charge type wires a fee to an income account, which is the kind of thing that
-    // wants a screen explaining what happens if you point it at the wrong one.
+    // Charge types stay read-only. Their service has write operations, and exposing them is a
+    // separate decision: a charge type wires a fee to an income account, which is the kind of thing
+    // that wants a screen explaining what happens if you point it at the wrong one.
+    //
+    // ⚠️ Exemption reasons were read-only for the same paragraph's other half — "AADE's list rather
+    // than ours" — and R1a changed that, narrowly. They are a StatutoryCodification now, which
+    // grants exactly three operations and forbids a fourth: describe, deactivate, reactivate, and
+    // NO create. The routes below are the whole of what that contract permits.
+    //
+    // ⚠️ They exist rather than being left to R2 for a specific reason: a service method with no
+    // route and no production caller is exactly what Q1-b spent a week deciding about. Adding
+    // `describe` to the interface without a way to reach it would have recreated the shape in the
+    // same session that closed it.
     // -------------------------------------------------------------------------------------------
 
     /**
@@ -185,7 +195,43 @@ class TaxLookupController {
     }
 
     // -------------------------------------------------------------------------------------------
+    // Administering exemption reasons — R1a. The three operations a statutory codification permits.
+    // -------------------------------------------------------------------------------------------
 
+    /**
+     * Corrects the description.
+     *
+     * <p>⚠️ The <strong>description</strong> only, and the omission is the important half: there is
+     * no route to the AADE code and none to {@code mydataCode}. The myDATA string is what goes on
+     * the wire, so correcting one in place would retroactively change what every document already
+     * transmitted under it appears to have declared.
+     */
+    @PatchMapping(path = "/api/vat-exemption-reasons/{id}/description",
+            consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Requires(section = Section.TAX_AND_CHARGES, level = AccessLevel.FULL)
+    VatExemptionReasonView describeExemptionReason(
+            @PathVariable long id, @RequestBody DescriptionRequest request) {
+        return exemptionReasons.describe(id, request.description());
+    }
+
+    /** AADE retired the reason. Nothing is ever deleted — issued documents must stay explicable. */
+    @PostMapping(path = "/api/vat-exemption-reasons/{id}/deactivate")
+    @Requires(section = Section.TAX_AND_CHARGES, level = AccessLevel.FULL)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void deactivateExemptionReason(@PathVariable long id) {
+        exemptionReasons.deactivate(id);
+    }
+
+    @PostMapping(path = "/api/vat-exemption-reasons/{id}/reactivate")
+    @Requires(section = Section.TAX_AND_CHARGES, level = AccessLevel.FULL)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void reactivateExemptionReason(@PathVariable long id) {
+        exemptionReasons.reactivate(id);
+    }
+
+    // -------------------------------------------------------------------------------------------
+
+    /** Shared by {@link #describeVatClass} and {@link #describeExemptionReason}. */
     record DescriptionRequest(@Mandatory String description) {
 
         DescriptionRequest {

@@ -2,6 +2,7 @@ package gr.novotrade.novocore.core.sales;
 
 import gr.novotrade.novocore.core.api.sales.SalesChannel;
 import gr.novotrade.novocore.core.api.sales.SettlementMethod;
+import gr.novotrade.novocore.core.api.sales.TransmissionStatus;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.support.AuditableEntity;
 import jakarta.persistence.CascadeType;
@@ -103,6 +104,42 @@ class SalesInvoice extends AuditableEntity {
 
     @Column(name = "reversal_of_id")
     private Long reversalOfId;
+
+    // -------------------------------------------------------------------------------------------
+    // Statutory identifiers — ADR 0016. RECORDED, never obtained.
+    //
+    // ⚠️ These are CORE fields and that is not a violation of "external reference IDs never live on
+    // core entities". Go's internal document id identifies a row in GO'S database and is meaningless
+    // once Go is replaced; the ΜΑΡΚ identifies THIS document to the Greek state, permanently, and is
+    // printed on the document itself. The test that separates them is whether the value survives the
+    // vendor being replaced.
+    //
+    // ⚠️ R1a is SCHEMA AND VALIDATION ONLY. Nothing here writes any of these — there is no setter,
+    // because there is nothing in this phase entitled to supply one. Novocore learns a ΜΑΡΚ from
+    // Prosvasis Go (step 18) or from a Πάροχος (step 40), and until an adapter exists, a Java path
+    // that could set one would be a path with no legitimate caller.
+    // -------------------------------------------------------------------------------------------
+
+    /** AADE's ΜΑΡΚ. {@code bigint} because AADE's own {@code response-v2.0.1.xsd} types it long. */
+    @Column(name = "mark")
+    private Long mark;
+
+    @Column(name = "uid", length = 100)
+    private String uid;
+
+    @Column(name = "qr_url", length = 500)
+    private String qrUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "transmission_status", nullable = false, length = 30)
+    private TransmissionStatus transmissionStatus = TransmissionStatus.UNKNOWN;
+
+    /**
+     * The numbering series. Null through R1a — every existing invoice predates series, and R1a
+     * cannot change what any existing test asserts. R1b makes it the source of the channel.
+     */
+    @Column(name = "series_id")
+    private Long seriesId;
 
     @OneToMany(mappedBy = "invoice", cascade = {CascadeType.PERSIST, CascadeType.MERGE},
             fetch = FetchType.LAZY)
@@ -225,4 +262,24 @@ class SalesInvoice extends AuditableEntity {
         }
         return total.plus(getRoundingAmount());
     }
+    Long getMark() {
+        return mark;
+    }
+
+    String getUid() {
+        return uid;
+    }
+
+    String getQrUrl() {
+        return qrUrl;
+    }
+
+    TransmissionStatus getTransmissionStatus() {
+        return transmissionStatus;
+    }
+
+    Long getSeriesId() {
+        return seriesId;
+    }
+
 }

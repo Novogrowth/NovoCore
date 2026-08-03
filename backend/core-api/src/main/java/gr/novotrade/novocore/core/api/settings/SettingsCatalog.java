@@ -141,9 +141,34 @@ public enum SettingsCatalog {
     /** Q43: 90 days. The only unbounded growth the outbox has — generated PDFs that exist nowhere else. */
     EMAIL_RETENTION_INLINE_ATTACHMENT_DAYS(
             SettingKeys.EMAIL_RETENTION_INLINE_ATTACHMENT_DAYS, SettingType.RETENTION_DAYS,
-            Access.READ_WRITE);
+            Access.READ_WRITE),
 
     /** The namespace no catalogue entry may name — see the class javadoc. */
+    /**
+     * The establishment (branch) number this installation issues documents from — R1a.
+     *
+     * <p>{@code READ_WRITE} and typed {@code TEXT} rather than {@code POSITIVE_INTEGER}: head
+     * office is {@code "0"}, which a positive-integer type would refuse, and a branch number is an
+     * identifier rather than a quantity — nothing computes with it.
+     *
+     * <p>⚠️ Editable on purpose. An establishment number that lives in a Java constant cannot be
+     * corrected by the person who knows it is wrong.
+     */
+    COMPANY_BRANCH_NUMBER(
+            SettingKeys.COMPANY_BRANCH_NUMBER, SettingType.TEXT, Access.READ_WRITE),
+
+    /**
+     * Which AADE specification version the seeded statutory codifications correspond to — R1a.
+     *
+     * <p>⚠️ {@code READ_ONLY}, and that is the point of it. The value describes what
+     * <strong>Flyway seeded</strong>; editing it through a form would make it claim a version the
+     * rows do not correspond to, which is worse than having no marker at all. It moves when a
+     * migration moves the seed.
+     */
+    AADE_SPEC_VERSION(SettingKeys.AADE_SPEC_VERSION, SettingType.TEXT, Access.READ_ONLY),
+
+    ;
+
     public static final String EXCLUDED_NAMESPACE = "backup.";
 
     private final String key;

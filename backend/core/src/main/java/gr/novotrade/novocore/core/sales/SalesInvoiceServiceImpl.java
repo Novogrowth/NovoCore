@@ -789,6 +789,16 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
                 invoice.getJournalEntryId(),
                 invoice.getReversalOfId(),
                 invoices.findByReversalOfId(invoice.getId()).map(SalesInvoice::getId).orElse(null),
+                // The statutory identifiers, read straight off the row. Null on every invoice as
+                // of R1a and that is correct: Novocore never obtains a ΜΑΡΚ itself, and nothing in
+                // this phase is entitled to supply one. The series abbreviation is resolved by
+                // R1b, which is the step that gives an invoice a series.
+                invoice.getMark(),
+                invoice.getUid(),
+                invoice.getQrUrl(),
+                invoice.getTransmissionStatus(),
+                invoice.getSeriesId(),
+                null,
                 lineViews);
     }
 

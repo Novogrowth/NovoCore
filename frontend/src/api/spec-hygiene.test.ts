@@ -33,7 +33,8 @@ describe('the committed OpenAPI spec', () => {
   const all = operations()
 
   it('describes the surface the client is generated from', () => {
-    expect(all.length).toBe(176)
+    // 176 before R1a, which added 54 — see `client-shape.test.ts` for the breakdown by route group.
+    expect(all.length).toBe(230)
   })
 
   it('declares a section and a level on every route', () => {
@@ -201,9 +202,16 @@ describe('the committed OpenAPI spec', () => {
       'CustomerController.NameRequest has no compact constructor, so its name is NOT required — which is the disagreement the merged schema was hiding',
     ).toBeUndefined()
 
+    /*
+     * 75 before 8a, 143 after it, and 167 after R1a — which added 24 schemas that declare
+     * `required`, every one of them a new record rather than a change to an existing contract.
+     *
+     * ⚠️ The direction matters more than the number. A DROP here means a record stopped guarding
+     * something, which makes every consumer's non-optional field a lie; a RISE is ordinary.
+     */
     expect(
       declaring.length,
       'the number of schemas declaring required fields changed — read the comment above before updating this number',
-    ).toBe(143)
+    ).toBe(167)
   })
 })

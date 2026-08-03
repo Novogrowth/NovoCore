@@ -2,7 +2,6 @@ package gr.novotrade.novocore.core.tax;
 
 import gr.novotrade.novocore.core.api.audit.AuditLogService;
 import gr.novotrade.novocore.core.api.tax.InvalidVatExemptionReasonException;
-import gr.novotrade.novocore.core.api.tax.NewVatExemptionReason;
 import gr.novotrade.novocore.core.api.tax.VatExemptionReasonNotFoundException;
 import gr.novotrade.novocore.core.api.tax.VatExemptionReasonService;
 import gr.novotrade.novocore.core.api.tax.VatExemptionReasonView;
@@ -65,46 +64,27 @@ class VatExemptionReasonServiceImpl implements VatExemptionReasonService {
 
     @Override
     @Transactional
-    public VatExemptionReasonView create(NewVatExemptionReason request) {
-        String description = requireText(request.description(), "Description");
-        // Null is a legitimate value: the OSS and IOSS reasons have no myDATA mapping. Blank is
-        // not — it would be a second representation of the same state, and the CHECK constraint
-        // refuses it — so blank is normalised to null here rather than rejected, since a caller
-        // passing "" plainly means "none".
-        String mydataCode = optionalText(request.mydataCode());
+    public VatExemptionReasonView describe(long id, String description) {
+        VatExemptionReason reason = repository.findById(id)
+                .orElseThrow(() -> new VatExemptionReasonNotFoundException(id));
+        String corrected = requireText(description, "Description");
 
-        if (request.code() <= 0) {
-            throw new InvalidVatExemptionReasonException(
-                    "AADE exemption reason codes are positive integers; got " + request.code()
-                            + ".");
-        }
-        if (repository.existsByCode(request.code())) {
-            throw new InvalidVatExemptionReasonException(
-                    "A VAT exemption reason with AADE code " + request.code()
-                            + " already exists.");
-        }
-        // The myDATA string is what gets transmitted. Two reasons sharing one would mean an
-        // exempt line could be reported under a reason nobody selected. Absence is not a
-        // collision, though: several reasons legitimately have no mapping at all.
-        if (mydataCode != null && repository.existsByMydataCode(mydataCode)) {
-            throw new InvalidVatExemptionReasonException(
-                    "A VAT exemption reason with myDATA code '" + mydataCode
-                            + "' already exists.");
+        if (corrected.equals(reason.getDescription())) {
+            return toView(reason);
         }
 
-        VatExemptionReason saved = repository.save(new VatExemptionReason(
-                request.code(), description, mydataCode, request.inputVatDeductible()));
+        String previous = reason.getDescription();
+        reason.describe(corrected);
 
-        auditLog.record("vat-exemption-reason.created", ENTITY_TYPE,
-                String.valueOf(saved.getId()), Map.of(
-                        "code", String.valueOf(request.code()),
-                        // Recorded as the literal "(none)" rather than omitted, so the log
-                        // distinguishes a reason created without a mapping from one created before
-                        // this detail was captured. Map.of rejects a null value in any case.
-                        "mydataCode", mydataCode == null ? "(none)" : mydataCode,
-                        "inputVatDeductible", String.valueOf(request.inputVatDeductible())));
+        // The previous value is recorded because this is the ONE editable field on a statutory
+        // codification, and "who changed the label on AADE code 6, and from what" is the question
+        // somebody asks when a picker stops reading the way they remember.
+        auditLog.record("vat-exemption-reason.described", ENTITY_TYPE, String.valueOf(id),
+                Map.of("code", String.valueOf(reason.getCode()),
+                        "previousDescription", previous,
+                        "description", corrected));
 
-        return toView(saved);
+        return toView(reason);
     }
 
     @Override
@@ -140,11 +120,6 @@ class VatExemptionReasonServiceImpl implements VatExemptionReasonService {
             throw new InvalidVatExemptionReasonException(what + " must not be blank.");
         }
         return value.trim();
-    }
-
-    /** Null or blank both mean "no value", normalised to null so there is one representation. */
-    private static String optionalText(String value) {
-        return (value == null || value.isBlank()) ? null : value.trim();
     }
 
     private static List<VatExemptionReasonView> toViews(List<VatExemptionReason> reasons) {

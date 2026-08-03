@@ -86,10 +86,12 @@ function SettingControl({
           <Label className="text-muted-foreground w-48 shrink-0 text-sm">{label}</Label>
           <div className="flex flex-1 items-baseline gap-2">
             <span className="flex-1 text-sm">{value === '' ? <UnsetValue /> : value}</span>
-            <Badge variant="secondary">{t('settings.statutory')}</Badge>
+            <Badge variant="secondary">{t(`settings.${spec.readOnlyReason}`)}</Badge>
           </div>
         </div>
-        <p className="text-muted-foreground mt-1 pl-52 text-sm">{t('settings.statutoryReason')}</p>
+        <p className="text-muted-foreground mt-1 pl-52 text-sm">
+          {t(`settings.${spec.readOnlyReason}Reason`)}
+        </p>
       </div>
     )
   }

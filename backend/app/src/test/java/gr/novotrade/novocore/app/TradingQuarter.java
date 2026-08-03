@@ -177,10 +177,15 @@ final class TradingQuarter {
         }
 
         // The exemption reasons matter from February, when the intra-EU sale needs one. Reading
-        // them here is what a form would do, and V8's real AADE seed is what makes the count 29.
+        // them here is what a form would do.
+        //
+        // ⚠️ 31, not 29, since R1a. V8 seeded 29 from Prosvasis Go with gaps at codes 24 and 28,
+        // and asked in its own header whether those two were retired by AADE or merely absent from
+        // Go. ⭐ The artefact answered: VatExemptionType in SimpleTypes-v2.0.1.xsd is xs:int
+        // restricted to 1..31 with no gaps, and annex 8.3 lists all thirty-one. V32 seeds them.
         List<JsonNode> reasons = Json.items(
                 api.get("/api/vat-exemption-reasons?active=true"), "the AADE exemption reasons");
-        assertThat(reasons).as("V8 seeds the real 29 AADE rows").hasSize(29);
+        assertThat(reasons).as("V8 plus V32 seed all 31 AADE rows, with no gaps").hasSize(31);
         for (JsonNode reason : reasons) {
             handles.put("exemption:" + reason.get("code").asInt(), reason.get("id").asLong());
         }
