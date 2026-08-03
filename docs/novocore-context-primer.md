@@ -94,7 +94,10 @@ the summary.
   same time and for the same reason: it was a snapshot duplicating `PROGRESS.md` and the roadmap, and a
   second record that drifts is exactly what let the backend queue and the frontend roadmap disagree
   about item 3 for a week. **Regenerate a summary on demand rather than maintaining one.**
-- ⚠️ **The next step is R1.** The running order is now **R1 → R2 → F5**. Q1 and 8a are both done
+- ⚠️ **The next step is R1b.** The running order is now **R1b → R2 → F5**. ⚠️ **R1 was split into
+  R1a and R1b on 2026-08-03 and R1a is DONE** (commits `aa1eda4` + `c5f9a97`) — see the R1a bullet
+  below. The split is test-facing: R1a could not change what any existing test asserts, and R1b
+  changes what *every* sales-invoice test constructs. Q1 and 8a are both done
   (2026-08-03); **8b dropped to ⚪ optional** and is off the critical path. F5 is still not next for
   the reason it was not next on 2026-08-02: the backend queue was prioritised ahead of it in a design
   conversation that existed only in chat until then, while three documents still said F5. It is the
@@ -112,6 +115,30 @@ the summary.
   `Required.field`; `PATCH /api/roles/{id}/description`; the duplicate `operationId` fixed, the
   generator taught to **refuse** one, and the frontend workaround deleted; the eight boolean primitives
   boxed.
+- ✅ **Step R1a is DONE — 2026-08-03, two commits** (`aa1eda4` the rewritten checklist, `c5f9a97`
+  the build). Six new tables, **54 new operations** (176 → 230), migrations **V31** and **V32**, a
+  new architecture rule, one deletion. **All 48 sub-parts have a verdict**: 46 done, S.4 explicitly
+  deferred to R2, E.3 a finding rather than a task. Backend **1,440** tests, frontend **310**.
+  - **Two layers, and the distinction is who authors a row.** `aade_invoice_type` carries all 55
+    XSD `InvoiceType` values with annex 8.1's group as a **column**, seeded by Flyway and governed
+    by the new `StatutoryCodification` contract (activate, deactivate, describe; **no create**,
+    enforced by `StatutoryCodificationRulesTest`). `sales_document_type`, `purchase_document_type`,
+    both series tables and `delivery_method` are the **business's own, full CRUD, and ship EMPTY**.
+  - ⭐ **The third-table blocker dissolved rather than being decided.** The six `17.x` Εγγραφές
+    Οντότητας codes were homeless only because 55 statutory values had been forced into two business
+    tables; with one codification table they are rows carrying their group, and 28+6+6+9+6 = 55 still
+    reconciles — asserted by the migration *and* by a test that parses the XSD itself.
+  - ✅ **Q1-b is closed by consequence.** `VatExemptionReasonService.create` is gone: row authorship
+    on a statutory codification belongs to Flyway.
+  - ⚠️ **Four premises corrected.** Annex 8.3 contains **no wire strings**, so exemption codes 24
+    and 28 are seeded with a NULL `mydataCode` and listed open. Annex 8.13 has **seven** codes, not
+    eight — four of our units map with certainty, and GRAM/MILLILITRE have **no AADE code at all**
+    while SET/PACK are a real judgement, so **Q38 is sharpened, not closed**. Codes `4` and `12`
+    have an **empty description cell** in annex 8.1. And ⚠️ **a derived accessor on a serialised
+    record answered `500` for the whole codification** — every service-layer test passed, and only
+    the real server could say so.
+  - 📌 **No live browser leg, and that is correct rather than skipped:** R1a ships no screens. **R2
+    needs one**, and therefore an app-image rebuild.
 - ✅ **Step 8a is DONE — 2026-08-03, two commits.** `@Mandatory` says a record component is never
   absent; `OpenApiSchema` reads it exactly as it reads `isPrimitive()`, and the two together are the
   `required` list. **339 components across 114 records and 105 files**, measured from the canonical
@@ -193,10 +220,11 @@ the summary.
   does recording a sales invoice recompute VAT, or store what the source document states? Answer it
   against the running system.** Precedence between product VAT class, island reduced-rate mapping and
   customer override is an open accountant decision, **needed for the island rates either way.**
-- **Measured 2026-08-03 (after 8a):** 1,381 backend tests (0 failures, 1 skipped, `mvn clean verify`
-  exit 0), 308 frontend tests across 31 files, **176 API operations and 196 schemas, of which 143
-  declare `required`**. 8a added 4 backend tests and **no routes** — it changed what the spec *says*
-  about existing operations, not which operations exist.
+- **Measured 2026-08-03 (after R1a):** **1,440** backend tests (0 failures, 1 skipped,
+  `mvn clean verify` exit 0), **310** frontend tests across 31 files, **230 API operations and 223
+  schemas, of which 167 declare `required`**. R1a added 59 backend tests and **54 operations**.
+  *(8a, for comparison, added 4 tests and no routes — it changed what the spec said about existing
+  operations rather than which operations exist.)*
 
 - **Setup complete:** git repo at `https://github.com/Novogrowth/NovoCore.git`, working locally at `C:\Novocore` (moved off Google Drive — Drive's virtual filesystem was silently corrupting `node_modules` installs; git/GitHub is the only cross-machine sync mechanism now, never Drive).
 - **Frontend foundation built and verified:** Vite + React 19 + TypeScript, Tailwind v4 (CSS-first config), shadcn/ui (style `base-nova`), React Router + an app shell (sidebar + main + Outlet). **No longer untouched — step 16 is under way on top of it; see the step 16 bullet at the end of this list.**

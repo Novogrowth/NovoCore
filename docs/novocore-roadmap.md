@@ -22,9 +22,9 @@ figure that cannot be measured is left blank with a reason, never filled with a 
 `Out` is tokens generated; `In` is input + cache-creation + cache-read — **read the warning under
 *How the actual figures were derived* before drawing any conclusion from that column.**
 
-**Current state, measured 2026-08-03 (after 8a):** **1,381 backend tests** (0 failures, 0 errors,
-1 skipped, `mvn clean verify` exit 0), **308 frontend tests across 31 files**, **176 API operations
-and 196 schemas, 143 of which declare `required`**.
+**Current state, measured 2026-08-03 (after R1a):** **1,440 backend tests** (0 failures, 0 errors,
+1 skipped, `mvn clean verify` exit 0), **310 frontend tests across 31 files**, **230 API operations
+and 223 schemas, 167 of which declare `required`**.
 
 ---
 
@@ -94,7 +94,8 @@ frontend work that must land before any adapter is built.
 |   Q1 | Backend queue: 4+6, 5, 1, 7 ᵘ           |     — |    1.5 |  208k | 🟢 Done         |
 |   8a | `@Mandatory`, schema names, bytecode rule ᵈᵉᶜ | — |  1.3 |  314k | 🟢 Done         |
 |   8b | Consumer cleanup — optional ᵈᵉᶜ         |     — |        |       | ⚪ Optional      |
-|   R1 | Document reference data (backend) ʳ     |     — |        |       | 🟡 **Current**  |
+|  R1a | Document reference data — additive ʳ    |     — |    1.9 |  529k | 🟢 Done         |
+|  R1b | Document reference data — behavioural ʳᵇ |     — |        |       | 🟡 **Current**  |
 |   R2 | Document reference data (screens) ʳ²    |     — |        |       | 🔴 Not started  |
 |   R3 | Self-supply posting paths ˢ             |     — |        |       | ⚪ Placement TBD |
 |   D1 | Supplier/customer codes + alias         |     — |        |       | ⚪ Placement TBD |
@@ -120,8 +121,11 @@ several of them are backend schema work rather than screens. Adding 8.0 across t
 present an estimate for the frontend as an estimate for the phase — so the F-row subtotal is stated
 separately instead, where a reader scanning a column of dashes will actually meet it.
 
-**Q1 and 8a are both 🟢 Done (2026-08-03) and step R1 is `🟡 Current`.** The running order is in
-`PROGRESS.md` under *What is next, in one place*, and it is now **R1 → R2 → F5**. ⚠️ **8a and 8b were
+**Q1, 8a and R1a are all 🟢 Done (2026-08-03) and step R1b is `🟡 Current`.** The running order is
+in `PROGRESS.md` under *What is next, in one place*, and it is now **R1b → R2 → F5**. ⚠️ **R1 split
+into R1a and R1b on 2026-08-03**, and the boundary is test-facing: R1a cannot change what any
+existing test asserts, and R1b changes what *every* sales-invoice test constructs — so a red build
+in R1a is a failure in new code, and in R1b it could be either. ⚠️ **8a and 8b were
 not new work invented here**: they are backend queue item 8, lifted out of Q1 and given their own rows
 so the placement decision is visible in the sequence rather than buried in a queue — see ᵈᵉᶜ.
 
@@ -669,7 +673,28 @@ be user-creatable because more will be needed.
 Reasoning in full in `PROGRESS.md` under *Why the model changed*; the governing statement is
 `CLAUDE.md` §*The document model*, item 5.
 
-**ʳ² R2 — document reference data, screens.** 🎯 Like every step that adds a search box, R2 **adopts
+**ʳᵇ R1b — document reference data, behavioural.** Two sub-parts, both recorded in `PROGRESS.md`
+with their reasoning so this step does not re-derive them. **1.** `documentType` becomes mandatory on
+`NewSalesInvoice` and `SalesInvoiceServiceImpl` branches on `affectsStock` before `consumeStock` —
+⚠️ **silently**: no pending state, no marker, no warning, and a non-moving type simply creates no
+consumption row. **2.** ⚠️ **Channel becomes authoritative from the series**, so an invoice's channel
+is no longer independently settable and **F5 has no channel field**. `sales_invoice.channel` is
+`NOT NULL` and the self-supply series have no channel: **do not relax that constraint** — refuse to
+record against a channel-less series instead, because self-supply has no posting rule yet and the
+constraint is what holds that question open. R3 resolves both together.
+
+⚠️ **The whole reason R1a and R1b are separate steps:** R1b changes what **every sales-invoice test
+constructs** — `TradingQuarter`, `WholeScenarioIT`, `SalesInvoiceIT`, `CreditNoteIT`,
+`PermissionSweepIT`, `RefusalMatrix`, `LiveSeedTest` and the frontend fixtures. A failure in R1a was
+a failure in new code; a failure in R1b could be either.
+
+**ʳ² R2 — document reference data, screens.** ⚠️ **FULL CRUD, not the read-plus-activate shape F4
+built for VAT classes.** The owner authors these rows — he creates his 15 sales and 4 purchase
+document types and their series here, **choosing each AADE invoice type himself** rather than having
+one inferred. The tables ship empty from R1a precisely so that he does. ⚠️ **Needs a live browser
+leg**, and therefore an app-image rebuild before it is handed over. **R2 is also where a dev seed of
+a few types and series belongs** — R1a deferred it (S.4) because nothing without screens needs one.
+ 🎯 Like every step that adds a search box, R2 **adopts
 its row from the 16-row search target list in `PROGRESS.md`** rather than re-deriving a narrower one —
 see `CLAUDE.md`, *"reconcile against the fullest list"*. The same applies to **F5–F9**, whose rows are
 already written there, including entities that do not exist yet. ⚠️ Those rows share a trap: a

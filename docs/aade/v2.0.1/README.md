@@ -97,9 +97,9 @@ rather than glob and trust. The same caution applies to the PDFs: one of them sp
 
 | Annex | Title | Codification | Novocore use |
 |---|---|---|---|
-| **8.1** | Είδη παραστατικών | **Document types**, code → Greek description, grouped by issuer/recipient and by whether the document is αντικριζόμενο | ⭐ **R1 A**, both document-type tables |
+| **8.1** | Είδη παραστατικών | **Document types**, code → Greek description, grouped by issuer/recipient and by whether the document is αντικριζόμενο | ⭐ **Seeded by R1a into `aade_invoice_type`** — all 55, group as a column. ⚠️ Codes **`4` and `12` have an EMPTY description cell**; their only label is the group heading `Για Μελλοντική Χρήση` |
 | 8.2 | Κατηγορία Φ.Π.Α. | VAT category, codes 1–10 | Not seeded today — see the note below |
-| **8.3** | Κατηγορία Αιτίας Εξαίρεσης ΦΠΑ | **VAT exemption reasons**, codes 1–31, with the ν.2859/2000 and ν.5144/2024 article numbering side by side | ⭐ Already seeded (`V8`) **from Prosvasis Go, not from here** — see the note below |
+| **8.3** | Κατηγορία Αιτίας Εξαίρεσης ΦΠΑ | **VAT exemption reasons**, codes 1–31, with the ν.2859/2000 and ν.5144/2024 article numbering side by side | ⭐ **Complete since R1a.** `V8` seeded 26 + 3 from Prosvasis Go; `V32` added **24 and 28** from here. ⚠️ **This annex contains NO myDATA wire strings** — see the note below |
 | 8.4 | Κατηγορία Παρακρατούμενων Φόρων | Withheld taxes | — |
 | 8.5 | Κατηγορία Λοιπών Φόρων | Other taxes | — |
 | 8.6 | Κατηγορία Συντελεστή Ψηφιακού Τέλους συναλλαγής | Digital transaction duty rates | — |
@@ -109,7 +109,7 @@ rather than glob and trust. The same caution applies to the PDFs: one of them sp
 | **8.10** | Κωδικός Κατηγορίας Χαρακτηρισμού Εξόδων | **Expense classification category** — `category2_1`…`category2_14`, `category2_95` | 📌 Fees, unscheduled |
 | **8.11** | Κωδικός Τύπου Χαρακτηρισμού Εξόδων | **Expense classification type** — the `E3_*` and `VAT_*` codes | 📌 Fees, unscheduled |
 | **8.12** | Τρόποι Πληρωμής | **Payment methods**, codes 1–8 | ⭐ **R1 D** |
-| **8.13** | Είδος Ποσότητας | **Quantity / unit-of-measure codes** | ⭐ **R1 F3.** `unit_of_measure.mydata_code` was all-NULL and recorded as *"pending the accountant"* (Q38) — **this table is the published list it was waiting for**, so the question was never the accountant's |
+| **8.13** | Είδος Ποσότητας | **Quantity / unit-of-measure codes** — ⚠️ **SEVEN**, `1..7` per `QuantityType` | ⭐ **R1a.** Four of NovoCore's eight units mapped; **four left NULL and open** — two have no AADE code at all, two are a real judgement. See note 4 below |
 | 8.14 | Σκοπός Διακίνησης | Transport purposes | 18b — explicitly out of R1 |
 | 8.15 | Επισήμανση | Line marking | — |
 | 8.16 | Είδος Γραμμής | Line kind | — |
@@ -143,12 +143,24 @@ dump of the annex alone.
    telephony, plastic bags, subscription TV, hotel stays, restaurant and casino gross receipts. A
    delivery charge and a COD fee are ordinary revenue lines and appear nowhere in it. ⚠️ **This is
    why Fees was cut from R1** and left unscheduled; its AADE grounding is 8.8–8.11, not 8.7.
-4. ⚠️ **The myDATA unit-of-measure codes were never an accountant question.** Q38 sat on the
+4. ⚠️ **The myDATA unit-of-measure codes were only PARTLY an accountant question.** Q38 sat on the
    *"waiting on the accountant"* list from step 3b, beside the exemption codes and the depreciation
    rates, because `unit_of_measure.mydata_code` was NULL on every row and nobody had a source.
-   **Annex 8.13 is that source and has been published all along.** The lesson is not about units:
-   *a question was filed against a person because the artefact that answers it was not in the
-   repository.* Three of the four items on this list are the same shape.
+   **Annex 8.13 is that source and has been published all along.**
+
+   ⚠️ **Corrected by R1a, 2026-08-03, and the correction is the useful part.** The annex has
+   **SEVEN** codes — confirmed against `QuantityType` in `SimpleTypes-v2.0.1.xsd`, which is
+   `xs:int` restricted to `1..7` — and NovoCore has **eight** unit rows. They do not line up. Four
+   map with certainty (`PIECE`→1, `KILOGRAM`→2, `LITRE`→3, `METRE`→4). **Four do not, for two
+   different reasons:** `GRAM` and `MILLILITRE` have **no AADE code at all**, because the list has
+   no sub-units and mapping a gram to `2 Κιλά` would transmit a quantity wrong by a factor of a
+   thousand; `SET` and `PACK` are a genuine judgement between `1 Τεμάχια` and
+   `7 Τεμάχια_Λοιπές Περιπτώσεις`, and the choice changes what is transmitted.
+
+   **So the lesson is sharper than "it was never the accountant's question".** *The whole question
+   was filed against a person because the artefact that answers most of it was not in the
+   repository* — which left nobody able to see which part was actually theirs. Three of the four
+   items on this list are the same shape.
 
 ### What is *not* here
 
@@ -194,6 +206,24 @@ Recorded because they bear on Novocore's own scheduling, not as a summary of the
   noted so a future reader does not mistake their absence from the seed for an omission.
 
 ---
+
+### ⚠️ Annex 8.3 gives reason TEXT, not a myDATA wire string
+
+**Established by R1a, 2026-08-03, and it changed what was seeded.** The approved scope said to seed
+codes 24 and 28 *"with verbatim wire strings from annex 8.3"*. **The annex has no such column.** It
+gives the exemption reason under two article numberings and nothing else.
+
+The `N-description` form that `vat_exemption_reason.mydata_code` carries on 26 rows is **Prosvasis
+Go's** rendering, transcribed verbatim by `V8` *precisely because composing one is a bet* — and
+codes **12 and 13 are the standing proof that the bet loses**, their description naming
+`Πλοία Ανοικτής Θαλάσσης` where their myDATA string does not.
+
+**Go has no row for 24 or 28**, so there was nothing verbatim to copy. Both are seeded with
+`mydata_code = NULL` and listed open, which is the stance already taken for OSS/IOSS: *no mapping
+exists*, not *not filled in yet*.
+
+⚠️ **Worth knowing before the myDATA adapter:** the wire type for this field is
+`VatExemptionType`, an **`xs:int`**. The string in that column is a UI rendering, not the wire value.
 
 ## Seeding rule
 

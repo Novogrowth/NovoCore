@@ -425,6 +425,23 @@ figures are incomplete for every non-stock-moving sales document**, which is a r
 sales. The document is recorded, the ledger posts, stock is left untouched, and the document must sit
 in a **queryable** "stock not yet moved" state so the gap is measurable rather than merely known.
 
+**6b. Channel comes from the SERIES, and that is settled (R1a decided it; R1b implements it).**
+A sales invoice's channel is **not independently settable**. ΑΛΠW is the web series, so an invoice in
+it is a web sale **by definition** rather than by someone remembering to tick a box — which means
+**F5 has no channel field**.
+
+- ⚠️ `sales_document_series.channel` is **nullable, and null means "this series is not a sales
+  channel"** — which the self-supply series genuinely are not, since the customer is the issuer.
+- ⚠️ **There is NO channel column on the purchase series table at all.** Channel is where a *sale*
+  came from and never applies to a purchase. A nullable column that could only ever be null invites
+  someone to fill it, and a purchase series carrying `ECOMMERCE` would be storable, meaningless and
+  indistinguishable from data. **Its absence is the decision, so a test asserts the absence** — "there
+  is no route" and "the route silently does nothing" look identical to a caller.
+- ⚠️ **`sales_invoice.channel` is `NOT NULL` and that constraint is NOT to be relaxed.** R1b must
+  **refuse** to record an invoice against a channel-less series rather than widening the column:
+  self-supply has no posting rule yet (blocked on the accountant), and the constraint is what holds
+  that question open instead of papering over it. **R3 resolves both together.**
+
 **7. `Στοιχείο Αυτοπαράδοσης` (self-supply)** covers internal consumption and moving inventory into
 fixed assets. The customer is the issuer, so it needs a **protected self-customer record** on the
 retail-walk-in pattern, **excluded from customer sales, revenue and margin reporting** since revenue is
@@ -639,6 +656,57 @@ of the thing answering.
 `/api/roles/3/definitely-not-a-route` **both answer 401**: Spring Security refuses before dispatch.
 That is the same fact already recorded about `/v3/api-docs`, and it means "just curl it" is not a
 substitute for the rebuild.
+
+#### ⚠️ It recurred twice in R1a, and neither time involved a container. A Maven reactor is enough
+
+**Found 2026-08-03, twenty minutes apart, while fixing one defect.** A serialisation bug was
+correctly diagnosed and correctly fixed, and the rerun reported **the identical failure** — so the
+obvious conclusion was that the diagnosis had been wrong. It had not been:
+
+1. **`mvn -pl app` without `-am` answers from the previously installed jar.** The fix was in
+   `core-api`, which was never rebuilt.
+2. Then `mvn install` **aborted at a test** that still referenced the removed method — so `core-api`
+   reinstalled and **`core` did not**, and the app ran the new API against the old implementation and
+   answered `500` from a `NoSuchMethodError` that looked exactly like the original bug.
+
+**Both times the answer was already on screen and in the build's own exit status**, not in the test
+result: `INSTALL=1`. ⚠️ **This is why the piped-build rule and this one are the same rule.** A build
+whose failure you did not look at will hand you a stale artefact and let the next command explain it
+to you in the vocabulary of the thing you were investigating.
+
+**The practical form: when a fix "does not work", check that the fix was BUILT before rethinking the
+fix.** `-pl X` without `-am`, and any `install` that did not reach every module, are the two ways
+this repository produces it.
+
+### ⚠️ A record that goes on the wire is asked for every accessor, not just its components
+
+**Found in R1a, 2026-08-03, and the 500 it produced was luck.**
+
+`AadeInvoiceTypeView` — a response record — carried a one-line derived accessor `issuedByUs()`
+delegating to an enum method that **throws** for the six codes that are neither issued nor received.
+The exception is correct: asking a payroll adjusting entry which party issued it *is* a programming
+error. **Putting a caller for it on a serialised record is what was wrong**, because
+**Jackson serialises a record's no-arg public accessors as properties** and therefore calls every one
+of them on every row.
+
+`GET /api/aade-invoice-types` answered **`500 "Failed to write request"`** for the whole
+codification. Every service-layer test passed — one of them asserted the throw and called it correct.
+
+⚠️ **The louder half is what the 500 concealed by being loud.** `OpenApiSchema` describes **record
+components**, so the committed spec documented five properties while Jackson would have written six.
+**A derived accessor that merely returned a value would have shipped an undocumented field on every
+response**, absent from the generated TypeScript, with nothing anywhere to say so. The throw is the
+only reason the disagreement was visible at all.
+
+**The rule: a record this codebase serialises exposes its components and nothing that computes.**
+Convenience accessors belong on the type being wrapped — here the enum — where only real callers
+reach them. `Optional`-returning `…IfAny()` helpers are the existing exception and are safe for the
+same reason this was not: they cannot throw.
+
+**Two guards, at the two layers that can see it:** a reflection test refusing any non-component
+no-arg public accessor on the view, and an integration test asserting the **wire body** carries
+exactly the documented properties. ⚠️ Neither is general — **they cover one record.** The general
+version would be a rule over every response record, and it is not built; watch for this in review.
 
 Do all six before ending the session — don't ask for confirmation on whether to do them, only flag anything unusual you find while doing so (e.g., uncommitted changes you didn't expect, tests that were failing when you started).
 
