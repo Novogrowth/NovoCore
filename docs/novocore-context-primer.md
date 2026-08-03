@@ -37,9 +37,14 @@ The governing statement is `CLAUDE.md`, *The document model*; the identifier dec
   routinely. ⚠️ **Known limitation:** until a dispatch document exists (18b), **stock figures are
   incomplete for a routine share of real sales**, and the state must be queryable so the gap is
   measurable.
-- **Document types are SEEDED from the AADE list** — activate, deactivate, edit a description; never
-  author a row or its behaviour flags. ⚠️ **The model is `VatExemptionReason`, NOT `VatClass`** — VAT
-  classes are seeded *and* extensible (`POST /api/vat-classes` exists), so they are the wrong analogy.
+- ⚠️ **CORRECTED 2026-08-03 (R1a): document types are TWO LAYERS, not one seed-only list.** This
+  bullet used to say they were seeded from the AADE list and never authored by a user. The owner's
+  real Prosvasis Go configuration disproved it: **Go's type numbers are Go's internal ids** (adapter
+  data), **six of his nineteen types have no AADE invoice type at all**, and types and series **must
+  be user-creatable**. So: **`aade_invoice_type`** carries all 55 XSD `InvoiceType` values and is
+  seed-only (the `VatExemptionReason` model applies **here and only here**); **`sales_document_type`
+  / `purchase_document_type`** are the business's own **user-creatable, full-CRUD** lists with a
+  **nullable** FK to it. **R1a ships them empty.** See `PROGRESS.md`, *Why the model changed*.
 - **`Στοιχείο Αυτοπαράδοσης`** (internal consumption; inventory → fixed assets) needs a **protected
   self-customer record** on the retail-walk-in pattern, **excluded from customer sales, revenue and
   margin reporting** since revenue is recognised at cost. **Line price comes from FIFO lot cost, not

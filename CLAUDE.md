@@ -395,11 +395,30 @@ identifier of Novocore's own document is categorically different from a vendor's
 
 **5. Document behaviour varies by myDATA type.** ΑΛΠ and ΤΠΔΑ combine sale and transport, so **stock
 moves**. A plain Τιμολόγιο is purely sales and **does not reduce stock**. This business issues both
-routinely, so this is not an edge case. **Document types are SEEDED from the official AADE list** —
-users may activate, deactivate and edit a description, and may **never** author a row or its behaviour
-flags. ⚠️ **The model for that is `VatExemptionReason`, NOT `VatClass`.** VAT classes are seeded *and*
-extensible — `POST /api/vat-classes` exists and a user can author one and set its `reduced-counterpart`
-link. Reaching for VAT classes as the analogy produces the wrong thing.
+routinely, so this is not an edge case.
+
+⚠️ **CORRECTED 2026-08-03 (R1a). This paragraph used to say document types are seeded from the AADE
+list and users may never author a row. That was wrong, and the owner's real Prosvasis Go
+configuration is what disproved it.** There are **TWO LAYERS**, and collapsing them is the mistake:
+
+- **`aade_invoice_type` — the statutory codification.** All 55 `InvoiceType` values from
+  `SimpleTypes-v2.0.1.xsd`, with annex 8.1's group as a column. **Seed-only: activate, deactivate,
+  describe; no `create`; Flyway owns row authorship.** The `VatExemptionReason` model applies **here
+  and only here**.
+- **`sales_document_type` / `purchase_document_type` — the business's own lists.** **USER-CREATABLE,
+  full CRUD**, with a **nullable** FK to `aade_invoice_type`.
+
+**The two facts that force the split:** Go's type numbers (`7001`, `2062`, …) are **Go's internal
+ids**, so under rule 2 above they belong in the adapter's mapping table; and **six of the owner's
+nineteen types have no AADE invoice type at all** — Προσφορά, Δελτίο Αποστολής, Παραγγελία and the
+rest are **operational documents, not tax documents**. A model in which the AADE code *is* the row
+can represent neither. **A type with no AADE code carries a null FK — never a sentinel row, never an
+`"N/A"` code**, because inventing an AADE code is exactly what the seeding rule forbids.
+
+⚠️ **The general lesson, which outlives the two tables:** *"seeded from the official list"* was a true
+statement about **one** thing (the codification) generalised into a false one about **another** (the
+business's document list). **When a rule says a list is not ours to author, check that the list it
+names is the same list the code is about.**
 
 **6. Known limitation, and it must stay visible.** Until a dispatch document exists (18b), **stock
 figures are incomplete for every non-stock-moving sales document**, which is a routine share of real

@@ -653,11 +653,21 @@ routinely. Until 18b exists, such a document is recorded, the ledger posts, stoc
 and the document sits in a visible, **queryable** "stock not yet moved" state. **Stock figures are
 therefore incomplete for a routine share of real sales.** Loud, measurable, and not a rounding concern.
 
-⚠️ **Document types are seed-only, on the `VatExemptionReason` model — NOT the `VatClass` model.**
-Users may activate, deactivate and edit the description; they may **never author a row or its
-behaviour flags**. VAT classes are the wrong analogy and were named as the right one in an earlier
-draft: `POST /api/vat-classes` exists, so a user genuinely **can** author a VAT class and set its
-`reduced-counterpart` link. VAT classes are seeded **and** extensible. Document types are not.
+⚠️ **CORRECTED 2026-08-03 (R1a): document types are NOT seed-only. There are two layers.** This
+paragraph used to say they were, on the `VatExemptionReason` model. **The owner's real Prosvasis Go
+configuration disproved it** — Go's type numbers are Go's internal ids (adapter data, rule 2), six of
+his nineteen types have **no AADE invoice type at all**, and he has stated that types and series must
+be user-creatable because more will be needed.
+
+- **`aade_invoice_type`** — all 55 XSD `InvoiceType` values, group from annex 8.1 as a column.
+  **Seed-only; the statutory-codification contract applies here and only here.**
+- **`sales_document_type` / `purchase_document_type`** — the business's own lists, **user-creatable,
+  full CRUD**, with a **nullable** FK to `aade_invoice_type`. **R1a ships them EMPTY**; the owner
+  creates his own through R2's screens, choosing each AADE type himself rather than having one
+  inferred.
+
+Reasoning in full in `PROGRESS.md` under *Why the model changed*; the governing statement is
+`CLAUDE.md` §*The document model*, item 5.
 
 **ʳ² R2 — document reference data, screens.** 🎯 Like every step that adds a search box, R2 **adopts
 its row from the 16-row search target list in `PROGRESS.md`** rather than re-deriving a narrower one —
