@@ -38,6 +38,41 @@ public interface SalesDocumentSeriesService {
     SalesDocumentSeriesView describe(long id, String description);
 
     /**
+     * Corrects the abbreviation of a series <strong>nothing has been recorded in</strong>.
+     *
+     * <p>⚠️ <strong>Added in R2, and the gap it closes is worth stating.</strong> Until then no route
+     * changed this at all, so a typo in a hand-authored Greek abbreviation had no correction path:
+     * the only remedy was deactivate-and-recreate, which burns the abbreviation permanently because
+     * {@code sales_document_series_abbreviation_unique} is not partial. Indefensible on a series
+     * created five seconds ago; correct on one that has recorded documents, which is why the freeze
+     * is conditional rather than absolute.
+     *
+     * @throws InvalidDocumentSeriesException if a sales invoice already names this series, or the
+     *     new abbreviation duplicates another
+     */
+    SalesDocumentSeriesView changeAbbreviation(long id, String abbreviation);
+
+    /**
+     * Repoints a series at a different document type.
+     *
+     * @throws InvalidDocumentSeriesException if a sales invoice already names this series — the type
+     *     decides whether recording a document consumed inventory, so changing it afterwards would
+     *     restate what already happened
+     * @throws DocumentTypeNotFoundException if the new type does not exist
+     */
+    SalesDocumentSeriesView changeDocumentType(long id, long documentTypeId);
+
+    /**
+     * Corrects whether documents in this series receive a ΜΑΡΚ.
+     *
+     * <p>⚠️ A wrong value here is not noticed on entry. It is noticed at <strong>F5</strong>, on a
+     * row that has been in the system for months — which is the argument for a correction path.
+     *
+     * @throws InvalidDocumentSeriesException if a sales invoice already names this series
+     */
+    SalesDocumentSeriesView changeGetsMark(long id, boolean getsMark);
+
+    /**
      * Sets or clears the sales channel.
      *
      * <p>⚠️ Null is a real value: the self-supply series are not a sales channel at all. In R1b

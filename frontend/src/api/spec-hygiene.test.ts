@@ -33,8 +33,9 @@ describe('the committed OpenAPI spec', () => {
   const all = operations()
 
   it('describes the surface the client is generated from', () => {
-    // 176 before R1a, which added 54 — see `client-shape.test.ts` for the breakdown by route group.
-    expect(all.length).toBe(230)
+    // 176 before R1a, which added 54; 230 before R2, which added 7 on 2026-08-04 — see
+    // `client-shape.test.ts` for the breakdown by route group.
+    expect(all.length).toBe(237)
   })
 
   it('declares a section and a level on every route', () => {
@@ -206,12 +207,19 @@ describe('the committed OpenAPI spec', () => {
      * 75 before 8a, 143 after it, and 167 after R1a — which added 24 schemas that declare
      * `required`, every one of them a new record rather than a change to an existing contract.
      *
+     * 170 after R2 (2026-08-04): three new request records — `AbbreviationRequest`,
+     * `SeriesDocumentTypeRequest`, `GetsMarkRequest`. ⚠️ The three views R2 also changed
+     * (`SalesDocumentSeriesView`, `PurchaseDocumentSeriesView`, `DeliveryMethodView`) each gained a
+     * required component, `inUse`, but were ALREADY declaring — so they move the property count and
+     * not this one. That is why +7 routes and +3 here is the right arithmetic rather than a
+     * mismatch.
+     *
      * ⚠️ The direction matters more than the number. A DROP here means a record stopped guarding
      * something, which makes every consumer's non-optional field a lie; a RISE is ordinary.
      */
     expect(
       declaring.length,
       'the number of schemas declaring required fields changed — read the comment above before updating this number',
-    ).toBe(167)
+    ).toBe(170)
   })
 })

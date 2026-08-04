@@ -18,5 +18,6 @@ export interface SalesDocumentSeriesView {
   channel?: SalesChannel;
   getsMark: boolean;
   transformableIntoSeriesId?: number;
+  inUse: boolean;
   active: boolean;
 }

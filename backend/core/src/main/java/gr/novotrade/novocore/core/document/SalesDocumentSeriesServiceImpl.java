@@ -11,6 +11,7 @@ import gr.novotrade.novocore.core.api.sales.SalesChannel;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,7 +52,7 @@ class SalesDocumentSeriesServiceImpl implements SalesDocumentSeriesService {
     @Override
     @Transactional(readOnly = true)
     public Optional<SalesDocumentSeriesView> find(long id) {
-        return repository.findById(id).map(SalesDocumentSeriesServiceImpl::toView);
+        return repository.findById(id).map(this::toView);
     }
 
     @Override
@@ -115,6 +116,90 @@ class SalesDocumentSeriesServiceImpl implements SalesDocumentSeriesService {
         auditLog.record("sales-document-series.described", ENTITY_TYPE, String.valueOf(id),
                 Map.of("previousDescription", previous, "description", corrected));
         return toView(series);
+    }
+
+    @Override
+    @Transactional
+    public SalesDocumentSeriesView changeAbbreviation(long id, String abbreviation) {
+        SalesDocumentSeries series = repository.findById(id)
+                .orElseThrow(() -> DocumentSeriesNotFoundException.sales(id));
+        if (abbreviation == null || abbreviation.isBlank()) {
+            throw new InvalidDocumentSeriesException("An abbreviation must not be blank.");
+        }
+        String corrected = abbreviation.trim();
+        if (corrected.equals(series.getAbbreviation())) {
+            return toView(series);
+        }
+        requireNothingRecorded(series, "abbreviation");
+        if (repository.existsByAbbreviationIgnoreCase(corrected)) {
+            throw new InvalidDocumentSeriesException(
+                    "A sales document series abbreviated \"" + corrected
+                            + "\" already exists. The abbreviation is what appears on the "
+                            + "document, so two series cannot share one.");
+        }
+
+        String previous = series.getAbbreviation();
+        series.changeAbbreviation(corrected);
+        auditLog.record("sales-document-series.abbreviation-changed", ENTITY_TYPE,
+                String.valueOf(id),
+                Map.of("previousAbbreviation", previous, "abbreviation", corrected));
+        return toView(series);
+    }
+
+    @Override
+    @Transactional
+    public SalesDocumentSeriesView changeDocumentType(long id, long documentTypeId) {
+        SalesDocumentSeries series = repository.findById(id)
+                .orElseThrow(() -> DocumentSeriesNotFoundException.sales(id));
+        if (series.getDocumentType().getId() == documentTypeId) {
+            return toView(series);
+        }
+        requireNothingRecorded(series, "document type");
+
+        SalesDocumentType documentType = documentTypes.findById(documentTypeId)
+                .orElseThrow(() -> DocumentTypeNotFoundException.sales(documentTypeId));
+
+        long previous = series.getDocumentType().getId();
+        series.changeDocumentType(documentType);
+        auditLog.record("sales-document-series.document-type-changed", ENTITY_TYPE,
+                String.valueOf(id), Map.of(
+                        "previousDocumentTypeId", String.valueOf(previous),
+                        "documentTypeId", String.valueOf(documentTypeId)));
+        return toView(series);
+    }
+
+    @Override
+    @Transactional
+    public SalesDocumentSeriesView changeGetsMark(long id, boolean getsMark) {
+        SalesDocumentSeries series = repository.findById(id)
+                .orElseThrow(() -> DocumentSeriesNotFoundException.sales(id));
+        if (series.isGetsMark() == getsMark) {
+            return toView(series);
+        }
+        requireNothingRecorded(series, "ΜΑΡΚ flag");
+
+        series.changeGetsMark(getsMark);
+        auditLog.record("sales-document-series.gets-mark-changed", ENTITY_TYPE, String.valueOf(id),
+                Map.of("getsMark", String.valueOf(getsMark)));
+        return toView(series);
+    }
+
+    /**
+     * ⚠️ The R2 freeze, in one place because all three fields share one predicate.
+     *
+     * <p>A no-op change is returned before this is reached, so correcting a field to the value it
+     * already holds never produces a refusal — which matters on a screen that sends a field on blur.
+     */
+    private void requireNothingRecorded(SalesDocumentSeries series, String field) {
+        if (repository.isNamedByARecordedDocument(series.getId())) {
+            throw new InvalidDocumentSeriesException(
+                    "The " + field + " of series \"" + series.getAbbreviation() + "\" cannot be "
+                            + "changed, because sales documents have already been recorded in it. "
+                            + "The abbreviation appears on those documents, the document type "
+                            + "decides whether recording them consumed inventory, and the ΜΑΡΚ flag "
+                            + "asserts something about documents that already exist. Create a new "
+                            + "series and deactivate this one.");
+        }
     }
 
     @Override
@@ -185,8 +270,18 @@ class SalesDocumentSeriesServiceImpl implements SalesDocumentSeriesService {
         }
     }
 
-    private static List<SalesDocumentSeriesView> toViews(List<SalesDocumentSeries> series) {
-        return series.stream().map(SalesDocumentSeriesServiceImpl::toView).toList();
+    /**
+     * ⚠️ <strong>One query for the whole list's {@code inUse} flags, not one per row.</strong> A
+     * list screen renders every series with its own locked state, so the per-row form of this
+     * question would be an N+1 on the page that exists to be scanned.
+     */
+    private List<SalesDocumentSeriesView> toViews(List<SalesDocumentSeries> series) {
+        Set<Long> recorded = repository.idsNamedByARecordedDocument();
+        return series.stream().map(one -> toView(one, recorded.contains(one.getId()))).toList();
+    }
+
+    private SalesDocumentSeriesView toView(SalesDocumentSeries series) {
+        return toView(series, repository.isNamedByARecordedDocument(series.getId()));
     }
 
     /**
@@ -194,8 +289,11 @@ class SalesDocumentSeriesServiceImpl implements SalesDocumentSeriesService {
      * materialised into the view. The association is lazy, so returning the entity and letting a
      * caller reach through it would blow up on first access outside the transaction — the trap
      * {@code CLAUDE.md} names beside proxy self-invocation.
+     *
+     * <p>{@code inUse} is passed in rather than looked up here, so the list form can answer it for
+     * every row at once.
      */
-    private static SalesDocumentSeriesView toView(SalesDocumentSeries series) {
+    private static SalesDocumentSeriesView toView(SalesDocumentSeries series, boolean inUse) {
         SalesDocumentType type = series.getDocumentType();
         return new SalesDocumentSeriesView(
                 series.getId(),
@@ -206,6 +304,7 @@ class SalesDocumentSeriesServiceImpl implements SalesDocumentSeriesService {
                 series.getChannel(),
                 series.isGetsMark(),
                 series.getTransformableIntoSeriesId(),
+                inUse,
                 series.isActive());
     }
 }

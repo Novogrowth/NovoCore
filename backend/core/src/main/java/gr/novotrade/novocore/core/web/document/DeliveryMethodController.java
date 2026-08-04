@@ -7,6 +7,7 @@ import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.web.Requires;
+import gr.novotrade.novocore.core.web.document.DocumentReferenceRequests.AbbreviationRequest;
 import gr.novotrade.novocore.core.web.document.DocumentReferenceRequests.DocumentDescriptionRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -59,13 +60,28 @@ class DeliveryMethodController {
         return deliveryMethods.create(request);
     }
 
-    /** The description only. The abbreviation is the identity and is what a document prints. */
     @PatchMapping(path = "/api/delivery-methods/{id}/description",
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.SALES, level = AccessLevel.FULL)
     DeliveryMethodView describe(
             @PathVariable long id, @RequestBody DocumentDescriptionRequest request) {
         return deliveryMethods.describe(id, request.description());
+    }
+
+    /**
+     * ⚠️ R2's correction path. Until then the abbreviation had no route on any installation.
+     *
+     * <p>⚠️⚠️ The "already in use" refusal <strong>cannot fire</strong>: measured 2026-08-04, no
+     * table in this schema has a foreign key to {@code delivery_method} at all. It is written in
+     * the same shape as the sales series' real guard so that whoever wires a delivery method onto a
+     * document at 18b replaces a method body rather than discovering a missing guard.
+     */
+    @PatchMapping(path = "/api/delivery-methods/{id}/abbreviation",
+            consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Requires(section = Section.SALES, level = AccessLevel.FULL)
+    DeliveryMethodView changeAbbreviation(
+            @PathVariable long id, @RequestBody AbbreviationRequest request) {
+        return deliveryMethods.changeAbbreviation(id, request.abbreviation());
     }
 
     @PostMapping(path = "/api/delivery-methods/{id}/deactivate")

@@ -325,6 +325,57 @@ export const NAV_TREE: readonly NavNode[] = [
             status: 'BUILT',
             endpoint: 'GET /api/units-of-measure',
           },
+          // R2's six. ⚠️ Five different grants across six items, and none of them is SETTINGS —
+          // the same principle VAT classes and units already follow: a section is about who needs
+          // to see something, not about which heading it sits under. Document types and series are
+          // read when recording a document, so they take SALES and PURCHASING; the AADE
+          // codification is a tax authority's list read by BOTH, so it takes TAX_AND_CHARGES and
+          // neither of the other two could hold it without the other losing access.
+          {
+            id: 'settings.salesDocumentTypes',
+            path: '/settings/sales-document-types',
+            requires: view(Section.SALES),
+            status: 'BUILT',
+            endpoint: 'GET /api/sales-document-types',
+          },
+          {
+            id: 'settings.salesDocumentSeries',
+            path: '/settings/sales-document-series',
+            requires: view(Section.SALES),
+            status: 'BUILT',
+            endpoint: 'GET /api/sales-document-series',
+          },
+          {
+            id: 'settings.purchaseDocumentTypes',
+            path: '/settings/purchase-document-types',
+            requires: view(Section.PURCHASING),
+            status: 'BUILT',
+            endpoint: 'GET /api/purchase-document-types',
+          },
+          {
+            id: 'settings.purchaseDocumentSeries',
+            path: '/settings/purchase-document-series',
+            requires: view(Section.PURCHASING),
+            status: 'BUILT',
+            endpoint: 'GET /api/purchase-document-series',
+          },
+          {
+            id: 'settings.deliveryMethods',
+            path: '/settings/delivery-methods',
+            requires: view(Section.SALES),
+            status: 'BUILT',
+            endpoint: 'GET /api/delivery-methods',
+          },
+          {
+            // ⚠️ Seed-only: 55 statutory rows nobody here may add to. The screen says so and a
+            // test asserts no create control renders. Listed last of the six deliberately — it is
+            // the list the other five point *at*, not one of them.
+            id: 'settings.aadeInvoiceTypes',
+            path: '/settings/aade-invoice-types',
+            requires: view(Section.TAX_AND_CHARGES),
+            status: 'BUILT',
+            endpoint: 'GET /api/aade-invoice-types',
+          },
           {
             id: 'settings.retention',
             path: '/settings/retention',

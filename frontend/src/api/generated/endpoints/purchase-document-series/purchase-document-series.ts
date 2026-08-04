@@ -27,9 +27,14 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AbbreviationRequest,
   DocumentDescriptionRequest,
+  GetsMarkRequest,
   ListResponsePurchaseDocumentSeriesView,
   NewPurchaseDocumentSeries,
+  PurchaseDocumentSeriesControllerChangeAbbreviation4xx,
+  PurchaseDocumentSeriesControllerChangeDocumentType4xx,
+  PurchaseDocumentSeriesControllerChangeGetsMark4xx,
   PurchaseDocumentSeriesControllerClearTransformationTarget4xx,
   PurchaseDocumentSeriesControllerCreate4xx,
   PurchaseDocumentSeriesControllerDeactivate4xx,
@@ -40,6 +45,7 @@ import type {
   PurchaseDocumentSeriesControllerSeries4xx,
   PurchaseDocumentSeriesControllerSeriesParams,
   PurchaseDocumentSeriesView,
+  SeriesDocumentTypeRequest,
   TransformationTargetRequest
 } from '../../model';
 
@@ -294,7 +300,66 @@ export function usePurchaseDocumentSeriesControllerOneSeries<TData = Awaited<Ret
 
 
 
-export const purchaseDocumentSeriesControllerDeactivate = (
+export const purchaseDocumentSeriesControllerChangeAbbreviation = (
+    id: number,
+    abbreviationRequest: AbbreviationRequest,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<PurchaseDocumentSeriesView>(
+      {url: `/api/purchase-document-series/${id}/abbreviation`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: abbreviationRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getPurchaseDocumentSeriesControllerChangeAbbreviationMutationOptions = <TError = PurchaseDocumentSeriesControllerChangeAbbreviation4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeAbbreviation>>, TError,{id: number;data: AbbreviationRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeAbbreviation>>, TError,{id: number;data: AbbreviationRequest}, TContext> => {
+
+const mutationKey = ['purchaseDocumentSeriesControllerChangeAbbreviation'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeAbbreviation>>, {id: number;data: AbbreviationRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  purchaseDocumentSeriesControllerChangeAbbreviation(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PurchaseDocumentSeriesControllerChangeAbbreviationMutationResult = NonNullable<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeAbbreviation>>>
+    export type PurchaseDocumentSeriesControllerChangeAbbreviationMutationBody = AbbreviationRequest
+    export type PurchaseDocumentSeriesControllerChangeAbbreviationMutationError = PurchaseDocumentSeriesControllerChangeAbbreviation4xx
+
+    export const usePurchaseDocumentSeriesControllerChangeAbbreviation = <TError = PurchaseDocumentSeriesControllerChangeAbbreviation4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeAbbreviation>>, TError,{id: number;data: AbbreviationRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeAbbreviation>>,
+        TError,
+        {id: number;data: AbbreviationRequest},
+        TContext
+      > => {
+      return useMutation(getPurchaseDocumentSeriesControllerChangeAbbreviationMutationOptions(options), queryClient);
+    }
+    export const purchaseDocumentSeriesControllerDeactivate = (
     id: number,
  signal?: AbortSignal
 ) => {
@@ -408,6 +473,124 @@ const {mutation: mutationOptions} = options ?
         TContext
       > => {
       return useMutation(getPurchaseDocumentSeriesControllerDescribeMutationOptions(options), queryClient);
+    }
+    export const purchaseDocumentSeriesControllerChangeDocumentType = (
+    id: number,
+    seriesDocumentTypeRequest: SeriesDocumentTypeRequest,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<PurchaseDocumentSeriesView>(
+      {url: `/api/purchase-document-series/${id}/document-type`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: seriesDocumentTypeRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getPurchaseDocumentSeriesControllerChangeDocumentTypeMutationOptions = <TError = PurchaseDocumentSeriesControllerChangeDocumentType4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeDocumentType>>, TError,{id: number;data: SeriesDocumentTypeRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeDocumentType>>, TError,{id: number;data: SeriesDocumentTypeRequest}, TContext> => {
+
+const mutationKey = ['purchaseDocumentSeriesControllerChangeDocumentType'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeDocumentType>>, {id: number;data: SeriesDocumentTypeRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  purchaseDocumentSeriesControllerChangeDocumentType(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PurchaseDocumentSeriesControllerChangeDocumentTypeMutationResult = NonNullable<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeDocumentType>>>
+    export type PurchaseDocumentSeriesControllerChangeDocumentTypeMutationBody = SeriesDocumentTypeRequest
+    export type PurchaseDocumentSeriesControllerChangeDocumentTypeMutationError = PurchaseDocumentSeriesControllerChangeDocumentType4xx
+
+    export const usePurchaseDocumentSeriesControllerChangeDocumentType = <TError = PurchaseDocumentSeriesControllerChangeDocumentType4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeDocumentType>>, TError,{id: number;data: SeriesDocumentTypeRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeDocumentType>>,
+        TError,
+        {id: number;data: SeriesDocumentTypeRequest},
+        TContext
+      > => {
+      return useMutation(getPurchaseDocumentSeriesControllerChangeDocumentTypeMutationOptions(options), queryClient);
+    }
+    export const purchaseDocumentSeriesControllerChangeGetsMark = (
+    id: number,
+    getsMarkRequest: GetsMarkRequest,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<PurchaseDocumentSeriesView>(
+      {url: `/api/purchase-document-series/${id}/gets-mark`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: getsMarkRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getPurchaseDocumentSeriesControllerChangeGetsMarkMutationOptions = <TError = PurchaseDocumentSeriesControllerChangeGetsMark4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeGetsMark>>, TError,{id: number;data: GetsMarkRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeGetsMark>>, TError,{id: number;data: GetsMarkRequest}, TContext> => {
+
+const mutationKey = ['purchaseDocumentSeriesControllerChangeGetsMark'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeGetsMark>>, {id: number;data: GetsMarkRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  purchaseDocumentSeriesControllerChangeGetsMark(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PurchaseDocumentSeriesControllerChangeGetsMarkMutationResult = NonNullable<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeGetsMark>>>
+    export type PurchaseDocumentSeriesControllerChangeGetsMarkMutationBody = GetsMarkRequest
+    export type PurchaseDocumentSeriesControllerChangeGetsMarkMutationError = PurchaseDocumentSeriesControllerChangeGetsMark4xx
+
+    export const usePurchaseDocumentSeriesControllerChangeGetsMark = <TError = PurchaseDocumentSeriesControllerChangeGetsMark4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeGetsMark>>, TError,{id: number;data: GetsMarkRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeGetsMark>>,
+        TError,
+        {id: number;data: GetsMarkRequest},
+        TContext
+      > => {
+      return useMutation(getPurchaseDocumentSeriesControllerChangeGetsMarkMutationOptions(options), queryClient);
     }
     export const purchaseDocumentSeriesControllerReactivate = (
     id: number,

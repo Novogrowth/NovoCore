@@ -91,7 +91,7 @@ describe('the generated client', () => {
   it('covers the whole surface', () => {
     // An anti-vacuity guard: if the generated output moved, every assertion below would pass
     // against an empty string and report a green build for a check that examined nothing.
-    expect(all.length).toBe(230)
+    expect(all.length).toBe(237)
     expect(source.length).toBeGreaterThan(100_000)
   })
 
@@ -106,7 +106,13 @@ describe('the generated client', () => {
     // the sales series and 8 on the purchase series — the difference between those two being the
     // channel PUT/DELETE pair, which purchases deliberately do not have — and 6 on delivery
     // methods.
-    expect(writes.length).toBe(134)
+    //
+    // R2 added 7 more, all writes (230 → 237, 134 → 141), on 2026-08-04: the "editable while
+    // unused" correction paths. 3 PATCH `.../abbreviation` (both series, delivery methods) and
+    // 4 PUT (`.../document-type` and `.../gets-mark` on both series). Every one of those fields
+    // previously had NO write route on any installation, which left a hand-typed Greek series
+    // abbreviation permanently uncorrectable.
+    expect(writes.length).toBe(141)
     expect(reads.length).toBe(96)
   })
 

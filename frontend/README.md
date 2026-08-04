@@ -391,14 +391,25 @@ is sortable **only** if its `meta.sortKey` is one the endpoint declares, and it 
 request. `canSortColumn` states this once. Today every list takes the other branch — all five
 endpoints return their rows whole, confirmed against the running container's own bytecode — but the
 branch is built and tested because the day it starts applying is the day the backend adds paging,
-and nothing on this side would change to mark the occasion. **None of the seven column files carries
-a `sortKey` yet**, so when one of them gains paging its sort controls disappear until somebody adds
-them. Safe, loud, and a real obligation.
+and nothing on this side would change to mark the occasion. **No column file carries a `sortKey`
+yet**, so when one of them gains paging its sort controls disappear until somebody adds them. Safe,
+loud, and a real obligation.
 
-⚠️ **Seven, not five.** S2 shipped sorting against five screens; F4 then shipped VAT classes and units
-of measure with sorting too, and the obligation grew with them without anyone restating it. Count
-`src/pages/*/*-columns.tsx` rather than trusting a number in prose — this one was wrong in three
-documents until 2026-08-02.
+⚠️ **The size of that obligation, measured 2026-08-04 after R2: 11 column FILES covering 13 LIST
+SCREENS.** S2 shipped sorting against five screens, F4 took it to seven, and R2 added six screens.
+**The two numbers differ and the larger one is the obligation**, because
+`document-reference/document-type-columns.tsx` and `document-reference/series-columns.tsx` are each
+shared by a sales screen and a purchase screen — one file, two lists, two endpoints that could gain
+paging independently.
+
+**Count, do not trust the prose** — `ls src/pages/*/*-columns.tsx` for the files, and remember the
+two shared ones count twice. This number was wrong in three documents until 2026-08-02, which is why
+it now carries a date and why the file/screen distinction is spelled out rather than left to be
+rediscovered.
+
+⚠️ **R2 added no `sortKey` and owed none**: all six of its endpoints are `{paged: false, sorts: []}`
+in the generated `paging.ts`, so every one of its columns sorts client-side over the whole list,
+correctly. R2 inherits the obligation; it does not discharge or worsen it.
 
 Two defaults live on `DataTable` rather than on each column, because forgetting one on a single
 column is a table that is quietly wrong in one place: **`sortUndefined: 'last'`** in both directions
@@ -516,9 +527,14 @@ What this means on screen:
   they read off `SalesInvoiceView` like anything else once R1 lands. They are **not** adapter data and
   are not fetched from somewhere special.
 - ⚠️ **Stock does not always move.** ΑΛΠ and ΤΠΔΑ combine sale and transport, so stock moves; a plain
-  Τιμολόγιο is purely sales and **does not** reduce stock, and this business issues both routinely. A
-  document in that state must be **visibly and queryably** "stock not yet moved" — not silently
-  identical to one that did move.
+  Τιμολόγιο is purely sales and **does not** reduce stock, and this business issues both routinely.
+  ⚠️⚠️ **CORRECTED 2026-08-04 (R2). This bullet used to say such a document must be "visibly and
+  queryably" stock-not-yet-moved. IT IS SILENT, BY DECISION** — a document type whose `affectsStock`
+  is false creates **no `stock_consumption` row at all**: no pending row, no marker, no flag, no
+  warning, nothing queryable. **Do not build an indicator on the strength of this file.** The
+  decision, the reasoning and the standing instruction not to add one back are in `CLAUDE.md`, *The
+  document model* §6 — deliberately in one place, because this bullet saying it a second time is how
+  the two came to disagree.
 
 ⚠️ **The generated client changed on 2026-08-02 and the old name is gone.** `POST /api/credit-notes`
 was `salesControllerIssue`; it is now **`salesControllerRecordNote`**, and

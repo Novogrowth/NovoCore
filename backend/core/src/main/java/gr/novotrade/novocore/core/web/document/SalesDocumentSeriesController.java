@@ -7,7 +7,10 @@ import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.web.Requires;
+import gr.novotrade.novocore.core.web.document.DocumentReferenceRequests.AbbreviationRequest;
 import gr.novotrade.novocore.core.web.document.DocumentReferenceRequests.DocumentDescriptionRequest;
+import gr.novotrade.novocore.core.web.document.DocumentReferenceRequests.GetsMarkRequest;
+import gr.novotrade.novocore.core.web.document.DocumentReferenceRequests.SeriesDocumentTypeRequest;
 import gr.novotrade.novocore.core.web.document.DocumentReferenceRequests.SeriesChannelRequest;
 import gr.novotrade.novocore.core.web.document.DocumentReferenceRequests.TransformationTargetRequest;
 import org.springframework.http.HttpStatus;
@@ -86,13 +89,56 @@ class SalesDocumentSeriesController {
         return series.create(request);
     }
 
-    /** The description only. The abbreviation is what a document prints and is the identity. */
     @PatchMapping(path = "/api/sales-document-series/{id}/description",
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.SALES, level = AccessLevel.FULL)
     SalesDocumentSeriesView describe(
             @PathVariable long id, @RequestBody DocumentDescriptionRequest request) {
         return series.describe(id, request.description());
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // ⚠️ R2 — editable while unused, frozen once used. Three routes that did not exist before.
+    //
+    // The abbreviation is what a document prints, so it IS the identity once a document exists —
+    // which is why this was originally left with no route at all. But the owner authors nineteen
+    // types and their series by hand, in Greek, and a typo caught five seconds later had no
+    // correction path: deactivate-and-recreate burns the abbreviation permanently, because
+    // sales_document_series_abbreviation_unique is not partial. The freeze is therefore conditional
+    // on the row being referenced rather than absolute, and `inUse` on the view is what lets a
+    // screen show the control disabled with the reason instead of hiding it.
+    // -------------------------------------------------------------------------------------------
+
+    /** Refused with the reason once a sales invoice names this series. */
+    @PatchMapping(path = "/api/sales-document-series/{id}/abbreviation",
+            consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Requires(section = Section.SALES, level = AccessLevel.FULL)
+    SalesDocumentSeriesView changeAbbreviation(
+            @PathVariable long id, @RequestBody AbbreviationRequest request) {
+        return series.changeAbbreviation(id, request.abbreviation());
+    }
+
+    /**
+     * Repoints the series at a different document type.
+     *
+     * <p>⚠️ Refused once documents exist: the type decides whether recording one consumed
+     * inventory, so changing it afterwards would restate what already happened.
+     */
+    @PutMapping(path = "/api/sales-document-series/{id}/document-type",
+            consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Requires(section = Section.SALES, level = AccessLevel.FULL)
+    SalesDocumentSeriesView changeDocumentType(
+            @PathVariable long id, @RequestBody SeriesDocumentTypeRequest request) {
+        return series.changeDocumentType(id, request.documentTypeId());
+    }
+
+    /** ⚠️ A wrong value here is not noticed on entry — it is noticed at F5, months later. */
+    @PutMapping(path = "/api/sales-document-series/{id}/gets-mark",
+            consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Requires(section = Section.SALES, level = AccessLevel.FULL)
+    SalesDocumentSeriesView changeGetsMark(
+            @PathVariable long id, @RequestBody GetsMarkRequest request) {
+        return series.changeGetsMark(id, request.getsMark());
     }
 
     @PutMapping(path = "/api/sales-document-series/{id}/channel",

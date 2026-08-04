@@ -27,6 +27,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AbbreviationRequest,
+  DeliveryMethodControllerChangeAbbreviation4xx,
   DeliveryMethodControllerCreate4xx,
   DeliveryMethodControllerDeactivate4xx,
   DeliveryMethodControllerDeliveryMethod4xx,
@@ -291,7 +293,66 @@ export function useDeliveryMethodControllerDeliveryMethod<TData = Awaited<Return
 
 
 
-export const deliveryMethodControllerDeactivate = (
+export const deliveryMethodControllerChangeAbbreviation = (
+    id: number,
+    abbreviationRequest: AbbreviationRequest,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<DeliveryMethodView>(
+      {url: `/api/delivery-methods/${id}/abbreviation`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: abbreviationRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getDeliveryMethodControllerChangeAbbreviationMutationOptions = <TError = DeliveryMethodControllerChangeAbbreviation4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deliveryMethodControllerChangeAbbreviation>>, TError,{id: number;data: AbbreviationRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof deliveryMethodControllerChangeAbbreviation>>, TError,{id: number;data: AbbreviationRequest}, TContext> => {
+
+const mutationKey = ['deliveryMethodControllerChangeAbbreviation'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deliveryMethodControllerChangeAbbreviation>>, {id: number;data: AbbreviationRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  deliveryMethodControllerChangeAbbreviation(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeliveryMethodControllerChangeAbbreviationMutationResult = NonNullable<Awaited<ReturnType<typeof deliveryMethodControllerChangeAbbreviation>>>
+    export type DeliveryMethodControllerChangeAbbreviationMutationBody = AbbreviationRequest
+    export type DeliveryMethodControllerChangeAbbreviationMutationError = DeliveryMethodControllerChangeAbbreviation4xx
+
+    export const useDeliveryMethodControllerChangeAbbreviation = <TError = DeliveryMethodControllerChangeAbbreviation4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deliveryMethodControllerChangeAbbreviation>>, TError,{id: number;data: AbbreviationRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deliveryMethodControllerChangeAbbreviation>>,
+        TError,
+        {id: number;data: AbbreviationRequest},
+        TContext
+      > => {
+      return useMutation(getDeliveryMethodControllerChangeAbbreviationMutationOptions(options), queryClient);
+    }
+    export const deliveryMethodControllerDeactivate = (
     id: number,
  signal?: AbortSignal
 ) => {

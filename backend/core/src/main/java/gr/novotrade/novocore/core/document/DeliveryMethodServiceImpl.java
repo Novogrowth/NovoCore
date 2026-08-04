@@ -40,7 +40,7 @@ class DeliveryMethodServiceImpl implements DeliveryMethodService {
     @Override
     @Transactional(readOnly = true)
     public Optional<DeliveryMethodView> find(long id) {
-        return repository.findById(id).map(DeliveryMethodServiceImpl::toView);
+        return repository.findById(id).map(this::toView);
     }
 
     @Override
@@ -89,6 +89,48 @@ class DeliveryMethodServiceImpl implements DeliveryMethodService {
 
     @Override
     @Transactional
+    public DeliveryMethodView changeAbbreviation(long id, String abbreviation) {
+        DeliveryMethod method = repository.findById(id)
+                .orElseThrow(() -> new DeliveryMethodNotFoundException(id));
+        if (abbreviation == null || abbreviation.isBlank()) {
+            throw new InvalidDeliveryMethodException("An abbreviation must not be blank.");
+        }
+        String corrected = abbreviation.trim();
+        if (corrected.equals(method.getAbbreviation())) {
+            return toView(method);
+        }
+        if (isNamedByARecordedDocument(id)) {
+            throw new InvalidDeliveryMethodException(
+                    "The abbreviation of delivery method \"" + method.getAbbreviation()
+                            + "\" cannot be changed, because documents already name it.");
+        }
+        if (repository.existsByAbbreviationIgnoreCase(corrected)) {
+            throw new InvalidDeliveryMethodException(
+                    "A delivery method abbreviated \"" + corrected + "\" already exists.");
+        }
+
+        String previous = method.getAbbreviation();
+        method.changeAbbreviation(corrected);
+        auditLog.record("delivery-method.abbreviation-changed", ENTITY_TYPE, String.valueOf(id),
+                Map.of("previousAbbreviation", previous, "abbreviation", corrected));
+        return toView(method);
+    }
+
+    /**
+     * ⚠️⚠️ <strong>Always false, and more strongly than on the purchase series: measured
+     * 2026-08-04, NO table in this schema has a foreign key to {@code delivery_method} at all.</strong>
+     * It is a list the business maintains ahead of the document that will use it (18b, dispatch).
+     *
+     * <p>Written in the same shape as the sales series' real predicate so whoever wires a delivery
+     * method onto a document replaces a method body rather than discovering a missing guard.
+     * {@code DocumentReferenceGraphIT} pins the emptiness and goes red the day it stops holding.
+     */
+    private boolean isNamedByARecordedDocument(long deliveryMethodId) {
+        return false;
+    }
+
+    @Override
+    @Transactional
     public void deactivate(long id) {
         DeliveryMethod method = repository.findById(id)
                 .orElseThrow(() -> new DeliveryMethodNotFoundException(id));
@@ -113,15 +155,16 @@ class DeliveryMethodServiceImpl implements DeliveryMethodService {
                 Map.of("abbreviation", method.getAbbreviation()));
     }
 
-    private static List<DeliveryMethodView> toViews(List<DeliveryMethod> methods) {
-        return methods.stream().map(DeliveryMethodServiceImpl::toView).toList();
+    private List<DeliveryMethodView> toViews(List<DeliveryMethod> methods) {
+        return methods.stream().map(this::toView).toList();
     }
 
-    private static DeliveryMethodView toView(DeliveryMethod method) {
+    private DeliveryMethodView toView(DeliveryMethod method) {
         return new DeliveryMethodView(
                 method.getId(),
                 method.getAbbreviation(),
                 method.getDescription(),
+                isNamedByARecordedDocument(method.getId()),
                 method.isActive());
     }
 }

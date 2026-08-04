@@ -588,6 +588,31 @@ correct series or a return document **in one action**, with series, products and
 **never re-keyed**. Same flow for a returned or cancelled order. This needs the Go adapter; only the
 allowed-target reference is stored earlier (R1).
 
+### Named convention: a seed-only screen states its own emptiness, and a test pins it
+
+**Established in R2, 2026-08-04, on `/settings/aade-invoice-types` — the first screen over a
+`StatutoryCodification`.** Such a list has read plus activate/deactivate/describe and **no create
+path, on any installation, ever**: AADE authors the rows, Flyway writes them, and
+`StatutoryCodificationRulesTest` already makes a `create` method a build failure on the backend.
+
+**Three things, and the second is the one that gets left out:**
+
+1. **No Add control.**
+2. **A permanent line on the screen saying who authors the rows.** ⚠️ A list with no Add button and
+   no explanation reads as a screen somebody has not finished — so the absence has to be *legible as
+   a decision* rather than merely performed.
+3. **An absence test asserting no create control renders**, for a **FULL-access** role, with the
+   reason in the test's own name.
+
+⚠️ **Do not confuse this with `frontend/README.md`'s fourth field state.** That one — *"not built
+yet"* — also owes an absence test, and the two are **opposites**: one is a deferral somebody will
+come back and build, this is a permanent prohibition. They look identical in a diff, which is exactly
+why each says which it is in words.
+
+📌 **The next instance is already known and is not built: `/api/vat-exemption-reasons`.** R1a gave it
+the same three write operations and it has **no screen at all**, with nothing anywhere recording that
+absence. When somebody builds it, it is the AADE screen's twin — copy all three points above.
+
 ### AADE reference data
 
 **AADE publishes no live API for codifications.** The myDATA REST API only moves documents. Code lists
@@ -926,6 +951,34 @@ uses: `COALESCE(series_id, -1)` and the trigger's `IS NOT DISTINCT FROM` both ma
 and a naïve `existing.seriesId = :seriesId` would make them **not** collide — silently dropping the
 guarantee for every invoice recorded before R1b, which is precisely the trap C.6 documents for the
 index and which repeats one layer up.
+
+#### ✅ The remedy, applied deliberately in R2 — write the list down *as a test*, not as a paragraph
+
+**R2 met this shape again, knowingly, and it is the worked example of what the rule above asks for.**
+The step added an *editable-while-unused, frozen-once-used* rule to three records. On the sales series
+the predicate is real (`EXISTS (SELECT 1 FROM sales_invoice WHERE series_id = :id)`). On the other
+two it is **`false` by construction**, and measured rather than assumed on 2026-08-04: the only
+foreign key referencing `purchase_document_series` is its own transformation target, and **nothing
+whatsoever references `delivery_method`**. So two of the three guards cannot fire, and would start
+being able to — silently — the day F6 gives a purchase document a series and 18b gives a dispatch
+document a delivery method.
+
+**`DocumentReferenceGraphIT` is the list, in a form that fails a build.** It reads `pg_constraint`
+after every migration has run and pins the referencing set of all three tables. When F6 adds the
+column, that test goes red and its failure message names the field, the method and what to do.
+
+**Three things about it are worth copying, and the third is the one that is easy to skip:**
+
+- **It asks the catalogue, not the migrations.** A grep over `V*.sql` answers what the migrations
+  *say*; this asks what the database *has* — the distinction under *a fact established by reading*.
+- **The failure message is the handover note**, not `expected [] to equal [...]`. It says which
+  method still returns a hard-coded `false` and which test to extend.
+- ⚠️ **It carries a POSITIVE control**: `sales_document_series` must come back with exactly two
+  references. Without it, both "nothing references this" assertions would pass just as happily
+  against a typo in the SQL, a wrong catalogue column, or a connection to an empty schema — an empty
+  result would mean *"this test measures nothing"* and would read as *"nothing references it"*. That
+  is the negative-control requirement, arriving from the direction where the expected answer is
+  emptiness.
 
 Do all six before ending the session — don't ask for confirmation on whether to do them, only flag anything unusual you find while doing so (e.g., uncommitted changes you didn't expect, tests that were failing when you started).
 

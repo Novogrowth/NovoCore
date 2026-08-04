@@ -53,6 +53,14 @@ class DeliveryMethod extends AuditableEntity {
         return active;
     }
 
+    /**
+     * ⚠️ Correcting a typo. The service refuses once anything names this row — which nothing can
+     * today, because no table in this schema has a foreign key to {@code delivery_method}.
+     */
+    void changeAbbreviation(String newAbbreviation) {
+        this.abbreviation = newAbbreviation;
+    }
+
     void describe(String newDescription) {
         this.description = newDescription;
     }

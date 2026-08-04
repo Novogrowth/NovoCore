@@ -114,6 +114,22 @@ class SalesDocumentSeries extends AuditableEntity {
         this.description = newDescription;
     }
 
+    /**
+     * ⚠️ Correcting a typo, never renaming a series documents were recorded under. The service
+     * refuses once anything names this row; this method assumes that check has already been made.
+     */
+    void changeAbbreviation(String newAbbreviation) {
+        this.abbreviation = newAbbreviation;
+    }
+
+    void changeDocumentType(SalesDocumentType newDocumentType) {
+        this.documentType = newDocumentType;
+    }
+
+    void changeGetsMark(boolean nowGetsMark) {
+        this.getsMark = nowGetsMark;
+    }
+
     void changeChannel(SalesChannel newChannel) {
         this.channel = newChannel;
     }

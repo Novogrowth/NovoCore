@@ -29,6 +29,18 @@ import java.util.Optional;
  * @param transformableIntoSeriesId the series a document here may be transformed into — correcting
  *     a mistake must produce the correct series or a return document in <em>one</em> action, never
  *     re-keyed. ⚠️ Only the allowed-target reference is stored; the behaviour needs the Go adapter.
+ * @param inUse whether a sales invoice names this series. ⚠️ <strong>This is the predicate that
+ *     freezes {@code abbreviation}, {@code documentTypeId} and {@code getsMark}</strong>, added in
+ *     R2: those three are correctable while nothing has been recorded here and refused afterwards,
+ *     because the abbreviation is what appears on a document, the type decides whether recording one
+ *     consumed inventory, and the flag asserts a fact about documents that already exist.
+ *     <p>⚠️ Being another series' <em>transformation target</em> deliberately does NOT count. That
+ *     reference is by id and survives any of the three changing.
+ *     <p>⚠️ A <strong>reversed</strong> invoice counts. It was recorded, it is in the journal, and
+ *     its number is in the books — "recorded" is not "standing".
+ *     <p>⚠️ It is a flag and not a sentence <strong>on purpose</strong>: the screen renders the
+ *     reason, because the backend localises nothing (Q47(b)) and a server-composed reason would be
+ *     English prose beside translated labels on a Greek UI.
  */
 public record SalesDocumentSeriesView(
         long id,
@@ -39,6 +51,7 @@ public record SalesDocumentSeriesView(
         SalesChannel channel,
         boolean getsMark,
         Long transformableIntoSeriesId,
+        boolean inUse,
         boolean active) {
 
     public SalesDocumentSeriesView {

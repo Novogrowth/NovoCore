@@ -12,5 +12,6 @@ export interface DeliveryMethodView {
   id: number;
   abbreviation: string;
   description: string;
+  inUse: boolean;
   active: boolean;
 }

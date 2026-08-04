@@ -54,7 +54,7 @@ class PurchaseDocumentSeriesServiceImpl implements PurchaseDocumentSeriesService
     @Override
     @Transactional(readOnly = true)
     public Optional<PurchaseDocumentSeriesView> find(long id) {
-        return repository.findById(id).map(PurchaseDocumentSeriesServiceImpl::toView);
+        return repository.findById(id).map(this::toView);
     }
 
     @Override
@@ -117,6 +117,98 @@ class PurchaseDocumentSeriesServiceImpl implements PurchaseDocumentSeriesService
 
     @Override
     @Transactional
+    public PurchaseDocumentSeriesView changeAbbreviation(long id, String abbreviation) {
+        PurchaseDocumentSeries series = repository.findById(id)
+                .orElseThrow(() -> DocumentSeriesNotFoundException.purchase(id));
+        if (abbreviation == null || abbreviation.isBlank()) {
+            throw new InvalidDocumentSeriesException("An abbreviation must not be blank.");
+        }
+        String corrected = abbreviation.trim();
+        if (corrected.equals(series.getAbbreviation())) {
+            return toView(series);
+        }
+        requireNothingRecorded(series, "abbreviation");
+        if (repository.existsByAbbreviationIgnoreCase(corrected)) {
+            throw new InvalidDocumentSeriesException(
+                    "A purchase document series abbreviated \"" + corrected
+                            + "\" already exists. The abbreviation is what appears on the "
+                            + "document, so two series cannot share one.");
+        }
+
+        String previous = series.getAbbreviation();
+        series.changeAbbreviation(corrected);
+        auditLog.record("purchase-document-series.abbreviation-changed", ENTITY_TYPE,
+                String.valueOf(id),
+                Map.of("previousAbbreviation", previous, "abbreviation", corrected));
+        return toView(series);
+    }
+
+    @Override
+    @Transactional
+    public PurchaseDocumentSeriesView changeDocumentType(long id, long documentTypeId) {
+        PurchaseDocumentSeries series = repository.findById(id)
+                .orElseThrow(() -> DocumentSeriesNotFoundException.purchase(id));
+        if (series.getDocumentType().getId() == documentTypeId) {
+            return toView(series);
+        }
+        requireNothingRecorded(series, "document type");
+
+        PurchaseDocumentType documentType = documentTypes.findById(documentTypeId)
+                .orElseThrow(() -> DocumentTypeNotFoundException.purchase(documentTypeId));
+
+        long previous = series.getDocumentType().getId();
+        series.changeDocumentType(documentType);
+        auditLog.record("purchase-document-series.document-type-changed", ENTITY_TYPE,
+                String.valueOf(id), Map.of(
+                        "previousDocumentTypeId", String.valueOf(previous),
+                        "documentTypeId", String.valueOf(documentTypeId)));
+        return toView(series);
+    }
+
+    @Override
+    @Transactional
+    public PurchaseDocumentSeriesView changeGetsMark(long id, boolean getsMark) {
+        PurchaseDocumentSeries series = repository.findById(id)
+                .orElseThrow(() -> DocumentSeriesNotFoundException.purchase(id));
+        if (series.isGetsMark() == getsMark) {
+            return toView(series);
+        }
+        requireNothingRecorded(series, "ΜΑΡΚ flag");
+
+        series.changeGetsMark(getsMark);
+        auditLog.record("purchase-document-series.gets-mark-changed", ENTITY_TYPE,
+                String.valueOf(id), Map.of("getsMark", String.valueOf(getsMark)));
+        return toView(series);
+    }
+
+    /**
+     * ⚠️⚠️ <strong>This cannot fire today, and the reason is structural rather than about the
+     * data.</strong> Measured 2026-08-04: no table in this schema has a foreign key to
+     * {@code purchase_document_series} except its own transformation target, so nothing can ever
+     * name a purchase series until <strong>F6</strong> gives a purchase document one.
+     *
+     * <p>It is written now anyway, in the same shape as the sales one, so that F6 adds a query
+     * rather than discovering that a whole guard is missing. {@code DocumentReferenceGraphIT} pins
+     * the referencing set, so the day that column arrives the build goes red here — which is the
+     * remedy {@code CLAUDE.md} prescribes after R1b's per-series key agreed with the global one
+     * only because every row's series happened to be null.
+     */
+    private void requireNothingRecorded(PurchaseDocumentSeries series, String field) {
+        if (isNamedByARecordedDocument(series.getId())) {
+            throw new InvalidDocumentSeriesException(
+                    "The " + field + " of series \"" + series.getAbbreviation() + "\" cannot be "
+                            + "changed, because purchase documents have already been recorded in "
+                            + "it. Create a new series and deactivate this one.");
+        }
+    }
+
+    /** @see #requireNothingRecorded — false by construction until F6, not by coincidence. */
+    private boolean isNamedByARecordedDocument(long seriesId) {
+        return false;
+    }
+
+    @Override
+    @Transactional
     public PurchaseDocumentSeriesView mapTransformationTarget(long id, Long targetSeriesId) {
         PurchaseDocumentSeries series = repository.findById(id)
                 .orElseThrow(() -> DocumentSeriesNotFoundException.purchase(id));
@@ -169,8 +261,8 @@ class PurchaseDocumentSeriesServiceImpl implements PurchaseDocumentSeriesService
         }
     }
 
-    private static List<PurchaseDocumentSeriesView> toViews(List<PurchaseDocumentSeries> series) {
-        return series.stream().map(PurchaseDocumentSeriesServiceImpl::toView).toList();
+    private List<PurchaseDocumentSeriesView> toViews(List<PurchaseDocumentSeries> series) {
+        return series.stream().map(this::toView).toList();
     }
 
     /**
@@ -178,8 +270,11 @@ class PurchaseDocumentSeriesServiceImpl implements PurchaseDocumentSeriesService
      * materialised into the view. The association is lazy, so returning the entity and letting a
      * caller reach through it would blow up on first access outside the transaction — the trap
      * {@code CLAUDE.md} names beside proxy self-invocation.
+     *
+     * <p>Unlike the sales side there is no batched form of the {@code inUse} question, because there
+     * is no query behind it to batch.
      */
-    private static PurchaseDocumentSeriesView toView(PurchaseDocumentSeries series) {
+    private PurchaseDocumentSeriesView toView(PurchaseDocumentSeries series) {
         PurchaseDocumentType type = series.getDocumentType();
         return new PurchaseDocumentSeriesView(
                 series.getId(),
@@ -189,6 +284,7 @@ class PurchaseDocumentSeriesServiceImpl implements PurchaseDocumentSeriesService
                 type.getDescription(),
                 series.isGetsMark(),
                 series.getTransformableIntoSeriesId(),
+                isNamedByARecordedDocument(series.getId()),
                 series.isActive());
     }
 }

@@ -34,6 +34,43 @@ final class DocumentReferenceRequests {
     }
 
     /**
+     * The abbreviation of a series or a delivery method.
+     *
+     * <p>⚠️ <strong>Added in R2, and it is the correction path that did not exist.</strong> Until
+     * then nothing could change an abbreviation on any installation, so a typo in a hand-authored
+     * Greek series name had exactly one remedy — deactivate and recreate — which burns the
+     * abbreviation permanently, because {@code …_abbreviation_unique} is not a partial index. The
+     * service refuses once documents have been recorded in the series; before that it is a typo.
+     */
+    record AbbreviationRequest(@Mandatory String abbreviation) {
+
+        AbbreviationRequest {
+            Required.text(abbreviation, "abbreviation");
+        }
+    }
+
+    /** Which document type a series numbers. */
+    record SeriesDocumentTypeRequest(@Mandatory Long documentTypeId) {
+
+        SeriesDocumentTypeRequest {
+            Required.field(documentTypeId, "documentTypeId");
+        }
+    }
+
+    /**
+     * Whether documents in a series receive a ΜΑΡΚ.
+     *
+     * <p>Boxed, so an omitted field is a 400 naming it rather than arriving as {@code false} and
+     * silently asserting that these documents never reach AADE.
+     */
+    record GetsMarkRequest(@Mandatory Boolean getsMark) {
+
+        GetsMarkRequest {
+            Required.field(getsMark, "getsMark");
+        }
+    }
+
+    /**
      * Both stock flags at once, because they are one decision.
      *
      * <p>Two separate routes would allow an incoherent intermediate state — transfers stock but

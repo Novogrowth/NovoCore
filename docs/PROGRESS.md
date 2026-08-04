@@ -40,7 +40,21 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | R1a | **Document reference data (backend)** — the two-layer document model | **Done, committed** `aa1eda4` + `c5f9a97` — `aade_invoice_type` (55 seeded), the business's own document-type, series and delivery-method lists (all shipped **empty**), the statutory-codification contract with an ArchUnit rule, myDATA payment codes, statutory identifiers on `sales_invoice`, and the three artefact seeds. Migrations **V31**, **V32**. **54 new operations.** All 48 sub-parts have verdicts. See below |
 | R1b | **Document reference data (behavioural)** — the series becomes what a sale names | **Done, committed** — `seriesId` mandatory on `NewSalesInvoice`, `channel` removed and **derived from the series**, the consumption path branches **silently** on the document type's `affectsStock`, and three refusals (channel-less, inactive series, inactive type). Migration **V33** (comment only). **No new operations.** ⚠️ **Two defects found, both invisible before this step**; ⚠️ **the derived-accessor guard left R1b and became step W1** on a measurement. All 22 sub-parts have verdicts. See below |
 | U3 | **Eleven design decisions written into the repository** — D5, D4, D1, D3, D2, M0, vouchers, the shared gate | **Done, documentation only** — no production code, no schema, no migration, no test changed. D4 split (half already answered), M0 split into M0a/M0b, the per-order shipping address moved to step 22, voucher creation modes recorded against step 21, the Woo one-time load separated from the Woo adapter at step 19, and the **shared gate before step 24** recorded. Nothing ⚪ was promoted or reordered beyond those placements. See below |
+| R2 | **Document reference data (screens)** — six settings screens over R1a's six tables | **Done, committed** — the AADE codification (read + three verbs, **no create, ever**), sales/purchase document types, sales/purchase series, delivery methods. ⚠️ **Grew a backend sub-part mid-step**: 7 new routes making a series' abbreviation, document type and ΜΑΡΚ flag **editable while unused and frozen once used**, because none of them had a write route on any installation. **All 41 sub-parts have verdicts**; 4 premises corrected. See below |
 | 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress. F0–F4, S1 and S2 done. ⚠️ Next is Q1 (the backend queue), then R1, then F5** — reprioritised 2026-08-02. Foundations `94e17cd`, Products `56e3726` + guards `28c4119` + brand pass, then the render-loop fix `3458ee6`, F0 (the seed pass), F1 Suppliers `b406b27`, F2 Customers `496c7be`, F3 Users & Roles `aea0e56`, then **S1** (search), **S2** (sorting) and **F4** (Settings). **307 frontend tests, 31 files, green.** Per-step detail in `docs/novocore-roadmap.md`; decisions and what each step left behind in *Step 16 — the frontend* below |
+
+**Tests, measured 2026-08-04 (after R2): 1,470 passing, 0 failing, 1 skipped, `mvn clean verify`
+exit 0; 237 operations, 226 schemas, 170 declaring `required`. Frontend: 358 across 37 files,
+typecheck/lint/knip/build/check:offline green.** R2 added **13** backend tests (1,457 → 1,470) — 3 in
+the new `DocumentReferenceGraphIT`, 7 in the new `R2ReferenceDataContractIT`, 3 in
+`DocumentReferenceDataIT` — **48** frontend tests across **6** new files (310 → 358), and **7
+operations** (230 → 237), all of them writes. ⚠️ **The 7 are a deliberate mid-step scope addition**
+and not screen work: the *editable-while-unused* correction paths for a series' abbreviation,
+document type and ΜΑΡΚ flag, and a delivery method's abbreviation — none of which had a write route
+on any installation before. **No migration.** Lint is at its pre-R2 baseline of 3 warnings, all in
+files R2 did not touch.
+
+*(The paragraph below is R1b's, kept with its own figures — correct in its step's context.)*
 
 **Tests, measured 2026-08-04 (after R1b): 1,457 passing, 0 failing, 1 skipped, `mvn clean verify`
 exit 0; 230 operations, 223 schemas, 167 declaring `required`. Frontend: 310 across 31 files,
@@ -85,6 +99,165 @@ Step 16a added 36 (1152 → 1188) and four routes (133 → 137): `GET /api/me`,
 **S1 added 34 (1326 → 1360) and one route (174 → 175)** — the five list routes gained a *parameter* rather than an operation; the one new route is `PATCH /api/products/{id}/brand`. The spec diff is 108 lines of additions and **0 deletions**. **Step 16b added 138 (1188 → 1326) and 37 routes (137 → 174)** — 18 users/roles, 3 journal, 3
 settings, 13 lookup administration. The OpenAPI spec was regenerated and the operation sets diffed
 directly rather than trusting the line count: **0 removed, 37 added, 174 total.**
+
+---
+
+## ▶ R2 — document reference data, screens. **Phase 0 reported and approved 2026-08-04**
+
+**Written at the moment of approval, one line per sub-part, per `CLAUDE.md` §*An approved proposal
+is a checklist, not a paragraph*.** Phase 0 corrected four premises and found two documentation
+defects before a line was written; each is recorded against the line it changed.
+
+⚠️ **R2 grew a backend sub-part mid-approval (block X), and that is stated rather than absorbed.**
+The step was scoped as screens. Phase 0's 0.7 found that a series' `abbreviation`, `documentTypeId`
+and `getsMark`, and a delivery method's `abbreviation`, have **no write route on any installation** —
+so the owner is about to hand-author nineteen Greek document types and their series with **no
+correction path at all**, and deactivate-and-recreate burns the abbreviation permanently because
+`…_abbreviation_unique` is not partial. The owner declined to defer it. It is new routes, new view
+components, a spec change and a client regeneration inside a frontend step.
+
+### 🅐 The six screens
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| **A.1** | **AADE invoice types** — list + detail. `TAX_AND_CHARGES`, nav under Settings | ✅ **Done.** List + detail, `TAX_AND_CHARGES`, under Settings. 55 rows, no create path |
+| **A.2** | ⚠️ **No create control, ever** — `StatutoryCodification`. Row authorship is Flyway's | ✅ **Done.** No Add control anywhere, and **no `/new` route either** — a create form somebody added later would be unreachable |
+| **A.3** | A permanent explanatory line in the units-of-measure banner style, saying AADE authors these 55 codes | ✅ **Done.** Permanent banner in the units-of-measure style: *"AADE authors these 55 codes… nobody can add one, on any installation."* |
+| **A.4** | ⚠️ **An absence test** asserting no create control renders, naming *why* the omission is permanent rather than "not yet". **The convention's first instance** — the next seed-only screen copies it | ✅ **Done.** *"offers NO create control, permanently"*, asserted for a **FULL-access owner** — a role that could add one anywhere would add one here. ⭐ **Recorded in `CLAUDE.md` as a named convention**, with its next instance (`/api/vat-exemption-reasons`) named and the contrast against README state 4 ("not built yet") spelled out |
+| **A.5** | Detail: `description` editable (`PATCH`), activate/deactivate, **`code` as `ReadOnlyField`** — no route on any installation | ✅ **Done.** Description editable; **code and group are `ReadOnlyField`** — plain text with the reason, never a disabled control. A test asserts no Edit button exists for either |
+| **B.1** | **Sales document types** — list + detail + create. `SALES` | ✅ **Done.** List + detail + create, `SALES` |
+| **B.2** | ⚠️ **Three-state stock control on CREATE** — `null` ≠ `false`. `SegmentedControl`, which already refuses to be emptied | ✅ **Done.** `SegmentedControl` with a third `Not decided` option; the create form **starts there** and **omits** the field rather than sending `false` |
+| **B.3** | ⚠️ **Two-state on DETAIL**, because `StockBehaviourRequest` boxes both as `@Mandatory`: once decided a type **can never return to undecided**. Measured, not assumed | ✅ **Done, and it corrected the scoped design.** `StockBehaviourRequest` boxes both components `@Mandatory`, so once answered the question **cannot be unanswered**. The detail control shows `Not decided` **disabled with the reason** rather than removing it — an option that vanished between the two screens would leave somebody hunting |
+| **B.4** | Activate control **shown, disabled, with the reason** while a stock flag is unset — `customer-detail.tsx:117–137`'s precedent, mirroring the backend's 422 | ✅ **Done.** Activate rendered **disabled with the reason beneath it**, on `customer-detail.tsx:117–137`’s precedent. A test asserts both the disabled control and the visible reason |
+| **B.5** | AADE picker: `side=ISSUED` (**34**, not 55), grouped by annex 8.1 group, options rendered **`code — description`** | ✅ **Done.** `side=ISSUED` → **34**, not 55. Options render **`code — description`**, grouped by annex 8.1 group, rows unsorted within a group (dotted codes text-sort wrongly) |
+| **B.6** | `requiresMydataTransmission`, description, and the AADE mapping's `PUT`/`DELETE` pair (clear = DELETE, never a null body) | ✅ **Done.** myDATA is a required choice with no default; the AADE mapping uses `PUT` to set and **`DELETE` to clear** |
+| **C.1** | **Purchase document types** — the same, `PURCHASING`, AADE picker `side=RECEIVED` (**15**) | ✅ **Done.** Same screens, `PURCHASING`, `side=RECEIVED` → **15**. A test asserts the request carries `RECEIVED` and **never** `ISSUED` |
+| **C.2** | ⚠️ **Grouping is kept on the purchase picker although it has one group** — uniform component, no branch | ✅ **Done.** One component, no branch on how many groups a side happens to span |
+| **D.1** | **Sales document series** — list + detail + create. `SALES` | ✅ **Done.** List + detail + create, `SALES` |
+| **D.2** | ⚠️ **Channel offers "not a sales channel" as an explicit option, never a blank** — six of the owner's series are channel-less. `PUT …/channel` is `@Mandatory`, so that option routes to **`DELETE …/channel`** | ✅ **Done.** *"Not a sales channel"* is a named option; choosing it sends **`DELETE …/channel`**, never a `PUT` of null. The create form **starts** on it |
+| **D.3** | On-screen text: **a sales invoice's channel comes FROM its series** and is not settable on the invoice | ✅ **Done.** On the detail screen and the create form, with a test asserting the sentence renders |
+| **D.4** | `transformableIntoSeriesId` — ⚠️ **singular, an `OptionSelect` + explicit "none"**, not a multi-select. The row being edited is omitted from its own options | ⚠️ **Done, PREMISE CORRECTED — it is SINGULAR.** `transformableIntoSeriesId` is one nullable id with `PUT`/`DELETE …/transformation-target`, so an `OptionSelect` plus an explicit "none", **not** a multi-select. Materially less work than scoped. The row is omitted from its own options (belt); the server refuses a self-reference with a 422 and a CHECK sits under that (braces) |
+| **E.1** | **Purchase document series** — the same, `PURCHASING`. ⚠️ **No channel field and no channel column** — its absence is the decision | ✅ **Done.** No channel field, no channel column, **and three absence tests** — list column, detail control, create field. `onChannel` is not even passed, so a caller cannot wire one up |
+| **F.1** | **Delivery methods** — list + detail + create. `SALES` | ✅ **Done.** List + detail + create, `SALES` |
+| **G.1** | Six nav entries in `src/nav/tree.ts` with the right grant, checked against the spec by `tree.test.ts` | ✅ **Done.** Six nodes, **five different grants and none of them `SETTINGS`**; `tree.test.ts` checks each against the spec’s own `x-novocore-section` |
+| **G.2** | Six `.test.tsx` files, each with `requests.expectNoWrites()` on render | ✅ **Done.** Six files, **48 new tests**; every screen asserts `expectNoWrites()` on render |
+| **G.3** | i18n en + el for every new string; `enum-labels.test.ts` green | ✅ **Done.** 208 keys across four files, with **en and el key sets asserted equal** by the merge itself; `enum-labels.test.ts` green |
+
+### 🅧 ⚠️ SCOPE ADDITION — editable while unused, frozen once used. **Backend work in a screens step**
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| **X.0** | **Report the exact "used" predicate per field before building it.** If any is expensive or ambiguous, **STOP and report** rather than guess | ✅ **Done, and reported before a line was built.** Sales series: `EXISTS (SELECT 1 FROM sales_invoice WHERE series_id = :id)` — index-only on `sales_invoice_series_idx`, and **one batched query per list** rather than an N+1. ⚠️ A **reversed** invoice counts (it was recorded, it is in the journal). A **transformation-target** reference does **not** (it is by id and survives any of the three changing). Purchase series and delivery methods: **`false` by construction** — see X.9. Neither expensive nor ambiguous, so no stop |
+| **X.1** | `PATCH /api/sales-document-series/{id}/abbreviation` — refuses 422 with the reason once used | ✅ **Done.** `PATCH /api/sales-document-series/{id}/abbreviation` |
+| **X.2** | `PUT /api/sales-document-series/{id}/document-type` — same | ✅ **Done.** `PUT /api/sales-document-series/{id}/document-type` |
+| **X.3** | `PUT /api/sales-document-series/{id}/gets-mark` — same | ✅ **Done.** `PUT /api/sales-document-series/{id}/gets-mark` |
+| **X.4** | The three purchase-series equivalents | ✅ **Done.** All three purchase equivalents. ⚠️ Their refusal is unreachable until F6 — built anyway, because a purchase abbreviation is typed by hand exactly as a sales one is, and an inconsistency with no argument behind it is the shape S1 caught with `supplier.vat_number` |
+| **X.5** | `PATCH /api/delivery-methods/{id}/abbreviation` | ✅ **Done.** `PATCH /api/delivery-methods/{id}/abbreviation` |
+| **X.6** | Views gain **one component** saying the row is in use — ⚠️ **a component, not a derived accessor**: W1 measured 32 schemas shipping 66 undocumented properties and R2 must not add a 67th | ✅ **Done.** One new **component** `inUse` on all three views — a component and **not** a derived accessor, so W1’s 66 undocumented properties do not become 67 |
+| **X.7** | ⚠️ **The reason is composed on the screen, not sent by the server** — every existing `lockedReason` call site is a client i18n string, and Q47(b) says the backend localises nothing, so a server sentence would be English on a Greek UI | ✅ **Done.** The screen composes the reason. Every existing `lockedReason` call site is a client i18n string, and the backend localises nothing (Q47(b)) — a server sentence would render as English prose beside Greek labels |
+| **X.8** | The screens use **`lockedReason`** (shown, disabled, reason) instead of the plain-text no-route treatment. That is what the addition buys | ✅ **Done.** The three fields are `lockedReason` — shown, **disabled**, with the reason — instead of the plain-text no-route treatment they had. That is what the addition buys |
+| **X.9** | ⚠️ **A forward-looking test pinning the reference graph**, because *a purchase series is referenced by nothing today* so its freeze is unreachable and would silently become reachable at F6. Same shape as R1b's per-series key that agreed only because every row was null | ✅ **Done.** `DocumentReferenceGraphIT` reads `pg_constraint` **after every migration has run** and pins all three tables’ referencing sets, with failure messages that name the method still returning a hard-coded `false`. ⭐ **It carries a POSITIVE control** on the sales series, so an empty result cannot silently mean *"this test measures nothing"*. Written up in `CLAUDE.md` under the R1b entry it applies |
+| **X.10** | `PermissionSweepIT`'s table, `RouteCoverage`, `WebExceptionMappingTest` | ✅ **Done.** `PermissionSweepIT`’s table is prefix-based, so the seven inherit their section automatically; `TradingQuarterOverHttpIT` excuses them as a **separate block with R2’s own argument** — these are *refused* once a series is used, which is the state the quarter spends ten invoices creating, so R1a’s "reference data a trading narrative does not touch" would have been the wrong reason |
+
+### 🅢 Cross-cutting
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| **S.1** | Spec regenerated, client regenerated, **every drifted fixture reported BY NAME** | ✅ **Done.** Spec **230 → 237 operations**, **223 → 226 schemas**, **167 → 170 declaring `required`** (all measured 2026-08-04). Client regenerated. ⭐ **ZERO fixtures drifted, and that is measured rather than an omission**: `inUse` is required on three response types, so `tsc` would refuse any hand-authored fixture of them — there are none, because R2 is the first step to consume those records. **Four pinned counts updated** with dated reasons (`client-shape.test.ts` ×2, `spec-hygiene.test.ts` ×2); each went red first, which is what a pin is for |
+| **S.2** | A contract IT against the **real running server** for every new write route (block X), on `F4WriteContractIT`'s pattern — literal JSON, not serialised from the record | ✅ **Done.** `R2ReferenceDataContractIT` — **7 tests over real HTTP**, JSON written as literals. ⭐ Both halves of the rule on **one series either side of one invoice**, so neither half can pass vacuously. ⭐ **Proven against the defect**: with the guard replaced by `if (false)` the refusal test failed naming the exact assertion, then passed again once restored |
+| **S.3** | `CLAUDE.md`, `PROGRESS.md`, the primer and the roadmap updated | ✅ **Done** — `CLAUDE.md`, `PROGRESS.md`, the primer and the roadmap, in this close-out |
+| **S.4** | ⚠️ **The dev seed, deferred from R1a — closes as done-by-correction.** No seed mechanism: `TradingQuarter` gains one `TEST-` purchase type, one `TEST-` purchase series and two `TEST-` delivery methods, created **over HTTP** like everything else it builds. The tables ship empty precisely so the owner authors them | ✅ **Done as a correction, and NO seed mechanism was built.** `TradingQuarter` gains one `TEST-` purchase type, one purchase series and two delivery methods, created **over HTTP** like everything else it builds — so one `LiveSeedTest` run now populates all five business tables. **No migration, no seed SQL:** the tables ship empty precisely so the owner authors them, and a seed would put rows in front of him he did not create and could not have refused. ⚠️ Three excuses in `TradingQuarterOverHttpIT` became redundant and were removed — the coverage assertion would have failed on them |
+| **S.5** | ⚠️ **`frontend/README.md:518–521` corrected** — it is the only document left telling a future session to build the "stock not yet moved" indicator R1b deliberately removed, and `CLAUDE.md` §6 says not to add one back. Point at `CLAUDE.md`; do not restate the decision twice | ✅ **Done.** `frontend/README.md:518–521` corrected, and **pointed at `CLAUDE.md` §6 rather than restating the decision** — it saying so a second time is how the two came to disagree in the first place |
+| **S.6** | `frontend/README.md`'s column-file count restated **13, dated** — that number has been wrong in three documents before | ⚠️ **Done, and the answer is TWO numbers.** **11 column FILES covering 13 LIST SCREENS**, dated in `frontend/README.md`. They differ because `document-type-columns.tsx` and `series-columns.tsx` are each shared by a sales and a purchase screen — one file, two lists, two endpoints that can gain paging independently. **The obligation is 13.** R2 owed no `sortKey`: all six endpoints are `{paged:false, sorts:[]}` in the generated `paging.ts`, so it inherits the obligation without discharging or worsening it |
+| **S.7** | **NO SEARCH BOX**, recorded as a decision so nobody adopts a target-list row by reflex: no R2 entity is on the 16-row list, no R2 endpoint accepts `search=`, the largest list is 55 rows and all six are client-paged | ✅ **Done.** Recorded as a decision in each list screen’s javadoc and here: no R2 entity is on the 16-row search target list, no R2 endpoint accepts `search=`, and the largest of these lists is 55 rows returned whole. Adopting a row by reflex would have meant a migration, an index and a route parameter with nothing behind them |
+| **S.8** | 📌 **`/api/vat-exemption-reasons` recorded, NOT built** — three write routes from R1a, no screen, and no record anywhere that it has no screen. **It is the AADE screen's twin** when someone builds it | ✅ **Done — recorded, NOT built.** `/api/vat-exemption-reasons` gained three write routes in R1a, has **no screen**, and nothing anywhere recorded that absence. Now in `CLAUDE.md` as the AADE screen’s twin, with the three points to copy. Not built: R2 was already carrying backend work it was not scoped for |
+
+### 🅛 The live leg — the point of the step
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| **L.0** | ⚠️ **App image rebuilt** before hand-over. Unconditional | ⬜ |
+| **L.1** | Create a type, leave a stock flag unset, try to activate — control **disabled with the reason visible** | ⬜ |
+| **L.2** | Set both flags, activate, succeeds | ⬜ |
+| **L.3** | Create a sales series with a channel and one without — both save | ⬜ |
+| **L.4** | An inactive document type is refused with a usable **4xx naming the reason**, never a 5xx or a bare "Bad request." | ⬜ |
+| **L.5** | A frozen field renders **shown-and-disabled with its reason** — not hidden, not silently read-only | ⬜ |
+| **L.6** | The AADE picker is usable at 34 Greek options, **including the two that read `Για Μελλοντική Χρήση`** | ⬜ |
+| **L.7** | ⚠️ *(scope addition)* Create a series, **correct its abbreviation**, it saves | ⬜ |
+| **L.8** | ⚠️ *(scope addition)* The same field is **shown-disabled-with-reason** once the series has recorded a document — **if that state is reachable without F5** | ⬜ |
+| **L.9** | State plainly which items are verified at the **contract level** and which **only the browser** can answer | ⬜ |
+
+### ⭐ R2's findings — four premises corrected, and what R1's constraints did on meeting data
+
+**1. ⚠️ `transformableIntoSeries` is SINGULAR.** Phase 0 was scoped believing it was a multi-select
+over the same table. It is one nullable `bigint` with a self-FK and a `PUT`/`DELETE` pair. An
+`OptionSelect` plus an explicit "none" — materially less work than scoped.
+
+**2. ⚠️ The AADE picker is 34 options, not 55.** `?side=ISSUED` returns 34 and `RECEIVED` 15; the six
+`ENTITY_ADJUSTING` codes are in neither. And the backend *enforces* the split — a sales type naming a
+received code is refused 422 — so a 55-option picker would have been mostly certain refusals.
+
+**3. ⚠️ Codes 4 and 12 are NOT blank, and the real problem is the opposite one.** V31 seeded both with
+the group heading `Για Μελλοντική Χρήση`, and `…_description_not_blank` makes an empty one impossible.
+So the danger was never a blank option — it is that **two different statutory codes carry
+character-for-character identical descriptions**, and a picker showing the description alone offers
+two options a human cannot tell apart. Hence `code — description` on every option, which also rescues
+the three-character descriptions in `ISSUER_UNMATCHED`.
+
+**4. ⚠️ Nothing freezes conditionally today — the fields had NO route at all.** Phase 0 was scoped
+believing a series' abbreviation froze once it had recorded a document. It never froze, because it
+was never editable: no route changed a series' `abbreviation`, `documentTypeId` or `getsMark`, or a
+delivery method's `abbreviation`, on any installation. **That is what block X was added to fix**, and
+it is why those fields are `lockedReason` now rather than the plain-text no-route treatment.
+
+**5. 📌 Two documentation defects, found by reading rather than by a test.**
+`frontend/README.md:518–521` was the **only document left telling a future session to build the
+"stock not yet moved" indicator R1b deliberately removed** — a live contradiction pointing the wrong
+way. And `/api/vat-exemption-reasons` has three write routes from R1a, no screen, and nothing
+anywhere recording that absence.
+
+#### ⚠️ What R1's constraints did on meeting data — and the honest answer is "they still have not"
+
+**R2 was framed as the first time R1's vacuously-satisfied constraints meet real data. They do not,
+and saying so matters more than the six screens.** Measured on the live database, 2026-08-04:
+
+| | |
+|---|---|
+| `aade_invoice_type` | **55** |
+| `sales_document_type` / `purchase_document_type` | **0 / 0** |
+| `sales_document_series` / `purchase_document_series` | **0 / 0** |
+| `delivery_method` | **0** |
+| `sales_invoice` | **10, every one with `series_id IS NULL`** |
+
+⚠️ **`LiveSeedTest` has not been re-run since R1b**, so the `TEST-` residue the last close-out warned
+about is not there yet. **The per-series uniqueness key is therefore still one group**, exactly as
+R1b left it — and the channel-less, inactive-series and inactive-type refusals are still unreachable.
+**Only the owner's live leg changes that**, which is why the checklist below is the point of the step.
+
+⭐ **One thing was confirmed rather than assumed while looking:** `sales_invoice` rows 8 and 9 share
+the document number `TEST-SI-2026-0007`, which looks like the uniqueness key failing. It is not —
+`sales_invoice_number_idx` is partial, `WHERE reversal_of_id IS NULL`, and one of the two is the
+other's reversal. The constraint is intact.
+
+⚠️ **And R2 met the same vacuous-constraint shape again, knowingly.** Two of its three `inUse`
+predicates are `false` **by construction**: the only FK referencing `purchase_document_series` is its
+own transformation target, and **nothing at all** references `delivery_method`. Those guards cannot
+fire and would start being able to, silently, at F6 and 18b. `DocumentReferenceGraphIT` is the list
+written down as a test — see `CLAUDE.md`, where it is recorded as the worked example of the remedy
+the R1b entry prescribes.
+
+### 📌 Explicitly NOT in R2, each with its reason
+
+| Item | Why not |
+|---|---|
+| The owner's **real** nineteen types and series | He authors them after R2 lands, choosing each AADE type himself. The tables ship empty for exactly this reason |
+| **Fees / Έξοδα και κρατήσεις** | Cut from R1, still unscheduled |
+| **Settlement-method myDATA codes** | They live on an enum; there is nothing to edit. Not assumed into scope |
+| **`company.branch-number`, the spec-version marker** | Report whether they need a screen at all — propose, do not build |
+| **A `/api/vat-exemption-reasons` screen** | R2 is already carrying backend work it was not scoped for. Recorded (S.8), not built |
+| **W1, 8b, R3, F5** | Other steps |
+| **Purchase document types' behaviour** | F6's |
+| **`SalesChannel`** | Not to be changed |
 
 ---
 

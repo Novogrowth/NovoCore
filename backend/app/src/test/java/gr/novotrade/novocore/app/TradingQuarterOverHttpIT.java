@@ -180,20 +180,14 @@ class TradingQuarterOverHttpIT {
                     "the AADE codification. A trading narrative reads document types; it has no reason to administer AADE's own list, and describing or deactivating a statutory code mid-quarter would change what the quarter's own documents refer to. Covered by DocumentReferenceDataEndpointIT."),
             java.util.Map.entry("POST /api/aade-invoice-types/{id}/reactivate",
                     "the AADE codification. A trading narrative reads document types; it has no reason to administer AADE's own list, and describing or deactivating a statutory code mid-quarter would change what the quarter's own documents refer to. Covered by DocumentReferenceDataEndpointIT."),
-            java.util.Map.entry("POST /api/delivery-methods",
-                    "R1a reference data, shipped empty, and nothing in the quarter records a delivery. Covered by DocumentReferenceDataEndpointIT."),
             java.util.Map.entry("POST /api/delivery-methods/{id}/deactivate",
                     "R1a reference data, shipped empty, and nothing in the quarter records a delivery. Covered by DocumentReferenceDataEndpointIT."),
             java.util.Map.entry("POST /api/delivery-methods/{id}/reactivate",
                     "R1a reference data, shipped empty, and nothing in the quarter records a delivery. Covered by DocumentReferenceDataEndpointIT."),
-            java.util.Map.entry("POST /api/purchase-document-series",
-                    "same as the sales series, on the purchase side. Covered by DocumentReferenceDataEndpointIT."),
             java.util.Map.entry("POST /api/purchase-document-series/{id}/deactivate",
                     "same as the sales series, on the purchase side. Covered by DocumentReferenceDataEndpointIT."),
             java.util.Map.entry("POST /api/purchase-document-series/{id}/reactivate",
                     "same as the sales series, on the purchase side. Covered by DocumentReferenceDataEndpointIT."),
-            java.util.Map.entry("POST /api/purchase-document-types",
-                    "same as the sales document types, on the purchase side. Covered by DocumentReferenceDataEndpointIT."),
             java.util.Map.entry("POST /api/purchase-document-types/{id}/deactivate",
                     "same as the sales document types, on the purchase side. Covered by DocumentReferenceDataEndpointIT."),
             java.util.Map.entry("POST /api/purchase-document-types/{id}/reactivate",
@@ -210,6 +204,34 @@ class TradingQuarterOverHttpIT {
                     "the exemption reasons became a StatutoryCodification in R1a and gained the three write operations that contract permits. The quarter READS them — its February intra-EU sale needs one — and must not edit the list it is reading. Covered by DocumentReferenceDataEndpointIT."),
             java.util.Map.entry("POST /api/vat-exemption-reasons/{id}/reactivate",
                     "the exemption reasons became a StatutoryCodification in R1a and gained the three write operations that contract permits. The quarter READS them — its February intra-EU sale needs one — and must not edit the list it is reading. Covered by DocumentReferenceDataEndpointIT."),
+            // ===================================================================================
+            // R2 — the seven "editable while unused" correction routes.
+            //
+            // ⚠️ Excused for a DIFFERENT reason from R1a's block above, and the difference matters.
+            // Those are reference data a trading narrative does not touch. THESE are refused
+            // outright once a document has been recorded in the series — which is precisely the
+            // state this quarter spends ten invoices creating. Driving them here would either
+            // assert the refusal (a reference-data rule proved inside a ledger narrative, where a
+            // reader cannot see why) or require correcting a series before the quarter trades,
+            // which is R2ReferenceDataContractIT's job against the real server.
+            //
+            // Both halves are covered there: the correction succeeds while the series is unused,
+            // and is refused with its reason once an invoice names it.
+            // ===================================================================================
+            java.util.Map.entry("PATCH /api/delivery-methods/{id}/abbreviation",
+                    "R2's correction path. Nothing in the quarter records a delivery. Covered by R2ReferenceDataContractIT."),
+            java.util.Map.entry("PATCH /api/purchase-document-series/{id}/abbreviation",
+                    "R2's correction path, purchase side. ⚠️ Its refusal cannot fire at all until F6 — nothing can name a purchase series. Covered by R2ReferenceDataContractIT."),
+            java.util.Map.entry("PATCH /api/sales-document-series/{id}/abbreviation",
+                    "R2's correction path. Refused once a document is recorded in the series, which is the state this quarter creates. Covered by R2ReferenceDataContractIT."),
+            java.util.Map.entry("PUT /api/purchase-document-series/{id}/document-type",
+                    "R2's correction path, purchase side. Covered by R2ReferenceDataContractIT."),
+            java.util.Map.entry("PUT /api/purchase-document-series/{id}/gets-mark",
+                    "R2's correction path, purchase side. Covered by R2ReferenceDataContractIT."),
+            java.util.Map.entry("PUT /api/sales-document-series/{id}/document-type",
+                    "R2's correction path. Refused once a document is recorded in the series. Covered by R2ReferenceDataContractIT."),
+            java.util.Map.entry("PUT /api/sales-document-series/{id}/gets-mark",
+                    "R2's correction path. Refused once a document is recorded in the series. Covered by R2ReferenceDataContractIT."),
             java.util.Map.entry("PUT /api/purchase-document-series/{id}/transformation-target",
                     "same as the sales series, on the purchase side. Covered by DocumentReferenceDataEndpointIT."),
             java.util.Map.entry("PUT /api/purchase-document-types/{id}/aade-invoice-type",

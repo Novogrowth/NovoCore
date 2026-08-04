@@ -99,7 +99,47 @@ the summary.
   same time and for the same reason: it was a snapshot duplicating `PROGRESS.md` and the roadmap, and a
   second record that drifts is exactly what let the backend queue and the frontend roadmap disagree
   about item 3 for a week. **Regenerate a summary on demand rather than maintaining one.**
-- ⚠️ **The next step is R2.** The running order is now **R2 → F5**. ⚠️ **R1 was split into R1a and
+- ⚠️ **The next step is F5.** ⚠️ **R2 is DONE — 2026-08-04.** Six settings screens over R1a's six
+  tables, and **it grew a backend sub-part mid-step**: seven new routes (230 → **237** operations)
+  making a series' `abbreviation`, `documentTypeId` and `getsMark`, and a delivery method's
+  `abbreviation`, **editable while the row is unused and frozen once it is used**. None of them had a
+  write route on any installation before, so a typo in a hand-authored Greek series name had **no
+  correction path** — deactivate-and-recreate burns the abbreviation permanently, because
+  `…_abbreviation_unique` is not partial. **All 41 sub-parts have verdicts.** Backend **1,470** tests,
+  frontend **358** across 37 files.
+  - ⚠️⚠️ **R2 was framed as the first time R1's vacuous constraints meet real data. THEY STILL HAVE
+    NOT.** Measured 2026-08-04: all five business tables hold **0 rows**, and all 10 `sales_invoice`
+    rows still have `series_id IS NULL`, so the per-series uniqueness key is still one group and the
+    channel-less / inactive-series / inactive-type refusals are still unreachable. `LiveSeedTest` has
+    not been re-run since R1b. **Only the owner's browser leg changes that.**
+  - ⚠️ **R2 met the same vacuous-constraint shape again, knowingly.** Two of its three `inUse`
+    predicates are **`false` by construction** — the only FK referencing `purchase_document_series`
+    is its own transformation target, and **nothing at all** references `delivery_method`. Those
+    guards start being able to fire, silently, at **F6** and **18b**. **`DocumentReferenceGraphIT`**
+    reads `pg_constraint` and pins all three tables' referencing sets, with a **positive control** so
+    an empty result cannot mean "this test measures nothing". It is `CLAUDE.md`'s worked example of
+    the remedy the R1b entry prescribes.
+  - **Four premises corrected in Phase 0**: `transformableIntoSeries` is **singular**, not a
+    multi-select; the AADE picker is **34 options** (`side=ISSUED`), not 55; codes 4 and 12 are **not
+    blank** — they carry `Για Μελλοντική Χρήση` and the real hazard is that they are *identical*,
+    hence `code — description` on every option; and **nothing froze conditionally** — those fields
+    had no route at all, which is what block X was added to fix.
+  - ⭐ **New convention: a seed-only screen states its own emptiness and a test pins it.** No Add
+    control, a permanent line saying AADE authors the rows, and an absence test naming the omission
+    as *permanent* rather than *not yet*. 📌 **Its next instance is known and unbuilt:
+    `/api/vat-exemption-reasons`** — three write routes from R1a, no screen, and nothing anywhere
+    recorded that until now.
+  - ✅ **S.4 is CLOSED, as done-by-correction, and no seed mechanism was built.** `TradingQuarter`
+    gains one `TEST-` purchase type, one purchase series and two delivery methods **over HTTP**, so
+    one `LiveSeedTest` run populates all five business tables.
+  - **No search box, recorded as a decision**: no R2 entity is on the 16-row search target list, no
+    R2 endpoint accepts `search=`, and the largest list is 55 rows returned whole.
+  - ⚠️ **The column-file obligation is now TWO numbers: 11 files, 13 list screens.** They differ
+    because two column files are each shared by a sales and a purchase screen. **The obligation is
+    13.** R2 owed no `sortKey` — all six endpoints are `{paged:false, sorts:[]}`.
+  - 🐛 **`frontend/README.md` was corrected**: it was the only document left telling a future session
+    to build the "stock not yet moved" indicator R1b deliberately removed.
+- *(Historical, from before R2 landed:)* The running order was **R2 → F5**. ⚠️ **R1 was split into R1a and
   R1b on 2026-08-03; both are DONE** — R1a on 2026-08-03 (`aa1eda4` + `c5f9a97`), **R1b on
   2026-08-04**. The split was test-facing: R1a could not change what any existing test asserts, and
   R1b changed what *every* sales-invoice test constructs. ⚠️ **A new step, W1, was created out of

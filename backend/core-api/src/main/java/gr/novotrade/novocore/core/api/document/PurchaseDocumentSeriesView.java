@@ -14,6 +14,19 @@ import java.util.Optional;
  * sales series has one and this does not, which is the whole difference between the two records.
  *
  * <p>Numbers are recorded and never generated, exactly as for {@link SalesDocumentSeriesView}.
+ *
+ * @param inUse whether any recorded purchase document names this series — the predicate that
+ *     freezes {@code abbreviation}, {@code documentTypeId} and {@code getsMark}, as on
+ *     {@link SalesDocumentSeriesView}.
+ *     <p>⚠️⚠️ <strong>It is ALWAYS FALSE today, and that is a fact about the schema rather than
+ *     about the data.</strong> Measured 2026-08-04: the only foreign key anywhere referencing
+ *     {@code purchase_document_series} is its own {@code transformable_into_series_id}. No purchase
+ *     document carries a series — {@code purchase_document_type} becomes mandatory at <strong>F6</strong>,
+ *     and a series reference would arrive with it.
+ *     <p>⚠️ <strong>So this freeze is unreachable, and it will become reachable silently.</strong>
+ *     That is the exact shape {@code CLAUDE.md} names after R1b: a rule that agrees with itself only
+ *     because of what the data happens to look like today. {@code DocumentReferenceGraphIT} pins the
+ *     referencing set so <strong>F6 cannot add the column without a red build naming this field.</strong>
  */
 public record PurchaseDocumentSeriesView(
         long id,
@@ -23,6 +36,7 @@ public record PurchaseDocumentSeriesView(
         @Mandatory String documentTypeDescription,
         boolean getsMark,
         Long transformableIntoSeriesId,
+        boolean inUse,
         boolean active) {
 
     public PurchaseDocumentSeriesView {

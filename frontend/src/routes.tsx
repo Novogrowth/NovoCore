@@ -18,6 +18,35 @@ import {
   EmailSettings,
   RetentionSettings,
 } from '@/pages/settings/settings-page'
+import {
+  AadeInvoiceTypeDetail,
+  AadeInvoiceTypesList,
+} from '@/pages/aade-invoice-types/aade-invoice-types'
+import {
+  DeliveryMethodCreate,
+  DeliveryMethodDetail,
+  DeliveryMethodsList,
+} from '@/pages/delivery-methods/delivery-methods'
+import {
+  PurchaseDocumentSeriesCreate,
+  PurchaseDocumentSeriesDetail,
+  PurchaseDocumentSeriesList,
+} from '@/pages/purchase-document-series/purchase-document-series'
+import {
+  PurchaseDocumentTypeCreate,
+  PurchaseDocumentTypeDetail,
+  PurchaseDocumentTypesList,
+} from '@/pages/purchase-document-types/purchase-document-types'
+import {
+  SalesDocumentSeriesCreate,
+  SalesDocumentSeriesDetail,
+  SalesDocumentSeriesList,
+} from '@/pages/sales-document-series/sales-document-series'
+import {
+  SalesDocumentTypeCreate,
+  SalesDocumentTypeDetail,
+  SalesDocumentTypesList,
+} from '@/pages/sales-document-types/sales-document-types'
 import { UnitCreate } from '@/pages/units-of-measure/unit-create'
 import { UnitDetail } from '@/pages/units-of-measure/unit-detail'
 import { UnitsList } from '@/pages/units-of-measure/units-list'
@@ -57,6 +86,12 @@ const SCREENS: Record<string, () => ReactElement> = {
   '/settings/retention': RetentionSettings,
   '/settings/vat-classes': VatClassesList,
   '/settings/units-of-measure': UnitsList,
+  '/settings/sales-document-types': SalesDocumentTypesList,
+  '/settings/sales-document-series': SalesDocumentSeriesList,
+  '/settings/purchase-document-types': PurchaseDocumentTypesList,
+  '/settings/purchase-document-series': PurchaseDocumentSeriesList,
+  '/settings/delivery-methods': DeliveryMethodsList,
+  '/settings/aade-invoice-types': AadeInvoiceTypesList,
 }
 
 /**
@@ -88,6 +123,20 @@ const CHILD_ROUTES: { path: string; owner: string; element: () => ReactElement }
   { path: '/settings/vat-classes/:id', owner: 'settings.vatClasses', element: VatClassDetail },
   { path: '/settings/units-of-measure/new', owner: 'settings.unitsOfMeasure', element: UnitCreate },
   { path: '/settings/units-of-measure/:id', owner: 'settings.unitsOfMeasure', element: UnitDetail },
+  // R2's document reference data.
+  { path: '/settings/sales-document-types/new', owner: 'settings.salesDocumentTypes', element: SalesDocumentTypeCreate },
+  { path: '/settings/sales-document-types/:id', owner: 'settings.salesDocumentTypes', element: SalesDocumentTypeDetail },
+  { path: '/settings/sales-document-series/new', owner: 'settings.salesDocumentSeries', element: SalesDocumentSeriesCreate },
+  { path: '/settings/sales-document-series/:id', owner: 'settings.salesDocumentSeries', element: SalesDocumentSeriesDetail },
+  { path: '/settings/purchase-document-types/new', owner: 'settings.purchaseDocumentTypes', element: PurchaseDocumentTypeCreate },
+  { path: '/settings/purchase-document-types/:id', owner: 'settings.purchaseDocumentTypes', element: PurchaseDocumentTypeDetail },
+  { path: '/settings/purchase-document-series/new', owner: 'settings.purchaseDocumentSeries', element: PurchaseDocumentSeriesCreate },
+  { path: '/settings/purchase-document-series/:id', owner: 'settings.purchaseDocumentSeries', element: PurchaseDocumentSeriesDetail },
+  { path: '/settings/delivery-methods/new', owner: 'settings.deliveryMethods', element: DeliveryMethodCreate },
+  { path: '/settings/delivery-methods/:id', owner: 'settings.deliveryMethods', element: DeliveryMethodDetail },
+  // ⚠️ NO `/new` for the AADE codification, and its absence here is load-bearing: even if somebody
+  // added a create form, there would be no route to reach it by. Row authorship is Flyway's.
+  { path: '/settings/aade-invoice-types/:id', owner: 'settings.aadeInvoiceTypes', element: AadeInvoiceTypeDetail },
 ]
 
 function RouteElement({ node, screen }: { node: NavNode; screen?: () => ReactElement }) {

@@ -25,6 +25,16 @@ public interface DeliveryMethodService {
 
     DeliveryMethodView describe(long id, String description);
 
+    /**
+     * Corrects the abbreviation — R2's correction path.
+     *
+     * <p>⚠️ The "in use" refusal <strong>cannot fire today</strong>: no table in this schema has a
+     * foreign key to {@code delivery_method} at all. See {@link DeliveryMethodView#inUse()}.
+     *
+     * @throws InvalidDeliveryMethodException if the new abbreviation duplicates another
+     */
+    DeliveryMethodView changeAbbreviation(long id, String abbreviation);
+
     void deactivate(long id);
 
     void reactivate(long id);

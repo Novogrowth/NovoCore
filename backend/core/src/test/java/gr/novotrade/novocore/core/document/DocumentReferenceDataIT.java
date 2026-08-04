@@ -403,4 +403,93 @@ class DocumentReferenceDataIT extends AbstractCoreIntegrationTest {
         assertThat(deliveryMethods.describe(courier.id(), corrected).description())
                 .isEqualTo(corrected);
     }
+
+    // -------------------------------------------------------------------------------------------
+    // ⚠️ R2 — editable while unused. See R2ReferenceDataContractIT for the other half.
+    //
+    // This module cannot record a sales invoice, so the FROZEN half of the rule is not reachable
+    // from here — it needs a document, and that is an `app`-module concern. What is asserted here is
+    // the half this layer owns: the correction works, `inUse` reports the truth, and a duplicate is
+    // still refused. Stating which half is missing matters more than the tests: a reader who thinks
+    // this class covers the rule would not go looking for the class that does.
+    // -------------------------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("⚠️ R2: a series nothing has recorded in reports inUse=false and is fully correctable")
+    void anUnusedSeriesIsCorrectable() {
+        SalesDocumentTypeView type = salesTypes.create(new NewSalesDocumentType(
+                unique("Correctable type"), true, true, true, null));
+        SalesDocumentTypeView otherType = salesTypes.create(new NewSalesDocumentType(
+                unique("Other correctable type"), false, false, true, null));
+
+        String typo = "TYPO" + SEQUENCE.incrementAndGet();
+        SalesDocumentSeriesView series = salesSeries.create(new NewSalesDocumentSeries(
+                typo, unique("Series with a typo"), type.id(), SalesChannel.STORE_AND_PHONE,
+                false, null));
+
+        assertThat(series.inUse())
+                .as("nothing can have been recorded in a series created one line ago")
+                .isFalse();
+
+        String fixed = "FIXED" + SEQUENCE.incrementAndGet();
+        assertThat(salesSeries.changeAbbreviation(series.id(), fixed).abbreviation())
+                .isEqualTo(fixed);
+        assertThat(salesSeries.changeDocumentType(series.id(), otherType.id()).documentTypeId())
+                .isEqualTo(otherType.id());
+        assertThat(salesSeries.changeGetsMark(series.id(), true).getsMark()).isTrue();
+
+        // The abbreviation is still the identity even while it is correctable.
+        SalesDocumentSeriesView rival = salesSeries.create(new NewSalesDocumentSeries(
+                "RIVAL" + SEQUENCE.incrementAndGet(), unique("Rival series"), type.id(),
+                SalesChannel.STORE_AND_PHONE, false, null));
+        assertThatExceptionOfType(InvalidDocumentSeriesException.class)
+                .isThrownBy(() -> salesSeries.changeAbbreviation(rival.id(), fixed))
+                .withMessageContaining("already exists");
+
+        // A blank one is a refusal with a reason, not a stored empty string.
+        assertThatExceptionOfType(InvalidDocumentSeriesException.class)
+                .isThrownBy(() -> salesSeries.changeAbbreviation(series.id(), "   "))
+                .withMessageContaining("must not be blank");
+
+        // Repointing at a type that does not exist is a 404-shaped refusal, not a silent no-op.
+        assertThatExceptionOfType(DocumentTypeNotFoundException.class)
+                .isThrownBy(() -> salesSeries.changeDocumentType(series.id(), -1L));
+    }
+
+    @Test
+    @DisplayName("⚠️ R2: a purchase series is correctable, and inUse is false BY CONSTRUCTION until F6")
+    void aPurchaseSeriesIsCorrectable() {
+        PurchaseDocumentTypeView type = purchaseTypes.create(new NewPurchaseDocumentType(
+                unique("Correctable purchase type"), true, false, true, null));
+
+        String typo = "PTYPO" + SEQUENCE.incrementAndGet();
+        long seriesId = purchaseSeries.create(new NewPurchaseDocumentSeries(
+                typo, unique("Purchase series with a typo"), type.id(), false, null)).id();
+
+        String fixed = "PFIXED" + SEQUENCE.incrementAndGet();
+        assertThat(purchaseSeries.changeAbbreviation(seriesId, fixed).abbreviation())
+                .isEqualTo(fixed);
+        assertThat(purchaseSeries.changeGetsMark(seriesId, true).getsMark()).isTrue();
+
+        // ⚠️ Not "no purchase document happens to name it" — NO SCHEMA PATH EXISTS for one to.
+        // DocumentReferenceGraphIT pins that, and goes red when F6 changes it.
+        assertThat(purchaseSeries.require(seriesId).inUse()).isFalse();
+    }
+
+    @Test
+    @DisplayName("⚠️ R2: a delivery method's abbreviation is correctable; nothing references the table")
+    void aDeliveryMethodAbbreviationIsCorrectable() {
+        DeliveryMethodView method = deliveryMethods.create(new NewDeliveryMethod(
+                "DMT" + SEQUENCE.incrementAndGet(), unique("Method with a typo")));
+
+        String fixed = "DMF" + SEQUENCE.incrementAndGet();
+        DeliveryMethodView corrected = deliveryMethods.changeAbbreviation(method.id(), fixed);
+
+        assertThat(corrected.abbreviation()).isEqualTo(fixed);
+        assertThat(corrected.inUse()).isFalse();
+
+        assertThatExceptionOfType(InvalidDeliveryMethodException.class)
+                .isThrownBy(() -> deliveryMethods.changeAbbreviation(method.id(), "  "))
+                .withMessageContaining("must not be blank");
+    }
 }

@@ -99,7 +99,7 @@ frontend work that must land before any adapter is built.
 |   U3 | Eleven design decisions recorded ᵘ³     |     — |    0.2 |   90k | 🟢 Done         |
 |  R1b | Document reference data — behavioural ʳᵇ |     — |    1.5 |  286k | 🟢 Done         |
 |   W1 | Serialised-record contract fidelity ʷ¹  |     — |        |       | ⚪ Unscheduled   |
-|   R2 | Document reference data (screens) ʳ²    |     — |        |       | 🟡 **Current**  |
+|   R2 | Document reference data (screens) ʳ²    |     — |    1.9 |  447k | 🟢 Done         |
 |   R3 | Self-supply posting paths ˢ             |     — |        |       | ⚪ Blocked — accountant |
 |   D1 | Supplier/customer codes + alias ᵈ¹      |     — |        |       | ⚪ Placement TBD |
 |   D2 | Product categories, 3 levels ᵗ          |     — |        |       | ⚪ Before the Woo load (19) |
@@ -109,7 +109,7 @@ frontend work that must land before any adapter is built.
 |  M0a | Manager chart mapping — no code ᵐ⁰      |     — |        |       | ⚪ Unblocked, any time |
 |  M0b | Trial import, one real year ᵐ⁰          |     — |        |       | ⚪ After D1/D3/D4, before 24 |
 |   U2 | Split `PROGRESS.md` / `HISTORY.md` ᵘ²   |     — |        |       | ⚪ Unscheduled   |
-|   F5 | Sales Invoice + Credit Note ʷ           |     — |        |       | 🔴 Not started  |
+|   F5 | Sales Invoice + Credit Note ʷ           |     — |        |       | 🟡 **Current**  |
 |   F6 | Purchase Invoice + Goods Receipt ᶠ⁶     |     — |        |       | 🔴 Not started  |
 |   F7 | Receipts, Payments, Transfers           |     — |        |       | 🔴 Not started  |
 |   F8 | Freight, Journal, Write-offs            |     — |        |       | 🔴 Not started  |
@@ -125,8 +125,8 @@ several of them are backend schema work rather than screens. Adding 8.0 across t
 present an estimate for the frontend as an estimate for the phase — so the F-row subtotal is stated
 separately instead, where a reader scanning a column of dashes will actually meet it.
 
-**Q1, 8a, R1a and R1b are all 🟢 Done (R1b on 2026-08-04) and step R2 is `🟡 Current`.** The running
-order is in `PROGRESS.md` under *What is next, in one place*, and it is now **R2 → F5**. ⚠️ **R1 split
+**Q1, 8a, R1a, R1b and R2 are all 🟢 Done (R1b and R2 on 2026-08-04) and step F5 is `🟡 Current`.** The running
+order is in `PROGRESS.md` under *What is next, in one place*, and R2 landed on 2026-08-04, so it is now **F5**. ⚠️ **R1 split
 into R1a and R1b on 2026-08-03**, and the boundary was test-facing: R1a could not change what any
 existing test asserts, and R1b changed what *every* sales-invoice test constructs — so a red build
 in R1a was a failure in new code, and in R1b it could be either. **That split paid for itself:** every
@@ -826,6 +826,21 @@ documents all 66 in **one change** instead of editing 66 records, and the rule t
 generator rather than policing records. ⚠️ Not free: 8a's rule makes primitives `required`, so 66 new
 required booleans means fixture reconciliation across 32 schemas. **Weigh it at scoping.** The rule
 belongs in the **app module against the real Boot-configured mapper bean**.
+
+**ʳ² R2 — document reference data, screens. 🟢 DONE 2026-08-04, and it grew a backend sub-part.**
+⚠️ **Seven new routes (230 → 237 operations) that the step was not scoped for**: a series'
+`abbreviation`, `documentTypeId` and `getsMark`, and a delivery method's `abbreviation`, are now
+**editable while the row is unused and frozen once it is used**. Before R2 none of them had a write
+route on any installation, so a typo in a hand-authored Greek series name had no correction path —
+deactivate-and-recreate burns the abbreviation permanently, because `…_abbreviation_unique` is not
+partial. ⚠️ **On the purchase series and delivery methods the freeze CANNOT FIRE** (nothing in the
+schema references them until F6 and 18b); `DocumentReferenceGraphIT` makes that a red build rather
+than a silent gap. **S.4 closed as done-by-correction — no seed mechanism was built.** Four premises
+were corrected in Phase 0; the AADE picker is **34 options, not 55**, and
+`transformableIntoSeries` is **singular**. Measured at **1.9 h active, 447k output** — short,
+because the close-out is not yet in the transcript that measures it.
+
+*(The paragraph below is R2's original scoping note, kept for the reasoning it records.)*
 
 **ʳ² R2 — document reference data, screens.** ⚠️ **FULL CRUD, not the read-plus-activate shape F4
 built for VAT classes.** The owner authors these rows — he creates his 15 sales and 4 purchase

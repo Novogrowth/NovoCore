@@ -7,7 +7,10 @@ import gr.novotrade.novocore.core.api.security.AccessLevel;
 import gr.novotrade.novocore.core.api.security.Section;
 import gr.novotrade.novocore.core.web.ListResponse;
 import gr.novotrade.novocore.core.web.Requires;
+import gr.novotrade.novocore.core.web.document.DocumentReferenceRequests.AbbreviationRequest;
 import gr.novotrade.novocore.core.web.document.DocumentReferenceRequests.DocumentDescriptionRequest;
+import gr.novotrade.novocore.core.web.document.DocumentReferenceRequests.GetsMarkRequest;
+import gr.novotrade.novocore.core.web.document.DocumentReferenceRequests.SeriesDocumentTypeRequest;
 import gr.novotrade.novocore.core.web.document.DocumentReferenceRequests.TransformationTargetRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -77,13 +80,48 @@ class PurchaseDocumentSeriesController {
         return series.create(request);
     }
 
-    /** The description only. The abbreviation is what a document prints and is the identity. */
     @PatchMapping(path = "/api/purchase-document-series/{id}/description",
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Requires(section = Section.PURCHASING, level = AccessLevel.FULL)
     PurchaseDocumentSeriesView describe(
             @PathVariable long id, @RequestBody DocumentDescriptionRequest request) {
         return series.describe(id, request.description());
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // ⚠️ R2 — editable while unused, frozen once used. The sales controller's three routes, mirrored.
+    //
+    // ⚠️⚠️ THE FREEZE CANNOT FIRE HERE TODAY. Measured 2026-08-04: no table has a foreign key to
+    // purchase_document_series except its own transformation target, so nothing can name a purchase
+    // series until F6 gives a purchase document one. The routes exist anyway rather than waiting,
+    // because the correction path is needed for the same reason on both sides — the owner types
+    // these by hand — and because a purchase series that could not be corrected while a sales one
+    // could would be an inconsistency with no argument behind it, which is the shape S1 caught with
+    // supplier.vat_number. DocumentReferenceGraphIT makes F6 come back here.
+    // -------------------------------------------------------------------------------------------
+
+    @PatchMapping(path = "/api/purchase-document-series/{id}/abbreviation",
+            consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Requires(section = Section.PURCHASING, level = AccessLevel.FULL)
+    PurchaseDocumentSeriesView changeAbbreviation(
+            @PathVariable long id, @RequestBody AbbreviationRequest request) {
+        return series.changeAbbreviation(id, request.abbreviation());
+    }
+
+    @PutMapping(path = "/api/purchase-document-series/{id}/document-type",
+            consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Requires(section = Section.PURCHASING, level = AccessLevel.FULL)
+    PurchaseDocumentSeriesView changeDocumentType(
+            @PathVariable long id, @RequestBody SeriesDocumentTypeRequest request) {
+        return series.changeDocumentType(id, request.documentTypeId());
+    }
+
+    @PutMapping(path = "/api/purchase-document-series/{id}/gets-mark",
+            consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Requires(section = Section.PURCHASING, level = AccessLevel.FULL)
+    PurchaseDocumentSeriesView changeGetsMark(
+            @PathVariable long id, @RequestBody GetsMarkRequest request) {
+        return series.changeGetsMark(id, request.getsMark());
     }
 
     /**

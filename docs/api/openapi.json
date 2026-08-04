@@ -3181,6 +3181,65 @@
         }
       }
     },
+    "/api/delivery-methods/{id}/abbreviation" : {
+      "patch" : {
+        "operationId" : "DeliveryMethodController_changeAbbreviation",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AbbreviationRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeliveryMethodView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/delivery-methods/{id}/deactivate" : {
       "post" : {
         "operationId" : "DeliveryMethodController_deactivate",
@@ -6312,6 +6371,65 @@
         }
       }
     },
+    "/api/purchase-document-series/{id}/abbreviation" : {
+      "patch" : {
+        "operationId" : "PurchaseDocumentSeriesController_changeAbbreviation",
+        "x-novocore-section" : "PURCHASING",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AbbreviationRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PurchaseDocumentSeriesView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/purchase-document-series/{id}/deactivate" : {
       "post" : {
         "operationId" : "PurchaseDocumentSeriesController_deactivate",
@@ -6374,6 +6492,124 @@
             "application/json" : {
               "schema" : {
                 "$ref" : "#/components/schemas/DocumentDescriptionRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PurchaseDocumentSeriesView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/purchase-document-series/{id}/document-type" : {
+      "put" : {
+        "operationId" : "PurchaseDocumentSeriesController_changeDocumentType",
+        "x-novocore-section" : "PURCHASING",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SeriesDocumentTypeRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PurchaseDocumentSeriesView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/purchase-document-series/{id}/gets-mark" : {
+      "put" : {
+        "operationId" : "PurchaseDocumentSeriesController_changeGetsMark",
+        "x-novocore-section" : "PURCHASING",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GetsMarkRequest"
               }
             }
           }
@@ -8257,6 +8493,65 @@
         }
       }
     },
+    "/api/sales-document-series/{id}/abbreviation" : {
+      "patch" : {
+        "operationId" : "SalesDocumentSeriesController_changeAbbreviation",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AbbreviationRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SalesDocumentSeriesView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/sales-document-series/{id}/channel" : {
       "delete" : {
         "operationId" : "SalesDocumentSeriesController_clearChannel",
@@ -8425,6 +8720,124 @@
             "application/json" : {
               "schema" : {
                 "$ref" : "#/components/schemas/DocumentDescriptionRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SalesDocumentSeriesView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sales-document-series/{id}/document-type" : {
+      "put" : {
+        "operationId" : "SalesDocumentSeriesController_changeDocumentType",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SeriesDocumentTypeRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SalesDocumentSeriesView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sales-document-series/{id}/gets-mark" : {
+      "put" : {
+        "operationId" : "SalesDocumentSeriesController_changeGetsMark",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GetsMarkRequest"
               }
             }
           }
@@ -12056,6 +12469,15 @@
           }
         }
       },
+      "AbbreviationRequest" : {
+        "type" : "object",
+        "required" : [ "abbreviation" ],
+        "properties" : {
+          "abbreviation" : {
+            "type" : "string"
+          }
+        }
+      },
       "AccessLevel" : {
         "type" : "string",
         "enum" : [ "NONE", "VIEW", "FULL" ]
@@ -12734,7 +13156,7 @@
       },
       "DeliveryMethodView" : {
         "type" : "object",
-        "required" : [ "id", "abbreviation", "description", "active" ],
+        "required" : [ "id", "abbreviation", "description", "inUse", "active" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -12745,6 +13167,9 @@
           },
           "description" : {
             "type" : "string"
+          },
+          "inUse" : {
+            "type" : "boolean"
           },
           "active" : {
             "type" : "boolean"
@@ -12938,6 +13363,15 @@
             "items" : {
               "$ref" : "#/components/schemas/FreightAllocationLineView"
             }
+          }
+        }
+      },
+      "GetsMarkRequest" : {
+        "type" : "object",
+        "required" : [ "getsMark" ],
+        "properties" : {
+          "getsMark" : {
+            "type" : "boolean"
           }
         }
       },
@@ -14895,7 +15329,7 @@
       },
       "PurchaseDocumentSeriesView" : {
         "type" : "object",
-        "required" : [ "id", "abbreviation", "description", "documentTypeId", "documentTypeDescription", "getsMark", "active" ],
+        "required" : [ "id", "abbreviation", "description", "documentTypeId", "documentTypeDescription", "getsMark", "inUse", "active" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -14920,6 +15354,9 @@
           "transformableIntoSeriesId" : {
             "type" : "integer",
             "format" : "int64"
+          },
+          "inUse" : {
+            "type" : "boolean"
           },
           "active" : {
             "type" : "boolean"
@@ -15296,7 +15733,7 @@
       },
       "SalesDocumentSeriesView" : {
         "type" : "object",
-        "required" : [ "id", "abbreviation", "description", "documentTypeId", "documentTypeDescription", "getsMark", "active" ],
+        "required" : [ "id", "abbreviation", "description", "documentTypeId", "documentTypeDescription", "getsMark", "inUse", "active" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -15324,6 +15761,9 @@
           "transformableIntoSeriesId" : {
             "type" : "integer",
             "format" : "int64"
+          },
+          "inUse" : {
+            "type" : "boolean"
           },
           "active" : {
             "type" : "boolean"
@@ -15782,6 +16222,16 @@
         "properties" : {
           "channel" : {
             "$ref" : "#/components/schemas/SalesChannel"
+          }
+        }
+      },
+      "SeriesDocumentTypeRequest" : {
+        "type" : "object",
+        "required" : [ "documentTypeId" ],
+        "properties" : {
+          "documentTypeId" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         }
       },

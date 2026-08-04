@@ -9,6 +9,9 @@ import gr.novotrade.novocore.core.api.asset.NewAsset;
 import gr.novotrade.novocore.core.api.banking.NewBankTransfer;
 import gr.novotrade.novocore.core.api.bundle.NewBundleComponent;
 import gr.novotrade.novocore.core.api.customer.NewCustomer;
+import gr.novotrade.novocore.core.api.document.NewDeliveryMethod;
+import gr.novotrade.novocore.core.api.document.NewPurchaseDocumentSeries;
+import gr.novotrade.novocore.core.api.document.NewPurchaseDocumentType;
 import gr.novotrade.novocore.core.api.document.NewSalesDocumentSeries;
 import gr.novotrade.novocore.core.api.document.NewSalesDocumentType;
 import gr.novotrade.novocore.core.api.inventory.NewStockWriteOff;
@@ -300,6 +303,37 @@ final class TradingQuarter {
                 new NewSalesDocumentSeries("TEST-ALPK", "TEST Skroutz series",
                         salesType, SalesChannel.SKROUTZ, false, null),
                 "the Skroutz series"));
+
+        // ⚠️ THE PURCHASE SIDE AND THE DELIVERY METHODS — R2's S.4, and they are NOT needed by this
+        // narrative.
+        //
+        // Nothing below is read by a single assertion in this class: a purchase invoice does not
+        // carry a series until F6, and nothing records a delivery at all. They exist so that a
+        // LiveSeedTest run leaves all five of R1a's business tables non-empty, which is what R2's
+        // six screens open onto.
+        //
+        // ⚠️ This is deliberately NOT a seed migration, and the distinction is the whole of S.4.
+        // sales_document_type and its four siblings ship EMPTY from V31 so the owner authors his
+        // own nineteen types through R2's screens, choosing each AADE code himself. A migration
+        // would put rows in front of him that he did not create and could not have refused; rows
+        // created here are TEST- prefixed residue of a test run, exactly like the customers and
+        // products above, and carry no more authority than those do.
+        long purchaseType = created("/api/purchase-document-types",
+                new NewPurchaseDocumentType(
+                        "TEST-PURCHASE-DOCTYPE-01 Supplier invoice", true, false, true, null),
+                "the purchase document type");
+        handles.put("doctype:purchase", purchaseType);
+
+        handles.put("series:purchase", created("/api/purchase-document-series",
+                new NewPurchaseDocumentSeries("TEST-TPY", "TEST Supplier invoice series",
+                        purchaseType, false, null),
+                "the purchase series"));
+
+        handles.put("delivery:courier", created("/api/delivery-methods",
+                new NewDeliveryMethod("TEST-ACS", "TEST Courier"), "the courier delivery method"));
+        handles.put("delivery:collection", created("/api/delivery-methods",
+                new NewDeliveryMethod("TEST-SHOP", "TEST Collection from the shop"),
+                "the collection delivery method"));
 
         // Customers. The seeded retail customer is structural (ADR 0009 / Q10) and is found rather
         // than created; the two near-duplicates exist so match-suggestions has something to suggest.

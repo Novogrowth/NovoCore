@@ -27,10 +27,15 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AbbreviationRequest,
   DocumentDescriptionRequest,
+  GetsMarkRequest,
   ListResponseSalesDocumentSeriesView,
   NewSalesDocumentSeries,
+  SalesDocumentSeriesControllerChangeAbbreviation4xx,
   SalesDocumentSeriesControllerChangeChannel4xx,
+  SalesDocumentSeriesControllerChangeDocumentType4xx,
+  SalesDocumentSeriesControllerChangeGetsMark4xx,
   SalesDocumentSeriesControllerClearChannel4xx,
   SalesDocumentSeriesControllerClearTransformationTarget4xx,
   SalesDocumentSeriesControllerCreate4xx,
@@ -43,6 +48,7 @@ import type {
   SalesDocumentSeriesControllerSeriesParams,
   SalesDocumentSeriesView,
   SeriesChannelRequest,
+  SeriesDocumentTypeRequest,
   TransformationTargetRequest
 } from '../../model';
 
@@ -297,7 +303,66 @@ export function useSalesDocumentSeriesControllerOneSeries<TData = Awaited<Return
 
 
 
-export const salesDocumentSeriesControllerClearChannel = (
+export const salesDocumentSeriesControllerChangeAbbreviation = (
+    id: number,
+    abbreviationRequest: AbbreviationRequest,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<SalesDocumentSeriesView>(
+      {url: `/api/sales-document-series/${id}/abbreviation`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: abbreviationRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getSalesDocumentSeriesControllerChangeAbbreviationMutationOptions = <TError = SalesDocumentSeriesControllerChangeAbbreviation4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesDocumentSeriesControllerChangeAbbreviation>>, TError,{id: number;data: AbbreviationRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof salesDocumentSeriesControllerChangeAbbreviation>>, TError,{id: number;data: AbbreviationRequest}, TContext> => {
+
+const mutationKey = ['salesDocumentSeriesControllerChangeAbbreviation'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof salesDocumentSeriesControllerChangeAbbreviation>>, {id: number;data: AbbreviationRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  salesDocumentSeriesControllerChangeAbbreviation(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SalesDocumentSeriesControllerChangeAbbreviationMutationResult = NonNullable<Awaited<ReturnType<typeof salesDocumentSeriesControllerChangeAbbreviation>>>
+    export type SalesDocumentSeriesControllerChangeAbbreviationMutationBody = AbbreviationRequest
+    export type SalesDocumentSeriesControllerChangeAbbreviationMutationError = SalesDocumentSeriesControllerChangeAbbreviation4xx
+
+    export const useSalesDocumentSeriesControllerChangeAbbreviation = <TError = SalesDocumentSeriesControllerChangeAbbreviation4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesDocumentSeriesControllerChangeAbbreviation>>, TError,{id: number;data: AbbreviationRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof salesDocumentSeriesControllerChangeAbbreviation>>,
+        TError,
+        {id: number;data: AbbreviationRequest},
+        TContext
+      > => {
+      return useMutation(getSalesDocumentSeriesControllerChangeAbbreviationMutationOptions(options), queryClient);
+    }
+    export const salesDocumentSeriesControllerClearChannel = (
     id: number,
  signal?: AbortSignal
 ) => {
@@ -526,6 +591,124 @@ const {mutation: mutationOptions} = options ?
         TContext
       > => {
       return useMutation(getSalesDocumentSeriesControllerDescribeMutationOptions(options), queryClient);
+    }
+    export const salesDocumentSeriesControllerChangeDocumentType = (
+    id: number,
+    seriesDocumentTypeRequest: SeriesDocumentTypeRequest,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<SalesDocumentSeriesView>(
+      {url: `/api/sales-document-series/${id}/document-type`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: seriesDocumentTypeRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getSalesDocumentSeriesControllerChangeDocumentTypeMutationOptions = <TError = SalesDocumentSeriesControllerChangeDocumentType4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesDocumentSeriesControllerChangeDocumentType>>, TError,{id: number;data: SeriesDocumentTypeRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof salesDocumentSeriesControllerChangeDocumentType>>, TError,{id: number;data: SeriesDocumentTypeRequest}, TContext> => {
+
+const mutationKey = ['salesDocumentSeriesControllerChangeDocumentType'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof salesDocumentSeriesControllerChangeDocumentType>>, {id: number;data: SeriesDocumentTypeRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  salesDocumentSeriesControllerChangeDocumentType(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SalesDocumentSeriesControllerChangeDocumentTypeMutationResult = NonNullable<Awaited<ReturnType<typeof salesDocumentSeriesControllerChangeDocumentType>>>
+    export type SalesDocumentSeriesControllerChangeDocumentTypeMutationBody = SeriesDocumentTypeRequest
+    export type SalesDocumentSeriesControllerChangeDocumentTypeMutationError = SalesDocumentSeriesControllerChangeDocumentType4xx
+
+    export const useSalesDocumentSeriesControllerChangeDocumentType = <TError = SalesDocumentSeriesControllerChangeDocumentType4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesDocumentSeriesControllerChangeDocumentType>>, TError,{id: number;data: SeriesDocumentTypeRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof salesDocumentSeriesControllerChangeDocumentType>>,
+        TError,
+        {id: number;data: SeriesDocumentTypeRequest},
+        TContext
+      > => {
+      return useMutation(getSalesDocumentSeriesControllerChangeDocumentTypeMutationOptions(options), queryClient);
+    }
+    export const salesDocumentSeriesControllerChangeGetsMark = (
+    id: number,
+    getsMarkRequest: GetsMarkRequest,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<SalesDocumentSeriesView>(
+      {url: `/api/sales-document-series/${id}/gets-mark`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: getsMarkRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getSalesDocumentSeriesControllerChangeGetsMarkMutationOptions = <TError = SalesDocumentSeriesControllerChangeGetsMark4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesDocumentSeriesControllerChangeGetsMark>>, TError,{id: number;data: GetsMarkRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof salesDocumentSeriesControllerChangeGetsMark>>, TError,{id: number;data: GetsMarkRequest}, TContext> => {
+
+const mutationKey = ['salesDocumentSeriesControllerChangeGetsMark'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof salesDocumentSeriesControllerChangeGetsMark>>, {id: number;data: GetsMarkRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  salesDocumentSeriesControllerChangeGetsMark(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SalesDocumentSeriesControllerChangeGetsMarkMutationResult = NonNullable<Awaited<ReturnType<typeof salesDocumentSeriesControllerChangeGetsMark>>>
+    export type SalesDocumentSeriesControllerChangeGetsMarkMutationBody = GetsMarkRequest
+    export type SalesDocumentSeriesControllerChangeGetsMarkMutationError = SalesDocumentSeriesControllerChangeGetsMark4xx
+
+    export const useSalesDocumentSeriesControllerChangeGetsMark = <TError = SalesDocumentSeriesControllerChangeGetsMark4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesDocumentSeriesControllerChangeGetsMark>>, TError,{id: number;data: GetsMarkRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof salesDocumentSeriesControllerChangeGetsMark>>,
+        TError,
+        {id: number;data: GetsMarkRequest},
+        TContext
+      > => {
+      return useMutation(getSalesDocumentSeriesControllerChangeGetsMarkMutationOptions(options), queryClient);
     }
     export const salesDocumentSeriesControllerReactivate = (
     id: number,
