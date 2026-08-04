@@ -233,9 +233,33 @@ of both plugins**, because an explicit `<configuration>` value beats the user pr
 that silently passed and watching it fail**, and by confirming a selector-free build is unaffected.
 
 ⚠️ **The cost, stated rather than hidden: `-am` together with `-Dtest`/`-Dit.test` no longer works** —
-a reactor visits modules that legitimately lack the named test, and each now fails. **The replacement
-is the module's whole suite** (`mvn -pl core -am verify`), which is the invocation a negative control
-should use anyway, since it cannot report success while measuring nothing.
+a reactor visits modules that legitimately lack the named test, and each now fails.
+
+⚠️ **And that cost has a hazard in it, which is why the replacement is written down rather than left
+to be improvised.** The obvious workaround is to drop `-am` — and `-pl X` without `-am` is **already a
+named member of the stale-artefact family**, the one that produced two mis-diagnoses inside twenty
+minutes in R1a. ⭐ **Measured 2026-08-04, not argued:** the jars in `~/.m2` were from the previous day,
+and `./mvnw -pl app clean test-compile` compiled `TradingQuarter` against that stale `core-api`,
+failing with `long cannot be converted to SalesChannel` — R1b's own change. `dependency:build-classpath`
+confirmed the classpath named `~/.m2/…/novocore-core-api-0.1.0-SNAPSHOT.jar`. 📌 **And the first
+attempt to demonstrate it reported `BUILD SUCCESS`, because without `clean` it said *"Nothing to
+compile"* and compiled nothing** — the same family one layer down.
+
+**✅ The replacement, verified end to end:**
+`./mvnw -pl <module> -am install -DskipTests && ./mvnw -pl <module> verify -Dit.test=<Class>`.
+Step 1 rebuilds every dependency from source; step 2 has no `-am`, so no module without the test is
+visited. ⚠️ **`&&`, never `;`** — a part-way `install` is the R1a bite, and `&&` makes proceeding from
+one impossible. Proven: step 1 exit 0 → step 2 compiles clean with R1b's change picked up, and a name
+matching nothing **still fails**, so the two-step does not reopen the hole. **The always-safe option,
+and the right one for a negative control, remains the module's whole suite** (`./mvnw -pl core -am
+verify`).
+
+⚠️ **One documented command was broken by this and is fixed: `LiveSeedTest`'s javadoc**, which said
+`mvn -pl app test -Dtest=LiveSeedTest -Dsurefire.failIfNoSpecifiedTests=false …`. Two faults: the flag
+is now **inert**, and `-pl app` without `-am` is the trap above — **on a seeder that writes to a live
+database**, where an old request shape would be transmitted to a real server. It now uses the two-step.
+**CI is unaffected** — `.github/workflows/backend.yml` runs `./mvnw verify` with no selector, and a
+selector-free build never engages the flag.
 
 📌 **The third, smaller one is closed by the same pin.** After that red run, a targeted `verify` on a
 *different* module reported *"There are test failures in novocore-core"* — no core test had run.

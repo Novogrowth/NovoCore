@@ -365,6 +365,49 @@ engages when one is given.
 and the error message unhelpfully suggests exactly that flag — that suggestion comes from the plugin
 and predates the pin.
 
+##### ⚠️ The replacement invocation — and the trap you will fall into if you improvise one
+
+**The obvious workaround for "the selector fails with `-am`" is to drop `-am`. Do not.** `-pl X`
+without `-am` is **already a named member of the stale-artefact family above**, and it is what
+produced two mis-diagnoses inside twenty minutes in R1a. **A fix that makes a neighbouring failure
+mode more attractive has to name the replacement, or the replacement gets invented under time
+pressure by somebody who just wants one test to run.**
+
+⚠️ **This is not theoretical, and it was measured on 2026-08-04 rather than argued.** The jars in
+`~/.m2` were from the previous day. `./mvnw -pl app clean test-compile` compiled `TradingQuarter`
+against that stale `core-api` and failed with `long cannot be converted to SalesChannel` — R1b's own
+change, invisible to the module being built. `dependency:build-classpath` confirmed it: the classpath
+named `~/.m2/…/novocore-core-api-0.1.0-SNAPSHOT.jar`, not the reactor.
+
+📌 **And the first attempt to demonstrate it reported `BUILD SUCCESS` — because `-pl app test-compile`
+without `clean` said `Nothing to compile - all classes are up to date` and compiled nothing.** The
+same family, one layer down: a green build that measured nothing. **Use `clean` when the question is
+"what does this compile against".**
+
+**✅ THE REPLACEMENT — a two-step, and the `&&` is load-bearing:**
+
+```
+cd backend
+./mvnw -pl <module> -am install -DskipTests   && ./mvnw -pl <module> verify -Dit.test=<TestClass>
+```
+
+**Step 1 rebuilds every dependency from source and installs it**, so step 2's `-pl` resolves fresh
+artefacts instead of whatever `~/.m2` happens to hold. **Step 2 has no `-am`, so no module without
+the named test is visited, and the pin does its job in the module that has it.**
+
+⚠️ **`&&`, never `;`.** If step 1 fails part-way — the R1a bite where `install` aborted at a test, so
+`core-api` reinstalled and `core` did not — a `;` would run step 2 against a half-updated set and let
+it explain the old code to you in the vocabulary of the new. `-DskipTests` makes an abort much less
+likely; the `&&` is what makes it *impossible* to proceed from one.
+
+**Verified end to end on 2026-08-04:** step 1 exit 0 → step 2 compiles clean, R1b's `core-api` change
+picked up; and a name matching nothing still fails (`No tests matching pattern "NoSuchTestAnywhere"`),
+so the two-step does not quietly reopen the hole the pin closed.
+
+**The always-safe option, and the right one for a negative control:** run the module's whole suite,
+`./mvnw -pl <module> -am verify`. No selector, so nothing to mis-match, and no stale artefact — it is
+the invocation that cannot report success while measuring nothing.
+
 **2. A piped build hides its own failure. Do not pipe one, or set `-o pipefail`.**
 
 **The mechanism, because the instruction on its own is forgettable and the mechanism is not:** a

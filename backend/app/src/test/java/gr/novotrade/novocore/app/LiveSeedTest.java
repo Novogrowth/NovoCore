@@ -29,9 +29,23 @@ import tools.jackson.databind.JsonNode;
  * export NOVOCORE_SEED_USERNAME=...      # the Owner; never passed on the command line
  * export NOVOCORE_SEED_PASSWORD=...
  * cd backend
- * mvn -pl app test -Dtest=LiveSeedTest -Dsurefire.failIfNoSpecifiedTests=false \
- *     -Dnovocore.seed.base-url=https://localhost
+ * ./mvnw -pl app -am install -DskipTests \
+ *   && ./mvnw -pl app test -Dtest=LiveSeedTest -Dnovocore.seed.base-url=https://localhost
  * }</pre>
+ *
+ * <p>⚠️ <strong>The first step is not optional and the {@code &&} is load-bearing.</strong>
+ * This was a single {@code mvn -pl app test …}, which is {@code CLAUDE.md}'s named stale-artefact
+ * trap: without {@code -am}, {@code app} resolves {@code core} and {@code core-api} from
+ * {@code ~/.m2} rather than from source. <strong>Measured 2026-08-04, it really happens</strong> —
+ * with day-old jars installed, this class's own {@code TradingQuarter} failed to compile against a
+ * {@code NewSalesInvoice} that still carried {@code channel} instead of {@code seriesId}. A seeder
+ * is the worst place for that, because it writes to a live database: an old request shape would go
+ * to a real server, and a half-succeeded seed pass is what this class exists to refuse.
+ *
+ * <p>⚠️ {@code -Dsurefire.failIfNoSpecifiedTests=false} was dropped and must not come back. It
+ * is <strong>inert</strong> — the flag is pinned {@code true} in {@code backend/pom.xml} so a
+ * {@code -D} cannot turn it off — and it was never needed here: {@code -Dtest=LiveSeedTest}
+ * matches in this module, and a run this class skips for want of a base URL still counts as run.
  *
  * <h2>Three refusals, and why each one is worth the line</h2>
  *
