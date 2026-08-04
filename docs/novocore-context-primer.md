@@ -134,7 +134,8 @@ the summary.
     mean a list column instead.
   - ⭐ **The live-leg lesson is now in `CLAUDE.md`: a live-leg block is DERIVED from the screens a
     step ships, never composed freehand.** R2's had ten rows against twelve items.
-- ⚠️ **The next step is F5.** ⚠️ **R2 is DONE — 2026-08-04.** Six settings screens over R1a's six
+- ⚠️ **The next step is W1, then F5** — corrected 2026-08-04 by the owner's sequencing decision; this
+  bullet used to say F5 outright. ⚠️ **R2 is DONE — 2026-08-04.** Six settings screens over R1a's six
   tables, and **it grew a backend sub-part mid-step**: seven new routes (230 → **237** operations)
   making a series' `abbreviation`, `documentTypeId` and `getsMark`, and a delivery method's
   `abbreviation`, **editable while the row is unused and frozen once it is used**. None of them had a
@@ -303,8 +304,20 @@ the summary.
     and products, and flagged so it is not a surprise.
   - **Purchase is untouched, deliberately.** `purchase_document_type` becomes mandatory at **F6**;
     the one inconsistency that leaves is recorded in F6's roadmap footnote.
+- ⚠️ **THE SEQUENCE WAS DECIDED BY THE OWNER ON 2026-08-04, and the roadmap's ROW ORDER is where it
+  lives** — not a paragraph beside a list still in the old order, which is now a `CLAUDE.md` rule of
+  its own. The sequence: **W1 → F5 → D1 + D3 + D4 + D5 → F6 onward**; **D2** before step 19 (the Woo
+  one-time load); **R3** when the accountant answers, not schedulable; **U2** whenever a session has
+  slack. D1+D3 are paired because they are **the same two entities and the same two screens**
+  (Customers, Suppliers) — apart, those screens get reopened twice; D4+D5 are paired because both are
+  **ledger integrity and the accountant's concerns**. ⚠️ **The cost of putting the D-block after F5 is
+  recorded rather than argued away**: F5–F9 get built before the counterparty fields they will want,
+  so the document screens are touched twice. ⚠️ **Three status glyphs deliberately were NOT promoted**
+  — W1 still reads ⚪ while sitting first, F5 still reads 🟡 while sitting second, and the D-rows keep
+  ⚪ while their false `Placement TBD` text was corrected. **Position and status are different claims.**
 - ⚪ **W1 is a NEW step, created 2026-08-04 out of R1b's Phase 0: a serialised record's wire shape
-  must equal its documented shape.** It was scoped as one of R1b's three lines; measuring it first
+  must equal its documented shape.** ⚠️ **It is now FIRST in the decided sequence** (2026-08-04),
+  though its status glyph is still ⚪ pending the promotion above. It was scoped as one of R1b's three lines; measuring it first
   showed **32 committed schemas would fail it**, shipping **66 undocumented properties**, so it left
   R1b rather than landing with a baseline. ⚠️ **The mechanism is Jackson, not ASM** — the probe showed
   Jackson does not publish `issuedByUs`, it strips the `is` prefix and publishes **`suedByUs`**.

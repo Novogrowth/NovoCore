@@ -94,29 +94,31 @@ frontend work that must land before any adapter is built.
 |   U1 | Roadmap unification + doc reconcile ᵘ¹  |     — |    1.0 |  253k | 🟢 Done         |
 |   Q1 | Backend queue: 4+6, 5, 1, 7 ᵘ           |     — |    1.5 |  208k | 🟢 Done         |
 |   8a | `@Mandatory`, schema names, bytecode rule ᵈᵉᶜ | — |  1.3 |  314k | 🟢 Done         |
-|   8b | Consumer cleanup — optional ᵈᵉᶜ         |     — |        |       | ⚪ Optional      |
 |  R1a | Document reference data — additive ʳ    |     — |    1.9 |  529k | 🟢 Done         |
 |   U3 | Eleven design decisions recorded ᵘ³     |     — |    0.2 |   90k | 🟢 Done         |
 |  R1b | Document reference data — behavioural ʳᵇ |     — |    1.5 |  286k | 🟢 Done         |
-|   W1 | Serialised-record contract fidelity ʷ¹  |     — |        |       | ⚪ Unscheduled   |
 |   R2 | Document reference data (screens) ʳ²    |     — |    1.9 |  447k | 🟢 Done         |
 |  R2b | R2 live-leg fixes + sort code + payment methods ʳ²ᵇ | — |    1.3 |  309k | 🟢 Done         |
-|   R3 | Self-supply posting paths ˢ             |     — |        |       | ⚪ Blocked — accountant |
-|   D1 | Supplier/customer codes + alias ᵈ¹      |     — |        |       | ⚪ Placement TBD |
-|   D2 | Product categories, 3 levels ᵗ          |     — |        |       | ⚪ Before the Woo load (19) |
-|   D3 | Customer/supplier addresses ᵈ³          |     — |        |       | ⚪ Placement TBD |
-|   D4 | Internal document numbers ᵈ⁴            |     — |        |       | ⚪ Placement TBD |
-|   D5 | Period locking — a movable lock date ᵛ  |     — |        |       | ⚪ Placement TBD |
-|  M0a | Manager chart mapping — no code ᵐ⁰      |     — |        |       | ⚪ Unblocked, any time |
-|  M0b | Trial import, one real year ᵐ⁰          |     — |        |       | ⚪ After D1/D3/D4, before 24 |
-|   U2 | Split `PROGRESS.md` / `HISTORY.md` ᵘ²   |     — |        |       | ⚪ Unscheduled   |
+|      | **▼ THE DECIDED SEQUENCE — the row order below IS the decision** ˢᵉᑫ | | | | |
+|   W1 | Serialised-record contract fidelity ʷ¹  |     — |        |       | ⚪ Unscheduled ⚠️ ˢᵉᑫ |
 |   F5 | Sales Invoice + Credit Note ʷ           |     — |        |       | 🟡 **Current**  |
+|   D1 | Supplier/customer codes + alias ᵈ¹      |     — |        |       | ⚪ After F5, with D3 ˢᵉᑫ |
+|   D3 | Customer/supplier addresses ᵈ³          |     — |        |       | ⚪ After F5, with D1 ˢᵉᑫ |
+|   D4 | Internal document numbers ᵈ⁴            |     — |        |       | ⚪ After F5, with D5 ˢᵉᑫ |
+|   D5 | Period locking — a movable lock date ᵛ  |     — |        |       | ⚪ After F5, with D4 ˢᵉᑫ |
 |   F6 | Purchase Invoice + Goods Receipt ᶠ⁶     |     — |        |       | 🔴 Not started  |
 |   F7 | Receipts, Payments, Transfers           |     — |        |       | 🔴 Not started  |
 |   F8 | Freight, Journal, Write-offs            |     — |        |       | 🔴 Not started  |
 |   F9 | Operational read views                  |     — |        |       | 🔴 Not started  |
 |  F10 | Design pass, brand look + version badge ᵇᵃᵈᵍᵉ | — |      |       | 🔴 Not started  |
 |  F11 | Whole-system UI regression              |     — |        |       | 🔴 Not started  |
+|      | **▼ OUTSIDE THE SEQUENCE — each has its own gate, none is "next"** ˢᵉᑫ | | | | |
+|   D2 | Product categories, 3 levels ᵗ          |     — |        |       | ⚪ Before the Woo load (19) |
+|   R3 | Self-supply posting paths ˢ             |     — |        |       | ⚪ Not schedulable — accountant |
+|   U2 | Split `PROGRESS.md` / `HISTORY.md` ᵘ²   |     — |        |       | ⚪ Whenever a session has slack |
+|  M0a | Manager chart mapping — no code ᵐ⁰      |     — |        |       | ⚪ Unblocked, any time |
+|  M0b | Trial import, one real year ᵐ⁰          |     — |        |       | ⚪ After D1/D3/D4, before 24 |
+|   8b | Consumer cleanup — optional ᵈᵉᶜ         |     — |        |       | ⚪ Optional      |
 |      | **Subtotal, F-rows (step 16 estimate)** |**8.0**|        |       |                |
 |      | **Subtotal, Phase 2**                   |  **—**|        |       |                |
 
@@ -126,8 +128,53 @@ several of them are backend schema work rather than screens. Adding 8.0 across t
 present an estimate for the frontend as an estimate for the phase — so the F-row subtotal is stated
 separately instead, where a reader scanning a column of dashes will actually meet it.
 
-**Q1, 8a, R1a, R1b and R2 are all 🟢 Done (R1b and R2 on 2026-08-04) and step F5 is `🟡 Current`.** The running
-order is in `PROGRESS.md` under *What is next, in one place*, and R2 landed on 2026-08-04, so it is now **F5**. ⚠️ **R1 split
+### ˢᵉᑫ The sequence was decided on 2026-08-04, and the row order above is where it is recorded
+
+**The owner's decided sequence, in his own terms:**
+
+    W1  →  F5  →  D1 + D3 + D4 + D5  →  F6 onward
+    D2  before step 19 (the Woo one-time load)
+    R3  when the accountant answers — not schedulable
+    U2  whenever a session has slack
+
+**The rows were moved to match**, per `CLAUDE.md` §*A sequencing decision changes the roadmap's ORDER,
+not a paragraph beside it* — a rule written the same day and for this. **The order is the statement;
+this paragraph is the reasoning, not the record.**
+
+**Why the four D-rows are ONE block rather than four slots**, recorded here and at each row:
+
+- **D1 and D3 are the same two entities and the same two screens** — supplier and customer codes, the
+  supplier alias, and both parties' addresses all land on the Customers and Suppliers screens. Doing
+  them apart means **reopening those two screens twice**; doing them together means reopening them
+  once. That is the whole argument, and it is about screen churn rather than about schema.
+- **D4 and D5 are both ledger integrity and both the accountant's concerns** — internal reference
+  numbers for the documents Novocore itself creates, and the movable lock date that closes a filed
+  period. Neither has a screen in common with D1/D3; both are read by the same person for the same
+  reason.
+
+**And why they land AFTER F5**, which resolves the trade U3 recorded and deliberately left open: F5 is
+the first step in a long while that produces something to look at, and Q1, 8a, R1a, R1b, R2 and R2b
+have all been foundation. ⚠️ **The counter-argument has not gone away and is not deleted** — F5–F9 now
+get built before the counterparty fields they will eventually want, so the document screens are
+touched twice. **The owner made that trade knowingly; it is recorded as a cost, not as a non-issue.**
+
+⚠️ **THREE STATUS MISMATCHES ARE OPEN, and nothing was promoted to close them.** Position and status
+are different claims — *"this comes next"* is not *"this is scheduled"* — so the glyphs are untouched
+and the mismatches are stated instead:
+
+| Row | The mismatch | Proposed, not applied |
+|---|---|---|
+| **W1** | It is **first in the sequence** and is being worked on 2026-08-04, while its status still reads ⚪ **Unscheduled** | 🟡 **Current**, with F5 moving to 🔴 next — at W1's close-out, not before |
+| **F5** | It reads 🟡 **Current** while a step now sits ahead of it | 🔴 **Not started**, promoted to 🟡 when W1 closes |
+| **D1 / D3 / D4 / D5** | Their status cells said **`Placement TBD`**, which stopped being true the moment the sequence was decided | **The false half was corrected in place** — they now read *After F5* — and the ⚪ glyph deliberately **stays**: placed is not scheduled |
+
+⚠️ **`Placement TBD` was corrected rather than left**, and that is a different act from promoting a
+glyph. It was a **claim that had become false**: four rows went on saying *nobody has decided where
+this goes* after somebody had. The ⚪ is a claim about scheduling and is still true.
+
+**Q1, 8a, R1a, R1b, R2 and R2b are all 🟢 Done (R1b, R2 and R2b on 2026-08-04).** The running
+order is above, in the table, and **`PROGRESS.md`'s *What is next, in one place* follows it rather
+than restating it.** ⚠️ **R1 split
 into R1a and R1b on 2026-08-03**, and the boundary was test-facing: R1a could not change what any
 existing test asserts, and R1b changed what *every* sales-invoice test constructs — so a red build
 in R1a was a failure in new code, and in R1b it could be either. **That split paid for itself:** every
@@ -163,11 +210,17 @@ thing they have in common is written down nowhere.
 **D2 is the exception — its gate is step 19**, because the Woo adapter syncs categories and the
 one-time load runs before it.
 
-⚠️ **The gate is decided. The individual slots are NOT**, and nothing here promotes or reorders any
-⚪ row beyond the four placements U3 applied (M0a unblocked; M0b after D1/D3/D4; D2 before the Woo
-load; and two requirements moved into steps 21 and 22). **Whether D1 and D3 land before or after F5
-is an open decision below**, stated as a trade rather than resolved. Full reasoning in `PROGRESS.md`
-under *U3*.
+⚠️ **The gate is still the gate. The SLOTS ARE NO LONGER OPEN — corrected 2026-08-04.** This section
+used to end *"the individual slots are NOT [decided]"* and *"whether D1 and D3 land before or after F5
+is an open decision below"*. **Both were answered by the owner's sequencing decision on 2026-08-04**:
+**D1 + D3 + D4 + D5 are one block, after F5 and before F6** — see ˢᵉᑫ above and the rows themselves.
+U3's four placements stand unchanged (M0a unblocked; M0b after D1/D3/D4; D2 before the Woo load; two
+requirements moved into steps 21 and 22). Full reasoning in `PROGRESS.md` under *U3*.
+
+⚠️ **What the sequencing decision did NOT change: the gate is still what matters.** Four of the six
+now have slots, and a slot is a weaker guarantee than a deadline — **a block that slips as a block
+still misses step 24 together**, which is the exact failure this section was written to name. **R3 and
+M0b remain without slots** and are the two most likely to be forgotten.
 
 ✅ **Every step through Q1 is verified on both legs, with one stated exception.** ⚠️ **Q1's live
 browser leg has not been run** — its four items are proved by the contract tests and by a probe
@@ -270,7 +323,10 @@ Nothing here is solved. Each is recorded so its absence reads as a decision rath
 - **Should the Prosvasis Go adapter come before F5?** Novocore never obtains a ΜΑΡΚ itself — it
   packages data, the adapter hands it to Go, and the document comes back with its ΜΑΡΚ. So F5 as a
   data-entry screen is work that largely disappears once step 18 lands. The "F5 sets the pattern for
-  F6–F8" argument is weaker than it looked.
+  F6–F8" argument is weaker than it looked. ⚠️ **The 2026-08-04 sequencing decision did NOT settle
+  this** — it placed F5 relative to W1 and the D-block, and step 18 was not in the list it ordered. **A
+  decision to bring step 18 forward would displace F5 in the sequence above**, so it is still open and
+  is still the one that would cost the most to answer late.
 - ✅ **~~Should backend queue item 8 be promoted to first on severity?~~ DECIDED 2026-08-03, and the
   answer was neither.** It was **lifted out of Q1 entirely** and given its own numbered step, split
   into **8a** (annotation, generator line, bidirectional bytecode cross-check, spec) and **8b**
@@ -281,16 +337,17 @@ Nothing here is solved. Each is recorded so its absence reads as a decision rath
   the enforcement already in place rather than retrofitted; and **every screen built afterwards
   multiplies the fixture reconciliation**, so it is cheapest now and only gets worse. Never
   concurrent with a frontend step. See ᵈᵉᶜ.
-- ⚠️ **Do D1 and D3 land before or after F5? OPEN, and it is a real trade rather than a preference.**
-  Recorded by U3 (2026-08-03) in these terms and **deliberately not resolved**:
-  - **For doing them first:** **F5 through F9 are then built once.** Both add fields the document
-    screens want — a counterparty's code and alias are searched by six rows of the search target
-    list, and rows 8–10 are exactly F5–F7.
-  - **Against:** **Q1, 8a, R1a, R1b and R2 have all been foundation with nothing visible to show**,
-    and **F5 is the first step in a long while that produces something to look at.**
-  - **What is NOT open:** the gate. Both are inside the before-step-24 cluster either way — see *The
-    ⚪ rows share a deadline* above.
-- **Where D4 and D5 sit exactly.** Same shape: **the gate is decided, the slot is not.**
+- ✅ **~~Do D1 and D3 land before or after F5?~~ DECIDED 2026-08-04 by the owner: AFTER.** And D4 and
+  D5 with them, as **one block** — see ˢᵉᑫ above, where the reasoning sits beside the rows themselves.
+  ⚠️ **The losing side of the trade is kept rather than deleted, because it is a cost that was
+  accepted and not an argument that was refuted:** F5–F9 are now built before the counterparty code,
+  alias and address fields those screens will want, so **the document screens get touched twice**.
+  What won was that **Q1, 8a, R1a, R1b, R2 and R2b have all been foundation with nothing visible**,
+  and F5 is the first step in a long while that produces something to look at.
+- ✅ **~~Where D4 and D5 sit exactly.~~ DECIDED 2026-08-04 — in the same block, after F5.** They are
+  grouped with each other rather than with D1/D3 because **both are ledger integrity and both are the
+  accountant's concerns**; D1 and D3 are grouped because they are **the same two entities and the same
+  two screens**, so doing them apart reopens Customers and Suppliers twice.
 - ✅ **~~Where M0 sits.~~ DECIDED 2026-08-03 (U3), by splitting it.** **M0a — the chart mapping — is
   unblocked and can run at any time**, because it is a mapping exercise rather than an import and
   needs no code. **M0b — a real year of transactions — waits on D1, D3 and D4**, or it imports into a
@@ -672,7 +729,10 @@ relabelling the products filter box. **That decision was made and the work deliv
 scanners. `PROGRESS.md` still listed it as *"needs an owner decision first"*; the two records
 disagreed and `PROGRESS.md` was the stale one.
 
-**ᵘ² U2 — split `PROGRESS.md`.** ⚪ **Unscheduled, and deliberately not started.** That file is **~6,000
+**ᵘ² U2 — split `PROGRESS.md`.** 📍 **Confirmed 2026-08-04 as OUTSIDE the sequence: whenever a session
+has slack.** It is not "next" and never blocks anything, which is precisely why it needs a row that
+says so — an unscheduled item sitting in a sequence reads as skipped rather than as unscheduled.
+⚪ **Unscheduled, and deliberately not started.** That file is **~6,000
 lines, append-only, and the first file every session reads.** It contains per-step route counts and
 test counts that are correct in their own context and wrong lifted out; **the headline ones were
 date-stamped during U1, the rest were not swept — stated rather than claimed.**
@@ -882,7 +942,10 @@ document's search fields include the *counterparty's* name, VAT, code and alias,
 table, and `TextSearch`'s dotted path produces an **inner join** — so a document with no counterparty
 would drop out of its own list.
 
-**ˢ R3 — self-supply posting paths.** `Στοιχείο Αυτοπαράδοσης`, used for internal consumption and for
+**ˢ R3 — self-supply posting paths.** 📍 **Confirmed 2026-08-04 as NOT SCHEDULABLE, and therefore
+outside the sequence: it starts when the accountant answers, and no earlier.** ⚠️ **That is the one
+row above whose gate nothing in this repository can move**, and it is inside the before-step-24
+cluster — so *unschedulable* must not be read as *unimportant*. `Στοιχείο Αυτοπαράδοσης`, used for internal consumption and for
 moving an item from inventory into fixed assets. The customer is the issuer, so it needs a protected
 self-customer record on the pattern of the retail walk-in — **excluded from customer sales, revenue and
 margin reporting**, since revenue is recognised at cost. The line price derives from **FIFO lot cost,
@@ -901,7 +964,10 @@ which is the same shape D2 already requires**, so the load does not need a resha
 owner confirms Woo's categories are exactly the ones wanted: they import AS-IS, with no curation
 during the load.** See ʷᵒᵒ for why the load is not the adapter.
 
-**ᵈ¹ D1 — supplier/customer codes, and the alias.** Decided 2026-08-03 (U3):
+**ᵈ¹ D1 — supplier/customer codes, and the alias.** 📍 **Placed 2026-08-04: after F5, in one block with
+D3, D4 and D5.** ⚠️ **D1 and D3 are paired because they are the same two entities and the same two
+screens** — codes, the supplier alias and both parties' addresses all land on Customers and Suppliers,
+so doing them apart reopens those two screens twice. Content decided 2026-08-03 (U3):
 
 - **Codes are for the business's own reference and are NULLABLE.** The id remains the handle; nothing
   in the system depends on a code existing.
@@ -917,8 +983,10 @@ still an open cross-cutting obligation above. **Do not conflate them.** The thre
 (`Supplier.code`, `Supplier.alias`, `Customer.code`) and what each needs beyond a column are itemised
 in `PROGRESS.md` under *Queued out of S1*.
 
-**ᵈ³ D3 — addresses. Structured, conditional, and smaller than the row suggests.** Decided
-2026-08-03 (U3).
+**ᵈ³ D3 — addresses. Structured, conditional, and smaller than the row suggests.** 📍 **Placed
+2026-08-04: after F5, in one block with D1, D4 and D5 — and specifically PAIRED WITH D1**, because both
+land on the Customers and Suppliers screens and splitting them means reopening those screens twice.
+Content decided 2026-08-03 (U3).
 
 **Structured, not free text** — street, number, postcode, city, country as separate fields. Three
 concrete reasons: **myDATA requires the counterparty address elements separately** on transmitted
@@ -942,8 +1010,10 @@ for** (8a).
 voucher. **The customer entity holds ONE (billing) address**; per-order shipping **moved to step 22**
 — see ˢᵒᶠ.
 
-**ᵈ⁴ D4 — internal document numbers. It splits in two, and one half needs nothing built.** Decided
-2026-08-03 (U3).
+**ᵈ⁴ D4 — internal document numbers. It splits in two, and one half needs nothing built.** 📍 **Placed
+2026-08-04: after F5, in one block with D1, D3 and D5 — and specifically PAIRED WITH D5**, because both
+are ledger integrity and both are the external accountant's concerns; neither shares a screen with
+D1/D3. Content decided 2026-08-03 (U3).
 
 **Half one is already answered and is not D4's.** Sales document numbers are **captured** from Go —
 or from a certified Πάροχος in future — after the document has been issued and transmitted, exactly
@@ -968,7 +1038,9 @@ journal engine: *"**No entry number.** The id is the handle. A human-facing sequ
 real thing an accountant asks for and carries a format decision (per-year reset? prefix per source?)
 nobody has been asked."* **Those two are D4's to answer.**
 
-**ᵛ D5 — period locking, by a movable LOCK DATE.** Confirmed absent: `V15` states *"NO PERIOD LOCKING
+**ᵛ D5 — period locking, by a movable LOCK DATE.** 📍 **Placed 2026-08-04: after F5, in one block with
+D1, D3 and D4 — and specifically PAIRED WITH D4**, because both are ledger integrity and both are the
+external accountant's concerns. Confirmed absent: `V15` states *"NO PERIOD LOCKING
 and therefore no lock table (brief §6, explicit)"* and no lock table exists. Without it, entries dated
 into a filed period can keep arriving, so the ledger silently drifts away from what the accountant
 filed and nothing reports that it happened. Small to build now; awkward to retrofit onto live data.

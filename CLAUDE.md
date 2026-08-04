@@ -829,6 +829,35 @@ because a conversation that felt conclusive reads as recorded.**
 - A document you are reading contradicts what you believe, and your instinct is that the document is
   out of date rather than that you are wrong. **Check which — and then fix the document either way.**
 
+### A sequencing decision changes the roadmap's ORDER, not a paragraph beside it
+
+**When a sequencing decision is made, the roadmap's ORDER is changed to match it. Recording the
+decision in prose beside a list still in the old order is not enough — the order IS the statement, and
+a reader follows the list, not the footnote. This is the same failure as two records disagreeing: the
+roadmap and the decision become two records of the sequence.**
+
+**Why this rule exists, in two occurrences that were already paid for:**
+
+- **`F5 is next` survived in four documents after the owner had decided otherwise.** The backend queue
+  had been prioritised ahead of it in a design conversation, and every document a fresh session would
+  read still said F5. That is already the worked example under *a decision reached in a design
+  conversation*, and it is the same failure arriving through the sequence rather than through the
+  decision: **the prose was eventually corrected and the list was not.**
+- **The D-rows sat under `⚪ Placement TBD` while three of the same items carried product-brief
+  question numbers elsewhere.** A row whose status field says *the placement is undecided* is a
+  statement, and it went on being made after the placement was decided.
+
+**The mechanical form, because "update the roadmap" is too vague to be followed:**
+
+1. **Move the rows.** A table whose row order no longer means anything is worse than no order, because
+   nothing announces that it stopped meaning something.
+2. **Write each row's reasoning AT the row** — a footnote or a status cell — not only in a decisions
+   list. A reader scanning for what is next does not read the decisions list.
+3. ⚠️ **Do not promote a status as a side effect of moving a row.** Position and status are different
+   claims: *"this comes next"* and *"this is scheduled"* are not the same sentence, and a ⚪ row that
+   silently becomes 🟡 because it moved up is a decision nobody made. **Say the mismatch and propose
+   it.**
+
 ### Every figure written into a document carries a date or a step reference
 
 **A bare number — a route count, a test count, a total — is correct in the paragraph that wrote it and
