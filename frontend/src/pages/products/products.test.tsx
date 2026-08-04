@@ -52,6 +52,9 @@ const espresso: ProductView = {
   lastPurchasePrice: { amount: '12.505000', currency: 'EUR' },
   active: true,
   hiddenFields: [],
+  // Derived: hiddenFields is empty, and GOODS that is not a bundle is stocked.
+  redacted: false,
+  stocked: true,
 }
 
 let me: Me = owner

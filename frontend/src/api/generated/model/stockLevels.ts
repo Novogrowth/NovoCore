@@ -12,4 +12,6 @@ import type { StockLevelsByLocation } from './stockLevelsByLocation';
 export interface StockLevels {
   productId: number;
   byLocation: StockLevelsByLocation;
+  empty: boolean;
+  oversold: boolean;
 }

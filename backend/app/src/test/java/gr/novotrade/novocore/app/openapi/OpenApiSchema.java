@@ -63,8 +63,46 @@ import java.util.TreeMap;
  * {@code {}} or guessing at {@code object}. A spec that quietly describes a new type wrongly is the
  * failure just demonstrated; a spec that refuses to be generated until somebody says what the type
  * looks like is the one worth having. Adding a shape is a deliberate edit here.
+ *
+ * <h2>W1 — what "describe what Jackson writes" is scoped to</h2>
+ *
+ * <p>{@code SerialisedRecordContractIT} holds this document to what Jackson actually publishes.
+ * <strong>That rule is scoped to records built by {@link #recordSchema}, and the reason is a
+ * sentence rather than an exemption list:</strong> {@code Money}, {@code UnitCost},
+ * {@code Quantity} and {@code Rate} are matched by class in {@link #classSchema} <em>before</em>
+ * they could reach it, and their schemas are the four hand-written ones above. {@code
+ * NovoCoreJsonModule} replaces their serialisers, so Jackson never bean-introspects them and
+ * reports no object properties for them at all — asking it what they publish would answer
+ * "nothing", which is exactly the springdoc failure this class exists to avoid, arriving from the
+ * opposite side. Eleven {@code is*} accessors live on those four types and none of them is on the
+ * wire.
  */
 final class OpenApiSchema {
+
+    /**
+     * Which way a record crosses the wire, because Jackson does two different things to it.
+     *
+     * <p>See {@link #recordSchema} for why this is one rule and not two behaviours.
+     */
+    enum Direction {
+        /** A {@code @RequestBody}. Jackson <em>deserialises</em> it. */
+        REQUEST,
+        /** A handler's return type. Jackson <em>serialises</em> it. */
+        RESPONSE
+    }
+
+    /**
+     * The real Boot-configured mapper — <strong>the only thing that can answer what Jackson writes.</strong>
+     *
+     * <p>Not a mapper built here. A mapper constructed in a test is configured by the test, so asking
+     * it what the application publishes is {@code CLAUDE.md}'s <em>verification that answers its own
+     * request</em>: it returns whatever it was told to return.
+     */
+    private final tools.jackson.databind.ObjectMapper mapper;
+
+    OpenApiSchema(tools.jackson.databind.ObjectMapper mapper) {
+        this.mapper = mapper;
+    }
 
     /** Named component schemas, by schema name. Sorted so the written document is stable. */
     private final Map<String, Map<String, Object>> components = new TreeMap<>();
@@ -72,8 +110,94 @@ final class OpenApiSchema {
     /** Which type claimed each schema name, so a second claimant fails rather than being ignored. */
     private final Map<String, Class<?>> owners = new HashMap<>();
 
+    /** Which directions each schema name was reached from. See {@code recordsReachedFromBothDirections}. */
+    private final Map<String, java.util.EnumSet<Direction>> directions = new TreeMap<>();
+
     Map<String, Map<String, Object>> components() {
         return components;
+    }
+
+    /**
+     * Which Java type each published schema name describes.
+     *
+     * <p>Exposed for W1: {@code SerialisedRecordContractIT} compares what Jackson writes against what
+     * the committed document says, and needs the <em>classes</em> the walk reached. Rebuilding that
+     * set would mean reimplementing the generic-type recursion below and getting a different, quieter
+     * answer.
+     */
+    Map<String, Class<?>> owners() {
+        return owners;
+    }
+
+    /**
+     * The schema names {@link #recordSchema} built — <strong>the rule's scope, as a fact rather than
+     * a list.</strong>
+     *
+     * <p>{@code Money}, {@code UnitCost}, {@code Quantity} and {@code Rate} are records and do appear
+     * in {@link #owners()}, but {@link #classSchema} matches them by class first and their schemas
+     * are the four hand-written ones at the top of this file. Asking Jackson what they publish
+     * answers "nothing" — {@code NovoCoreJsonModule} replaces their serialisers — so a rule that did
+     * not exclude them would report {@code Money.amount} and {@code Money.currency} as promises
+     * nothing keeps. <strong>It did, on its first run.</strong> This is that scope expressed as
+     * something the generator knows rather than something a test hard-codes.
+     */
+    java.util.Set<String> builtByRecordSchema() {
+        return java.util.Set.copyOf(directions.keySet());
+    }
+
+    /**
+     * Schema names reached as <strong>both</strong> a request and a response.
+     *
+     * <p>Such a record is described once, and {@link #recordSchema} adds derived properties only in
+     * the {@code RESPONSE} direction — so whichever direction reached it first would decide the
+     * document, and {@code Map} iteration order would decide that. {@code SerialisedRecordContractIT}
+     * therefore refuses any record in this set that has derived properties, and <strong>pins the set
+     * itself</strong> so that "nothing here" is a measurement rather than an absence.
+     */
+    java.util.SortedSet<String> recordsReachedFromBothDirections() {
+        java.util.SortedSet<String> both = new java.util.TreeSet<>();
+        directions.forEach((name, reached) -> {
+            if (reached.size() == 2 && owners.get(name) != null && owners.get(name).isRecord()) {
+                both.add(name);
+            }
+        });
+        return both;
+    }
+
+    /**
+     * What Jackson would publish for this type, <strong>and at what type</strong>.
+     *
+     * <p>⚠️ <strong>The type comes from Jackson too, never from a reflective lookup by name.</strong>
+     * That was the first implementation and it made the generator <em>non-deterministic</em>:
+     * {@code CustomerView} has both {@code isSystemRecord():boolean} and
+     * {@code systemRecord():Optional<CustomerSystemKey>}, which map to the one published name
+     * {@code systemRecord}, and a name-based lookup picks between them in
+     * {@code Class.getMethods()} order — which the JVM does not specify. Two runs of the generator
+     * produced two different documents and {@code OpenApiSpecIT}'s drift check caught it. Jackson
+     * knows which member it will write; nothing else does.
+     */
+    Map<String, Class<?>> jacksonPropertiesOf(Class<?> raw) {
+        Map<String, Class<?>> published = new LinkedHashMap<>();
+        mapper.acceptJsonFormatVisitor(raw,
+                new tools.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper.Base() {
+                    @Override
+                    public tools.jackson.databind.jsonFormatVisitors.JsonObjectFormatVisitor
+                            expectObjectFormat(tools.jackson.databind.JavaType visited) {
+                        return new tools.jackson.databind.jsonFormatVisitors
+                                .JsonObjectFormatVisitor.Base(getContext()) {
+                            @Override
+                            public void property(tools.jackson.databind.BeanProperty property) {
+                                published.put(property.getName(), property.getType().getRawClass());
+                            }
+
+                            @Override
+                            public void optionalProperty(tools.jackson.databind.BeanProperty property) {
+                                published.put(property.getName(), property.getType().getRawClass());
+                            }
+                        };
+                    }
+                });
+        return published;
     }
 
     // -----------------------------------------------------------------------------------------
@@ -129,12 +253,12 @@ final class OpenApiSchema {
 
     // -----------------------------------------------------------------------------------------
 
-    Map<String, Object> schemaFor(Type type, String context) {
-        return schemaFor(type, Map.of(), context);
+    Map<String, Object> schemaFor(Type type, Direction direction, String context) {
+        return schemaFor(type, Map.of(), direction, context);
     }
 
     private Map<String, Object> schemaFor(Type type, Map<String, Type> substitutions,
-            String context) {
+            Direction direction, String context) {
 
         if (type instanceof TypeVariable<?> variable) {
             Type resolved = substitutions.get(variable.getName());
@@ -142,15 +266,15 @@ final class OpenApiSchema {
                 throw new IllegalStateException("Unresolved type variable " + variable.getName()
                         + " in " + context);
             }
-            return schemaFor(resolved, substitutions, context);
+            return schemaFor(resolved, substitutions, direction, context);
         }
 
         if (type instanceof ParameterizedType parameterized) {
-            return parameterizedSchema(parameterized, substitutions, context);
+            return parameterizedSchema(parameterized, substitutions, direction, context);
         }
 
         if (type instanceof Class<?> raw) {
-            return classSchema(raw, context);
+            return classSchema(raw, direction, context);
         }
 
         throw new IllegalStateException(
@@ -159,7 +283,7 @@ final class OpenApiSchema {
     }
 
     private Map<String, Object> parameterizedSchema(ParameterizedType type,
-            Map<String, Type> substitutions, String context) {
+            Map<String, Type> substitutions, Direction direction, String context) {
 
         Class<?> raw = (Class<?>) type.getRawType();
         Type[] arguments = type.getActualTypeArguments();
@@ -167,24 +291,24 @@ final class OpenApiSchema {
         if (Collection.class.isAssignableFrom(raw)) {
             Map<String, Object> schema = ordered();
             schema.put("type", "array");
-            schema.put("items", schemaFor(arguments[0], substitutions, context));
+            schema.put("items", schemaFor(arguments[0], substitutions, direction, context));
             if (Set.class.isAssignableFrom(raw)) {
                 schema.put("uniqueItems", true);
             }
             return schema;
         }
         if (Optional.class.equals(raw)) {
-            return schemaFor(arguments[0], substitutions, context);
+            return schemaFor(arguments[0], substitutions, direction, context);
         }
         if ("org.springframework.http.ResponseEntity".equals(raw.getName())) {
             // A handler that sets headers itself — the attachment download does, for
             // Content-Disposition. The body is the payload; the envelope is transport.
-            return schemaFor(arguments[0], substitutions, context);
+            return schemaFor(arguments[0], substitutions, direction, context);
         }
         if (Map.class.isAssignableFrom(raw)) {
             Map<String, Object> schema = ordered();
             schema.put("type", "object");
-            schema.put("additionalProperties", schemaFor(arguments[1], substitutions, context));
+            schema.put("additionalProperties", schemaFor(arguments[1], substitutions, direction, context));
             return schema;
         }
         if (raw.isRecord()) {
@@ -196,14 +320,14 @@ final class OpenApiSchema {
                 resolved.put(parameters[i].getName(), arguments[i]);
             }
             String name = raw.getSimpleName() + "_" + simpleNameOf(arguments[0]);
-            return recordSchema(raw, name, resolved, context);
+            return recordSchema(raw, name, resolved, direction, context);
         }
 
         throw new IllegalStateException(
                 "No OpenAPI schema for parameterized " + raw.getName() + " (" + context + ")");
     }
 
-    private Map<String, Object> classSchema(Class<?> raw, String context) {
+    private Map<String, Object> classSchema(Class<?> raw, Direction direction, String context) {
         if (Money.class.equals(raw)) {
             claim("Money", raw, context);
             return register("Money", () -> amountSchema("amount", "12.50", "two decimals"));
@@ -276,7 +400,7 @@ final class OpenApiSchema {
             });
         }
         if (raw.isRecord()) {
-            return recordSchema(raw, raw.getSimpleName(), Map.of(), context);
+            return recordSchema(raw, raw.getSimpleName(), Map.of(), direction, context);
         }
         if (void.class.equals(raw) || Void.class.equals(raw)) {
             return null;
@@ -341,23 +465,78 @@ final class OpenApiSchema {
      * present, and no {@code required} list can say that. And a component made mandatory by an inline
      * {@code if (x == null) throw} is invisible to the cross-check, so it is not declared either.
      * Both leave the list incomplete rather than wrong, which is the right side of that trade.
+     *
+     * <h2>W1 — a RESPONSE also carries whatever Jackson derives, and a REQUEST does not</h2>
+     *
+     * <p>The javadoc above says "components, not accessors", and until W1 (2026-08-04) that was
+     * applied in both directions. It is right in one of them. <strong>Jackson publishes bean
+     * getters</strong> — {@code isXxx()} returning boolean, {@code getXxx()} — <strong>as well as
+     * record components</strong>, so 32 schemas on this surface wrote 66 properties this document
+     * did not mention. Nothing broke, because nothing sets {@code additionalProperties: false} and
+     * the generated TypeScript simply lacked the fields; the contract was merely lying about 32
+     * schemas, which is the half nothing would ever have reported.
+     *
+     * <h3>⚠️ Why this is ONE rule and not two behaviours — do not collapse it back</h3>
+     *
+     * <p>The rule is <em>describe what Jackson actually does with this record</em>. Jackson does two
+     * genuinely different things:
+     *
+     * <ul>
+     *   <li><strong>A response is SERIALISED.</strong> Jackson asks every bean getter and writes the
+     *       answer, so a derived property is on the wire and the document must say so.
+     *   <li><strong>A request is DESERIALISED</strong> — through the canonical constructor, which
+     *       sees exactly the record components. <strong>A request record is never serialised at
+     *       all.</strong> So the seven derived properties on {@code NewSalesInvoiceLine},
+     *       {@code NewPurchaseInvoiceLine}, {@code NewGoodsReceiptLine} and
+     *       {@code NewStockWriteOff} describe a write that never happens.
+     * </ul>
+     *
+     * <p><strong>That is why the two directions differ here.</strong> It is not a policy about what
+     * clients ought to send, and it is not one construct with two behaviours — it is one question
+     * asked of two mechanisms. A future reader who sees only that {@code SalesInvoiceLineView}
+     * documents {@code exempt} while {@code NewSalesInvoiceLine} does not, and "simplifies" the two
+     * into one, would be documenting a serialisation that does not occur.
+     *
+     * <p>A record reached from <em>both</em> directions cannot be described both ways, and this
+     * method does not try: it takes whichever direction reached it first. That would make the
+     * document depend on iteration order, so {@code SerialisedRecordContractIT} refuses any
+     * both-directions record that has derived properties at all — and pins the both-directions set,
+     * so an empty result cannot read as compliance.
      */
     private Map<String, Object> recordSchema(Class<?> raw, String name,
-            Map<String, Type> substitutions, String context) {
+            Map<String, Type> substitutions, Direction direction, String context) {
 
         claim(name, raw, context);
+        directions.computeIfAbsent(name, key -> java.util.EnumSet.noneOf(Direction.class))
+                .add(direction);
         if (!components.containsKey(name)) {
             // Reserved before recursing, so a record referring to itself terminates.
             components.put(name, ordered());
 
             Map<String, Object> properties = ordered();
             List<String> required = new ArrayList<>();
+            Set<String> componentNames = new java.util.LinkedHashSet<>();
             for (RecordComponent component : raw.getRecordComponents()) {
+                componentNames.add(component.getName());
                 properties.put(component.getName(), schemaFor(component.getGenericType(),
-                        substitutions, context + " → " + name + "." + component.getName()));
+                        substitutions, direction,
+                        context + " → " + name + "." + component.getName()));
                 if (component.getType().isPrimitive()
                         || component.isAnnotationPresent(Mandatory.class)) {
                     required.add(component.getName());
+                }
+            }
+
+            if (direction == Direction.RESPONSE) {
+                for (Map.Entry<String, Class<?>> derived : jacksonPropertiesOf(raw).entrySet()) {
+                    if (componentNames.contains(derived.getKey())) {
+                        continue;
+                    }
+                    properties.put(derived.getKey(), schemaFor(derived.getValue(), substitutions,
+                            direction, context + " → " + name + "." + derived.getKey()));
+                    // Computed on every write, so it is always present — required in exactly the
+                    // sense a primitive component is.
+                    required.add(derived.getKey());
                 }
             }
 

@@ -41,4 +41,7 @@ export interface SalesInvoiceView {
   seriesId?: number;
   seriesAbbreviation?: string;
   lines: SalesInvoiceLineView[];
+  inForce: boolean;
+  reversal: boolean;
+  reversed: boolean;
 }

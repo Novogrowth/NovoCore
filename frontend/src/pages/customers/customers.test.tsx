@@ -52,15 +52,24 @@ const cafe: CustomerView = {
   vatNumber: 'EL999100003',
   vatStatus: VatStatus.DOMESTIC,
   active: true,
+  // Derived: no systemKey, so it is an ordinary record and may be merged.
+  systemRecord: false,
+  mergeable: true,
 }
 
-/** The seeded retail record. `systemKey` is what the spec exposes; `systemRecord` is not in it. */
+/**
+ * The seeded retail record. ⚠️ `systemRecord` and `mergeable` are DERIVED from `systemKey` and are
+ * on the wire — W1 (2026-08-04) put them in the contract, where the spec had described neither.
+ */
 const retail: CustomerView = {
   id: 1,
   name: 'Πελάτης Λιανικής',
   vatStatus: VatStatus.DOMESTIC,
   systemKey: CustomerSystemKey.RETAIL_WALK_IN,
   active: true,
+  systemRecord: true,
+  // RETAIL_WALK_IN.isMergeable() is false: merging the walk-in away is what must never happen.
+  mergeable: false,
 }
 
 let me: Me = owner

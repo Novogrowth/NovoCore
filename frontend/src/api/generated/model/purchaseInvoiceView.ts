@@ -25,4 +25,7 @@ export interface PurchaseInvoiceView {
   reversalOfInvoiceId?: number;
   reversedByInvoiceId?: number;
   lines: PurchaseInvoiceLineView[];
+  inForce: boolean;
+  reversal: boolean;
+  reversed: boolean;
 }

@@ -64,6 +64,7 @@ const receipt: SalesDocumentTypeView = {
   aadeInvoiceTypeCode: '11.1',
   sortCode: 90,
   active: true,
+  draft: false,
 }
 
 /**
@@ -76,6 +77,8 @@ const draft: SalesDocumentTypeView = {
   requiresMydataTransmission: false,
   sortCode: 80,
   active: false,
+  // Derived: a stock flag is ABSENT, so the server computes draft = true.
+  draft: true,
 }
 
 const issuedCodes: AadeInvoiceTypeView[] = [

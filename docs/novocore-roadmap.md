@@ -22,10 +22,15 @@ figure that cannot be measured is left blank with a reason, never filled with a 
 `Out` is tokens generated; `In` is input + cache-creation + cache-read — **read the warning under
 *How the actual figures were derived* before drawing any conclusion from that column.**
 
-**Current state, measured 2026-08-04 (after R1b):** **1,457 backend tests** (0 failures, 0 errors,
-1 skipped, `mvn clean verify` exit 0), **310 frontend tests across 31 files**, **230 API operations
-and 223 schemas, 167 of which declare `required`** — ⚠️ **R1b changed no operation and no schema
-count**; its whole spec diff is four lines on one schema.
+**Current state, measured 2026-08-04 (after W1):** **1,480 backend tests** (0 failures, 0 errors,
+1 skipped, `mvn clean verify` exit 0), **368 frontend tests across 39 files**, **247 API operations
+and 231 schemas, 175 of which declare `required`** — ⚠️ **W1 changed no operation and no schema
+count either**; it added **58 properties across 27 response schemas**, which is the whole point of
+it: the document now says what Jackson writes.
+
+*(The line below is R1b's, kept with its own figures — correct in its step's context.)*
+**Measured 2026-08-04 (after R1b):** 1,457 backend tests, 310 frontend tests across 31 files, 230
+operations and 223 schemas, 167 declaring `required`.
 
 ---
 
@@ -100,7 +105,7 @@ frontend work that must land before any adapter is built.
 |   R2 | Document reference data (screens) ʳ²    |     — |    1.9 |  447k | 🟢 Done         |
 |  R2b | R2 live-leg fixes + sort code + payment methods ʳ²ᵇ | — |    1.3 |  309k | 🟢 Done         |
 |      | **▼ THE DECIDED SEQUENCE — the row order below IS the decision** ˢᵉᑫ | | | | |
-|   W1 | Serialised-record contract fidelity ʷ¹  |     — |        |       | ⚪ Unscheduled ⚠️ ˢᵉᑫ |
+|   W1 | Serialised-record contract fidelity ʷ¹  |     — |    1.5 |  356k | 🟢 Done         |
 |   F5 | Sales Invoice + Credit Note ʷ           |     — |        |       | 🟡 **Current**  |
 |   D1 | Supplier/customer codes + alias ᵈ¹      |     — |        |       | ⚪ After F5, with D3 ˢᵉᑫ |
 |   D3 | Customer/supplier addresses ᵈ³          |     — |        |       | ⚪ After F5, with D1 ˢᵉᑫ |
@@ -162,11 +167,11 @@ touched twice. **The owner made that trade knowingly; it is recorded as a cost, 
 are different claims — *"this comes next"* is not *"this is scheduled"* — so the glyphs are untouched
 and the mismatches are stated instead:
 
-| Row | The mismatch | Proposed, not applied |
+| Row | The mismatch | Outcome |
 |---|---|---|
-| **W1** | It is **first in the sequence** and is being worked on 2026-08-04, while its status still reads ⚪ **Unscheduled** | 🟡 **Current**, with F5 moving to 🔴 next — at W1's close-out, not before |
-| **F5** | It reads 🟡 **Current** while a step now sits ahead of it | 🔴 **Not started**, promoted to 🟡 when W1 closes |
-| **D1 / D3 / D4 / D5** | Their status cells said **`Placement TBD`**, which stopped being true the moment the sequence was decided | **The false half was corrected in place** — they now read *After F5* — and the ⚪ glyph deliberately **stays**: placed is not scheduled |
+| **W1** | It was **first in the sequence** and being worked on 2026-08-04, while its status still read ⚪ **Unscheduled** | ✅ **Resolved by completion, not by promotion.** W1 landed the same day and the row is 🟢 **Done**. The proposal was never applied — the work overtook it, which is the honest way for a position/status mismatch to close |
+| **F5** | It read 🟡 **Current** while a step sat ahead of it | ✅ **Resolved.** W1 is done, so F5 is genuinely current now and the glyph was always going to be right; it was briefly early rather than wrong |
+| **D1 / D3 / D4 / D5** | Their status cells said **`Placement TBD`**, which stopped being true the moment the sequence was decided | ⚠️ **STILL ⚪, deliberately.** The false half was corrected in place — they read *After F5* — and the glyph **stays**: placed is not scheduled |
 
 ⚠️ **`Placement TBD` was corrected rather than left**, and that is a different act from promoting a
 glyph. It was a **claim that had become false**: four rows went on saying *nobody has decided where
@@ -887,6 +892,32 @@ documents all 66 in **one change** instead of editing 66 records, and the rule t
 generator rather than policing records. ⚠️ Not free: 8a's rule makes primitives `required`, so 66 new
 required booleans means fixture reconciliation across 32 schemas. **Weigh it at scoping.** The rule
 belongs in the **app module against the real Boot-configured mapper bean**.
+
+**✅ W1 IS DONE — 2026-08-04. The generator route was taken, and it cost 14 fixture edits.** Spec
+**+58 properties across 27 response schemas**, no operation and no schema-count change; backend
+**1,480** tests (`BUILD SUCCESS`), frontend **368** green, and every one of the 14 `tsc` errors was a
+**test fixture** rather than application source.
+
+⚠️ **The step corrected two premises, and the second is worth more than the fix.**
+**1.** The 32/66 figure did **not** predate R1a/R1b — it was measured *in* R1b's Phase 0, so what the
+re-measure establishes is that **R2 and R2b added nothing** (⭐ R2's X.6 discipline held; there is no
+67th). **2.** `CLAUDE.md` said *"Jackson serialises a record's no-arg public accessors"*, and that is
+**false**: Jackson publishes **bean getters**. Of **222** non-component accessors on this surface,
+**79** are `is*` and Jackson publishes **66** — **153 are invisible to it**, including every
+`…IfAny()`, which is a far better reason for that idiom's safety than the one recorded.
+
+⚠️ **REQUEST records are deliberately NOT given derived properties, and it is one rule rather than
+two behaviours.** A request record is **deserialised through the canonical constructor**, which sees
+exactly the components, and **is never serialised at all** — so a derived property there describes a
+write that never happens. `OpenItemRef.isCustomerSide()` was **deleted** (zero references anywhere in
+compiled code) and the both-directions case is refused at build time, with the both-directions set
+**pinned non-empty as a positive control**.
+
+⭐ **Building it found what reading could not:** a name-based type lookup made the generator
+**non-deterministic**, because `CustomerView` has both `isSystemRecord():boolean` and
+`systemRecord():Optional<CustomerSystemKey>`. **The type comes from Jackson's visitor.** Measured at
+**1.5 h active / 356k output**, covering Part 1 and Part 2 — short, as every close-out figure is,
+because the close-out is not yet in the transcript that measures it.
 
 **ʳ²ᵇ R2b — what R2's live leg found, 2026-08-04. 🟢 DONE.** Five sections, two of which started
 from a wrong premise. ⚠️ **The stale-list defect was OLDER than R2 and sat in all THIRTEEN create

@@ -89,6 +89,14 @@ class OpenApiSpecIT {
     @Autowired
     private List<RequestMappingHandlerMapping> handlerMappings;
 
+    /**
+     * The real Boot-configured mapper. {@link OpenApiSchema} needs it to answer what Jackson
+     * publishes for a response record; a mapper built here would answer whatever it was configured
+     * to answer.
+     */
+    @Autowired
+    private tools.jackson.databind.ObjectMapper realMapper;
+
     @Test
     @DisplayName("the committed OpenAPI spec matches the routes actually served")
     void theSpecMatchesTheSurface() throws IOException {
@@ -206,7 +214,7 @@ class OpenApiSpecIT {
     // -------------------------------------------------------------------------------------------
 
     private Map<String, Object> buildDocument() {
-        OpenApiSchema schema = new OpenApiSchema();
+        OpenApiSchema schema = new OpenApiSchema(realMapper);
         Map<String, Map<String, Object>> paths = new TreeMap<>();
         Map<String, List<String>> routesByOperationId = new TreeMap<>();
 
@@ -331,13 +339,16 @@ class OpenApiSpecIT {
 
             if (path != null) {
                 parameters.add(parameter("path", nameOf(path.value(), parameter), true,
-                        schema.schemaFor(parameter.getParameterizedType(), context)));
+                        schema.schemaFor(parameter.getParameterizedType(),
+                                OpenApiSchema.Direction.REQUEST, context)));
             } else if (query != null) {
                 parameters.add(parameter("query", nameOf(query.value(), parameter), query.required(),
-                        schema.schemaFor(parameter.getParameterizedType(), context)));
+                        schema.schemaFor(parameter.getParameterizedType(),
+                                OpenApiSchema.Direction.REQUEST, context)));
             } else if (body != null) {
                 requestBody = content(
-                        schema.schemaFor(parameter.getParameterizedType(), context), true);
+                        schema.schemaFor(parameter.getParameterizedType(),
+                                OpenApiSchema.Direction.REQUEST, context), true);
             }
         }
 
@@ -361,7 +372,8 @@ class OpenApiSpecIT {
         response.put("description", success.getReasonPhrase());
 
         if (!void.class.equals(method.getReturnType())) {
-            Map<String, Object> body = schema.schemaFor(method.getGenericReturnType(), context);
+            Map<String, Object> body = schema.schemaFor(method.getGenericReturnType(),
+                    OpenApiSchema.Direction.RESPONSE, context);
             if (body != null) {
                 response.put("content", contentOf(body));
             }

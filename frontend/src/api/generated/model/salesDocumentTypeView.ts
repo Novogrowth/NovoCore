@@ -18,4 +18,5 @@ export interface SalesDocumentTypeView {
   aadeInvoiceTypeCode?: string;
   sortCode: number;
   active: boolean;
+  draft: boolean;
 }

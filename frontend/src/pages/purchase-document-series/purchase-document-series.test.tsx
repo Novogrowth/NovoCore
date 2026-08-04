@@ -50,6 +50,7 @@ const supplierInvoice: PurchaseDocumentTypeView = {
   requiresMydataTransmission: true,
   sortCode: 20,
   active: true,
+  draft: false,
 }
 
 const series: PurchaseDocumentSeriesView = {

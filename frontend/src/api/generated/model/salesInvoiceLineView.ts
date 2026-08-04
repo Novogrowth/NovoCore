@@ -33,4 +33,6 @@ export interface SalesInvoiceLineView {
   soldSerialNumbers: string[];
   description?: string;
   components: SalesInvoiceLineComponentView[];
+  bundle: boolean;
+  exempt: boolean;
 }

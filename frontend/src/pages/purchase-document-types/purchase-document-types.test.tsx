@@ -50,6 +50,7 @@ const supplierInvoice: PurchaseDocumentTypeView = {
   aadeInvoiceTypeCode: '14.1',
   sortCode: 30,
   active: true,
+  draft: false,
 }
 
 const receivedCodes: AadeInvoiceTypeView[] = [

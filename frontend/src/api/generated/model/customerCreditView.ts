@@ -18,4 +18,6 @@ export interface CustomerCreditView {
   amount: Money;
   openAmount: Money;
   description?: string;
+  exhausted: boolean;
+  untouched: boolean;
 }

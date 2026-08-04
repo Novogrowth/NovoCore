@@ -26,4 +26,6 @@ export interface AccountView {
   active: boolean;
   expectedToClear: boolean;
   elpCode?: string;
+  contra: boolean;
+  settlementTarget: boolean;
 }

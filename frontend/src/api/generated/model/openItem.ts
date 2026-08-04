@@ -19,4 +19,6 @@ export interface OpenItem {
   grossAmount: Money;
   allocatedAmount: Money;
   openAmount: Money;
+  fullySettled: boolean;
+  untouched: boolean;
 }

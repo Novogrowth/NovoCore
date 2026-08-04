@@ -487,6 +487,33 @@ invisible to a script *and* to a human reading the output, which is why it survi
 depends on a fresh artefact — and one that rebuilds a module before testing it always does —
 **confirm the build succeeded on its own terms before believing anything the test then says.**
 
+**3. ⚠️ A prove-against-the-defect script must RESTORE with something that cannot silently restore
+too much. `git checkout --` is not that thing.**
+
+**W1 met this on 2026-08-04 and it is the third occurrence in this file.** A script broke the code
+four ways in turn, ran the guard against each, and restored with `git checkout -- <path>` between
+rounds. **All four proofs fired correctly and named the right property.** The restores did not:
+
+- On a **tracked** file, `git checkout --` restores it to **`HEAD`** — which reverted the step's own
+  uncommitted work. `OpenItemRef`'s deletion and its entire rationale comment vanished, and so did a
+  regenerated `openapi.json`. **Silently, and reported as success.**
+- On the **untracked** new test file it failed loudly (`did not match any file(s) known to git`) and
+  **left the injected defect in place**, so every later round in that run was measuring broken code.
+
+⚠️ **Note which half was dangerous.** The loud failure cost nothing — it was investigated
+immediately. The silent one reverted real work while the script printed nothing, and would have been
+committed had the tree not been read afterwards. This is *the thing that answered was not the thing
+under test* one more time: the later rounds ran against a tree nobody had looked at.
+
+**The remedy, in order of preference: copy the file aside and copy it back; or make the injection a
+patch you reverse; or — simplest and what should have been done — inject and restore each defect by
+hand, one at a time, reading `git status` between rounds.** A batch script is a false economy here,
+because the whole point of the exercise is that you are deliberately holding a broken tree.
+
+📌 **And always `git status` after any prove-against-the-defect run**, before believing the green
+that follows it. W1's script ended by re-running the guard and reporting failure — which is the only
+reason the damage was found in the same minute rather than in the commit.
+
 📌 **A recommendation is on file to make this unnecessary, and it is deliberately not built** —
 roadmap footnote ᵇˢ, recorded by U3 on 2026-08-03. **One build script** that sets `pipefail`, always
 builds with `-am` and never truncates output, which this file would then tell sessions to invoke — so
@@ -998,35 +1025,89 @@ goal** still reads a stale summary and still reports the old failure. That needs
 goal on its own, which nothing here does. **For that case only, `clean` first** — it is discipline,
 not configuration, and it is a much smaller surface than what the pin removed.
 
-### ⚠️ A record that goes on the wire is asked for every accessor, not just its components
+### ⚠️ A record that goes on the wire is asked for every BEAN GETTER — and the contract must say so
 
-**Found in R1a, 2026-08-03, and the 500 it produced was luck.**
+**Found in R1a, 2026-08-03, and the 500 it produced was luck. Generalised and CORRECTED by W1,
+2026-08-04.**
 
 `AadeInvoiceTypeView` — a response record — carried a one-line derived accessor `issuedByUs()`
 delegating to an enum method that **throws** for the six codes that are neither issued nor received.
 The exception is correct: asking a payroll adjusting entry which party issued it *is* a programming
-error. **Putting a caller for it on a serialised record is what was wrong**, because
-**Jackson serialises a record's no-arg public accessors as properties** and therefore calls every one
-of them on every row.
+error. **Putting a caller for it on a serialised record is what was wrong.**
 
 `GET /api/aade-invoice-types` answered **`500 "Failed to write request"`** for the whole
 codification. Every service-layer test passed — one of them asserted the throw and called it correct.
 
-⚠️ **The louder half is what the 500 concealed by being loud.** `OpenApiSchema` describes **record
-components**, so the committed spec documented five properties while Jackson would have written six.
-**A derived accessor that merely returned a value would have shipped an undocumented field on every
-response**, absent from the generated TypeScript, with nothing anywhere to say so. The throw is the
-only reason the disagreement was visible at all.
+⚠️ **The louder half is what the 500 concealed by being loud.** `OpenApiSchema` described **record
+components**, so the committed spec documented five properties while Jackson wrote six.
+**A derived accessor that merely returns a value ships an undocumented field on every response**,
+absent from the generated TypeScript, with nothing anywhere to say so. The throw is the only reason
+the disagreement was visible at all — and W1 measured the silent version: **32 schemas on the
+committed surface were writing 66 properties the document did not mention.**
 
-**The rule: a record this codebase serialises exposes its components and nothing that computes.**
-Convenience accessors belong on the type being wrapped — here the enum — where only real callers
-reach them. `Optional`-returning `…IfAny()` helpers are the existing exception and are safe for the
-same reason this was not: they cannot throw.
+#### ⚠️ This entry USED TO SAY "Jackson serialises a record's no-arg public accessors". That is false
 
-**Two guards, at the two layers that can see it:** a reflection test refusing any non-component
-no-arg public accessor on the view, and an integration test asserting the **wire body** carries
-exactly the documented properties. ⚠️ Neither is general — **they cover one record.** The general
-version would be a rule over every response record, and it is not built; watch for this in review.
+**Measured 2026-08-04 (W1 Phase 0), by asking Jackson rather than by reading it.** Jackson publishes
+**bean getters** — `isXxx()` returning `boolean`, `getXxx()` — **plus record components.** A plain
+`normalBalance()`, `hasVariance()`, `netExactly()`, `totalDebits()` or `bornSettled()` is published by
+**nothing**. On this surface: **222** non-component public no-arg accessors exist, **79** are named
+`is*`, and Jackson publishes **66**. **153 are invisible to it.**
+
+**The proof is a name nobody would derive by reading:** `issuedByUs()` is published as
+**`suedByUs`** — the `is` prefix is *stripped*, because Jackson sees `is` + `suedByUs`. A control
+record carrying both `issuedByUs()` and `label()` published the first and not the second.
+
+⚠️ **`…IfAny()` helpers were recorded here as safe "for the same reason this was not: they cannot
+throw." That reason is wrong, and the right one is much stronger and much more general:** they return
+`Optional`, so **Jackson never publishes them at all** — and neither does it publish any of the other
+149 non-bean-getter accessors. The old wording told a reader that a safe pattern was dangerous.
+
+**The 79 − 66 = 13 residual is fully attributed rather than waved at:** **11** live on `Money`,
+`Quantity`, `Rate` and `UnitCost`, whose serialisers `NovoCoreJsonModule` replaces so Jackson never
+bean-introspects them; **2** are `ProductView.isSerialTracked()` and `isBundle()`, whose published
+names are *already record components* and which delegate to them, so they cannot disagree.
+
+#### ✅ The rule, built in W1: what Jackson writes must equal what the contract documents
+
+**Two honest ways to comply — delete the accessor, or document it.** `SerialisedRecordContractIT`
+(app module, against the **real Boot-configured mapper bean**) enforces it, reading the **committed**
+`openapi.json` on one side and asking **Jackson** on the other, so a generator bug cannot make both
+sides agree.
+
+⚠️ **A REQUEST record is treated differently, and this is ONE rule rather than two behaviours. Do not
+collapse it.** The rule is *describe what Jackson actually does with this record*, and Jackson does
+two different things: it **serialises** a response, asking every bean getter; it **deserialises** a
+request through the canonical constructor, which sees exactly the record components — **a request
+record is never serialised at all.** So a derived property on `NewSalesInvoiceLine` would describe a
+write that never happens, and a generated client would be told to compute and send a value the server
+discards. A future reader who notices only that `SalesInvoiceLineView` documents `exempt` while
+`NewSalesInvoiceLine` does not, and "simplifies" the two together, is documenting a serialisation
+that does not occur.
+
+⚠️ **A record reached from BOTH directions cannot be described either way**, so the rule refuses it —
+and **pins the both-directions set non-empty as a positive control**, because "no offenders" and
+"this test measured nothing" produce the same output otherwise. Same shape as
+`DocumentReferenceGraphIT`.
+
+⚠️ **The type comes from Jackson's visitor, never from a reflective lookup by name.** That was the
+first implementation and it made the generator **non-deterministic**: `CustomerView` has both
+`isSystemRecord():boolean` and `systemRecord():Optional<CustomerSystemKey>`, which map to one
+published name, and a name-based lookup picks between them in `Class.getMethods()` order — which the
+JVM does not specify. Two runs produced two documents; the spec drift check caught it.
+
+#### ⚠️ The general rule does NOT subsume `AadeInvoiceTypeIT.theViewHasNoDerivedAccessorThatCanThrow`
+
+**Keep both, and this is the reason.** That test is narrower *and stricter*: it forbids **any**
+non-component no-arg public accessor on one view. The general rule only requires that whatever
+Jackson publishes is documented — so under W1, **a throwing bean getter is now a documented property
+and still answers `500` on every row.** Documenting a field is not the same as the field working.
+The general rule can see a contract mismatch; it cannot see an exception. **A test that looks
+redundant against a newer, wider rule is worth checking against this case before deleting it.**
+
+📌 **One consequence, so nobody keeps paying a price that no longer exists.** R2's X.6 chose a
+*component* (`inUse`) over a derived accessor specifically to avoid becoming the 67th undocumented
+property. **That reason expired on 2026-08-04.** A derived accessor on a response record is now an
+ordinary, documented part of its schema. Choose a component or an accessor on the merits.
 
 ### ⚠️ Two enforcements of one rule that agree by construction will diverge the day the construction changes
 

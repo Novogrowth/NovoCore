@@ -36,4 +36,7 @@ export interface CreditNoteView {
   reversalOfCreditNoteId?: number;
   reversedByCreditNoteId?: number;
   lines: CreditNoteLineView[];
+  inForce: boolean;
+  reversal: boolean;
+  reversed: boolean;
 }

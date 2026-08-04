@@ -18,4 +18,5 @@ export interface GrIrMatchView {
   quantity: Quantity;
   receiptUnitCost: UnitCost;
   invoiceUnitPrice: UnitCost;
+  unfavourable: boolean;
 }

@@ -28,4 +28,8 @@ export interface StockConsumptionView {
   reversedByConsumptionId?: number;
   returnOfConsumptionId?: number;
   lines: StockConsumptionLineView[];
+  inForce: boolean;
+  return: boolean;
+  reversal: boolean;
+  reversed: boolean;
 }

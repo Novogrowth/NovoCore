@@ -28,4 +28,7 @@ export interface StockWriteOffView {
   postedAmount?: Money;
   reversalOfWriteOffId?: number;
   reversedByWriteOffId?: number;
+  reversal: boolean;
+  reversed: boolean;
+  serialized: boolean;
 }

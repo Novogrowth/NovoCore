@@ -18,4 +18,8 @@ export interface JournalEntryView {
   reversalOfEntryId?: number;
   reversedByEntryId?: number;
   lines: JournalLineView[];
+  amendable: boolean;
+  balanced: boolean;
+  reversal: boolean;
+  reversed: boolean;
 }

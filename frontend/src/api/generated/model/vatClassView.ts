@@ -16,4 +16,5 @@ export interface VatClassView {
   ratePercent: Rate;
   reducedCounterpartId?: number;
   active: boolean;
+  zeroRated: boolean;
 }

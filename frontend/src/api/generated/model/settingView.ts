@@ -15,4 +15,5 @@ export interface SettingView {
   description?: string;
   updatedAt?: string;
   updatedBy?: string;
+  unset: boolean;
 }

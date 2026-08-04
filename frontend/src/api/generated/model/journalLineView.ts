@@ -29,4 +29,5 @@ export interface JournalLineView {
   description?: string;
   subLedgerRef?: SubLedgerRef;
   vat?: VatDimension;
+  debit: boolean;
 }

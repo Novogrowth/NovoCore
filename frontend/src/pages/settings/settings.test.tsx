@@ -39,6 +39,8 @@ const setting = (key: string, value: string, extra: Partial<SettingView> = {}): 
   description: `What ${key} does.`,
   updatedAt: '2026-07-28T17:21:41Z',
   updatedBy: 'system',
+  // Derived server-side: value.isBlank(), or a secret still at its placeholder with no timestamp.
+  unset: value === '',
   ...extra,
 })
 
@@ -161,9 +163,17 @@ describe('the settings screens', () => {
   })
 
   it('distinguishes a password never configured from one that is', async () => {
-    // An unset key comes back with an empty value and no timestamps, which is the only signal.
+    // An unset key comes back with an empty value and no timestamps.
+    //
+    // ⚠️ That used to be "the only signal", and W1 (2026-08-04) made it untrue: SettingView.unset
+    // is a derived property the backend has always computed and the contract never described, so
+    // it is on the wire and in the generated type now. The screen still reconstructs the answer
+    // from `value !== ''` in setting-row.tsx; using the server's own is a separate change and is
+    // queued, not done here.
     body = settings.map((entry) =>
-      entry.key === 'smtp.password' ? { key: 'smtp.password', value: '', secret: true } : entry,
+      entry.key === 'smtp.password'
+        ? { key: 'smtp.password', value: '', secret: true, unset: true }
+        : entry,
     )
     renderPage(() => <EmailSettings />)
     await screen.findByText('mail.novotrade.gr')

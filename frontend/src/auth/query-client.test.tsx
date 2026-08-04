@@ -61,6 +61,8 @@ const existing: SalesDocumentTypeView = {
   requiresMydataTransmission: true,
   sortCode: 10,
   active: true,
+  // Derived: both stock flags are answered, so the type is not a draft.
+  draft: false,
 }
 
 const created: SalesDocumentTypeView = {
@@ -71,6 +73,8 @@ const created: SalesDocumentTypeView = {
   requiresMydataTransmission: true,
   sortCode: 20,
   active: true,
+  // Derived: both stock flags are answered — false is an ANSWER, not an absence.
+  draft: false,
 }
 
 /** The server's rows. The POST handler appends, exactly as a real backend would. */

@@ -19,4 +19,7 @@ export interface JournalEntrySummaryView {
   reversedByEntryId?: number;
   total: Money;
   lineCount: number;
+  amendable: boolean;
+  reversal: boolean;
+  reversed: boolean;
 }

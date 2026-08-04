@@ -18,6 +18,12 @@ target/
 # find it. Ignored so that window cannot end in a commit. See docs/PROGRESS.md's F0 section.
 /seed.ps1
 
+# Claude Code's per-checkout permission allow/deny list. It is a statement about what one
+# developer's agent may run on one machine, not about this project — committing it would make one
+# person's local trust decisions everybody's, and silently. Found untracked during W1, 2026-08-04.
+.claude/settings.json
+.claude/settings.local.json
+
 # OS / editor cruft
 .DS_Store
 Thumbs.db

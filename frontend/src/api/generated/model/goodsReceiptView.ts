@@ -22,4 +22,7 @@ export interface GoodsReceiptView {
   reversalOfReceiptId?: number;
   reversedByReceiptId?: number;
   lines: GoodsReceiptLineView[];
+  inForce: boolean;
+  reversal: boolean;
+  reversed: boolean;
 }

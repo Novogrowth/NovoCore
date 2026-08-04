@@ -36,9 +36,25 @@ public record OpenItemRef(@Mandatory OpenItemType type, long id) {
         return new OpenItemRef(OpenItemType.CUSTOMER_CREDIT, customerCreditId);
     }
 
-    public boolean isCustomerSide() {
-        return type.isCustomerSide();
-    }
+    /*
+     * ⚠️ `isCustomerSide()` was DELETED in W1, 2026-08-04, and the reason is that it had ZERO
+     * REFERENCES ANYWHERE in compiled backend code — no invokevirtual, no method handle, no
+     * constant-pool entry, in production or in tests. It was a bean getter, so Jackson published
+     * `customerSide` on every wire body while this document said nothing about it; deleting an
+     * unused accessor is one of the two honest ways to close that, and here it was plainly the
+     * right one.
+     *
+     * It is NOT deleted because it made W1's direction rule simpler. It did — OpenItemRef is the
+     * one record reached as both a request and a response, so a derived property on it was the
+     * only case the rule could not describe either way — but that is a CONSEQUENCE, not the
+     * justification. Recorded this way deliberately: a reader who believes the reason was
+     * convenience will restore the accessor the first time it looks useful, and
+     * SerialisedRecordContractIT will then refuse the build with a message that reads as an
+     * obstacle rather than as an answer.
+     *
+     * `OpenItemType.isCustomerSide()` is untouched and is where the question belongs — a caller
+     * that wants the answer asks the type, which is what the one real caller already did.
+     */
 
     @Override
     public String toString() {

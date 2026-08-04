@@ -13057,7 +13057,7 @@
       },
       "AccountView" : {
         "type" : "object",
-        "required" : [ "id", "name", "type", "kind", "groupId", "groupName", "displayOrder", "active", "expectedToClear" ],
+        "required" : [ "id", "name", "type", "kind", "groupId", "groupName", "displayOrder", "active", "expectedToClear", "contra", "settlementTarget" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -13100,6 +13100,12 @@
           },
           "elpCode" : {
             "type" : "string"
+          },
+          "contra" : {
+            "type" : "boolean"
+          },
+          "settlementTarget" : {
+            "type" : "boolean"
           }
         }
       },
@@ -13483,7 +13489,7 @@
       },
       "CreditNoteView" : {
         "type" : "object",
-        "required" : [ "id", "salesInvoiceId", "salesInvoiceNumber", "customerId", "customerName", "channel", "documentNumber", "creditNoteDate", "netTotal", "vatTotal", "grossTotal", "roundingAmount", "roundingNeededReview", "journalEntryId", "lines" ],
+        "required" : [ "id", "salesInvoiceId", "salesInvoiceNumber", "customerId", "customerName", "channel", "documentNumber", "creditNoteDate", "netTotal", "vatTotal", "grossTotal", "roundingAmount", "roundingNeededReview", "journalEntryId", "lines", "inForce", "reversal", "reversed" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -13564,6 +13570,15 @@
             "items" : {
               "$ref" : "#/components/schemas/CreditNoteLineView"
             }
+          },
+          "inForce" : {
+            "type" : "boolean"
+          },
+          "reversal" : {
+            "type" : "boolean"
+          },
+          "reversed" : {
+            "type" : "boolean"
           }
         }
       },
@@ -13580,7 +13595,7 @@
       },
       "CustomerCreditView" : {
         "type" : "object",
-        "required" : [ "id", "customerId", "customerName", "settlementId", "creditDate", "amount", "openAmount" ],
+        "required" : [ "id", "customerId", "customerName", "settlementId", "creditDate", "amount", "openAmount", "exhausted", "untouched" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -13609,6 +13624,12 @@
           },
           "description" : {
             "type" : "string"
+          },
+          "exhausted" : {
+            "type" : "boolean"
+          },
+          "untouched" : {
+            "type" : "boolean"
           }
         }
       },
@@ -13647,7 +13668,7 @@
       },
       "CustomerView" : {
         "type" : "object",
-        "required" : [ "id", "name", "vatStatus", "active" ],
+        "required" : [ "id", "name", "vatStatus", "active", "mergeable", "systemRecord" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -13680,6 +13701,12 @@
             "$ref" : "#/components/schemas/CustomerSystemKey"
           },
           "active" : {
+            "type" : "boolean"
+          },
+          "mergeable" : {
+            "type" : "boolean"
+          },
+          "systemRecord" : {
             "type" : "boolean"
           }
         }
@@ -13843,7 +13870,7 @@
       },
       "FreightAllocationView" : {
         "type" : "object",
-        "required" : [ "id", "purchaseInvoiceLineId", "purchaseInvoiceId", "allocationDate", "amount", "capitalised", "variance", "journalEntryId", "lines" ],
+        "required" : [ "id", "purchaseInvoiceLineId", "purchaseInvoiceId", "allocationDate", "amount", "capitalised", "variance", "journalEntryId", "lines", "reversal", "reversed" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -13893,6 +13920,12 @@
             "items" : {
               "$ref" : "#/components/schemas/FreightAllocationLineView"
             }
+          },
+          "reversal" : {
+            "type" : "boolean"
+          },
+          "reversed" : {
+            "type" : "boolean"
           }
         }
       },
@@ -13907,7 +13940,7 @@
       },
       "GoodsReceiptLineView" : {
         "type" : "object",
-        "required" : [ "id", "lineNumber", "productId", "quantity", "unitCost", "location", "lotId", "serialNumbers", "matchedQuantity", "openQuantity" ],
+        "required" : [ "id", "lineNumber", "productId", "quantity", "unitCost", "location", "lotId", "serialNumbers", "matchedQuantity", "openQuantity", "awaitingInvoice", "serialized" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -13952,6 +13985,12 @@
           },
           "openQuantity" : {
             "$ref" : "#/components/schemas/Quantity"
+          },
+          "awaitingInvoice" : {
+            "type" : "boolean"
+          },
+          "serialized" : {
+            "type" : "boolean"
           }
         }
       },
@@ -13970,7 +14009,7 @@
       },
       "GoodsReceiptView" : {
         "type" : "object",
-        "required" : [ "id", "supplierId", "supplierName", "receiptDate", "totalValue", "lines" ],
+        "required" : [ "id", "supplierId", "supplierName", "receiptDate", "totalValue", "lines", "inForce", "reversal", "reversed" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -14013,12 +14052,21 @@
             "items" : {
               "$ref" : "#/components/schemas/GoodsReceiptLineView"
             }
+          },
+          "inForce" : {
+            "type" : "boolean"
+          },
+          "reversal" : {
+            "type" : "boolean"
+          },
+          "reversed" : {
+            "type" : "boolean"
           }
         }
       },
       "GrIrMatchView" : {
         "type" : "object",
-        "required" : [ "id", "purchaseInvoiceLineId", "goodsReceiptLineId", "lotId", "quantity", "receiptUnitCost", "invoiceUnitPrice" ],
+        "required" : [ "id", "purchaseInvoiceLineId", "goodsReceiptLineId", "lotId", "quantity", "receiptUnitCost", "invoiceUnitPrice", "unfavourable" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -14044,6 +14092,9 @@
           },
           "invoiceUnitPrice" : {
             "$ref" : "#/components/schemas/UnitCost"
+          },
+          "unfavourable" : {
+            "type" : "boolean"
           }
         }
       },
@@ -14058,7 +14109,7 @@
       },
       "InventoryLotView" : {
         "type" : "object",
-        "required" : [ "id", "productId", "productSku", "serialTracked", "quantityReceived", "quantityRemaining", "receivedUnitCost", "allocatedLandedUnitCost", "acquisitionDate", "units" ],
+        "required" : [ "id", "productId", "productSku", "serialTracked", "quantityReceived", "quantityRemaining", "receivedUnitCost", "allocatedLandedUnitCost", "acquisitionDate", "units", "open" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -14106,6 +14157,9 @@
           "goodsReceiptLineId" : {
             "type" : "integer",
             "format" : "int64"
+          },
+          "open" : {
+            "type" : "boolean"
           }
         }
       },
@@ -14115,7 +14169,7 @@
       },
       "JournalEntrySummaryView" : {
         "type" : "object",
-        "required" : [ "id", "entryDate", "description", "source", "total", "lineCount" ],
+        "required" : [ "id", "entryDate", "description", "source", "total", "lineCount", "amendable", "reversal", "reversed" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -14145,12 +14199,21 @@
           "lineCount" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "amendable" : {
+            "type" : "boolean"
+          },
+          "reversal" : {
+            "type" : "boolean"
+          },
+          "reversed" : {
+            "type" : "boolean"
           }
         }
       },
       "JournalEntryView" : {
         "type" : "object",
-        "required" : [ "id", "entryDate", "description", "source", "lines" ],
+        "required" : [ "id", "entryDate", "description", "source", "lines", "amendable", "balanced", "reversal", "reversed" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -14179,12 +14242,24 @@
             "items" : {
               "$ref" : "#/components/schemas/JournalLineView"
             }
+          },
+          "amendable" : {
+            "type" : "boolean"
+          },
+          "balanced" : {
+            "type" : "boolean"
+          },
+          "reversal" : {
+            "type" : "boolean"
+          },
+          "reversed" : {
+            "type" : "boolean"
           }
         }
       },
       "JournalLineView" : {
         "type" : "object",
-        "required" : [ "id", "entryId", "entryDate", "source", "entryDescription", "lineNumber", "accountId", "accountName", "accountType", "side", "amount" ],
+        "required" : [ "id", "entryId", "entryDate", "source", "entryDescription", "lineNumber", "accountId", "accountName", "accountType", "side", "amount", "debit" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -14232,6 +14307,9 @@
           },
           "vat" : {
             "$ref" : "#/components/schemas/VatDimension"
+          },
+          "debit" : {
+            "type" : "boolean"
           }
         }
       },
@@ -15710,7 +15788,7 @@
       },
       "OpenItem" : {
         "type" : "object",
-        "required" : [ "ref", "documentNumber", "documentDate", "partyId", "partyName", "grossAmount", "allocatedAmount", "openAmount" ],
+        "required" : [ "ref", "documentNumber", "documentDate", "partyId", "partyName", "grossAmount", "allocatedAmount", "openAmount", "fullySettled", "untouched" ],
         "properties" : {
           "ref" : {
             "$ref" : "#/components/schemas/OpenItemRef"
@@ -15737,6 +15815,12 @@
           },
           "openAmount" : {
             "$ref" : "#/components/schemas/Money"
+          },
+          "fullySettled" : {
+            "type" : "boolean"
+          },
+          "untouched" : {
+            "type" : "boolean"
           }
         }
       },
@@ -15876,7 +15960,7 @@
       },
       "ProductView" : {
         "type" : "object",
-        "required" : [ "id", "sku", "name", "type", "unitOfMeasure", "defaultVatClassId", "serialTracked", "bundle", "active", "hiddenFields" ],
+        "required" : [ "id", "sku", "name", "type", "unitOfMeasure", "defaultVatClassId", "serialTracked", "bundle", "active", "hiddenFields", "redacted", "stocked" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -15932,6 +16016,12 @@
               "$ref" : "#/components/schemas/ProtectedField"
             },
             "uniqueItems" : true
+          },
+          "redacted" : {
+            "type" : "boolean"
+          },
+          "stocked" : {
+            "type" : "boolean"
           }
         }
       },
@@ -15981,7 +16071,7 @@
       },
       "PurchaseDocumentTypeView" : {
         "type" : "object",
-        "required" : [ "id", "description", "requiresMydataTransmission", "sortCode", "active" ],
+        "required" : [ "id", "description", "requiresMydataTransmission", "sortCode", "active", "draft" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -16012,12 +16102,15 @@
           },
           "active" : {
             "type" : "boolean"
+          },
+          "draft" : {
+            "type" : "boolean"
           }
         }
       },
       "PurchaseInvoiceLineView" : {
         "type" : "object",
-        "required" : [ "id", "lineNumber", "type", "netAmount", "vatAmount", "reverseCharge", "matchedQuantity", "openQuantity" ],
+        "required" : [ "id", "lineNumber", "type", "netAmount", "vatAmount", "reverseCharge", "matchedQuantity", "openQuantity", "awaitingDelivery", "exempt", "inventory" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -16072,12 +16165,21 @@
           },
           "openQuantity" : {
             "$ref" : "#/components/schemas/Quantity"
+          },
+          "awaitingDelivery" : {
+            "type" : "boolean"
+          },
+          "exempt" : {
+            "type" : "boolean"
+          },
+          "inventory" : {
+            "type" : "boolean"
           }
         }
       },
       "PurchaseInvoiceView" : {
         "type" : "object",
-        "required" : [ "id", "supplierId", "supplierName", "supplierInvoiceNumber", "invoiceDate", "netTotal", "vatTotal", "grossTotal", "journalEntryId", "lines" ],
+        "required" : [ "id", "supplierId", "supplierName", "supplierInvoiceNumber", "invoiceDate", "netTotal", "vatTotal", "grossTotal", "journalEntryId", "lines", "inForce", "reversal", "reversed" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -16129,6 +16231,15 @@
             "items" : {
               "$ref" : "#/components/schemas/PurchaseInvoiceLineView"
             }
+          },
+          "inForce" : {
+            "type" : "boolean"
+          },
+          "reversal" : {
+            "type" : "boolean"
+          },
+          "reversed" : {
+            "type" : "boolean"
           }
         }
       },
@@ -16396,7 +16507,7 @@
       },
       "SalesDocumentTypeView" : {
         "type" : "object",
-        "required" : [ "id", "description", "requiresMydataTransmission", "sortCode", "active" ],
+        "required" : [ "id", "description", "requiresMydataTransmission", "sortCode", "active", "draft" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -16426,6 +16537,9 @@
             "format" : "int32"
           },
           "active" : {
+            "type" : "boolean"
+          },
+          "draft" : {
             "type" : "boolean"
           }
         }
@@ -16463,7 +16577,7 @@
       },
       "SalesInvoiceLineView" : {
         "type" : "object",
-        "required" : [ "id", "lineNumber", "lineType", "quantity", "unitPrice", "netAmount", "vatAmount", "soldSerialNumbers", "components" ],
+        "required" : [ "id", "lineNumber", "lineType", "quantity", "unitPrice", "netAmount", "vatAmount", "soldSerialNumbers", "components", "bundle", "exempt" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -16531,6 +16645,12 @@
             "items" : {
               "$ref" : "#/components/schemas/SalesInvoiceLineComponentView"
             }
+          },
+          "bundle" : {
+            "type" : "boolean"
+          },
+          "exempt" : {
+            "type" : "boolean"
           }
         }
       },
@@ -16619,7 +16739,7 @@
       },
       "SalesInvoiceView" : {
         "type" : "object",
-        "required" : [ "id", "customerId", "customerName", "channel", "settlementMethod", "documentNumber", "invoiceDate", "netTotal", "vatTotal", "grossTotal", "roundingAmount", "roundingNeededReview", "journalEntryId", "transmissionStatus", "lines" ],
+        "required" : [ "id", "customerId", "customerName", "channel", "settlementMethod", "documentNumber", "invoiceDate", "netTotal", "vatTotal", "grossTotal", "roundingAmount", "roundingNeededReview", "journalEntryId", "transmissionStatus", "lines", "inForce", "reversal", "reversed" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -16713,6 +16833,15 @@
             "items" : {
               "$ref" : "#/components/schemas/SalesInvoiceLineView"
             }
+          },
+          "inForce" : {
+            "type" : "boolean"
+          },
+          "reversal" : {
+            "type" : "boolean"
+          },
+          "reversed" : {
+            "type" : "boolean"
           }
         }
       },
@@ -16808,7 +16937,7 @@
       },
       "SerializedUnitView" : {
         "type" : "object",
-        "required" : [ "id", "lotId", "productId", "serialNumber", "status", "location", "unitCost" ],
+        "required" : [ "id", "lotId", "productId", "serialNumber", "status", "location", "unitCost", "onHand", "sellable" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -16841,6 +16970,12 @@
           "soldOnInvoiceLineId" : {
             "type" : "integer",
             "format" : "int64"
+          },
+          "onHand" : {
+            "type" : "boolean"
+          },
+          "sellable" : {
+            "type" : "boolean"
           }
         }
       },
@@ -16865,7 +17000,7 @@
       },
       "SettingView" : {
         "type" : "object",
-        "required" : [ "key", "value", "secret" ],
+        "required" : [ "key", "value", "secret", "unset" ],
         "properties" : {
           "key" : {
             "type" : "string"
@@ -16885,6 +17020,9 @@
           },
           "updatedBy" : {
             "type" : "string"
+          },
+          "unset" : {
+            "type" : "boolean"
           }
         }
       },
@@ -16902,7 +17040,7 @@
       },
       "SettlementView" : {
         "type" : "object",
-        "required" : [ "id", "direction", "partyType", "partyId", "partyName", "accountId", "accountName", "settlementDate", "amount", "allocatedAmount", "unallocatedAmount", "journalEntryId", "allocations" ],
+        "required" : [ "id", "direction", "partyType", "partyId", "partyName", "accountId", "accountName", "settlementDate", "amount", "allocatedAmount", "unallocatedAmount", "journalEntryId", "allocations", "fullyAllocated", "receipt" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -16960,6 +17098,12 @@
             "items" : {
               "$ref" : "#/components/schemas/AllocationView"
             }
+          },
+          "fullyAllocated" : {
+            "type" : "boolean"
+          },
+          "receipt" : {
+            "type" : "boolean"
           }
         }
       },
@@ -17014,7 +17158,7 @@
       },
       "StockConsumptionView" : {
         "type" : "object",
-        "required" : [ "id", "productId", "productSku", "quantityRequested", "quantityFilled", "shortfallQuantity", "consumptionDate", "source", "totalCost", "lines" ],
+        "required" : [ "id", "productId", "productSku", "quantityRequested", "quantityFilled", "shortfallQuantity", "consumptionDate", "source", "totalCost", "lines", "inForce", "return", "reversal", "reversed" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -17070,12 +17214,24 @@
             "items" : {
               "$ref" : "#/components/schemas/StockConsumptionLineView"
             }
+          },
+          "inForce" : {
+            "type" : "boolean"
+          },
+          "return" : {
+            "type" : "boolean"
+          },
+          "reversal" : {
+            "type" : "boolean"
+          },
+          "reversed" : {
+            "type" : "boolean"
           }
         }
       },
       "StockLevels" : {
         "type" : "object",
-        "required" : [ "productId", "byLocation" ],
+        "required" : [ "productId", "byLocation", "empty", "oversold" ],
         "properties" : {
           "productId" : {
             "type" : "integer",
@@ -17086,6 +17242,12 @@
             "additionalProperties" : {
               "$ref" : "#/components/schemas/Quantity"
             }
+          },
+          "empty" : {
+            "type" : "boolean"
+          },
+          "oversold" : {
+            "type" : "boolean"
           }
         }
       },
@@ -17095,7 +17257,7 @@
       },
       "StockWriteOffView" : {
         "type" : "object",
-        "required" : [ "id", "lotId", "productId", "productSku", "quantity", "unitCost", "reason", "writeOffDate" ],
+        "required" : [ "id", "lotId", "productId", "productSku", "quantity", "unitCost", "reason", "writeOffDate", "reversal", "reversed", "serialized" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -17149,6 +17311,15 @@
           "reversedByWriteOffId" : {
             "type" : "integer",
             "format" : "int64"
+          },
+          "reversal" : {
+            "type" : "boolean"
+          },
+          "reversed" : {
+            "type" : "boolean"
+          },
+          "serialized" : {
+            "type" : "boolean"
           }
         }
       },
@@ -17429,7 +17600,7 @@
       },
       "VatClassView" : {
         "type" : "object",
-        "required" : [ "id", "code", "description", "ratePercent", "active" ],
+        "required" : [ "id", "code", "description", "ratePercent", "active", "zeroRated" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -17449,6 +17620,9 @@
             "format" : "int64"
           },
           "active" : {
+            "type" : "boolean"
+          },
+          "zeroRated" : {
             "type" : "boolean"
           }
         }

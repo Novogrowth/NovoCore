@@ -24,4 +24,6 @@ export interface FreightAllocationView {
   reversalOfId?: number;
   reversedByAllocationId?: number;
   lines: FreightAllocationLineView[];
+  reversal: boolean;
+  reversed: boolean;
 }

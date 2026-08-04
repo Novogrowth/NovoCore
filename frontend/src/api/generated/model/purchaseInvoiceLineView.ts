@@ -29,4 +29,7 @@ export interface PurchaseInvoiceLineView {
   description?: string;
   matchedQuantity: Quantity;
   openQuantity: Quantity;
+  awaitingDelivery: boolean;
+  exempt: boolean;
+  inventory: boolean;
 }

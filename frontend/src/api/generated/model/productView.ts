@@ -30,4 +30,6 @@ export interface ProductView {
   lastPurchasePrice?: UnitCost;
   active: boolean;
   hiddenFields: ProtectedField[];
+  redacted: boolean;
+  stocked: boolean;
 }

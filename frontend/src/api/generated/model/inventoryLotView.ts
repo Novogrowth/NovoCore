@@ -26,4 +26,5 @@ export interface InventoryLotView {
   location?: StockLocation;
   units: SerializedUnitView[];
   goodsReceiptLineId?: number;
+  open: boolean;
 }

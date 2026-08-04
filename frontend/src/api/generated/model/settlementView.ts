@@ -29,4 +29,6 @@ export interface SettlementView {
   journalEntryId: number;
   customerCreditId?: number;
   allocations: AllocationView[];
+  fullyAllocated: boolean;
+  receipt: boolean;
 }

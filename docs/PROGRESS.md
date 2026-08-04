@@ -42,7 +42,18 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | U3 | **Eleven design decisions written into the repository** — D5, D4, D1, D3, D2, M0, vouchers, the shared gate | **Done, documentation only** — no production code, no schema, no migration, no test changed. D4 split (half already answered), M0 split into M0a/M0b, the per-order shipping address moved to step 22, voucher creation modes recorded against step 21, the Woo one-time load separated from the Woo adapter at step 19, and the **shared gate before step 24** recorded. Nothing ⚪ was promoted or reordered beyond those placements. See below |
 | R2 | **Document reference data (screens)** — six settings screens over R1a's six tables | **Done, committed** — the AADE codification (read + three verbs, **no create, ever**), sales/purchase document types, sales/purchase series, delivery methods. ⚠️ **Grew a backend sub-part mid-step**: 7 new routes making a series' abbreviation, document type and ΜΑΡΚ flag **editable while unused and frozen once used**, because none of them had a write route on any installation. **All 41 sub-parts have verdicts**; 4 premises corrected. See below |
 | R2b | **What R2's live leg found**, plus two premises its brief had wrong | **Done, committed** — ⚠️ **the stale-list defect was OLDER than R2 and sat in all 13 create forms**, fixed globally with a structural guard; ⚠️ **no server-side check existed** that a series' document type is usable, so the screen was the only guard; `sort_code` on four tables (**V34**, integer, NOT NULL); **payment methods (V35)**, which had no screen because of a scoping error. **237 → 247 operations.** All 30 sub-parts have verdicts; **one is still open** — §5's conditional |
-| 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress. F0–F4, S1 and S2 done.** ⚠️ **Next is W1, then F5, then the D-block (D1+D3+D4+D5), then F6 onward** — the owner's sequencing decision of **2026-08-04**, recorded as the roadmap's row order. *(This cell previously read "Next is Q1, then R1, then F5", correct when written on 2026-08-02 and overtaken since: Q1, R1a, R1b, R2 and R2b have all landed.)* Foundations `94e17cd`, Products `56e3726` + guards `28c4119` + brand pass, then the render-loop fix `3458ee6`, F0 (the seed pass), F1 Suppliers `b406b27`, F2 Customers `496c7be`, F3 Users & Roles `aea0e56`, then **S1** (search), **S2** (sorting) and **F4** (Settings). **307 frontend tests, 31 files, green.** Per-step detail in `docs/novocore-roadmap.md`; decisions and what each step left behind in *Step 16 — the frontend* below |
+| W1 | **Serialised-record contract fidelity** — the wire shape equals the documented shape | **Done, committed** — the generator describes what **Jackson** writes, not what a record's components say. **+58 properties across 27 response schemas**; no operations, no schemas, no migration. ⚠️ **Request records deliberately excluded** — they are deserialised through the canonical constructor and never serialised, so a derived property there describes a write that never happens. `OpenItemRef.isCustomerSide()` deleted (zero references anywhere). **Two premises corrected**, one of them `CLAUDE.md`'s own statement of the Jackson mechanism. All 16 sub-parts have verdicts |
+| 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress. F0–F4, S1 and S2 done.** ⚠️ **W1 landed 2026-08-04, so next is F5, then the D-block (D1+D3+D4+D5), then F6 onward** — the owner's sequencing decision of **2026-08-04**, recorded as the roadmap's row order. *(This cell previously read "Next is Q1, then R1, then F5", correct when written on 2026-08-02 and overtaken since: Q1, R1a, R1b, R2 and R2b have all landed.)* Foundations `94e17cd`, Products `56e3726` + guards `28c4119` + brand pass, then the render-loop fix `3458ee6`, F0 (the seed pass), F1 Suppliers `b406b27`, F2 Customers `496c7be`, F3 Users & Roles `aea0e56`, then **S1** (search), **S2** (sorting) and **F4** (Settings). **307 frontend tests, 31 files, green.** Per-step detail in `docs/novocore-roadmap.md`; decisions and what each step left behind in *Step 16 — the frontend* below |
+
+**Tests, measured 2026-08-04 (after W1): 1,480 passing, 0 failing, 1 skipped, `mvn clean verify`
+exit 0; 247 operations, 231 schemas, 175 declaring `required`. Frontend: 368 across 39 files,
+typecheck/lint/knip/build/check:offline green.** W1 added **3** backend tests (1,477 → 1,480, all
+three in the new `SerialisedRecordContractIT`), **no** frontend tests, and **no operations and no
+schemas** — its whole spec diff is **58 properties added across 27 response schemas**, which is the
+step: the document now describes what Jackson writes. Lint is at its pre-R2 baseline of 3 warnings,
+all in files W1 did not touch.
+
+*(The paragraph below is R2b's, kept with its own figures — correct in its step's context.)*
 
 **Tests, measured 2026-08-04 (after R2b): 1,477 passing, 0 failing, 1 skipped, `mvn clean verify` exit 0; 247 operations, 231 schemas, 175 declaring `required`.
 Frontend: 368 across 39 files, typecheck/lint/knip/build/check:offline green** — R2b added 8
@@ -194,6 +205,84 @@ pre-edit name.
 **The handler was made stateful rather than the assertion relaxed** — a mock that forgets a write the
 app just made is describing a server nobody runs. 📌 **Any screen test with a static fixture can now
 show pre-edit data after a save**; that is the mock being unfaithful, and this is the worked example.
+
+## ▶ W1 — Part 2: a serialised record's wire shape equals its documented shape. **DONE 2026-08-04**
+
+**Approved 2026-08-04 with four conditions, written here as a checklist at the moment of approval**,
+per `CLAUDE.md` §*An approved proposal is a checklist, not a paragraph*.
+
+### 🅟 Phase 0 — EVIDENCE, not decisions
+
+**Everything below was established by asking the running system, never by reading source and
+concluding.** The probe was a `@SpringBootTest` in the **app module** over the **real
+Boot-configured `ObjectMapper` bean**, comparing `acceptJsonFormatVisitor` against
+`Class.getRecordComponents()`; it carried a negative control and was deleted afterwards.
+
+| # | Finding, measured 2026-08-04 |
+|---|---|
+| **P.1** | **197** record schemas on the committed surface; **32** serialise beyond their components, shipping **66** undocumented properties. Committed spec at the time: **247 operations, 214 paths, 231 schemas, 175 declaring `required`** |
+| **P.2** | ⚠️ **PREMISE CORRECTED — the 32/66 figure did NOT predate R1a and R1b.** The roadmap's own ʷ¹ footnote dates it **2026-08-04, in R1b's Phase 0**, and the offender list contains R1a's `SalesDocumentTypeView`. What the re-measure actually establishes is narrower: **R2 and R2b added nothing** |
+| **P.3** | ⭐ **R2's discipline held; there is no 67th.** Its three series/delivery views are on the surface with `inUse` as a documented **component**, `PaymentMethodView` and `AadeInvoiceTypeView` are clean, and none of the five is among the 32 |
+| **P.4** | ⚠️⚠️ **PREMISE CORRECTED — `CLAUDE.md` stated the mechanism wrongly.** Jackson publishes **bean getters**, not "a record's no-arg public accessors". **222** non-component accessors exist, **79** are `is*`, Jackson publishes **66**, and **153 are invisible to it**. Proof: `issuedByUs()` → **`suedByUs`**; a control's `label()` was not published at all |
+| **P.5** | The **79 − 66 = 13** residual is **fully attributed**: 11 on `Money`/`Quantity`/`Rate`/`UnitCost` (custom serialisers, never bean-introspected), 2 on `ProductView` whose published names are already components |
+| **P.6** | **The generator has ONE path**, not two — `recordSchema` has no direction parameter, and `OpenItemRef` (reached from both directions) produced one schema |
+| **P.7** | **No derived property appeared anywhere in the committed spec**, in either direction |
+| **P.8** | **Deserialisation ACCEPTS a derived property.** `FAIL_ON_UNKNOWN_PROPERTIES = false`; the real mapper accepted a `NewSalesInvoiceLine` body carrying `exempt`/`product`/`serialized` and produced a record identical to the one without them. Baseline accepted, negative control (`productId` non-numeric) refused. ⚠️ **Mapper-level, not HTTP** — it was supporting evidence for the option *not* chosen |
+| **P.9** | ⚠️ **My first deserialisation case answered the wrong question** — it omitted the mandatory `lineType`, so the refusal was about a missing field, not about the extras. Caught only by reading the output |
+| **P.10** | **No exemption list is needed**, but a **scoping sentence** is: `Money`/`UnitCost`/`Quantity`/`Rate` are matched in `classSchema` first and carry hand-written schemas. ⭐ **The rule's first run proved this rather than my prose** — it reported `Money.amount` and `Money.currency` as promises nothing keeps |
+| **P.11** | **Caller counts, from bytecode attributed by receiver type** (a type-blind grep was tried and discarded — it credited `StockLevels.empty` with 84 callers, which are `List.isEmpty()`). ⚠️ **PREMISE CORRECTED: the brief's "every one … with real callers" is wrong.** **15 of 66** have a production caller; **51** have none; **10** have **zero references anywhere** in compiled backend code |
+| **P.12** | ⭐ **`SettingView.unset` is the concrete cost of the contract's lie.** `setting-row.tsx` computes `const configured = value !== ''` and `settings.test.tsx` called that "the only signal" — the backend has always computed `isUnset()` and it never reached the wire |
+| **P.13** | **Generator route measured in an isolated worktree**: spec **+58 properties across 27 schemas**, **14 type errors in 9 files — every one a test fixture, none in application source** — **368/368** frontend tests pass, backend `BUILD SUCCESS` with **1,477** tests |
+| **P.14** | ⭐ **Building it found a defect reading could not.** A name-based type lookup made the generator **non-deterministic**: `CustomerView` has both `isSystemRecord():boolean` and `systemRecord():Optional<CustomerSystemKey>`, and `Class.getMethods()` order is unspecified. The drift check caught it. **The type must come from Jackson's visitor** |
+| **P.15** | ⚠️ **Two of my own diagnostics reported failure while measuring nothing** — a run whose `EXIT=1` was a *compile* error, and an AssertJ-truncated message that made a bogus 10,984-line "diff" look real. And **the background wrapper reported "exit code 0" while Maven reported `BUILD FAILURE`**, exactly as the brief warned |
+
+### 🅐 The build, as approved — option B, four conditions
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| **A.1** | **Option B — document derived properties on RESPONSE schemas only** | ✅ **Done.** Spec **+58 properties across 27 schemas**; the four request records and `OpenItemRef` gained nothing |
+| **A.2** | ⚠️ **The reason recorded as the owner framed it — SERIALISATION, not contract meaning** | ✅ **Done**, in `OpenApiSchema.recordSchema`'s javadoc, in `SerialisedRecordContractIT`'s failure message, and in `CLAUDE.md`: a request record is **deserialised through the canonical constructor, which sees exactly the components, and is never serialised at all**, so the seven request-side properties describe **a write that never happens**. ⭐ **B is therefore one rule — *describe what Jackson actually does with this record* — applied to two genuinely different mechanisms**, which is what stops a future session collapsing B back into A |
+| **A.3** | **Condition 1 — the both-directions guard carries a POSITIVE CONTROL** | ✅ **Done.** `RECORDS_REACHED_FROM_BOTH_DIRECTIONS` is pinned **non-empty** (`OpenItemRef`) on `DocumentReferenceGraphIT`'s pattern, so an empty result cannot read as compliance. **Proven by forcing the set empty and watching the control fail** while the derived-property assertion still passed — which is the whole point |
+| **A.4** | **Condition 2 — the deletion's reason recorded correctly** | ✅ **Done**, at the site. `OpenItemRef.isCustomerSide()` is deleted because it had **zero references anywhere in compiled backend code**; the comment states in as many words that simplifying B is **a consequence, not the justification**, and says what will happen to a reader who restores it believing otherwise |
+| **A.5** | **Condition 3 — `AadeInvoiceTypeIT.theViewHasNoDerivedAccessorThatCanThrow` KEPT, reason restated** | ✅ **Done.** Untouched. `CLAUDE.md` and the new IT both state explicitly that the general rule **does not subsume it**: under W1 a **throwing** bean getter is now a *documented* property and still answers **500 on every row**. Documenting a field is not the field working |
+| **A.6** | **Condition 4 — keep/delete for the ten zero-reference properties** | ✅ **Reported before regeneration; verdict KEEP on nine, DELETE on one.** Table below. Only `OpenItemRef.isCustomerSide()` was deleted |
+| **A.7** | **The rule lives in the app module against the real mapper bean** | ✅ **Done.** `SerialisedRecordContractIT`, `@Autowired ObjectMapper`. ⭐ **Two sources, not one read twice**: the documented side is the **committed** `openapi.json`, the written side is **Jackson** — so an `OpenApiSchema` bug cannot make both agree |
+| **A.8** | **Scoped to records built by `recordSchema`, with the reason written down** | ✅ **Done**, and expressed as `OpenApiSchema.builtByRecordSchema()` — something the generator knows — rather than a list a test hard-codes |
+| **A.9** | **The type comes from Jackson's visitor, never a reflective lookup** | ✅ **Done**, with the `CustomerView.systemRecord` non-determinism recorded at the method as the reason |
+| **A.10** | **Spec regenerated, client regenerated, every drifted fixture named** | ✅ **Done. 14 fixtures in 9 files, all named**: `query-client.test.tsx` ×2, `customers.test.tsx` ×2, `products.test.tsx` ×1, `purchase-document-series` ×1, `purchase-document-types` ×1, `sales-document-series` ×1, `sales-document-types` ×2, `settings.test.tsx` ×2, `vat-classes.test.tsx` ×2. **All were test fixtures; none was application source** |
+| **A.11** | **Proven against the defect first** | ✅ **Done, four separate defects, each naming its own property** — a new derived accessor (`VatClassView.deliberatelyUndocumented`), a derived property documented on a request schema (`NewSalesInvoiceLine.exempt`), a restored `OpenItemRef.isCustomerSide()` (`OpenItemRef.customerSide`), and the positive control forced empty |
+| **A.12** | ⚠️ **The proof script's RESTORE step reverted W1's own work** | ⭐ **Found, repaired, and written into `CLAUDE.md` as a third requirement of the throwaway probe.** `git checkout --` restored tracked files to **`HEAD`**, silently deleting the `OpenItemRef` change and the regenerated spec, and **failed loudly on the untracked new test**, leaving a defect in place. **All four proofs were still valid**; the restores were not. The loud half cost nothing, the silent half nearly shipped |
+| **A.13** | ⭐ **The consequence for future steps, recorded** | ✅ **Done**, in `CLAUDE.md`: **R2's X.6 reason for choosing a component over a derived accessor has expired.** A derived accessor on a response record is now an ordinary documented part of its schema |
+| **A.14** | **ONE commit, for 8a's CI reason** | ✅ **Done.** `frontend.yml` triggers on `docs/api/openapi.json` and `OpenApiSpecIT` fails on drift, so generator + spec + client + fixtures cannot be split without leaving `main` red |
+| **A.15** | `.claude/settings.json` gitignored, not committed | ✅ **Done**, with the reason at the entry |
+| **A.16** | `CLAUDE.md`, `PROGRESS.md`, primer, roadmap | ✅ **Done** — all four |
+
+### 🅑 Condition 4 — the ten zero-reference properties, one line each
+
+⚠️ **Zero callers in Java is not evidence a property is useless on a wire no client has ever been
+given it on.** Nine are kept; the frontend could not have called any of them, because none was in the
+generated client.
+
+| Property | Verdict |
+|---|---|
+| `GoodsReceiptLineView.serialized` | **KEEP** — whether to show serial numbers on a receipt line; F6 needs it |
+| `JournalEntrySummaryView.amendable` | **KEEP** — whether a journal list may offer Edit; F8 needs it |
+| `OpenItemRef.customerSide` | 🗑️ **DELETE** — zero references, and `OpenItemType.isCustomerSide()` is where the question belongs |
+| `PurchaseDocumentTypeView.draft` | **KEEP** — its sales twin *has* production callers; deleting one of a pair is the `supplier.vat_number` asymmetry |
+| `PurchaseInvoiceLineView.inventory` | **KEEP** — the inventory/expense discriminator (8a's H.2); a purchase screen must render them differently |
+| `SalesInvoiceLineView.exempt` | **KEEP** — an exempt line must display differently; F5 needs it |
+| `SettingView.unset` | **KEEP, emphatically** — the screen already reconstructs it from `value !== ''`; documenting it removes a workaround |
+| `SettlementView.receipt` | **KEEP** — receipt vs payment; F7 needs it |
+| `StockConsumptionView.inForce` | **KEEP** — consistent with its `reversal`/`reversed` siblings, which are documented |
+| `StockWriteOffView.reversed` | **KEEP** — same family |
+
+### 📌 Queued out of W1, deliberately not done here
+
+| Item | Where it goes |
+|---|---|
+| **The app image carries no commit label** — nothing can ask it what it was built from, which is what the R1a stale-artefact incident was diagnosed by reading a jar to answer | **F10**, attached to the build-SHA badge row (owner's placement) |
+| **`CustomerView.systemRecord():Optional<CustomerSystemKey>` reads as if it returns the key, while the wire carries a boolean** from `isSystemRecord()` | Queued. `AccountView.systemKeyIfAny()` is this codebase's own idiom for the fix |
+| **The settings screen still computes `configured` from `value !== ''`** rather than using the now-documented `unset` | Queued; noted in `settings.test.tsx` |
 
 ## ▶ W1 — Part 1: the roadmap re-sequenced, and a standing rule. **DONE 2026-08-04**
 
@@ -1232,9 +1321,9 @@ different claims and a glyph nobody decided to move must not move.**
 | **R1a — document reference data, additive** | ✅ **DONE, 2026-08-03**, commits `aa1eda4` + `c5f9a97`. Six new tables, 54 new routes, a new architecture rule, one deletion. **All 48 sub-parts have a verdict**; 46 done, S.4 deferred to R2, E.3 a finding. **Four premise corrections and one defect only the real server could find** — see R1a's findings. No live leg: R1a ships no screens |
 | **U3 — eleven design decisions recorded** | ✅ **DONE, 2026-08-03. Documentation only** — no code, no schema, no migration, no test. It does **not** change what is next. Four placements applied (M0a unblocked, M0b gated, D2 before step 19, and two requirements moved into steps 21 and 22); **the shared before-24 gate recorded as a decision**; nothing else promoted or reordered. **D1/D3-versus-F5 is stated as a trade in the roadmap, not resolved** |
 | **R1b — document reference data, behavioural** | ✅ **DONE, 2026-08-04.** All 22 sub-parts have verdicts, none is "still open". ⚠️ **`seriesId`, not `documentTypeId`** — the document type is mandatory *through* the series, because `sales_invoice` has `series_id` and no `document_type_id`. Channel derived from the series; a channel-less series **refused**, not accommodated. **Nothing outstanding** |
-| **W1 — a serialised record's wire shape must equal its documented shape** | ⚠️ **NEXT — first in the decided sequence, 2026-08-04.** *(Created 2026-08-04 out of R1b's Phase 0; its glyph is still ⚪ pending the promotion proposed in the roadmap.)* ⚠️ **32 committed schemas ship 66 undocumented properties** — measured, not estimated. None is a live defect; the contract lies about all 32. ⭐ **Evaluate the generator route first** — one change to `OpenApiSchema` documents all 66. Detail in the roadmap under ʷ¹ |
+| **W1 — a serialised record's wire shape must equal its documented shape** | ✅ **DONE, 2026-08-04. All 16 sub-parts have verdicts, none is "still open".** Nothing outstanding. *(Originally:)* ⚠️ **32 committed schemas ship 66 undocumented properties** — measured, not estimated. None is a live defect; the contract lies about all 32. ⭐ **Evaluate the generator route first** — one change to `OpenApiSchema` documents all 66. Detail in the roadmap under ʷ¹ |
 | **R2 — document reference data, screens** | 🔴 After R1b. ⚠️ **Full CRUD**, not the read-plus-activate shape F4 built — the owner authors these rows. He creates his 19 document types and their series here, **choosing each AADE type himself**. ⚠️ Needs a **live browser leg**, and therefore an app-image rebuild |
-| **F5 — Sales Invoice + Credit Note** | 🟡 **Second in the decided sequence (2026-08-04) — after W1, before the D-block.** *(This cell used to read "No longer next" against R2; W1 is what now sits ahead of it.)* ⚠️ It decides the create/preview/commit pattern F6–F8 all reuse, so it is worth disproportionate scrutiny — but ⚠️ **see the open decision in the roadmap**: since documents arrive already issued, F5 before step 18 is a data-entry screen for documents created elsewhere, and much of it disappears when the Go adapter lands |
+| **F5 — Sales Invoice + Credit Note** | 🟡 **NEXT. W1 landed on 2026-08-04, so F5 is now current** — after it come D1 + D3 + D4 + D5 as one block, then F6 onward. ⚠️ It decides the create/preview/commit pattern F6–F8 all reuse, so it is worth disproportionate scrutiny — but ⚠️ **see the open decision in the roadmap**: since documents arrive already issued, F5 before step 18 is a data-entry screen for documents created elsewhere, and much of it disappears when the Go adapter lands |
 | ~~⚠️ **Backend queue item 8 — promote to first?**~~ | ✅ **DECIDED 2026-08-03, and the answer was neither.** Not promoted within Q1 and not left last: **lifted out of the queue** into its own step, split 8a/8b, placed after Q1 and before R1. The open decision is removed from the roadmap and replaced by the step |
 | **M0a — map Manager's chart onto Novocore's** | 🟢 **UNBLOCKED, can run at any time** (U3, 2026-08-03). It is a **mapping exercise, not an import**: no code, no schema, a spreadsheet and a session. Novocore's chart was built from scratch, so the question is *which Manager accounts have no Novocore home* |
 | **M0b — a real year of transactions** | ⚪ **Gated: after D1/D3/D4, before step 24.** Importing before those exist means importing into columns that do not exist |

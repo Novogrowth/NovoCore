@@ -24,4 +24,6 @@ export interface GoodsReceiptLineView {
   purchaseInvoiceLineId?: number;
   matchedQuantity: Quantity;
   openQuantity: Quantity;
+  awaitingInvoice: boolean;
+  serialized: boolean;
 }

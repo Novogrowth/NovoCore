@@ -134,8 +134,8 @@ the summary.
     mean a list column instead.
   - ⭐ **The live-leg lesson is now in `CLAUDE.md`: a live-leg block is DERIVED from the screens a
     step ships, never composed freehand.** R2's had ten rows against twelve items.
-- ⚠️ **The next step is W1, then F5** — corrected 2026-08-04 by the owner's sequencing decision; this
-  bullet used to say F5 outright. ⚠️ **R2 is DONE — 2026-08-04.** Six settings screens over R1a's six
+- ⚠️ **The next step is F5.** W1 landed on 2026-08-04, so the decided sequence has advanced by one:
+  **F5 → D1 + D3 + D4 + D5 → F6 onward.** ⚠️ **R2 is DONE — 2026-08-04.** Six settings screens over R1a's six
   tables, and **it grew a backend sub-part mid-step**: seven new routes (230 → **237** operations)
   making a series' `abbreviation`, `documentTypeId` and `getsMark`, and a delivery method's
   `abbreviation`, **editable while the row is unused and frozen once it is used**. None of them had a
@@ -315,14 +315,39 @@ the summary.
   so the document screens are touched twice. ⚠️ **Three status glyphs deliberately were NOT promoted**
   — W1 still reads ⚪ while sitting first, F5 still reads 🟡 while sitting second, and the D-rows keep
   ⚪ while their false `Placement TBD` text was corrected. **Position and status are different claims.**
-- ⚪ **W1 is a NEW step, created 2026-08-04 out of R1b's Phase 0: a serialised record's wire shape
-  must equal its documented shape.** ⚠️ **It is now FIRST in the decided sequence** (2026-08-04),
-  though its status glyph is still ⚪ pending the promotion above. It was scoped as one of R1b's three lines; measuring it first
-  showed **32 committed schemas would fail it**, shipping **66 undocumented properties**, so it left
-  R1b rather than landing with a baseline. ⚠️ **The mechanism is Jackson, not ASM** — the probe showed
-  Jackson does not publish `issuedByUs`, it strips the `is` prefix and publishes **`suedByUs`**.
-  ⭐ **Evaluate the generator route first**: teaching `OpenApiSchema` to describe what Jackson writes
-  documents all 66 in one change. Full detail in the roadmap under ʷ¹.
+- ✅ **W1 is DONE — 2026-08-04. The contract now says what Jackson writes.** Spec **+58 properties
+  across 27 response schemas**; no operation and no schema-count change. Backend **1,480** tests,
+  frontend **368**, both green. The generator route was taken and cost **14 fixture edits in 9
+  files — every one a test fixture, none in application source.**
+  - ⚠️⚠️ **`CLAUDE.md` had the mechanism WRONG and it is corrected.** It said *"Jackson serialises a
+    record's no-arg public accessors"*. **Jackson publishes BEAN GETTERS** — `isXxx():boolean`,
+    `getXxx()` — plus components. Of **222** non-component accessors on this surface, **79** are
+    `is*` and Jackson publishes **66**; **153 are invisible to it.** ⭐ That is also the *correct*
+    reason `…IfAny()` helpers are safe — not "they cannot throw", but that Jackson never publishes
+    an `Optional`-returning accessor at all. The proof is a name nobody derives by reading:
+    `issuedByUs()` publishes as **`suedByUs`**.
+  - ⚠️ **The 32/66 figure did NOT predate R1a and R1b** — it was measured *in* R1b's Phase 0. What
+    the re-measure establishes is narrower and better: ⭐ **R2 and R2b added nothing. There is no
+    67th**, which is R2's X.6 discipline confirmed rather than assumed.
+  - ⚠️ **REQUEST records get no derived properties, and it is ONE rule, not two behaviours.** A
+    request record is **deserialised through the canonical constructor**, which sees exactly the
+    components, and **is never serialised at all** — so a derived property there describes **a write
+    that never happens**. Do not "simplify" this back into one path.
+  - 🗑️ **`OpenItemRef.isCustomerSide()` deleted** — because it had **zero references anywhere in
+    compiled backend code**, not because it made the rule simpler. The record is reached from both
+    directions, and such a record cannot be described either way, so the rule **refuses** it and
+    **pins the both-directions set non-empty as a positive control**.
+  - ⭐ **Building it found what reading could not:** a name-based type lookup made the generator
+    **non-deterministic** (`CustomerView` has both `isSystemRecord():boolean` and
+    `systemRecord():Optional<CustomerSystemKey>`). **The type comes from Jackson's visitor.**
+  - ⚠️ **The general rule does NOT subsume `AadeInvoiceTypeIT.theViewHasNoDerivedAccessorThatCanThrow`** —
+    under W1 a **throwing** bean getter is a *documented* property and still answers **500 on every
+    row**. Both tests stay.
+  - 📌 **Consequence: R2's X.6 reason for preferring a component to a derived accessor has EXPIRED.**
+    A derived accessor on a response record is now ordinary, documented schema.
+  - ⚠️ **A lesson from the step's own proof script, now in `CLAUDE.md`:** `git checkout --` as a
+    restore step reverted W1's uncommitted work to `HEAD` **silently**, and failed loudly on the
+    untracked new test, leaving a defect in place. All four proofs were valid; the restores were not.
 - ✅ **Step R1a is DONE — 2026-08-03, two commits** (`aa1eda4` the rewritten checklist, `c5f9a97`
   the build). Six new tables, **54 new operations** (176 → 230), migrations **V31** and **V32**, a
   new architecture rule, one deletion. **All 48 sub-parts have a verdict**: 46 done, S.4 explicitly

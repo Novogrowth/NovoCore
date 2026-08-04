@@ -21,4 +21,6 @@ export interface SerializedUnitView {
   unitCost: UnitCost;
   soldToCustomerId?: number;
   soldOnInvoiceLineId?: number;
+  onHand: boolean;
+  sellable: boolean;
 }

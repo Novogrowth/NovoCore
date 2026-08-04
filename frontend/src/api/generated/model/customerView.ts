@@ -21,4 +21,6 @@ export interface CustomerView {
   vatExemptionReasonId?: number;
   systemKey?: CustomerSystemKey;
   active: boolean;
+  mergeable: boolean;
+  systemRecord: boolean;
 }

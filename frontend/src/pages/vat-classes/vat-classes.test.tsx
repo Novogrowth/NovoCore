@@ -45,6 +45,8 @@ const standard: VatClassView = {
   ratePercent: '24.000000',
   reducedCounterpartId: 8,
   active: true,
+  // Derived from ratePercent, which is not zero.
+  zeroRated: false,
 }
 
 const island: VatClassView = {
@@ -53,6 +55,7 @@ const island: VatClassView = {
   description: 'ΦΠΑ 17%',
   ratePercent: '17.000000',
   active: true,
+  zeroRated: false,
 }
 
 const classes = [island, standard]

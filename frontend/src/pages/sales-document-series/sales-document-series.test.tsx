@@ -51,6 +51,7 @@ const receiptType: SalesDocumentTypeView = {
   requiresMydataTransmission: true,
   sortCode: 70,
   active: true,
+  draft: false,
 }
 
 /** Nothing recorded in it yet — every field correctable. */
