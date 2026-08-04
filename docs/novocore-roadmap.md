@@ -1162,6 +1162,20 @@ nothing there and would be a whole detour anywhere else.
 *"which version is that customer on?"* stops being a convenience and becomes a support precondition —
 so if F10 slips past 43 for any reason, this moves rather than waits.
 
+#### 📌 Display defects deferred to F10 from earlier steps' live legs
+
+**A running list, so a defect the owner saw but chose not to stop for is neither fixed on the spot nor
+forgotten.** Each entry names the step whose live leg found it.
+
+- ⚠️ **The AADE invoice-type picker cell is too small and cuts its text** — found by the owner in
+  **R2**'s live leg, 2026-08-04, and **deferred by him explicitly** rather than triaged away. The
+  content is correct: every option renders `code — description · group`, which is what makes codes
+  **4** and **12** distinguishable at all, since both read `Για Μελλοντική Χρήση`. **That is exactly
+  why the truncation matters more here than on an ordinary select** — the disambiguating half of the
+  label is the part being cut, and the two codes it disambiguates are a statutory field transmitted
+  to the tax authority. The picker was judged **usable** at 34 Greek options; this is a sizing fix,
+  not a redesign.
+
 **Steps 36 and 37 have not had a Claude Code pass against the real codebase** the way the rest of this
 file has. Treat their estimates as rougher than the others.
 

@@ -107,11 +107,27 @@ the summary.
   correction path** — deactivate-and-recreate burns the abbreviation permanently, because
   `…_abbreviation_unique` is not partial. **All 41 sub-parts have verdicts.** Backend **1,470** tests,
   frontend **358** across 37 files.
-  - ⚠️⚠️ **R2 was framed as the first time R1's vacuous constraints meet real data. THEY STILL HAVE
-    NOT.** Measured 2026-08-04: all five business tables hold **0 rows**, and all 10 `sales_invoice`
-    rows still have `series_id IS NULL`, so the per-series uniqueness key is still one group and the
-    channel-less / inactive-series / inactive-type refusals are still unreachable. `LiveSeedTest` has
-    not been re-run since R1b. **Only the owner's browser leg changes that.**
+  - ✅ **The live leg RAN on 2026-08-04 and ten of twelve items passed.** ⚠️ **This bullet used to say
+    R1's constraints had still not met data — that is now out of date and corrected.** ⭐ **Nine
+    constraints fired correctly on first contact with real rows rather than a fixture**: the
+    active-has-stock-behaviour CHECK (a draft exists in the database with both flags **NULL**), the
+    genuinely three-state stock flags, a **channel-less** series saving as a named choice, and the
+    coherence rule refusing before a request was sent.
+  - ⚠️ **What is still unexercised, and why**: all 10 `sales_invoice` rows still have `series_id IS
+    NULL`, because nothing recorded an invoice — that needs **F5**. So **the per-series uniqueness
+    key is still one group**, and the channel-less / inactive-series / inactive-type refusals are
+    still unreachable, all three living on the **recording** path.
+  - ⚠️⚠️ **The tenth constraint did not fire, and it is the live leg's most valuable result.** **Both**
+    series the owner created point at an **inactive** document type — one deactivated, one a draft
+    never activated — and **nothing refused either**:
+    `SalesDocumentSeriesServiceImpl.create` has **no active check**, so the screen's filter was the
+    only guard on that path and it did not hold. **A path where the screen is load-bearing and
+    nothing behind it is.** Item 1 (creating a draft) also failed, on the **reporting** side — the
+    database shows the write itself was correct.
+  - 📌 **Two live-leg rows carried to F5**: the one reachable `lockedReason` instance nobody was asked
+    to look at, and the series freeze (which needs a recorded document). Both have their contract half
+    verified. 📌 **One display defect deferred to F10** by the owner: the AADE picker cell cuts its
+    text.
   - ⚠️ **R2 met the same vacuous-constraint shape again, knowingly.** Two of its three `inUse`
     predicates are **`false` by construction** — the only FK referencing `purchase_document_series`
     is its own transformation target, and **nothing at all** references `delivery_method`. Those

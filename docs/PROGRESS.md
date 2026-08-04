@@ -176,16 +176,16 @@ components, a spec change and a client regeneration inside a frontend step.
 
 | # | Sub-part | Verdict |
 |---|---|---|
-| **L.0** | ⚠️ **App image rebuilt** before hand-over. Unconditional | ⬜ |
-| **L.1** | Create a type, leave a stock flag unset, try to activate — control **disabled with the reason visible** | ⬜ |
-| **L.2** | Set both flags, activate, succeeds | ⬜ |
-| **L.3** | Create a sales series with a channel and one without — both save | ⬜ |
-| **L.4** | An inactive document type is refused with a usable **4xx naming the reason**, never a 5xx or a bare "Bad request." | ⬜ |
-| **L.5** | A frozen field renders **shown-and-disabled with its reason** — not hidden, not silently read-only | ⬜ |
-| **L.6** | The AADE picker is usable at 34 Greek options, **including the two that read `Για Μελλοντική Χρήση`** | ⬜ |
-| **L.7** | ⚠️ *(scope addition)* Create a series, **correct its abbreviation**, it saves | ⬜ |
-| **L.8** | ⚠️ *(scope addition)* The same field is **shown-disabled-with-reason** once the series has recorded a document — **if that state is reachable without F5** | ⬜ |
-| **L.9** | State plainly which items are verified at the **contract level** and which **only the browser** can answer | ⬜ |
+| **L.0** | ⚠️ **App image rebuilt** before hand-over. Unconditional | ✅ **Done.** Image rebuilt from `52c56ab` at `2026-08-04T13:23:46Z`, 19 s after the commit, and the startup line reported **237 handlers** — 230 before R2, so the seven new routes were provably in the deployed artefact rather than only in the repository |
+| **L.1** | Create a type, leave a stock flag unset, try to activate — control **disabled with the reason visible** | ⚠️ **SPLIT — one half passed, one failed, and the split is the finding.** This row conflates **two** hand-over items. **Item 2 (the activate control) PASSED**: a draft refuses activation, disabled, with the reason visible. **Item 1 (creating the draft) FAILED** — symptom in §1 of the R2-live-leg task, **which is not in the message this session received**. ⭐ **The database proves the WRITE half worked**: `sales_document_type` id 2 (`Test 2`) has `affects_stock` and `transfers_stock` both **NULL** and `active = false` — exactly the draft the design specifies, so the service, the CHECK and the omit-rather-than-send-false form all behaved. The failure is on the reporting side, not the write side |
+| **L.2** | Set both flags, activate, succeeds | ✅ **PASSED.** Hand-over item 3. Both flags set, activation succeeds — confirmed in the browser and consistent with the data (`Test` carries `affects_stock=false, transfers_stock=false`, i.e. it was decided and activated before item 7 deactivated it again) |
+| **L.3** | Create a sales series with a channel and one without — both save | ✅ **PASSED.** Hand-over item 5. Both saved, and ⭐ **the channel-less one renders as a NAMED choice rather than a blank** — the point of the row. Confirmed in the data: `TEST99` has `channel IS NULL` and `TEST2` has `ECOMMERCE` |
+| **L.4** | An inactive document type is refused with a usable **4xx naming the reason**, never a 5xx or a bare "Bad request." | ❌ **FAILED — hand-over item 7 — AND ⚠️ THIS ROW WAS MAPPED ONTO THE WRONG PATH.** ⚠️ **The row's own subject is unreachable**: the "inactive document type refused with a 4xx" guard lives in `SalesInvoiceServiceImpl` line 230, on the **recording** path, so it needs **F5** exactly as L.8 does. What item 7 actually exercised was the **series-creation** path — and ⭐ **`SalesDocumentSeriesServiceImpl.create` has NO active check at all** (verified in the source, 2026-08-04: it calls `documentTypes.findById` and never reads `isActive()`), so **the screen's active-only filter is the ONLY guard on that path** and it did not hold. **Proven in the data, not merely reported:** `sales_document_series` id 2 (`TEST2`) points at document type 1, which is `active = false`; and id 1 (`TEST99`) points at type 2, which is not merely inactive but **a draft whose stock question has never been answered**. **Both series in the database name an inactive type.** Fix in §2 of the live-leg task (not in this session's message) |
+| **L.5** | A frozen field renders **shown-and-disabled with its reason** — not hidden, not silently read-only | ⚠️ **NOT VERIFIED, and no hand-over item covered its subject** — a reconciliation finding rather than a result. This row is about the **`lockedReason`** state (shown, **disabled**, with the reason). The nearest thing the browser confirmed is hand-over item 8 — the AADE code and group rendering as **plain text with the reason** — which is a *different* state (`frontend/README.md`'s **third**: no route on any installation). ⚠️ **R2 does ship one REACHABLE `lockedReason` instance and nobody was asked to look at it**: the `Not decided` option on a decided type's stock control, disabled because `StockBehaviourRequest` boxes both components `@Mandatory`. Every other instance is the series freeze, which needs F5. **Carry to F5's live leg** |
+| **L.6** | The AADE picker is usable at 34 Greek options, **including the two that read `Για Μελλοντική Χρήση`** | ✅ **PASSED.** Hand-over items 9 and 10. The picker is usable at 34 Greek options, and codes **4** and **12** both read `Για Μελλοντική Χρήση` with the note explaining that annex 8.1's cell is empty — so the `code — description` rendering is what makes them distinguishable, as designed. ⚠️ **One display defect, DEFERRED TO F10 by the owner**: the picker cell is too small and cuts its text. Recorded in the roadmap under F10 with the other display items — deferred, not unnoticed |
+| **L.7** | ⚠️ *(scope addition)* Create a series, **correct its abbreviation**, it saves | ✅ **PASSED.** Hand-over item 6. ⭐ **And it covered more than this row names**: the owner corrected the **abbreviation, the document type AND the ΜΑΡΚ flag** on a fresh series, so all three of block X's sales-side routes are browser-confirmed, not just the one this row lists. **This is the sub-part R2 grew for**, and it is the first evidence that the correction path an owner authoring nineteen Greek series actually needs is reachable from a screen |
+| **L.8** | ⚠️ *(scope addition)* The same field is **shown-disabled-with-reason** once the series has recorded a document — **if that state is reachable without F5** | ⛔ **NOT REACHABLE — recorded as unreachable, NOT as untested.** The frozen-once-used state needs a **recorded document**, and recording one needs **F5**, which does not exist. The row was written conditionally (*"if that state is reachable without F5"*) and the condition is false. ✅ **Its contract half IS verified** — `R2ReferenceDataContractIT` drives the freeze over real HTTP either side of one invoice, and was proven against the defect. **Carry the browser half to F5's live leg**, together with L.5 |
+| **L.9** | State plainly which items are verified at the **contract level** and which **only the browser** can answer | ✅ **Done — see *What only the browser could answer* below.** Ten of twelve hand-over items passed, two failed, one row was unreachable and one had no item at all |
 
 ### ⭐ R2's findings — four premises corrected, and what R1's constraints did on meeting data
 
@@ -216,23 +216,50 @@ it is why those fields are `lockedReason` now rather than the plain-text no-rout
 way. And `/api/vat-exemption-reasons` has three write routes from R1a, no screen, and nothing
 anywhere recording that absence.
 
-#### ⚠️ What R1's constraints did on meeting data — and the honest answer is "they still have not"
+#### ⭐ What R1's constraints did on meeting data — ⚠️ **CORRECTED after the live leg ran**
 
-**R2 was framed as the first time R1's vacuously-satisfied constraints meet real data. They do not,
-and saying so matters more than the six screens.** Measured on the live database, 2026-08-04:
+⚠️ **This section said "they still have not". That was true when it was written, before the owner ran
+the live leg on 2026-08-04, and it is now WRONG — corrected rather than left standing.** Measured on
+the live database **after** the owner's session:
 
-| | |
-|---|---|
-| `aade_invoice_type` | **55** |
-| `sales_document_type` / `purchase_document_type` | **0 / 0** |
-| `sales_document_series` / `purchase_document_series` | **0 / 0** |
-| `delivery_method` | **0** |
-| `sales_invoice` | **10, every one with `series_id IS NULL`** |
+| | Before the live leg | After |
+|---|---|---|
+| `aade_invoice_type` | 55 | **55** |
+| `sales_document_type` | 0 | **2** — one decided-then-deactivated, one still a draft |
+| `sales_document_series` | 0 | **2** — one with `ECOMMERCE`, one with `channel IS NULL` |
+| `delivery_method` | 0 | **1** |
+| `purchase_document_type` / `purchase_document_series` | 0 / 0 | **0 / 0** — not exercised |
+| `sales_invoice` | 10, all `series_id IS NULL` | **10, all `series_id IS NULL`** |
 
-⚠️ **`LiveSeedTest` has not been re-run since R1b**, so the `TEST-` residue the last close-out warned
-about is not there yet. **The per-series uniqueness key is therefore still one group**, exactly as
-R1b left it — and the channel-less, inactive-series and inactive-type refusals are still unreachable.
-**Only the owner's live leg changes that**, which is why the checklist below is the point of the step.
+**⭐ NINE constraints fired correctly on first contact with data rather than a fixture**, and each is
+visible in the rows above rather than only in a report:
+
+- **`…_active_has_stock_behaviour`** — `Test 2` carries both stock flags **NULL** with `active =
+  false`. The draft state exists in the data exactly as designed, and the screen refused to activate
+  it with the reason shown.
+- **The nullable stock flags are genuinely three-state** — a NULL in the database, not a `false`.
+  This is the constraint R1b's silent-consumption branch reads, and it survived a real form.
+- **`sales_document_series_channel_known`** with a **NULL** channel — `TEST99` is channel-less and
+  saved, which is the self-supply shape, and the screen offered it as a named choice.
+- **The coherence rule** (`transfersStock` without `affectsStock`) refused before a request was sent.
+- Plus the abbreviation, document-type and ΜΑΡΚ correction paths, all three exercised.
+
+⚠️ **What did NOT get exercised, and the distinction matters:**
+
+- **The per-series uniqueness key is STILL one group.** All 10 invoices still have `series_id IS
+  NULL`, because nothing recorded an invoice — that needs **F5**. R1a's C.6 key remains enforced by
+  nothing in practice, exactly as R1b left it.
+- **The channel-less, inactive-series and inactive-type refusals are still unreachable**, for the
+  same reason: all three live on the **recording** path.
+- **`LiveSeedTest` still has not been re-run**, so the `TEST-` residue is still absent. The rows above
+  are the **owner's own**, typed through the screens.
+
+⚠️⚠️ **And the tenth constraint is the one that did not fire — item 7.** **Both** series in the
+database point at an **inactive** document type: `TEST2` → type 1 (deactivated), and `TEST99` → type
+2 (a draft that was never activated at all). Nothing refused either, because
+**`SalesDocumentSeriesServiceImpl.create` has no active check** and the screen's filter was the only
+guard. **This is the single most valuable result of the live leg**: it found a path where the screen
+is load-bearing and nothing behind it is.
 
 ⭐ **One thing was confirmed rather than assumed while looking:** `sales_invoice` rows 8 and 9 share
 the document number `TEST-SI-2026-0007`, which looks like the uniqueness key failing. It is not —
@@ -245,6 +272,68 @@ own transformation target, and **nothing at all** references `delivery_method`. 
 fire and would start being able to, silently, at F6 and 18b. `DocumentReferenceGraphIT` is the list
 written down as a test — see `CLAUDE.md`, where it is recorded as the worked example of the remedy
 the R1b entry prescribes.
+
+### 🅛 The live leg — ran 2026-08-04. ⚠️ **TWELVE hand-over items against TEN checklist rows**
+
+**The two lists do not map one to one, and reconciling them silently is how a sub-part goes
+missing.** The `🅛` block above was written at approval time; the hand-over checklist was written for
+the owner's browser and is a different shape. Both directions are reconciled here.
+
+| Hand-over item | → row | Result |
+|---|---|---|
+| 1 — create a type with both stock questions unanswered | **L.1** (first half) | ❌ **FAILED**, §1 |
+| 2 — Activate disabled with the reason | **L.1** (second half) | ✅ PASSED |
+| 3 — set both flags, activate | **L.2** | ✅ PASSED |
+| 4 — `affectsStock=No` + `transfersStock=Yes` refused before sending | ⚠️ **no row** | ✅ PASSED |
+| 5 — a series with a channel and one without | **L.3** | ✅ PASSED |
+| 6 — correct abbreviation, document type and ΜΑΡΚ | **L.7** (names only the abbreviation) | ✅ PASSED |
+| 7 — deactivate a type, create a series against it | **L.4** ⚠️ *wrong path* | ❌ **FAILED**, §2 |
+| 8 — AADE: no Add, permanent line, code/group plain text | ⚠️ **no row** | ✅ PASSED |
+| 9 — codes 4 and 12 both `Για Μελλοντική Χρήση` | **L.6** | ✅ PASSED |
+| 10 — the picker usable at 34 Greek options | **L.6** | ✅ PASSED *(display defect → F10)* |
+| 11 — purchase series: no channel anywhere | ⚠️ **no row** | ✅ PASSED |
+| 12 — delivery methods create + abbreviation correctable | ⚠️ **no row** | ✅ PASSED |
+
+**⚠️ Four hand-over items had NO row in the approved checklist** — 4, 8, 11 and 12. None is a gap in
+what was *built*: each is browser evidence for a sub-part verified elsewhere (**B.2/B.3** the
+coherence rule, **A.2/A.3/A.5** the seed-only convention, **E.1** the channel absence, **F.1**
+delivery methods). But the `🅛` block was written as *"the live leg"* and did not cover a third of
+what the live leg actually needed to ask. **A live-leg block should be derived from the screens the
+step ships, not composed freehand.**
+
+**⚠️ Three rows had no item, for three different reasons** — and they are not interchangeable:
+
+- **L.0** is a precondition *this session* performs, not something the owner does. Done.
+- **L.5** — nothing covered its subject. A **reconciliation finding**, not a result.
+- **L.8** — **unreachable**, and correctly written as conditional at approval time.
+
+**⚠️ L.4 is the one that was mapped onto the wrong path**, and the mapping error was mine at
+hand-over time rather than a defect in either checklist. The row means *the recording path refuses an
+inactive type*; the item asked *does the series form offer an inactive type*. Both are worth testing,
+they are different guards, and **only one of them exists** — see L.4's verdict.
+
+### ⚠️ What only the browser could answer, now that it has — L.9
+
+**Ten of twelve passed on first contact.** Recording them as evidence rather than ticks, because
+several of these could not have been answered any other way:
+
+- **A control being *reachable*.** `R2ReferenceDataContractIT` proves the server accepts and refuses
+  the right things; it cannot say an operator can get to the control. Items 2, 6, 8, 11 and 12 are
+  reachability results and nothing else could have produced them.
+- **Whether a picker is *usable*.** Item 10 is a judgement, not an assertion — 34 Greek options with
+  the `code — description` rendering. The owner's verdict is what settled it, and it came with a
+  display defect no test would have reported.
+- **Whether a refusal is *legible*.** Item 2 confirms not just that Activate is disabled but that the
+  reason is visible beside it — the difference between a control that reads as broken and one that
+  reads as answered.
+- **Two failures that only a browser could surface.** Item 7 is a screen-side guard failing where
+  **no backend guard exists at all**, and item 1 is a reporting-side failure over a write the
+  database shows was correct. **Neither is visible to any test in this repository**, which is the
+  standing argument for the live leg restated with fresh evidence.
+
+⚠️ **Two rows are carried forward to F5's live leg** — **L.5** (the one reachable `lockedReason`
+instance nobody was asked to look at) and **L.8** (the series freeze, which needs a recorded
+document). Both have their contract half verified already.
 
 ### 📌 Explicitly NOT in R2, each with its reason
 
