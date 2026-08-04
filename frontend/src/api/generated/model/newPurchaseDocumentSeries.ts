@@ -14,4 +14,5 @@ export interface NewPurchaseDocumentSeries {
   documentTypeId: number;
   getsMark: boolean;
   transformableIntoSeriesId?: number;
+  sortCode: number;
 }

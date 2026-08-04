@@ -62,6 +62,7 @@ const receipt: SalesDocumentTypeView = {
   requiresMydataTransmission: true,
   aadeInvoiceTypeId: 20,
   aadeInvoiceTypeCode: '11.1',
+  sortCode: 90,
   active: true,
 }
 
@@ -73,6 +74,7 @@ const draft: SalesDocumentTypeView = {
   id: 2,
   description: 'Προσφορά',
   requiresMydataTransmission: false,
+  sortCode: 80,
   active: false,
 }
 

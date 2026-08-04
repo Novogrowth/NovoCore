@@ -77,7 +77,7 @@ class DocumentReferenceDataIT extends AbstractCoreIntegrationTest {
         // operational documents, not tax documents. A model in which the AADE code IS the row
         // cannot represent them, which is what disproved the previous design.
         SalesDocumentTypeView quote = salesTypes.create(new NewSalesDocumentType(
-                unique("Προσφορά"), false, false, false, null));
+                unique("Προσφορά"), false, false, false, null, SEQUENCE.incrementAndGet()));
 
         assertThat(quote.aadeInvoiceTypeIdIfAny()).isEmpty();
         assertThat(quote.aadeInvoiceTypeCode()).isNull();
@@ -96,12 +96,12 @@ class DocumentReferenceDataIT extends AbstractCoreIntegrationTest {
         // This service is where that split is enforced.
         assertThatExceptionOfType(InvalidDocumentTypeException.class)
                 .isThrownBy(() -> salesTypes.create(new NewSalesDocumentType(
-                        unique("Wrong side"), false, false, true, rentExpense)))
+                        unique("Wrong side"), false, false, true, rentExpense, SEQUENCE.incrementAndGet())))
                 .withMessageContaining("16.1")
                 .withMessageContaining("issues");
 
         SalesDocumentTypeView correct = salesTypes.create(new NewSalesDocumentType(
-                unique("Τιμολόγιο"), false, false, true, salesInvoice));
+                unique("Τιμολόγιο"), false, false, true, salesInvoice, SEQUENCE.incrementAndGet()));
         assertThat(correct.aadeInvoiceTypeCode()).isEqualTo("1.1");
     }
 
@@ -113,12 +113,12 @@ class DocumentReferenceDataIT extends AbstractCoreIntegrationTest {
 
         assertThatExceptionOfType(InvalidDocumentTypeException.class)
                 .isThrownBy(() -> purchaseTypes.create(new NewPurchaseDocumentType(
-                        unique("Wrong side"), false, false, true, salesInvoice)))
+                        unique("Wrong side"), false, false, true, salesInvoice, SEQUENCE.incrementAndGet())))
                 .withMessageContaining("1.1")
                 .withMessageContaining("receives");
 
         PurchaseDocumentTypeView correct = purchaseTypes.create(new NewPurchaseDocumentType(
-                unique("Ενδοκοινοτικές"), true, false, true, intraCommunity));
+                unique("Ενδοκοινοτικές"), true, false, true, intraCommunity, SEQUENCE.incrementAndGet()));
         assertThat(correct.aadeInvoiceTypeCode()).isEqualTo("14.1");
     }
 
@@ -132,12 +132,12 @@ class DocumentReferenceDataIT extends AbstractCoreIntegrationTest {
         // are not documents issued to or received from anyone.
         assertThatExceptionOfType(InvalidDocumentTypeException.class)
                 .isThrownBy(() -> salesTypes.create(new NewSalesDocumentType(
-                        unique("Payroll sales"), false, false, true, payroll)))
+                        unique("Payroll sales"), false, false, true, payroll, SEQUENCE.incrementAndGet())))
                 .withMessageContaining("ENTITY_ADJUSTING");
 
         assertThatExceptionOfType(InvalidDocumentTypeException.class)
                 .isThrownBy(() -> purchaseTypes.create(new NewPurchaseDocumentType(
-                        unique("Payroll purchase"), false, false, true, payroll)))
+                        unique("Payroll purchase"), false, false, true, payroll, SEQUENCE.incrementAndGet())))
                 .withMessageContaining("ENTITY_ADJUSTING");
     }
 
@@ -149,7 +149,7 @@ class DocumentReferenceDataIT extends AbstractCoreIntegrationTest {
     @DisplayName("⚠️ a type created without its stock flags is an inactive DRAFT, not a false")
     void undecidedStockBehaviourProducesADraft() {
         SalesDocumentTypeView draft = salesTypes.create(new NewSalesDocumentType(
-                unique("Undecided"), null, null, true, null));
+                unique("Undecided"), null, null, true, null, SEQUENCE.incrementAndGet()));
 
         assertThat(draft.affectsStock())
                 .as("null, and not false — a false would read as a decision that stock does not "
@@ -180,7 +180,7 @@ class DocumentReferenceDataIT extends AbstractCoreIntegrationTest {
     void transferringStockImpliesAffectingIt() {
         assertThatExceptionOfType(InvalidDocumentTypeException.class)
                 .isThrownBy(() -> salesTypes.create(new NewSalesDocumentType(
-                        unique("Incoherent"), false, true, true, null)))
+                        unique("Incoherent"), false, true, true, null, SEQUENCE.incrementAndGet())))
                 .withMessageContaining("necessarily affects it");
     }
 
@@ -192,7 +192,7 @@ class DocumentReferenceDataIT extends AbstractCoreIntegrationTest {
         // exception — a machine sent to a supplier for service and returned. A purchase document
         // bringing stock IN with no payable behind it.
         PurchaseDocumentTypeView receipt = purchaseTypes.create(new NewPurchaseDocumentType(
-                unique("Δελτίο Παραλαβής"), true, false, false, null));
+                unique("Δελτίο Παραλαβής"), true, false, false, null, SEQUENCE.incrementAndGet()));
 
         assertThat(receipt.affectsStock()).isTrue();
         assertThat(receipt.requiresMydataTransmission())
@@ -205,7 +205,7 @@ class DocumentReferenceDataIT extends AbstractCoreIntegrationTest {
     @DisplayName("deactivating a type never invalidates it, and reactivating a decided one works")
     void deactivationIsAlwaysAllowed() {
         SalesDocumentTypeView type = salesTypes.create(new NewSalesDocumentType(
-                unique("Retirable"), true, true, true, null));
+                unique("Retirable"), true, true, true, null, SEQUENCE.incrementAndGet()));
 
         salesTypes.deactivate(type.id());
         assertThat(salesTypes.require(type.id()).active()).isFalse();
@@ -222,7 +222,7 @@ class DocumentReferenceDataIT extends AbstractCoreIntegrationTest {
     void theAadeMappingIsOptionalInBothDirections() {
         long salesInvoice = aadeInvoiceTypes.requireByCode("1.1").id();
         SalesDocumentTypeView type = salesTypes.create(new NewSalesDocumentType(
-                unique("Mappable"), true, true, true, salesInvoice));
+                unique("Mappable"), true, true, true, salesInvoice, SEQUENCE.incrementAndGet()));
 
         assertThat(type.aadeInvoiceTypeCode()).isEqualTo("1.1");
 
@@ -239,11 +239,11 @@ class DocumentReferenceDataIT extends AbstractCoreIntegrationTest {
     @DisplayName("a duplicate description is refused with its reason")
     void duplicateDescriptionIsRefused() {
         String name = unique("Duplicated");
-        salesTypes.create(new NewSalesDocumentType(name, true, true, true, null));
+        salesTypes.create(new NewSalesDocumentType(name, true, true, true, null, SEQUENCE.incrementAndGet()));
 
         assertThatExceptionOfType(InvalidDocumentTypeException.class)
                 .isThrownBy(() -> salesTypes.create(
-                        new NewSalesDocumentType(name, true, true, true, null)))
+                        new NewSalesDocumentType(name, true, true, true, null, SEQUENCE.incrementAndGet())))
                 .withMessageContaining("already exists");
     }
 
@@ -256,11 +256,11 @@ class DocumentReferenceDataIT extends AbstractCoreIntegrationTest {
     void aSeriesMayNotBeASalesChannel() {
         SalesDocumentTypeView selfSupply = salesTypes.create(new NewSalesDocumentType(
                 unique("Αυτοπαράδοση"), true, false, true,
-                aadeInvoiceTypes.requireByCode("6.1").id()));
+                aadeInvoiceTypes.requireByCode("6.1").id(), SEQUENCE.incrementAndGet()));
 
         SalesDocumentSeriesView series = salesSeries.create(new NewSalesDocumentSeries(
                 unique("ΑΥΤ").replace(" ", ""), unique("Self-supply series"),
-                selfSupply.id(), null, true, null));
+                selfSupply.id(), null, true, null, SEQUENCE.incrementAndGet()));
 
         assertThat(series.channelIfAny())
                 .as("the customer is the issuer; there is no sales channel to attribute")
@@ -310,16 +310,16 @@ class DocumentReferenceDataIT extends AbstractCoreIntegrationTest {
     @DisplayName("a series cannot transform into itself")
     void aSeriesCannotTransformIntoItself() {
         SalesDocumentTypeView type = salesTypes.create(new NewSalesDocumentType(
-                unique("Transformable"), true, true, true, null));
+                unique("Transformable"), true, true, true, null, SEQUENCE.incrementAndGet()));
         SalesDocumentSeriesView series = salesSeries.create(new NewSalesDocumentSeries(
-                "TR" + SEQUENCE.incrementAndGet(), unique("Series"), type.id(), null, true, null));
+                "TR" + SEQUENCE.incrementAndGet(), unique("Series"), type.id(), null, true, null, SEQUENCE.incrementAndGet()));
 
         assertThatExceptionOfType(InvalidDocumentSeriesException.class)
                 .isThrownBy(() -> salesSeries.mapTransformationTarget(series.id(), series.id()))
                 .withMessageContaining("cannot transform into itself");
 
         SalesDocumentSeriesView target = salesSeries.create(new NewSalesDocumentSeries(
-                "TG" + SEQUENCE.incrementAndGet(), unique("Target"), type.id(), null, true, null));
+                "TG" + SEQUENCE.incrementAndGet(), unique("Target"), type.id(), null, true, null, SEQUENCE.incrementAndGet()));
         assertThat(salesSeries.mapTransformationTarget(series.id(), target.id())
                 .transformableIntoSeriesIdIfAny()).contains(target.id());
         assertThat(salesSeries.mapTransformationTarget(series.id(), null)
@@ -332,7 +332,7 @@ class DocumentReferenceDataIT extends AbstractCoreIntegrationTest {
         assertThatExceptionOfType(DocumentTypeNotFoundException.class)
                 .isThrownBy(() -> salesSeries.create(new NewSalesDocumentSeries(
                         "NX" + SEQUENCE.incrementAndGet(), unique("Orphan"),
-                        999_999L, null, true, null)));
+                        999_999L, null, true, null, SEQUENCE.incrementAndGet())));
 
         assertThatExceptionOfType(DocumentSeriesNotFoundException.class)
                 .isThrownBy(() -> salesSeries.require(999_999L));
@@ -342,14 +342,14 @@ class DocumentReferenceDataIT extends AbstractCoreIntegrationTest {
     @DisplayName("a duplicate abbreviation is refused, since it is what a document prints")
     void duplicateAbbreviationIsRefused() {
         SalesDocumentTypeView type = salesTypes.create(new NewSalesDocumentType(
-                unique("Abbreviated"), true, true, true, null));
+                unique("Abbreviated"), true, true, true, null, SEQUENCE.incrementAndGet()));
         String abbreviation = "AB" + SEQUENCE.incrementAndGet();
         salesSeries.create(new NewSalesDocumentSeries(
-                abbreviation, unique("First"), type.id(), null, true, null));
+                abbreviation, unique("First"), type.id(), null, true, null, SEQUENCE.incrementAndGet()));
 
         assertThatExceptionOfType(InvalidDocumentSeriesException.class)
                 .isThrownBy(() -> salesSeries.create(new NewSalesDocumentSeries(
-                        abbreviation, unique("Second"), type.id(), null, true, null)))
+                        abbreviation, unique("Second"), type.id(), null, true, null, SEQUENCE.incrementAndGet())))
                 .withMessageContaining("already exists");
     }
 
@@ -358,11 +358,11 @@ class DocumentReferenceDataIT extends AbstractCoreIntegrationTest {
     void purchaseSeriesRoundTrip() {
         PurchaseDocumentTypeView type = purchaseTypes.create(new NewPurchaseDocumentType(
                 unique("ΤΔΑΑ"), true, false, true,
-                aadeInvoiceTypes.requireByCode("14.1").id()));
+                aadeInvoiceTypes.requireByCode("14.1").id(), SEQUENCE.incrementAndGet()));
 
         String abbreviation = "PS" + SEQUENCE.incrementAndGet();
         purchaseSeries.create(new NewPurchaseDocumentSeries(
-                abbreviation, unique("Purchase series"), type.id(), true, null));
+                abbreviation, unique("Purchase series"), type.id(), true, null, SEQUENCE.incrementAndGet()));
 
         assertThat(purchaseSeries.ofDocumentType(type.id()))
                 .extracting(view -> view.abbreviation())
@@ -418,14 +418,14 @@ class DocumentReferenceDataIT extends AbstractCoreIntegrationTest {
     @DisplayName("⚠️ R2: a series nothing has recorded in reports inUse=false and is fully correctable")
     void anUnusedSeriesIsCorrectable() {
         SalesDocumentTypeView type = salesTypes.create(new NewSalesDocumentType(
-                unique("Correctable type"), true, true, true, null));
+                unique("Correctable type"), true, true, true, null, SEQUENCE.incrementAndGet()));
         SalesDocumentTypeView otherType = salesTypes.create(new NewSalesDocumentType(
-                unique("Other correctable type"), false, false, true, null));
+                unique("Other correctable type"), false, false, true, null, SEQUENCE.incrementAndGet()));
 
         String typo = "TYPO" + SEQUENCE.incrementAndGet();
         SalesDocumentSeriesView series = salesSeries.create(new NewSalesDocumentSeries(
                 typo, unique("Series with a typo"), type.id(), SalesChannel.STORE_AND_PHONE,
-                false, null));
+                false, null, SEQUENCE.incrementAndGet()));
 
         assertThat(series.inUse())
                 .as("nothing can have been recorded in a series created one line ago")
@@ -441,7 +441,7 @@ class DocumentReferenceDataIT extends AbstractCoreIntegrationTest {
         // The abbreviation is still the identity even while it is correctable.
         SalesDocumentSeriesView rival = salesSeries.create(new NewSalesDocumentSeries(
                 "RIVAL" + SEQUENCE.incrementAndGet(), unique("Rival series"), type.id(),
-                SalesChannel.STORE_AND_PHONE, false, null));
+                SalesChannel.STORE_AND_PHONE, false, null, SEQUENCE.incrementAndGet()));
         assertThatExceptionOfType(InvalidDocumentSeriesException.class)
                 .isThrownBy(() -> salesSeries.changeAbbreviation(rival.id(), fixed))
                 .withMessageContaining("already exists");
@@ -460,11 +460,11 @@ class DocumentReferenceDataIT extends AbstractCoreIntegrationTest {
     @DisplayName("⚠️ R2: a purchase series is correctable, and inUse is false BY CONSTRUCTION until F6")
     void aPurchaseSeriesIsCorrectable() {
         PurchaseDocumentTypeView type = purchaseTypes.create(new NewPurchaseDocumentType(
-                unique("Correctable purchase type"), true, false, true, null));
+                unique("Correctable purchase type"), true, false, true, null, SEQUENCE.incrementAndGet()));
 
         String typo = "PTYPO" + SEQUENCE.incrementAndGet();
         long seriesId = purchaseSeries.create(new NewPurchaseDocumentSeries(
-                typo, unique("Purchase series with a typo"), type.id(), false, null)).id();
+                typo, unique("Purchase series with a typo"), type.id(), false, null, SEQUENCE.incrementAndGet())).id();
 
         String fixed = "PFIXED" + SEQUENCE.incrementAndGet();
         assertThat(purchaseSeries.changeAbbreviation(seriesId, fixed).abbreviation())

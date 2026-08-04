@@ -37,6 +37,16 @@ public interface PurchaseDocumentTypeService {
     PurchaseDocumentTypeView describe(long id, String description);
 
     /**
+     * Reorders the row. ⚠️ <strong>Freely editable</strong> — this is deliberately NOT the
+     * editable-while-unused freeze, because a sort code appears on no document and carries no
+     * legal meaning. Reordering a list is a normal act, not a correction.
+     *
+     * @throws InvalidDocumentTypeException if another row in the same table already holds that sort code — it is
+     *     unique, so the ordering is deterministic
+     */
+    PurchaseDocumentTypeView changeSortCode(long id, int sortCode);
+
+    /**
      * ⚠️ {@code affectsStock} is meaningful here and is not a mirror of the sales flag —
      * {@code 2041 Δελτίο Παραλαβής} brings stock in with no payable behind it. See
      * {@link PurchaseDocumentTypeView#affectsStock()}.

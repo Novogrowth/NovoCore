@@ -48,6 +48,7 @@ const supplierInvoice: PurchaseDocumentTypeView = {
   requiresMydataTransmission: true,
   aadeInvoiceTypeId: 41,
   aadeInvoiceTypeCode: '14.1',
+  sortCode: 30,
   active: true,
 }
 

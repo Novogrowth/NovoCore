@@ -11,9 +11,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
  */
 interface PurchaseDocumentTypeRepository extends JpaRepository<PurchaseDocumentType, Long> {
 
-    List<PurchaseDocumentType> findAllByOrderByDescriptionAsc();
 
-    List<PurchaseDocumentType> findByActiveTrueOrderByDescriptionAsc();
+    /**
+     * ⚠️ Ordered by {@code sort_code}. That is what the column exists for — the previous default
+     * ordered by description, which is the Greek alphabet and therefore arbitrary to the person
+     * reading the list. See {@code V34}.
+     */
+    List<PurchaseDocumentType> findAllByOrderBySortCodeAsc();
+
+    List<PurchaseDocumentType> findByActiveTrueOrderBySortCodeAsc();
 
     /**
      * Types whose stock behaviour is undecided — drafts.
@@ -22,7 +28,10 @@ interface PurchaseDocumentTypeRepository extends JpaRepository<PurchaseDocumentT
      * a different thing from a retired type: the two look identical in a list and have entirely
      * different fixes.
      */
-    List<PurchaseDocumentType> findByAffectsStockIsNullOrTransfersStockIsNullOrderByDescriptionAsc();
+    List<PurchaseDocumentType> findByAffectsStockIsNullOrTransfersStockIsNullOrderBySortCodeAsc();
+
+    /** Unique per table, so the ordering is deterministic. */
+    boolean existsBySortCode(int sortCode);
 
     Optional<PurchaseDocumentType> findByDescriptionIgnoreCase(String description);
 }

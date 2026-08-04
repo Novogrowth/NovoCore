@@ -43,6 +43,23 @@ class SalesDocumentType extends AuditableEntity {
     @Column(name = "aade_invoice_type_id")
     private Long aadeInvoiceTypeId;
 
+    /**
+     * ⚠️ <strong>Ordering only. Not an identifier, and the name is what keeps it that way.</strong>
+     *
+     * <p>The owner assigns these so that the list an employee sees when recording a document is in
+     * a sensible order. It is <strong>freely editable</strong> — deliberately not the
+     * editable-while-unused freeze R2 put on a series' abbreviation, because an abbreviation appears
+     * on a document and this appears on nothing. It carries no legal meaning, is transmitted
+     * nowhere, and is <strong>never derived from Prosvasis Go's numbers</strong>, which are Go's
+     * internal ids and belong in an adapter mapping table.
+     *
+     * <p>An {@code int} rather than a string because a text sort puts {@code 1000} before
+     * {@code 900} — for a column whose whole purpose is ordering that is the column failing at its
+     * job. See {@code V34}.
+     */
+    @Column(name = "sort_code", nullable = false)
+    private int sortCode;
+
     @Column(name = "active", nullable = false)
     private boolean active = true;
 
@@ -51,12 +68,14 @@ class SalesDocumentType extends AuditableEntity {
     }
 
     SalesDocumentType(String description, Boolean affectsStock, Boolean transfersStock,
-            boolean requiresMydataTransmission, Long aadeInvoiceTypeId, boolean active) {
+            boolean requiresMydataTransmission, Long aadeInvoiceTypeId, int sortCode,
+            boolean active) {
         this.description = description;
         this.affectsStock = affectsStock;
         this.transfersStock = transfersStock;
         this.requiresMydataTransmission = requiresMydataTransmission;
         this.aadeInvoiceTypeId = aadeInvoiceTypeId;
+        this.sortCode = sortCode;
         this.active = active;
     }
 
@@ -86,6 +105,15 @@ class SalesDocumentType extends AuditableEntity {
 
     boolean isActive() {
         return active;
+    }
+
+    int getSortCode() {
+        return sortCode;
+    }
+
+    /** Reordering is a normal act, not a correction — see the field's note. */
+    void changeSortCode(int newSortCode) {
+        this.sortCode = newSortCode;
     }
 
     /** True while either stock flag is undecided. Such a type cannot be active. */

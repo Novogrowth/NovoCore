@@ -280,6 +280,72 @@ component without `@Mandatory` must be able to see why without reconstructing it
 requirements under *the throwaway probe* came from — **a negative control, and never piping a build.**
 Stated once, there, rather than twice.
 
+### ⚠️ Named anti-pattern: the screen was the only guard, and nothing behind it was
+
+**Found by R2's live leg, 2026-08-04, and it is the reason a browser pass is not a formality.**
+
+`SalesDocumentSeriesServiceImpl.create` resolved a document type and **never read `isActive()`**. The
+*create screen* filtered its picker to active types; the *edit screen* did not filter at all. So the
+rule "a series may not point at a retired document type" was enforced by one screen, on one of the
+two paths, and by nothing at all for an adapter or a direct API call.
+
+⚠️ **The data proved it rather than an argument**: both series the owner created point at an inactive
+type — one deactivated, one a **draft whose stock question was never answered**. Nothing refused
+either.
+
+**The tell, and it is worth learning to hear:** *"the picker only offers active ones."* That is a
+statement about a **control**, and it is being used to answer a question about a **rule**. The two
+are different the moment a second screen, an adapter or a `curl` exists — and R2 shipped the second
+screen in the same step, which is how the inconsistency became visible at all.
+
+**The remedy is not "filter the other picker too."** It is to ask what refuses this when the screen is
+not there, and if the answer is nothing, build it in the service — then fix both pickers, which are
+now stopping a request whose refusal is certain rather than being the refusal.
+
+⚠️ **Two things R2b's fix records that are easy to get wrong:**
+
+- **SETTING is refused; HOLDING is not.** Deactivating a document type must not break the series
+  already pointing at it, or deactivation becomes destructive and nobody will use it. The guard runs
+  on create and on change — the two places a type is *set* — and nowhere else. The same shape as the
+  `active` flag on a payment method: recording a *new* invoice against a retired method is refused,
+  and invoices already settled by it are untouched.
+- ⚠️ **Test the DRAFT case before the INACTIVE case.** A draft is *always* inactive — the CHECK forces
+  it — so testing `!isActive()` first catches every draft and gives it the milder message, and the
+  specific reason becomes unreachable. They are genuinely different failures: a draft's stock
+  behaviour is undecided, so a document in a series pointing at it **could not post correctly**;
+  deactivated merely means *not for new documents*.
+
+### ⚠️ Named anti-pattern: a defect copied faithfully thirteen times, and self-healing
+
+**Also found by R2's live leg, and it had been in the repository since the first screen.**
+
+**Not one of this application's thirteen create forms invalidated its list.** Every one mutates and
+then navigates to the new record — products, customers, suppliers, users, roles, VAT classes, units
+of measure, and all six of R2's. R2 did not diverge from the pattern; **it copied the pattern
+faithfully, including the defect.**
+
+⚠️ **The reason it survived seven screens is that it heals itself.** `staleTime` is 30 seconds, so a
+list revisited inside that window is served from cache without the new row, and a list revisited
+after it looks perfectly fine. **A bug that fixes itself in half a minute reads as "the browser being
+slow", not as a bug** — and nobody adding one supplier a week ever hits it. It becomes constant only
+when somebody creates fifty rows in a sitting, which is exactly what R2's screens exist for.
+
+**The fix is global — one `MutationCache.onSuccess` on the shared `QueryClient` — and the argument is
+the defect itself:** thirteen copies of a line that must never be forgotten is the shape that
+produced this, and a fourteenth create form would copy it again.
+
+⚠️ **A global fix needs a STRUCTURAL guard, and this is the part that is easy to skip.** With the fix
+in the shared client, deleting it leaves **every screen test in the repository passing** — no screen
+contains it, so no screen test can see it. `query-client.test.ts` therefore asserts *both*: that the
+handler is present (cheap, and what makes removal a red build) and that it works end to end through
+a real `createQueryClient()` with its real 30-second `staleTime`. A test client with caching turned
+off would pass against the defect and prove nothing.
+
+📌 **One consequence worth knowing before it surprises somebody:** a screen test whose `msw` handler
+is a static fixture will now show *pre-edit* data after a save, because the app refetches where it
+used to trust `setQueryData`. That is the mock being unfaithful, not the app being wrong — the
+remedy is to make the handler record its writes, as `products.test.tsx` now does.
+
 ### Named practice: the throwaway probe
 
 **When the question is behavioural — *what does the system actually answer?* — boot the real
@@ -587,6 +653,22 @@ guess.**
 correct series or a return document **in one action**, with series, products and customer auto-filled,
 **never re-keyed**. Same flow for a returned or cancelled order. This needs the Go adapter; only the
 allowed-target reference is stored earlier (R1).
+
+### ⚠️ A live-leg checklist is DERIVED from the screens a step ships, never composed freehand
+
+**R2's was composed freehand, and the reconciliation is what showed the cost.** The approved block
+had ten rows; the checklist actually handed over had twelve items. **Four items had no row** — the
+coherence rule, the seed-only convention, the purchase-series channel absence, and delivery methods
+— **and three rows had no item**, for three unrelated reasons. One row was mapped onto the wrong
+path entirely.
+
+None of that was a gap in what was *built*. It was a gap in what the leg was asked to *look at*, and
+the block was called "the live leg" while covering roughly two thirds of it.
+
+**The practice: enumerate the screens and routes the step ships, and derive one row per thing a
+browser can answer that a test cannot.** Then reconcile both directions afterwards — items with no
+row, and rows with no item — because those are different failures and neither is visible from the
+other side.
 
 ### Named convention: a seed-only screen states its own emptiness, and a test pins it
 

@@ -33,6 +33,7 @@ import type {
   MydataTransmissionRequest,
   NewPurchaseDocumentType,
   PurchaseDocumentTypeControllerChangeMydataTransmissionRequired4xx,
+  PurchaseDocumentTypeControllerChangeSortCode4xx,
   PurchaseDocumentTypeControllerChangeStockBehaviour4xx,
   PurchaseDocumentTypeControllerClearAadeInvoiceType4xx,
   PurchaseDocumentTypeControllerCreate4xx,
@@ -45,6 +46,7 @@ import type {
   PurchaseDocumentTypeControllerMapToAadeInvoiceType4xx,
   PurchaseDocumentTypeControllerReactivate4xx,
   PurchaseDocumentTypeView,
+  SortCodeRequest,
   StockBehaviourRequest
 } from '../../model';
 
@@ -729,6 +731,65 @@ const {mutation: mutationOptions} = options ?
         TContext
       > => {
       return useMutation(getPurchaseDocumentTypeControllerReactivateMutationOptions(options), queryClient);
+    }
+    export const purchaseDocumentTypeControllerChangeSortCode = (
+    id: number,
+    sortCodeRequest: SortCodeRequest,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<PurchaseDocumentTypeView>(
+      {url: `/api/purchase-document-types/${id}/sort-code`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: sortCodeRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getPurchaseDocumentTypeControllerChangeSortCodeMutationOptions = <TError = PurchaseDocumentTypeControllerChangeSortCode4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseDocumentTypeControllerChangeSortCode>>, TError,{id: number;data: SortCodeRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof purchaseDocumentTypeControllerChangeSortCode>>, TError,{id: number;data: SortCodeRequest}, TContext> => {
+
+const mutationKey = ['purchaseDocumentTypeControllerChangeSortCode'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof purchaseDocumentTypeControllerChangeSortCode>>, {id: number;data: SortCodeRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  purchaseDocumentTypeControllerChangeSortCode(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PurchaseDocumentTypeControllerChangeSortCodeMutationResult = NonNullable<Awaited<ReturnType<typeof purchaseDocumentTypeControllerChangeSortCode>>>
+    export type PurchaseDocumentTypeControllerChangeSortCodeMutationBody = SortCodeRequest
+    export type PurchaseDocumentTypeControllerChangeSortCodeMutationError = PurchaseDocumentTypeControllerChangeSortCode4xx
+
+    export const usePurchaseDocumentTypeControllerChangeSortCode = <TError = PurchaseDocumentTypeControllerChangeSortCode4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseDocumentTypeControllerChangeSortCode>>, TError,{id: number;data: SortCodeRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof purchaseDocumentTypeControllerChangeSortCode>>,
+        TError,
+        {id: number;data: SortCodeRequest},
+        TContext
+      > => {
+      return useMutation(getPurchaseDocumentTypeControllerChangeSortCodeMutationOptions(options), queryClient);
     }
     export const purchaseDocumentTypeControllerChangeStockBehaviour = (
     id: number,

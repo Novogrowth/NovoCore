@@ -4,6 +4,7 @@ import gr.novotrade.novocore.core.api.audit.AuditLogService;
 import gr.novotrade.novocore.core.api.document.DocumentSeriesNotFoundException;
 import gr.novotrade.novocore.core.api.document.DocumentTypeNotFoundException;
 import gr.novotrade.novocore.core.api.document.InvalidDocumentSeriesException;
+import gr.novotrade.novocore.core.api.document.InvalidDocumentTypeException;
 import gr.novotrade.novocore.core.api.document.NewPurchaseDocumentSeries;
 import gr.novotrade.novocore.core.api.document.PurchaseDocumentSeriesService;
 import gr.novotrade.novocore.core.api.document.PurchaseDocumentSeriesView;
@@ -36,19 +37,19 @@ class PurchaseDocumentSeriesServiceImpl implements PurchaseDocumentSeriesService
     @Override
     @Transactional(readOnly = true)
     public List<PurchaseDocumentSeriesView> all() {
-        return toViews(repository.findAllByOrderByAbbreviationAsc());
+        return toViews(repository.findAllByOrderBySortCodeAsc());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<PurchaseDocumentSeriesView> active() {
-        return toViews(repository.findByActiveTrueOrderByAbbreviationAsc());
+        return toViews(repository.findByActiveTrueOrderBySortCodeAsc());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<PurchaseDocumentSeriesView> ofDocumentType(long documentTypeId) {
-        return toViews(repository.findByDocumentTypeIdOrderByAbbreviationAsc(documentTypeId));
+        return toViews(repository.findByDocumentTypeIdOrderBySortCodeAsc(documentTypeId));
     }
 
     @Override
@@ -77,14 +78,18 @@ class PurchaseDocumentSeriesServiceImpl implements PurchaseDocumentSeriesService
         PurchaseDocumentType documentType = documentTypes.findById(request.documentTypeId())
                 .orElseThrow(() -> DocumentTypeNotFoundException.purchase(request.documentTypeId()));
 
+        requireUsableDocumentType(documentType);
+
         requireTargetExists(request.transformableIntoSeriesId());
+        requireSortCodeIsFree(request.sortCode());
 
         PurchaseDocumentSeries saved = repository.save(new PurchaseDocumentSeries(
                 abbreviation,
                 request.description().trim(),
                 documentType,
                 request.getsMark(),
-                request.transformableIntoSeriesId()));
+                request.transformableIntoSeriesId(),
+                request.sortCode()));
 
         auditLog.record("purchase-document-series.created", ENTITY_TYPE,
                 String.valueOf(saved.getId()), Map.of(
@@ -112,6 +117,25 @@ class PurchaseDocumentSeriesServiceImpl implements PurchaseDocumentSeriesService
         series.describe(corrected);
         auditLog.record("purchase-document-series.described", ENTITY_TYPE, String.valueOf(id),
                 Map.of("previousDescription", previous, "description", corrected));
+        return toView(series);
+    }
+
+    @Override
+    @Transactional
+    public PurchaseDocumentSeriesView changeSortCode(long id, int sortCode) {
+        PurchaseDocumentSeries series = repository.findById(id)
+                .orElseThrow(() -> DocumentSeriesNotFoundException.purchase(id));
+        if (series.getSortCode() == sortCode) {
+            return toView(series);
+        }
+        // ⚠️ NO in-use freeze, unlike the three fields below. Reordering is normal. See V34.
+        requireSortCodeIsFree(sortCode);
+
+        int previous = series.getSortCode();
+        series.changeSortCode(sortCode);
+        auditLog.record("purchase-document-series.sort-code-changed", ENTITY_TYPE,
+                String.valueOf(id), Map.of("previousSortCode", String.valueOf(previous),
+                        "sortCode", String.valueOf(sortCode)));
         return toView(series);
     }
 
@@ -155,6 +179,7 @@ class PurchaseDocumentSeriesServiceImpl implements PurchaseDocumentSeriesService
 
         PurchaseDocumentType documentType = documentTypes.findById(documentTypeId)
                 .orElseThrow(() -> DocumentTypeNotFoundException.purchase(documentTypeId));
+        requireUsableDocumentType(documentType);
 
         long previous = series.getDocumentType().getId();
         series.changeDocumentType(documentType);
@@ -255,6 +280,43 @@ class PurchaseDocumentSeriesServiceImpl implements PurchaseDocumentSeriesService
                 Map.of("abbreviation", series.getAbbreviation()));
     }
 
+    /**
+     * ⚠️ A DRAFT or DEACTIVATED document type may not be SET on a series — the sales side's rule,
+     * mirrored, and see {@code SalesDocumentSeriesServiceImpl.requireUsableDocumentType} for the
+     * full argument and for why the live leg made it necessary.
+     *
+     * <p>⚠️ <strong>Draft is tested first, and that order is load-bearing.</strong> A draft is
+     * always inactive — the CHECK forces it — so testing "inactive" first would give every draft
+     * the milder message and the specific reason would be unreachable.
+     *
+     * <p>⚠️ <strong>Setting is refused; holding is not.</strong> Deactivating a type never breaks
+     * the series already pointing at it.
+     */
+    private static void requireUsableDocumentType(PurchaseDocumentType documentType) {
+        if (documentType.isDraft()) {
+            throw new InvalidDocumentTypeException(
+                    "Document type \"" + documentType.getDescription() + "\" is a draft: its stock "
+                            + "behaviour is undecided, so a document recorded in a series pointing "
+                            + "at it could not post correctly — whether it consumes inventory has "
+                            + "no answer yet. Set both stock flags on the type first.");
+        }
+        if (!documentType.isActive()) {
+            throw new InvalidDocumentTypeException(
+                    "Document type \"" + documentType.getDescription() + "\" is inactive, so it is "
+                            + "not for new documents and a new series must not be pointed at it. "
+                            + "Series that already use it are unaffected and keep working.");
+        }
+    }
+
+    /** Unique so the ordering is deterministic. See {@code V34}. */
+    private void requireSortCodeIsFree(int sortCode) {
+        if (repository.existsBySortCode(sortCode)) {
+            throw new InvalidDocumentSeriesException(
+                    "Sort code " + sortCode + " is already used by another purchase document "
+                            + "series. Sort codes are unique so the list has one definite order.");
+        }
+    }
+
     private void requireTargetExists(Long targetSeriesId) {
         if (targetSeriesId != null && !repository.existsById(targetSeriesId)) {
             throw DocumentSeriesNotFoundException.purchase(targetSeriesId);
@@ -284,6 +346,7 @@ class PurchaseDocumentSeriesServiceImpl implements PurchaseDocumentSeriesService
                 type.getDescription(),
                 series.isGetsMark(),
                 series.getTransformableIntoSeriesId(),
+                series.getSortCode(),
                 isNamedByARecordedDocument(series.getId()),
                 series.isActive());
     }

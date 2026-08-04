@@ -60,6 +60,23 @@ class SalesDocumentSeries extends AuditableEntity {
     @Column(name = "transformable_into_series_id")
     private Long transformableIntoSeriesId;
 
+    /**
+     * ⚠️ <strong>Ordering only. Not an identifier, and the name is what keeps it that way.</strong>
+     *
+     * <p>The owner assigns these so that the list an employee sees when recording a document is in
+     * a sensible order. It is <strong>freely editable</strong> — deliberately not the
+     * editable-while-unused freeze R2 put on a series' abbreviation, because an abbreviation appears
+     * on a document and this appears on nothing. It carries no legal meaning, is transmitted
+     * nowhere, and is <strong>never derived from Prosvasis Go's numbers</strong>, which are Go's
+     * internal ids and belong in an adapter mapping table.
+     *
+     * <p>An {@code int} rather than a string because a text sort puts {@code 1000} before
+     * {@code 900} — for a column whose whole purpose is ordering that is the column failing at its
+     * job. See {@code V34}.
+     */
+    @Column(name = "sort_code", nullable = false)
+    private int sortCode;
+
     @Column(name = "active", nullable = false)
     private boolean active = true;
 
@@ -68,13 +85,15 @@ class SalesDocumentSeries extends AuditableEntity {
     }
 
     SalesDocumentSeries(String abbreviation, String description, SalesDocumentType documentType,
-            SalesChannel channel, boolean getsMark, Long transformableIntoSeriesId) {
+            SalesChannel channel, boolean getsMark, Long transformableIntoSeriesId,
+            int sortCode) {
         this.abbreviation = abbreviation;
         this.description = description;
         this.documentType = documentType;
         this.channel = channel;
         this.getsMark = getsMark;
         this.transformableIntoSeriesId = transformableIntoSeriesId;
+        this.sortCode = sortCode;
         this.active = true;
     }
 
@@ -108,6 +127,15 @@ class SalesDocumentSeries extends AuditableEntity {
 
     boolean isActive() {
         return active;
+    }
+
+    int getSortCode() {
+        return sortCode;
+    }
+
+    /** Reordering is a normal act, not a correction — see the field's note. */
+    void changeSortCode(int newSortCode) {
+        this.sortCode = newSortCode;
     }
 
     void describe(String newDescription) {

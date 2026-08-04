@@ -232,6 +232,39 @@ class TradingQuarterOverHttpIT {
                     "R2's correction path. Refused once a document is recorded in the series. Covered by R2ReferenceDataContractIT."),
             java.util.Map.entry("PUT /api/sales-document-series/{id}/gets-mark",
                     "R2's correction path. Refused once a document is recorded in the series. Covered by R2ReferenceDataContractIT."),
+            // ===================================================================================
+            // R2b — four sort-code routes and the six payment-method routes.
+            //
+            // ⚠️ The sort code is ORDERING, not behaviour: it appears on no document, is transmitted
+            // nowhere, and changes nothing about what a quarter of trading posts. Reordering a
+            // reference list mid-narrative would be noise in a ledger story.
+            //
+            // Payment methods are the same reference-data argument as delivery methods above, with
+            // one addition: the quarter READS them — every invoice it records names a settlement
+            // method, and R2b refuses a deactivated one — so deactivating one here would change
+            // what the narrative's own documents can be settled by. Covered by PaymentMethodIT and
+            // R2ReferenceDataContractIT.
+            // ===================================================================================
+            java.util.Map.entry("PATCH /api/purchase-document-series/{id}/sort-code",
+                    "R2b ordering only; changes nothing a quarter posts. Covered by R2ReferenceDataContractIT."),
+            java.util.Map.entry("PATCH /api/purchase-document-types/{id}/sort-code",
+                    "R2b ordering only; changes nothing a quarter posts. Covered by R2ReferenceDataContractIT."),
+            java.util.Map.entry("PATCH /api/sales-document-series/{id}/sort-code",
+                    "R2b ordering only; changes nothing a quarter posts. Covered by R2ReferenceDataContractIT."),
+            java.util.Map.entry("PATCH /api/sales-document-types/{id}/sort-code",
+                    "R2b ordering only; changes nothing a quarter posts. Covered by R2ReferenceDataContractIT."),
+            java.util.Map.entry("GET /api/payment-methods",
+                    "R2b reference data. The quarter names settlement methods on every invoice but must not administer the list it is reading. Covered by PaymentMethodIT."),
+            java.util.Map.entry("GET /api/payment-methods/{method}",
+                    "R2b reference data. Covered by PaymentMethodIT."),
+            java.util.Map.entry("PATCH /api/payment-methods/{method}/description",
+                    "R2b reference data. Covered by PaymentMethodIT."),
+            java.util.Map.entry("PATCH /api/payment-methods/{method}/sort-code",
+                    "R2b ordering only. Covered by PaymentMethodIT."),
+            java.util.Map.entry("POST /api/payment-methods/{method}/deactivate",
+                    "⚠️ R2b: deactivating a method mid-quarter would change what the narrative's own invoices can be settled by. Covered by PaymentMethodIT and R2ReferenceDataContractIT."),
+            java.util.Map.entry("POST /api/payment-methods/{method}/reactivate",
+                    "⚠️ R2b: see deactivate. Covered by PaymentMethodIT."),
             java.util.Map.entry("PUT /api/purchase-document-series/{id}/transformation-target",
                     "same as the sales series, on the purchase side. Covered by DocumentReferenceDataEndpointIT."),
             java.util.Map.entry("PUT /api/purchase-document-types/{id}/aade-invoice-type",

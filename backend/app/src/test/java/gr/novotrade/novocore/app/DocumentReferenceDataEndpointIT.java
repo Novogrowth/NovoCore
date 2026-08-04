@@ -210,7 +210,7 @@ class DocumentReferenceDataEndpointIT {
         // WAS the row — could not represent them, which is what R1a corrected.
         ResponseEntity<String> created = owner.post("/api/sales-document-types", """
                 {"description":"Προσφορά","affectsStock":false,"transfersStock":false,
-                 "requiresMydataTransmission":false}""");
+                 "requiresMydataTransmission":false,"sortCode":100}""");
 
         assertThat(created.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         JsonNode type = Json.read(created);
@@ -224,7 +224,7 @@ class DocumentReferenceDataEndpointIT {
         // The body a form sends before somebody has answered the stock question. A `false` here
         // would record a decision nobody took, and R1b branches the consumption path on it.
         JsonNode draft = Json.read(owner.post("/api/sales-document-types", """
-                {"description":"Undecided over HTTP","requiresMydataTransmission":true}""")
+                {"description":"Undecided over HTTP","requiresMydataTransmission":true,"sortCode":110}""")
                 );
 
         assertThat(isAbsent(draft, "affectsStock"))
@@ -256,7 +256,7 @@ class DocumentReferenceDataEndpointIT {
     void anOmittedStockFlagIsRefusedByName() {
         long id = Json.read(owner.post("/api/sales-document-types", """
                 {"description":"Flag guard","affectsStock":true,"transfersStock":true,
-                 "requiresMydataTransmission":true}""")).get("id").asLong();
+                 "requiresMydataTransmission":true,"sortCode":120}""")).get("id").asLong();
 
         // ⚠️ The distinction the create route deliberately allows and this one deliberately does
         // not. On POST, an absent flag means "not decided yet" and produces a draft. On this route
@@ -278,7 +278,7 @@ class DocumentReferenceDataEndpointIT {
         ResponseEntity<String> refused = owner.post("/api/sales-document-types",
                 "{\"description\":\"Wrong side over HTTP\",\"affectsStock\":false,"
                         + "\"transfersStock\":false,\"requiresMydataTransmission\":true,"
-                        + "\"aadeInvoiceTypeId\":" + rentExpense + "}");
+                        + "\"aadeInvoiceTypeId\":" + rentExpense + ",\"sortCode\":700}");
 
         assertThat(refused.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
         assertThat(refused.getBody())
@@ -294,7 +294,7 @@ class DocumentReferenceDataEndpointIT {
         long salesInvoice = byCode(items("/api/aade-invoice-types"), "1.1").get("id").asLong();
         long id = Json.read(owner.post("/api/sales-document-types", """
                 {"description":"Τιμολόγιο over HTTP","affectsStock":false,"transfersStock":false,
-                 "requiresMydataTransmission":true}""")).get("id").asLong();
+                 "requiresMydataTransmission":true,"sortCode":130}""")).get("id").asLong();
 
         JsonNode mapped = Json.read(owner.put("/api/sales-document-types/" + id
                 + "/aade-invoice-type", "{\"aadeInvoiceTypeId\":" + salesInvoice + "}"));
@@ -329,7 +329,7 @@ class DocumentReferenceDataEndpointIT {
         long id = Json.read(owner.post("/api/purchase-document-types",
                 "{\"description\":\"ΤΔΑΑ over HTTP\",\"affectsStock\":true,"
                         + "\"transfersStock\":false,\"requiresMydataTransmission\":true,"
-                        + "\"aadeInvoiceTypeId\":" + intraCommunity + "}"))
+                        + "\"aadeInvoiceTypeId\":" + intraCommunity + ",\"sortCode\":710}"))
                 .get("id").asLong();
 
         assertThat(owner.put("/api/purchase-document-types/" + id + "/aade-invoice-type",
@@ -341,7 +341,7 @@ class DocumentReferenceDataEndpointIT {
         // 2041 Δελτίο Παραλαβής: stock IN with NO payable — the case that justifies the column.
         long receipt = Json.read(owner.post("/api/purchase-document-types", """
                 {"description":"Δελτίο Παραλαβής over HTTP","affectsStock":true,
-                 "transfersStock":false,"requiresMydataTransmission":false}"""))
+                 "transfersStock":false,"requiresMydataTransmission":false,"sortCode":140}"""))
                 .get("id").asLong();
 
         assertThat(owner.put("/api/purchase-document-types/" + receipt + "/stock-behaviour", """
@@ -372,11 +372,11 @@ class DocumentReferenceDataEndpointIT {
     void theSalesSeriesSurface() {
         long typeId = Json.read(owner.post("/api/sales-document-types", """
                 {"description":"Σειρές over HTTP","affectsStock":true,"transfersStock":true,
-                 "requiresMydataTransmission":true}""")).get("id").asLong();
+                 "requiresMydataTransmission":true,"sortCode":150}""")).get("id").asLong();
 
         JsonNode series = Json.read(owner.post("/api/sales-document-series",
                 "{\"abbreviation\":\"ΑΛΠW\",\"description\":\"Web retail\",\"documentTypeId\":"
-                        + typeId + ",\"channel\":\"ECOMMERCE\",\"getsMark\":true}"));
+                        + typeId + ",\"channel\":\"ECOMMERCE\",\"getsMark\":true,\"sortCode\":740}"));
 
         long id = series.get("id").asLong();
         assertThat(Json.text(series, "channel")).isEqualTo("ECOMMERCE");
@@ -397,7 +397,7 @@ class DocumentReferenceDataEndpointIT {
         // A transformation target, which is all R1a stores — the behaviour needs the Go adapter.
         long target = Json.read(owner.post("/api/sales-document-series",
                 "{\"abbreviation\":\"ΠΙΣW\",\"description\":\"Web credit\",\"documentTypeId\":"
-                        + typeId + ",\"getsMark\":true}")).get("id").asLong();
+                        + typeId + ",\"getsMark\":true,\"sortCode\":750}")).get("id").asLong();
 
         assertThat(owner.put("/api/sales-document-series/" + id + "/transformation-target",
                         "{\"targetSeriesId\":" + target + "}").getStatusCode())
@@ -427,12 +427,12 @@ class DocumentReferenceDataEndpointIT {
     void thePurchaseSeriesHasNoChannelRoute() {
         long typeId = Json.read(owner.post("/api/purchase-document-types", """
                 {"description":"Purchase σειρές over HTTP","affectsStock":true,
-                 "transfersStock":false,"requiresMydataTransmission":true}"""))
+                 "transfersStock":false,"requiresMydataTransmission":true,"sortCode":160}"""))
                 .get("id").asLong();
 
         long id = Json.read(owner.post("/api/purchase-document-series",
                 "{\"abbreviation\":\"ΤΔΑΑ1\",\"description\":\"Purchase series\","
-                        + "\"documentTypeId\":" + typeId + ",\"getsMark\":false}"))
+                        + "\"documentTypeId\":" + typeId + ",\"getsMark\":false,\"sortCode\":760}"))
                 .get("id").asLong();
 
         // ⚠️ Asserted from outside, because "there is no route" and "the route silently does
@@ -452,7 +452,7 @@ class DocumentReferenceDataEndpointIT {
 
         long target = Json.read(owner.post("/api/purchase-document-series",
                 "{\"abbreviation\":\"ΤΔΑΑ2\",\"description\":\"Second\",\"documentTypeId\":"
-                        + typeId + ",\"getsMark\":false}")).get("id").asLong();
+                        + typeId + ",\"getsMark\":false,\"sortCode\":770}")).get("id").asLong();
         assertThat(owner.put("/api/purchase-document-series/" + id + "/transformation-target",
                         "{\"targetSeriesId\":" + target + "}").getStatusCode())
                 .isEqualTo(HttpStatus.OK);

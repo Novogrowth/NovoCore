@@ -34,6 +34,16 @@ public interface PurchaseDocumentSeriesService {
     PurchaseDocumentSeriesView describe(long id, String description);
 
     /**
+     * Reorders the row. ⚠️ <strong>Freely editable</strong> — this is deliberately NOT the
+     * editable-while-unused freeze, because a sort code appears on no document and carries no
+     * legal meaning. Reordering a list is a normal act, not a correction.
+     *
+     * @throws InvalidDocumentSeriesException if another row in the same table already holds that sort code — it is
+     *     unique, so the ordering is deterministic
+     */
+    PurchaseDocumentSeriesView changeSortCode(long id, int sortCode);
+
+    /**
      * Corrects the abbreviation of a series nothing has been recorded in — R2's correction path.
      *
      * <p>⚠️ The refusal <strong>cannot fire today</strong>: nothing in the schema can name a

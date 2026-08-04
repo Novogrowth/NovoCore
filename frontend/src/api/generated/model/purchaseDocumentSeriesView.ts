@@ -16,6 +16,7 @@ export interface PurchaseDocumentSeriesView {
   documentTypeDescription: string;
   getsMark: boolean;
   transformableIntoSeriesId?: number;
+  sortCode: number;
   inUse: boolean;
   active: boolean;
 }

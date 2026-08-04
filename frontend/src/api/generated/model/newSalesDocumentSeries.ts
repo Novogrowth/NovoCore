@@ -16,4 +16,5 @@ export interface NewSalesDocumentSeries {
   channel?: SalesChannel;
   getsMark: boolean;
   transformableIntoSeriesId?: number;
+  sortCode: number;
 }

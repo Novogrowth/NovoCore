@@ -46,6 +46,13 @@ import java.util.Map;
  */
 public final class SalesDocumentFixture {
 
+    /**
+     * ⚠️ Sort codes are unique per table. These fixtures assert nothing about ORDER — the value is
+     * arbitrary and only has to be distinct, which is exactly why an arbitrary one is safe here.
+     */
+    private static final java.util.concurrent.atomic.AtomicInteger SORT_CODES =
+            new java.util.concurrent.atomic.AtomicInteger(9000);
+
     private final SalesDocumentTypeService types;
     private final SalesDocumentSeriesService series;
     private final String prefix;
@@ -124,9 +131,9 @@ public final class SalesDocumentFixture {
                 // necessarily consumes them, and V31's CHECK refuses the incoherent pair.
                 affectsStock,
                 true,
-                null)).id();
+                null, SORT_CODES.incrementAndGet())).id();
         return series.create(new NewSalesDocumentSeries(
-                abbreviation, prefix + " " + key + " series", typeId, channel, false, null)).id();
+                abbreviation, prefix + " " + key + " series", typeId, channel, false, null, SORT_CODES.incrementAndGet())).id();
     }
 
     /**

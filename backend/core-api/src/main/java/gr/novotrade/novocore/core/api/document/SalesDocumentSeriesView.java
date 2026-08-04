@@ -41,6 +41,12 @@ import java.util.Optional;
  *     <p>⚠️ It is a flag and not a sentence <strong>on purpose</strong>: the screen renders the
  *     reason, because the backend localises nothing (Q47(b)) and a server-composed reason would be
  *     English prose beside translated labels on a Greek UI.
+ *
+ * @param sortCode ⚠️ <strong>Ordering only, and not an identifier.</strong> Assigned by the business
+ *     so the list an employee sees is in a sensible order. <strong>Freely editable</strong> — unlike
+ *     the abbreviation, because it appears on no document and carries no legal meaning — and never
+ *     derived from Prosvasis Go's numbers. An {@code int}, because a text sort puts {@code 1000}
+ *     before {@code 900}. See {@code V34}.
  */
 public record SalesDocumentSeriesView(
         long id,
@@ -51,6 +57,7 @@ public record SalesDocumentSeriesView(
         SalesChannel channel,
         boolean getsMark,
         Long transformableIntoSeriesId,
+        int sortCode,
         boolean inUse,
         boolean active) {
 

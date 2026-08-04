@@ -208,7 +208,10 @@ class PermissionSweepIT {
         // methods are chosen when a sale is recorded, so they are here too.
         rules.put("sales", startingWith(Section.SALES,
                 "/api/sales-invoices", "/api/credit-notes", "/api/sales-document-types",
-                "/api/sales-document-series", "/api/delivery-methods"));
+                "/api/sales-document-series", "/api/delivery-methods",
+                // R2b: a payment method is chosen when a sale is recorded, exactly as a delivery
+                // method is — the same section, for the same reason.
+                "/api/payment-methods"));
         rules.put("settlements", startingWith(Section.SETTLEMENTS,
                 "/api/settlements", "/api/bank-transfers", "/api/allocations", "/api/open-items",
                 "/api/customer-credits"));

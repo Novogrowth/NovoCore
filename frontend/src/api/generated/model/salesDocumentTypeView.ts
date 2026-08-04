@@ -16,5 +16,6 @@ export interface SalesDocumentTypeView {
   requiresMydataTransmission: boolean;
   aadeInvoiceTypeId?: number;
   aadeInvoiceTypeCode?: string;
+  sortCode: number;
   active: boolean;
 }

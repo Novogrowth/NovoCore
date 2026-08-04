@@ -39,6 +39,7 @@
   "settings.documents": "Documents & Rounding",
   "settings.email": "Email / SMTP",
   "settings.modules": "Modules",
+  "settings.paymentMethods": "Payment methods",
   "settings.purchaseDocumentSeries": "Purchase series",
   "settings.purchaseDocumentTypes": "Purchase document types",
   "settings.retention": "Retention",

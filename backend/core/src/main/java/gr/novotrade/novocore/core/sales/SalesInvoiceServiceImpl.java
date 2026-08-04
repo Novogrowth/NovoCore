@@ -40,6 +40,8 @@ import gr.novotrade.novocore.core.api.sales.SalesInvoicePreviewLine;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceService;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceSort;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceView;
+import gr.novotrade.novocore.core.api.sales.PaymentMethodService;
+import gr.novotrade.novocore.core.api.sales.PaymentMethodView;
 import gr.novotrade.novocore.core.api.sales.SettlementMethod;
 import gr.novotrade.novocore.core.api.settings.SettingKeys;
 import gr.novotrade.novocore.core.api.settings.SettingsService;
@@ -102,6 +104,7 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
     private final VatExemptionReasonService exemptionReasons;
     private final InventoryService inventory;
     private final JournalService journal;
+    private final PaymentMethodService paymentMethods;
     private final SettingsService settings;
     private final AuditLogService auditLog;
 
@@ -111,7 +114,8 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
             ProductService products, BundleService bundles,
             ChargeTypeService chargeTypes, ChartOfAccountsService chartOfAccounts,
             VatClassService vatClasses, VatExemptionReasonService exemptionReasons,
-            InventoryService inventory, JournalService journal, SettingsService settings,
+            InventoryService inventory, JournalService journal,
+            PaymentMethodService paymentMethods, SettingsService settings,
             AuditLogService auditLog) {
         this.invoices = invoices;
         this.creditNotes = creditNotes;
@@ -126,6 +130,7 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
         this.exemptionReasons = exemptionReasons;
         this.inventory = inventory;
         this.journal = journal;
+        this.paymentMethods = paymentMethods;
         this.settings = settings;
         this.auditLog = auditLog;
     }
@@ -195,10 +200,43 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
         Rounding rounding = compareAgainstDocument(request, computedGross, currency);
         Money receivable = computedGross.plus(rounding.amount());
 
+        requireActiveSettlementMethod(request.settlementMethod());
         requireWithinCashLimit(request.settlementMethod(), receivable);
 
         return new Computation(customer, series, priced, computedGross, rounding, receivable,
                 currency);
+    }
+
+    /**
+     * ⚠️ <strong>A deactivated payment method may not settle a NEW invoice</strong> (R2b §4).
+     *
+     * <h2>Why this is here and not deferred</h2>
+     *
+     * <p>{@code payment_method.active} would be decoration without a rule that reads it, and there
+     * is exactly one place a caller <em>chooses</em> a settlement method:
+     * {@code NewSalesInvoice.settlementMethod}, which arrives here. A credit note takes its method
+     * from the invoice it refunds rather than from a caller — that is <em>holding</em>, not
+     * <em>setting</em>, so it is deliberately not guarded.
+     *
+     * <p>It sits in {@code compute(...)}, which {@code record} and {@code preview} share, so an
+     * entry screen learns before the operator submits — the same placement as R1b's channel-less,
+     * inactive-series and inactive-type refusals.
+     *
+     * <h2>⚠️ SETTING IS REFUSED; HOLDING IS NOT</h2>
+     *
+     * <p>Deactivating a method does <strong>not</strong> touch invoices already settled by it: they
+     * keep pointing at it and stay explicable, and reversing or crediting one still works. If that
+     * were not so, deactivation would be destructive and the owner could never retire the methods he
+     * does not use — which is the whole capability {@code active} exists for.
+     */
+    private void requireActiveSettlementMethod(SettlementMethod method) {
+        PaymentMethodView paymentMethod = paymentMethods.require(method);
+        if (!paymentMethod.active()) {
+            throw new InvalidSalesInvoiceException(
+                    "Payment method '" + paymentMethod.description() + "' is inactive, so it is "
+                            + "not for new documents. Invoices already settled by it are "
+                            + "unaffected. Choose another method, or reactivate it in Settings.");
+        }
     }
 
     /**

@@ -3,9 +3,11 @@ package gr.novotrade.novocore.core.web;
 import gr.novotrade.novocore.core.api.codification.AadeInvoiceTypeNotFoundException;
 import gr.novotrade.novocore.core.api.codification.InvalidAadeInvoiceTypeException;
 import gr.novotrade.novocore.core.api.document.DeliveryMethodNotFoundException;
+import gr.novotrade.novocore.core.api.sales.PaymentMethodNotFoundException;
 import gr.novotrade.novocore.core.api.document.DocumentSeriesNotFoundException;
 import gr.novotrade.novocore.core.api.document.DocumentTypeNotFoundException;
 import gr.novotrade.novocore.core.api.document.InvalidDeliveryMethodException;
+import gr.novotrade.novocore.core.api.sales.InvalidPaymentMethodException;
 import gr.novotrade.novocore.core.api.document.InvalidDocumentSeriesException;
 import gr.novotrade.novocore.core.api.document.InvalidDocumentTypeException;
 import gr.novotrade.novocore.core.api.account.AccountGroupNotFoundException;
@@ -153,6 +155,9 @@ class WebExceptionHandler {
         CreditNoteNotFoundException.class,
         CustomerNotFoundException.class,
         DeliveryMethodNotFoundException.class,
+        // ⚠️ A method the seed has no row for is a drift bug, but a caller naming one that genuinely
+        // does not exist must still get a 404 saying so rather than a 500 describing internals.
+        PaymentMethodNotFoundException.class,
         DocumentSeriesNotFoundException.class,
         DocumentTypeNotFoundException.class,
         EmailAttachmentNotFoundException.class,
@@ -200,6 +205,7 @@ class WebExceptionHandler {
         InvalidCreditNoteException.class,
         InvalidCustomerException.class,
         InvalidDeliveryMethodException.class,
+        InvalidPaymentMethodException.class,
         InvalidDocumentSeriesException.class,
         InvalidDocumentTypeException.class,
         InvalidFreightAllocationException.class,

@@ -35,6 +35,7 @@ import type {
   PurchaseDocumentSeriesControllerChangeAbbreviation4xx,
   PurchaseDocumentSeriesControllerChangeDocumentType4xx,
   PurchaseDocumentSeriesControllerChangeGetsMark4xx,
+  PurchaseDocumentSeriesControllerChangeSortCode4xx,
   PurchaseDocumentSeriesControllerClearTransformationTarget4xx,
   PurchaseDocumentSeriesControllerCreate4xx,
   PurchaseDocumentSeriesControllerDeactivate4xx,
@@ -46,6 +47,7 @@ import type {
   PurchaseDocumentSeriesControllerSeriesParams,
   PurchaseDocumentSeriesView,
   SeriesDocumentTypeRequest,
+  SortCodeRequest,
   TransformationTargetRequest
 } from '../../model';
 
@@ -647,6 +649,65 @@ const {mutation: mutationOptions} = options ?
         TContext
       > => {
       return useMutation(getPurchaseDocumentSeriesControllerReactivateMutationOptions(options), queryClient);
+    }
+    export const purchaseDocumentSeriesControllerChangeSortCode = (
+    id: number,
+    sortCodeRequest: SortCodeRequest,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<PurchaseDocumentSeriesView>(
+      {url: `/api/purchase-document-series/${id}/sort-code`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: sortCodeRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getPurchaseDocumentSeriesControllerChangeSortCodeMutationOptions = <TError = PurchaseDocumentSeriesControllerChangeSortCode4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeSortCode>>, TError,{id: number;data: SortCodeRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeSortCode>>, TError,{id: number;data: SortCodeRequest}, TContext> => {
+
+const mutationKey = ['purchaseDocumentSeriesControllerChangeSortCode'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeSortCode>>, {id: number;data: SortCodeRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  purchaseDocumentSeriesControllerChangeSortCode(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PurchaseDocumentSeriesControllerChangeSortCodeMutationResult = NonNullable<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeSortCode>>>
+    export type PurchaseDocumentSeriesControllerChangeSortCodeMutationBody = SortCodeRequest
+    export type PurchaseDocumentSeriesControllerChangeSortCodeMutationError = PurchaseDocumentSeriesControllerChangeSortCode4xx
+
+    export const usePurchaseDocumentSeriesControllerChangeSortCode = <TError = PurchaseDocumentSeriesControllerChangeSortCode4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeSortCode>>, TError,{id: number;data: SortCodeRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof purchaseDocumentSeriesControllerChangeSortCode>>,
+        TError,
+        {id: number;data: SortCodeRequest},
+        TContext
+      > => {
+      return useMutation(getPurchaseDocumentSeriesControllerChangeSortCodeMutationOptions(options), queryClient);
     }
     export const purchaseDocumentSeriesControllerClearTransformationTarget = (
     id: number,

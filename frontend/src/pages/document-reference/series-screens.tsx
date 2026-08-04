@@ -19,6 +19,7 @@ import {
   channelLabel,
   channelOptions,
   idOf,
+  sortCodeOf,
   type NewSeriesBody,
   type SeriesView,
 } from './values'
@@ -68,6 +69,7 @@ export interface SeriesDetailProps {
   documentTypes: readonly { id: number; description: string }[]
   onDescribe: (description: string) => Promise<unknown>
   onAbbreviation: (abbreviation: string) => Promise<unknown>
+  onSortCode: (sortCode: number) => Promise<unknown>
   onDocumentType: (documentTypeId: number) => Promise<unknown>
   onGetsMark: (getsMark: boolean) => Promise<unknown>
   /** `null` sends the DELETE. Absent on the purchase screen, which has no channel at all. */
@@ -318,6 +320,7 @@ export function SeriesCreateForm({
   pending: boolean
 }) {
   const [abbreviation, setAbbreviation] = useState('')
+  const [sortCode, setSortCode] = useState('')
   const [description, setDescription] = useState('')
   const [documentTypeId, setDocumentTypeId] = useState<string | null>(null)
   /** ⚠️ Starts at the NAMED "not a sales channel" option, never at a blank. */
@@ -339,6 +342,7 @@ export function SeriesCreateForm({
     onSubmit({
       abbreviation: abbreviation.trim(),
       description: description.trim(),
+      sortCode: sortCodeOf(sortCode),
       documentTypeId: idOf(documentTypeId),
       // Omitted, not null — a series with no channel is a real configuration and the request
       // record's component is nullable for exactly that reason.
@@ -376,6 +380,18 @@ export function SeriesCreateForm({
                 id="description"
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="sortCode">{t('docSeries.column.sortCode')}</Label>
+              <p className="text-muted-foreground text-sm">{t('docSeries.sortCode.help')}</p>
+              {/* Digits only — see the document-type form for why not `type="number"`. */}
+              <Input
+                id="sortCode"
+                inputMode="numeric"
+                value={sortCode}
+                onChange={(event) => setSortCode(event.target.value.replace(/[^0-9]/g, ''))}
               />
             </div>
 

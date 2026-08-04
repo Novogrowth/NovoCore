@@ -49,6 +49,7 @@ const receiptType: SalesDocumentTypeView = {
   affectsStock: true,
   transfersStock: true,
   requiresMydataTransmission: true,
+  sortCode: 70,
   active: true,
 }
 
@@ -62,6 +63,7 @@ const fresh: SalesDocumentSeriesView = {
   channel: SalesChannel.STORE_AND_PHONE,
   getsMark: true,
   inUse: false,
+  sortCode: 60,
   active: true,
 }
 
@@ -75,6 +77,7 @@ const used: SalesDocumentSeriesView = {
   channel: SalesChannel.ECOMMERCE,
   getsMark: true,
   inUse: true,
+  sortCode: 50,
   active: true,
 }
 
@@ -87,6 +90,7 @@ const selfSupply: SalesDocumentSeriesView = {
   documentTypeDescription: 'Απόδειξη Λιανικής',
   getsMark: false,
   inUse: false,
+  sortCode: 40,
   active: true,
 }
 

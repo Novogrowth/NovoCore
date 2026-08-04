@@ -12,11 +12,20 @@ import org.springframework.data.jpa.repository.Query;
  */
 interface SalesDocumentSeriesRepository extends JpaRepository<SalesDocumentSeries, Long> {
 
-    List<SalesDocumentSeries> findAllByOrderByAbbreviationAsc();
 
-    List<SalesDocumentSeries> findByActiveTrueOrderByAbbreviationAsc();
+    /**
+     * ⚠️ Ordered by {@code sort_code}. That is what the column exists for — the previous default
+     * ordered by abbreviation, which is the Greek alphabet and therefore arbitrary to the person
+     * reading the list. See {@code V34}.
+     */
+    List<SalesDocumentSeries> findAllByOrderBySortCodeAsc();
 
-    List<SalesDocumentSeries> findByDocumentTypeIdOrderByAbbreviationAsc(long documentTypeId);
+    List<SalesDocumentSeries> findByActiveTrueOrderBySortCodeAsc();
+
+    List<SalesDocumentSeries> findByDocumentTypeIdOrderBySortCodeAsc(long documentTypeId);
+
+    /** Unique per table, so the ordering is deterministic. */
+    boolean existsBySortCode(int sortCode);
 
     boolean existsByAbbreviationIgnoreCase(String abbreviation);
 

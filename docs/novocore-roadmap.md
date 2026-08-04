@@ -100,6 +100,7 @@ frontend work that must land before any adapter is built.
 |  R1b | Document reference data — behavioural ʳᵇ |     — |    1.5 |  286k | 🟢 Done         |
 |   W1 | Serialised-record contract fidelity ʷ¹  |     — |        |       | ⚪ Unscheduled   |
 |   R2 | Document reference data (screens) ʳ²    |     — |    1.9 |  447k | 🟢 Done         |
+|  R2b | R2 live-leg fixes + sort code + payment methods ʳ²ᵇ | — |    1.3 |  309k | 🟢 Done         |
 |   R3 | Self-supply posting paths ˢ             |     — |        |       | ⚪ Blocked — accountant |
 |   D1 | Supplier/customer codes + alias ᵈ¹      |     — |        |       | ⚪ Placement TBD |
 |   D2 | Product categories, 3 levels ᵗ          |     — |        |       | ⚪ Before the Woo load (19) |
@@ -827,6 +828,31 @@ generator rather than policing records. ⚠️ Not free: 8a's rule makes primiti
 required booleans means fixture reconciliation across 32 schemas. **Weigh it at scoping.** The rule
 belongs in the **app module against the real Boot-configured mapper bean**.
 
+**ʳ²ᵇ R2b — what R2's live leg found, 2026-08-04. 🟢 DONE.** Five sections, two of which started
+from a wrong premise. ⚠️ **The stale-list defect was OLDER than R2 and sat in all THIRTEEN create
+forms** — R2 copied the pattern faithfully, including the defect — and it **heals itself in 30
+seconds**, which is why seven screens shipped with it. Fixed globally with a structural guard.
+⚠️ **There was NO server-side check that a series' document type is usable**: the create screen's
+picker was the only guard, the edit screen had none, and an adapter or a direct call had none at
+all — a path where **the screen was load-bearing and nothing behind it was**. Now refused on create
+*and* change, both sides, with **draft tested before inactive** because a draft is always inactive.
+
+✅ **`sort_code` on four tables (`V34`), INTEGER and NOT NULL.** ⚠️ The owner overruled a nullable
+proposal, and the reason does not transfer elsewhere: `sales_invoice.series_id` stayed nullable
+because backfilling would **invent a series nobody authored**, which is a false statement about a
+legal document — whereas **a sort code has no truth value**, so an initial backfill fabricates
+nothing. Integer because a text sort puts `1000` before `900`.
+
+⭐ **Payment methods had no screen because of a SCOPING ERROR rather than an implementation gap**
+(`V35`). *"`SettlementMethod` is an enum, so nothing to edit"* was carried into R2's scope, while
+delivery methods — a near-identical row in the same specification — got full CRUD. ⚠️ **The brief's
+premise was also wrong**: the myDATA codes have been on the enum since it was written, so they are
+read from it and **not stored**, and a drift test holds table and enum together in both directions.
+
+Spec **237 → 247 operations**. ⚠️ **Measured at 1.3 h active / 309k output — this session's total
+minus R2's own 1.9 h / 447k, so it also covers the live-leg recording commit `bf3f950`** — and, like
+every close-out figure, short because the close-out is not yet in the transcript that measures it.
+
 **ʳ² R2 — document reference data, screens. 🟢 DONE 2026-08-04, and it grew a backend sub-part.**
 ⚠️ **Seven new routes (230 → 237 operations) that the step was not scoped for**: a series'
 `abbreviation`, `documentTypeId` and `getsMark`, and a delivery method's `abbreviation`, are now
@@ -1167,14 +1193,24 @@ so if F10 slips past 43 for any reason, this moves rather than waits.
 **A running list, so a defect the owner saw but chose not to stop for is neither fixed on the spot nor
 forgotten.** Each entry names the step whose live leg found it.
 
-- ⚠️ **The AADE invoice-type picker cell is too small and cuts its text** — found by the owner in
-  **R2**'s live leg, 2026-08-04, and **deferred by him explicitly** rather than triaged away. The
-  content is correct: every option renders `code — description · group`, which is what makes codes
-  **4** and **12** distinguishable at all, since both read `Για Μελλοντική Χρήση`. **That is exactly
-  why the truncation matters more here than on an ordinary select** — the disambiguating half of the
-  label is the part being cut, and the two codes it disambiguates are a statutory field transmitted
-  to the tax authority. The picker was judged **usable** at 34 Greek options; this is a sizing fix,
-  not a redesign.
+- ✅ ~~The AADE invoice-type picker cell is too small and cuts its text~~ — **PULLED BACK OUT OF F10
+  AND FIXED IN R2b, 2026-08-04.** `OptionSelect` now passes `w-full`, so the trigger uses its column
+  instead of shrinking to content. A width change only; F10 keeps the styling sweep.
+
+  ⚠️⚠️ **AND THE REASON RECORDED HERE FOR PULLING IT WAS WRONG.** This entry used to say *"the
+  disambiguating half of the label is the part being cut"* — that the `code —` prefix was lost.
+  **`line-clamp-1` truncates the END**, so the prefix was structurally safe and the **group suffix**
+  was what disappeared. The claim was never checked before being written into two documents, and it
+  was then **amplified**: it was the stated justification for pulling the item out of F10 at all.
+
+  **Pulling it may still have been right** — the picker is used nineteen times and its options are
+  the longest in the application — but that is a different argument from the one that was made, and
+  the record should not pretend otherwise. It is `CLAUDE.md`'s *fact established by reading, then
+  built upon*, in a place where the reading was of a CSS class rather than a Java file.
+
+  📌 **One thing is still open**: the owner said "cell", which may mean the select trigger (fixed) or
+  a **column in the AADE invoice types list**, which is a different element and a different fix. He
+  has not answered, and it is recorded rather than guessed.
 
 **Steps 36 and 37 have not had a Claude Code pass against the real codebase** the way the rest of this
 file has. Treat their estimates as rougher than the others.

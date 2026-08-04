@@ -38,6 +38,16 @@ public interface SalesDocumentSeriesService {
     SalesDocumentSeriesView describe(long id, String description);
 
     /**
+     * Reorders the row. ⚠️ <strong>Freely editable</strong> — this is deliberately NOT the
+     * editable-while-unused freeze, because a sort code appears on no document and carries no
+     * legal meaning. Reordering a list is a normal act, not a correction.
+     *
+     * @throws InvalidDocumentSeriesException if another row in the same table already holds that sort code — it is
+     *     unique, so the ordering is deterministic
+     */
+    SalesDocumentSeriesView changeSortCode(long id, int sortCode);
+
+    /**
      * Corrects the abbreviation of a series <strong>nothing has been recorded in</strong>.
      *
      * <p>⚠️ <strong>Added in R2, and the gap it closes is worth stating.</strong> Until then no route

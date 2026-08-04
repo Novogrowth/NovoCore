@@ -62,6 +62,28 @@ the cookie is written on the first response — including the 401 that sends you
 only hand-written API calls in the application (`src/api/auth.ts`). Both answer with a status code
 rather than a redirect, because `fetch` follows a 302 to an HTML page and reports it as success.
 
+### ⚠️ Every successful write invalidates every query — one place, and a test that it is still there
+
+`createQueryClient()` puts an `onSuccess` on the shared `MutationCache`. It exists because **not one
+of this application's thirteen create forms invalidated its list**: every one mutates and navigates,
+so a list revisited inside `staleTime` (30 s) was served from cache without the new row.
+
+⚠️ **It reads as intermittent because it heals itself** — after thirty seconds everything looks
+right, which is why seven screens shipped with it. It only becomes constant when somebody creates
+fifty records in a sitting.
+
+**Two consequences you will meet:**
+
+- **A screen no longer needs to invalidate after a create.** Do not add per-screen invalidation back;
+  thirteen copies of a line that must never be forgotten is what caused this.
+- ⚠️ **A screen test whose `msw` handler is a static fixture will now show PRE-EDIT data after a
+  save**, because the app refetches where it used to trust `setQueryData`. That is the mock being
+  unfaithful rather than the app being wrong — make the handler record its writes.
+  `products.test.tsx` is the worked example.
+
+`query-client.test.ts` asserts the handler is **present** as well as that it works: with the fix
+global, deleting it leaves every screen test in this repository passing.
+
 ### The API client is generated
 
 `npm run api:generate` runs orval over `../docs/api/openapi.json`, then the paging-map generator.
@@ -395,8 +417,8 @@ and nothing on this side would change to mark the occasion. **No column file car
 yet**, so when one of them gains paging its sort controls disappear until somebody adds them. Safe,
 loud, and a real obligation.
 
-⚠️ **The size of that obligation, measured 2026-08-04 after R2: 11 column FILES covering 13 LIST
-SCREENS.** S2 shipped sorting against five screens, F4 took it to seven, and R2 added six screens.
+⚠️ **The size of that obligation, measured 2026-08-04 after R2b: 12 column FILES covering 14 LIST
+SCREENS** — R2b added payment methods. *(It was 11 / 13 after R2, and 7 after F4.)* S2 shipped sorting against five screens, F4 took it to seven, and R2 added six screens.
 **The two numbers differ and the larger one is the obligation**, because
 `document-reference/document-type-columns.tsx` and `document-reference/series-columns.tsx` are each
 shared by a sales screen and a purchase screen — one file, two lists, two endpoints that could gain

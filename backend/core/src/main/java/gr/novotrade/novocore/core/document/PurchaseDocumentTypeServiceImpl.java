@@ -33,20 +33,20 @@ class PurchaseDocumentTypeServiceImpl implements PurchaseDocumentTypeService {
     @Override
     @Transactional(readOnly = true)
     public List<PurchaseDocumentTypeView> all() {
-        return toViews(repository.findAllByOrderByDescriptionAsc());
+        return toViews(repository.findAllByOrderBySortCodeAsc());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<PurchaseDocumentTypeView> active() {
-        return toViews(repository.findByActiveTrueOrderByDescriptionAsc());
+        return toViews(repository.findByActiveTrueOrderBySortCodeAsc());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<PurchaseDocumentTypeView> drafts() {
         return toViews(repository
-                .findByAffectsStockIsNullOrTransfersStockIsNullOrderByDescriptionAsc());
+                .findByAffectsStockIsNullOrTransfersStockIsNullOrderBySortCodeAsc());
     }
 
     @Override
@@ -81,6 +81,7 @@ class PurchaseDocumentTypeServiceImpl implements PurchaseDocumentTypeService {
                 request.transfersStock(),
                 request.requiresMydataTransmission(),
                 request.aadeInvoiceTypeId(),
+                request.sortCode(),
                 decided));
 
         auditLog.record("purchase-document-type.created", ENTITY_TYPE,
@@ -118,6 +119,25 @@ class PurchaseDocumentTypeServiceImpl implements PurchaseDocumentTypeService {
         type.describe(corrected);
         auditLog.record("purchase-document-type.described", ENTITY_TYPE, String.valueOf(id),
                 Map.of("previousDescription", previous, "description", corrected));
+        return toView(type);
+    }
+
+
+    @Override
+    @Transactional
+    public PurchaseDocumentTypeView changeSortCode(long id, int sortCode) {
+        PurchaseDocumentType type = repository.findById(id)
+                .orElseThrow(() -> DocumentTypeNotFoundException.purchase(id));
+        if (type.getSortCode() == sortCode) {
+            return toView(type);
+        }
+        requireSortCodeIsFree(sortCode);
+
+        int previous = type.getSortCode();
+        type.changeSortCode(sortCode);
+        auditLog.record("purchase-document-type.sort-code-changed", ENTITY_TYPE, String.valueOf(id),
+                Map.of("previousSortCode", String.valueOf(previous),
+                        "sortCode", String.valueOf(sortCode)));
         return toView(type);
     }
 
@@ -198,6 +218,18 @@ class PurchaseDocumentTypeServiceImpl implements PurchaseDocumentTypeService {
                 Map.of("description", type.getDescription()));
     }
 
+    /**
+     * ⚠️ Unique so the ordering is deterministic — two rows sharing a sort code would order by
+     * whatever the plan produced, which is the one thing a sort key must not do. See {@code V34}.
+     */
+    private void requireSortCodeIsFree(int sortCode) {
+        if (repository.existsBySortCode(sortCode)) {
+            throw new InvalidDocumentTypeException(
+                    "Sort code " + sortCode + " is already used by another purchase document type. "
+                            + "Sort codes are unique so the list has one definite order.");
+        }
+    }
+
     private void requireDescriptionIsFree(String description, Long selfId) {
         repository.findByDescriptionIgnoreCase(description).ifPresent(existing -> {
             if (selfId == null || !existing.getId().equals(selfId)) {
@@ -265,6 +297,7 @@ class PurchaseDocumentTypeServiceImpl implements PurchaseDocumentTypeService {
                 type.isRequiresMydataTransmission(),
                 type.getAadeInvoiceTypeId(),
                 aadeCode,
+                type.getSortCode(),
                 type.isActive());
     }
 }

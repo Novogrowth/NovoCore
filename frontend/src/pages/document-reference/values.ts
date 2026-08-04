@@ -28,6 +28,8 @@ export type DocumentTypeView = SalesDocumentTypeView
 
 export interface NewDocumentTypeBody {
   description: string
+  /** ⚠️ Required — the column is `NOT NULL`. Ordering only, and freely editable afterwards. */
+  sortCode: number
   affectsStock?: boolean
   transfersStock?: boolean
   requiresMydataTransmission: boolean
@@ -111,6 +113,8 @@ export type SeriesView = SalesDocumentSeriesView
 export interface NewSeriesBody {
   abbreviation: string
   description: string
+  /** ⚠️ Required — the column is `NOT NULL`. Ordering only, and freely editable afterwards. */
+  sortCode: number
   documentTypeId: number
   channel?: SalesChannel
   getsMark: boolean
@@ -143,4 +147,17 @@ export function channelOptions(t: TFunction): { value: string; label: string }[]
 export function idOf(option: string): number {
   // eslint-disable-next-line no-restricted-syntax
   return Number(option)
+}
+
+/**
+ * A typed sort code back to a number.
+ *
+ * ⚠️ **Not `MoneyInput` and not `<input type="number">`.** A sort code is a plain count, not a
+ * decimal — none of `frontend/README.md`'s decimal rules apply, and `type="number"` is banned
+ * outright. A text input restricted to digits is the honest control: it cannot produce a fraction,
+ * a negative, or a locale-dependent separator.
+ */
+export function sortCodeOf(typed: string): number {
+  // eslint-disable-next-line no-restricted-syntax
+  return Number(typed)
 }

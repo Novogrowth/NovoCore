@@ -11,6 +11,7 @@ import gr.novotrade.novocore.core.web.document.DocumentReferenceRequests.AadeInv
 import gr.novotrade.novocore.core.web.document.DocumentReferenceRequests.DocumentDescriptionRequest;
 import gr.novotrade.novocore.core.web.document.DocumentReferenceRequests.MydataTransmissionRequest;
 import gr.novotrade.novocore.core.web.document.DocumentReferenceRequests.StockBehaviourRequest;
+import gr.novotrade.novocore.core.web.document.DocumentReferenceRequests.SortCodeRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -105,6 +106,21 @@ class PurchaseDocumentTypeController {
     PurchaseDocumentTypeView describe(
             @PathVariable long id, @RequestBody DocumentDescriptionRequest request) {
         return documentTypes.describe(id, request.description());
+    }
+
+    /**
+     * Reorders the row in every list and picker that offers it.
+     *
+     * <p>⚠️ <strong>Freely editable, and that is the difference from every other correction route
+     * on this controller.</strong> A sort code appears on no document and carries no legal meaning,
+     * so there is no in-use freeze on it — reordering is a normal act rather than a correction.
+     */
+    @PatchMapping(path = "/api/purchase-document-types/{id}/sort-code",
+            consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Requires(section = Section.PURCHASING, level = AccessLevel.FULL)
+    PurchaseDocumentTypeView changeSortCode(
+            @PathVariable long id, @RequestBody SortCodeRequest request) {
+        return documentTypes.changeSortCode(id, request.sortCode());
     }
 
     /**

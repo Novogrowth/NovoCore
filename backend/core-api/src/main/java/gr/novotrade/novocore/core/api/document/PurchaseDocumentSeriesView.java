@@ -27,6 +27,12 @@ import java.util.Optional;
  *     That is the exact shape {@code CLAUDE.md} names after R1b: a rule that agrees with itself only
  *     because of what the data happens to look like today. {@code DocumentReferenceGraphIT} pins the
  *     referencing set so <strong>F6 cannot add the column without a red build naming this field.</strong>
+ *
+ * @param sortCode ⚠️ <strong>Ordering only, and not an identifier.</strong> Assigned by the business
+ *     so the list an employee sees is in a sensible order. <strong>Freely editable</strong> — unlike
+ *     the abbreviation, because it appears on no document and carries no legal meaning — and never
+ *     derived from Prosvasis Go's numbers. An {@code int}, because a text sort puts {@code 1000}
+ *     before {@code 900}. See {@code V34}.
  */
 public record PurchaseDocumentSeriesView(
         long id,
@@ -36,6 +42,7 @@ public record PurchaseDocumentSeriesView(
         @Mandatory String documentTypeDescription,
         boolean getsMark,
         Long transformableIntoSeriesId,
+        int sortCode,
         boolean inUse,
         boolean active) {
 

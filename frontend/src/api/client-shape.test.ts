@@ -91,7 +91,7 @@ describe('the generated client', () => {
   it('covers the whole surface', () => {
     // An anti-vacuity guard: if the generated output moved, every assertion below would pass
     // against an empty string and report a green build for a check that examined nothing.
-    expect(all.length).toBe(237)
+    expect(all.length).toBe(247)
     expect(source.length).toBeGreaterThan(100_000)
   })
 
@@ -112,8 +112,14 @@ describe('the generated client', () => {
     // 4 PUT (`.../document-type` and `.../gets-mark` on both series). Every one of those fields
     // previously had NO write route on any installation, which left a hand-typed Greek series
     // abbreviation permanently uncorrectable.
-    expect(writes.length).toBe(141)
-    expect(reads.length).toBe(96)
+    //
+    // R2b added 10 more, all writes (237 → 247, 141 → 149) on 2026-08-04: four PATCH
+    // `.../sort-code` routes — the business's own ordering key, which is what an employee's list
+    // is sorted by — and six on `/api/payment-methods`, a table that had no screen at all because
+    // "SettlementMethod is an enum" was carried into R2's scope as "nothing to edit".
+    expect(writes.length).toBe(149)
+    // 96 before R2b; the two new reads are `GET /api/payment-methods` and its single-row route.
+    expect(reads.length).toBe(98)
   })
 
   it('wires every write as a mutation', () => {

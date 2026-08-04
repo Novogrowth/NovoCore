@@ -49,6 +49,23 @@ final class DocumentReferenceRequests {
         }
     }
 
+    /**
+     * Where a row sits in the list an employee reads.
+     *
+     * <p>⚠️ <strong>Ordering only, and freely editable</strong> — deliberately not the
+     * editable-while-unused freeze the abbreviation carries, because a sort code appears on no
+     * document and has no legal meaning. Reordering is a normal act.
+     *
+     * <p>Boxed, so an omitted field is a 400 naming it rather than arriving as {@code 0} and
+     * silently moving the row to the top of every picker.
+     */
+    record SortCodeRequest(@Mandatory Integer sortCode) {
+
+        SortCodeRequest {
+            Required.field(sortCode, "sortCode");
+        }
+    }
+
     /** Which document type a series numbers. */
     record SeriesDocumentTypeRequest(@Mandatory Long documentTypeId) {
 

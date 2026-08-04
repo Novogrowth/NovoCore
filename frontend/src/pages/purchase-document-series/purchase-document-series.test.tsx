@@ -48,6 +48,7 @@ const supplierInvoice: PurchaseDocumentTypeView = {
   affectsStock: true,
   transfersStock: false,
   requiresMydataTransmission: true,
+  sortCode: 20,
   active: true,
 }
 
@@ -60,6 +61,7 @@ const series: PurchaseDocumentSeriesView = {
   getsMark: false,
   // ⚠️ Always false today — see the file note. Nothing can make it true before F6.
   inUse: false,
+  sortCode: 10,
   active: true,
 }
 

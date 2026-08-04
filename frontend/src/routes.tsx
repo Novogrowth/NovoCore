@@ -28,6 +28,10 @@ import {
   DeliveryMethodsList,
 } from '@/pages/delivery-methods/delivery-methods'
 import {
+  PaymentMethodDetail,
+  PaymentMethodsList,
+} from '@/pages/payment-methods/payment-methods'
+import {
   PurchaseDocumentSeriesCreate,
   PurchaseDocumentSeriesDetail,
   PurchaseDocumentSeriesList,
@@ -91,6 +95,7 @@ const SCREENS: Record<string, () => ReactElement> = {
   '/settings/purchase-document-types': PurchaseDocumentTypesList,
   '/settings/purchase-document-series': PurchaseDocumentSeriesList,
   '/settings/delivery-methods': DeliveryMethodsList,
+  '/settings/payment-methods': PaymentMethodsList,
   '/settings/aade-invoice-types': AadeInvoiceTypesList,
 }
 
@@ -137,6 +142,9 @@ const CHILD_ROUTES: { path: string; owner: string; element: () => ReactElement }
   // ⚠️ NO `/new` for the AADE codification, and its absence here is load-bearing: even if somebody
   // added a create form, there would be no route to reach it by. Row authorship is Flyway's.
   { path: '/settings/aade-invoice-types/:id', owner: 'settings.aadeInvoiceTypes', element: AadeInvoiceTypeDetail },
+  // ⚠️ NO `/new`, for the same reason as the AADE codification: adding a payment method needs an
+  // AccountSystemKey and two behaviour flags, so it is a code change rather than a form.
+  { path: '/settings/payment-methods/:method', owner: 'settings.paymentMethods', element: PaymentMethodDetail },
 ]
 
 function RouteElement({ node, screen }: { node: NavNode; screen?: () => ReactElement }) {

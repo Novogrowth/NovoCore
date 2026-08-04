@@ -5244,6 +5244,300 @@
         }
       }
     },
+    "/api/payment-methods" : {
+      "get" : {
+        "operationId" : "PaymentMethodController_paymentMethods",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "VIEW",
+        "parameters" : [ {
+          "name" : "active",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ListResponse_PaymentMethodView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payment-methods/{method}" : {
+      "get" : {
+        "operationId" : "PaymentMethodController_paymentMethod",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "VIEW",
+        "parameters" : [ {
+          "name" : "method",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/SettlementMethod"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PaymentMethodView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payment-methods/{method}/deactivate" : {
+      "post" : {
+        "operationId" : "PaymentMethodController_deactivate",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "method",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/SettlementMethod"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payment-methods/{method}/description" : {
+      "patch" : {
+        "operationId" : "PaymentMethodController_describe",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "method",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/SettlementMethod"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PaymentMethodDescriptionRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PaymentMethodView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payment-methods/{method}/reactivate" : {
+      "post" : {
+        "operationId" : "PaymentMethodController_reactivate",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "method",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/SettlementMethod"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payment-methods/{method}/sort-code" : {
+      "patch" : {
+        "operationId" : "PaymentMethodController_changeSortCode",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "method",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/SettlementMethod"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PaymentMethodSortCodeRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PaymentMethodView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/products" : {
       "get" : {
         "operationId" : "ProductController_products",
@@ -6691,6 +6985,65 @@
         }
       }
     },
+    "/api/purchase-document-series/{id}/sort-code" : {
+      "patch" : {
+        "operationId" : "PurchaseDocumentSeriesController_changeSortCode",
+        "x-novocore-section" : "PURCHASING",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SortCodeRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PurchaseDocumentSeriesView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/purchase-document-series/{id}/transformation-target" : {
       "delete" : {
         "operationId" : "PurchaseDocumentSeriesController_clearTransformationTarget",
@@ -7265,6 +7618,65 @@
         "responses" : {
           "204" : {
             "description" : "No Content"
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/purchase-document-types/{id}/sort-code" : {
+      "patch" : {
+        "operationId" : "PurchaseDocumentTypeController_changeSortCode",
+        "x-novocore-section" : "PURCHASING",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SortCodeRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PurchaseDocumentTypeView"
+                }
+              }
+            }
           },
           "4XX" : {
             "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
@@ -8919,6 +9331,65 @@
         }
       }
     },
+    "/api/sales-document-series/{id}/sort-code" : {
+      "patch" : {
+        "operationId" : "SalesDocumentSeriesController_changeSortCode",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SortCodeRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SalesDocumentSeriesView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/sales-document-series/{id}/transformation-target" : {
       "delete" : {
         "operationId" : "SalesDocumentSeriesController_clearTransformationTarget",
@@ -9493,6 +9964,65 @@
         "responses" : {
           "204" : {
             "description" : "No Content"
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sales-document-types/{id}/sort-code" : {
+      "patch" : {
+        "operationId" : "SalesDocumentTypeController_changeSortCode",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SortCodeRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SalesDocumentTypeView"
+                }
+              }
+            }
           },
           "4XX" : {
             "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
@@ -14002,6 +14532,21 @@
           }
         }
       },
+      "ListResponse_PaymentMethodView" : {
+        "type" : "object",
+        "required" : [ "items" ],
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PaymentMethodView"
+            }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
+          }
+        }
+      },
       "ListResponse_ProductView" : {
         "type" : "object",
         "required" : [ "items" ],
@@ -14744,7 +15289,7 @@
       },
       "NewPurchaseDocumentSeries" : {
         "type" : "object",
-        "required" : [ "abbreviation", "description", "documentTypeId", "getsMark" ],
+        "required" : [ "abbreviation", "description", "documentTypeId", "getsMark", "sortCode" ],
         "properties" : {
           "abbreviation" : {
             "type" : "string"
@@ -14762,12 +15307,16 @@
           "transformableIntoSeriesId" : {
             "type" : "integer",
             "format" : "int64"
+          },
+          "sortCode" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       },
       "NewPurchaseDocumentType" : {
         "type" : "object",
-        "required" : [ "description", "requiresMydataTransmission" ],
+        "required" : [ "description", "requiresMydataTransmission", "sortCode" ],
         "properties" : {
           "description" : {
             "type" : "string"
@@ -14784,6 +15333,10 @@
           "aadeInvoiceTypeId" : {
             "type" : "integer",
             "format" : "int64"
+          },
+          "sortCode" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       },
@@ -14873,7 +15426,7 @@
       },
       "NewSalesDocumentSeries" : {
         "type" : "object",
-        "required" : [ "abbreviation", "description", "documentTypeId", "getsMark" ],
+        "required" : [ "abbreviation", "description", "documentTypeId", "getsMark", "sortCode" ],
         "properties" : {
           "abbreviation" : {
             "type" : "string"
@@ -14894,12 +15447,16 @@
           "transformableIntoSeriesId" : {
             "type" : "integer",
             "format" : "int64"
+          },
+          "sortCode" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       },
       "NewSalesDocumentType" : {
         "type" : "object",
-        "required" : [ "description", "requiresMydataTransmission" ],
+        "required" : [ "description", "requiresMydataTransmission", "sortCode" ],
         "properties" : {
           "description" : {
             "type" : "string"
@@ -14916,6 +15473,10 @@
           "aadeInvoiceTypeId" : {
             "type" : "integer",
             "format" : "int64"
+          },
+          "sortCode" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       },
@@ -15250,6 +15811,57 @@
           }
         }
       },
+      "PaymentMethodDescriptionRequest" : {
+        "type" : "object",
+        "required" : [ "description" ],
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          }
+        }
+      },
+      "PaymentMethodSortCodeRequest" : {
+        "type" : "object",
+        "required" : [ "sortCode" ],
+        "properties" : {
+          "sortCode" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "PaymentMethodView" : {
+        "type" : "object",
+        "required" : [ "method", "abbreviation", "description", "settlesImmediately", "subjectToCashLimit", "sortCode", "active" ],
+        "properties" : {
+          "method" : {
+            "$ref" : "#/components/schemas/SettlementMethod"
+          },
+          "abbreviation" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "mydataPaymentCode" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "settlesImmediately" : {
+            "type" : "boolean"
+          },
+          "subjectToCashLimit" : {
+            "type" : "boolean"
+          },
+          "sortCode" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "active" : {
+            "type" : "boolean"
+          }
+        }
+      },
       "ProductNameRequest" : {
         "type" : "object",
         "properties" : {
@@ -15329,7 +15941,7 @@
       },
       "PurchaseDocumentSeriesView" : {
         "type" : "object",
-        "required" : [ "id", "abbreviation", "description", "documentTypeId", "documentTypeDescription", "getsMark", "inUse", "active" ],
+        "required" : [ "id", "abbreviation", "description", "documentTypeId", "documentTypeDescription", "getsMark", "sortCode", "inUse", "active" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -15355,6 +15967,10 @@
             "type" : "integer",
             "format" : "int64"
           },
+          "sortCode" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
           "inUse" : {
             "type" : "boolean"
           },
@@ -15365,7 +15981,7 @@
       },
       "PurchaseDocumentTypeView" : {
         "type" : "object",
-        "required" : [ "id", "description", "requiresMydataTransmission", "active" ],
+        "required" : [ "id", "description", "requiresMydataTransmission", "sortCode", "active" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -15389,6 +16005,10 @@
           },
           "aadeInvoiceTypeCode" : {
             "type" : "string"
+          },
+          "sortCode" : {
+            "type" : "integer",
+            "format" : "int32"
           },
           "active" : {
             "type" : "boolean"
@@ -15733,7 +16353,7 @@
       },
       "SalesDocumentSeriesView" : {
         "type" : "object",
-        "required" : [ "id", "abbreviation", "description", "documentTypeId", "documentTypeDescription", "getsMark", "inUse", "active" ],
+        "required" : [ "id", "abbreviation", "description", "documentTypeId", "documentTypeDescription", "getsMark", "sortCode", "inUse", "active" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -15762,6 +16382,10 @@
             "type" : "integer",
             "format" : "int64"
           },
+          "sortCode" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
           "inUse" : {
             "type" : "boolean"
           },
@@ -15772,7 +16396,7 @@
       },
       "SalesDocumentTypeView" : {
         "type" : "object",
-        "required" : [ "id", "description", "requiresMydataTransmission", "active" ],
+        "required" : [ "id", "description", "requiresMydataTransmission", "sortCode", "active" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -15796,6 +16420,10 @@
           },
           "aadeInvoiceTypeCode" : {
             "type" : "string"
+          },
+          "sortCode" : {
+            "type" : "integer",
+            "format" : "int32"
           },
           "active" : {
             "type" : "boolean"
@@ -16332,6 +16960,16 @@
             "items" : {
               "$ref" : "#/components/schemas/AllocationView"
             }
+          }
+        }
+      },
+      "SortCodeRequest" : {
+        "type" : "object",
+        "required" : [ "sortCode" ],
+        "properties" : {
+          "sortCode" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       },

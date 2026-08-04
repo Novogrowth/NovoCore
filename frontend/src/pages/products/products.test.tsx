@@ -56,10 +56,26 @@ const espresso: ProductView = {
 
 let me: Me = owner
 
+/** What the last successful write left behind — see the GET handler's note. */
+let saved: ProductView = espresso
+
 const server = setupServer(
   http.get('http://localhost/api/me', () => HttpResponse.json(me)),
   http.get('http://localhost/api/products', () => HttpResponse.json({ items: [espresso] })),
-  http.get('http://localhost/api/products/41', () => HttpResponse.json(espresso)),
+  /*
+   * ⚠️ STATEFUL, and R2b is what made that necessary — this is the mock being made faithful, not
+   * an assertion being relaxed.
+   *
+   * Since the global invalidate-after-write handler landed, a successful PATCH invalidates every
+   * query, so the detail screen refetches this route immediately afterwards. Against a real server
+   * that returns the UPDATED product and the screen is correct. Against a static fixture it
+   * returned the pre-edit one, and the screen appeared to revert.
+   *
+   * A mock that forgets a write the app just made is describing a server nobody runs. `saved` is
+   * what the PATCH handlers below record, so this route answers what the last write left — which is
+   * what the assertion about "the server's answer" was always meant to be testing.
+   */
+  http.get('http://localhost/api/products/41', () => HttpResponse.json(saved)),
   http.get('http://localhost/api/products/41/stock', () =>
     HttpResponse.json({ productId: 41, byLocation: { INVENTORY: '12.000000' } }),
   ),
@@ -75,11 +91,13 @@ const server = setupServer(
   ),
   http.patch('http://localhost/api/products/41/name', async ({ request }) => {
     const body = (await request.json()) as { name: string }
-    return HttpResponse.json({ ...espresso, name: body.name })
+    saved = { ...saved, name: body.name }
+    return HttpResponse.json(saved)
   }),
   http.patch('http://localhost/api/products/41/brand', async ({ request }) => {
     const body = (await request.json()) as { brand?: string }
-    return HttpResponse.json({ ...espresso, brand: body.brand })
+    saved = { ...saved, brand: body.brand }
+    return HttpResponse.json(saved)
   }),
   http.patch('http://localhost/api/products/41/selling-price', () =>
     HttpResponse.json({ ...espresso, sellingPrice: { amount: '19.90', currency: 'EUR' } }),
@@ -97,6 +115,7 @@ const requests = trackRequests(server)
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => {
   server.resetHandlers()
+  saved = espresso
   me = owner
   requests.reset()
 })

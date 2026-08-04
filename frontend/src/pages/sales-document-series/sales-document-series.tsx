@@ -9,6 +9,7 @@ import {
   useSalesDocumentSeriesControllerChangeAbbreviation,
   useSalesDocumentSeriesControllerChangeChannel,
   useSalesDocumentSeriesControllerChangeDocumentType,
+  useSalesDocumentSeriesControllerChangeSortCode,
   useSalesDocumentSeriesControllerChangeGetsMark,
   useSalesDocumentSeriesControllerClearChannel,
   useSalesDocumentSeriesControllerClearTransformationTarget,
@@ -110,6 +111,7 @@ export function SalesDocumentSeriesDetail() {
 
   const describe = useSalesDocumentSeriesControllerDescribe()
   const abbreviation = useSalesDocumentSeriesControllerChangeAbbreviation()
+  const sortCode = useSalesDocumentSeriesControllerChangeSortCode()
   const documentType = useSalesDocumentSeriesControllerChangeDocumentType()
   const getsMark = useSalesDocumentSeriesControllerChangeGetsMark()
   const changeChannel = useSalesDocumentSeriesControllerChangeChannel()
@@ -147,6 +149,9 @@ export function SalesDocumentSeriesDetail() {
         applyResponse(
           await abbreviation.mutateAsync({ id: seriesId, data: { abbreviation: value } }),
         )
+      }
+      onSortCode={async (value) =>
+        applyResponse(await sortCode.mutateAsync({ id: seriesId, data: { sortCode: value } }))
       }
       onDocumentType={async (documentTypeId) =>
         applyResponse(await documentType.mutateAsync({ id: seriesId, data: { documentTypeId } }))

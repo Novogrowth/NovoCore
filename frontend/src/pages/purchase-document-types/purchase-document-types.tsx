@@ -8,6 +8,7 @@ import {
   usePurchaseDocumentTypeControllerClearAadeInvoiceType,
   usePurchaseDocumentTypeControllerCreate,
   usePurchaseDocumentTypeControllerDeactivate,
+  usePurchaseDocumentTypeControllerChangeSortCode,
   usePurchaseDocumentTypeControllerDescribe,
   usePurchaseDocumentTypeControllerDocumentType,
   usePurchaseDocumentTypeControllerDocumentTypes,
@@ -122,6 +123,7 @@ export function PurchaseDocumentTypeDetail() {
   })
 
   const describe = usePurchaseDocumentTypeControllerDescribe()
+  const sortCode = usePurchaseDocumentTypeControllerChangeSortCode()
   const stock = usePurchaseDocumentTypeControllerChangeStockBehaviour()
   const mydata = usePurchaseDocumentTypeControllerChangeMydataTransmissionRequired()
   const mapAade = usePurchaseDocumentTypeControllerMapToAadeInvoiceType()
@@ -147,6 +149,9 @@ export function PurchaseDocumentTypeDetail() {
       backLabel={t('docTypes.backToPurchaseList')}
       onDescribe={async (description) =>
         applyResponse(await describe.mutateAsync({ id: typeId, data: { description } }))
+      }
+      onSortCode={async (value) =>
+        applyResponse(await sortCode.mutateAsync({ id: typeId, data: { sortCode: value } }))
       }
       onStockBehaviour={async (affectsStock, transfersStock) =>
         applyResponse(

@@ -4,6 +4,7 @@ import gr.novotrade.novocore.core.api.audit.AuditLogService;
 import gr.novotrade.novocore.core.api.document.DocumentSeriesNotFoundException;
 import gr.novotrade.novocore.core.api.document.DocumentTypeNotFoundException;
 import gr.novotrade.novocore.core.api.document.InvalidDocumentSeriesException;
+import gr.novotrade.novocore.core.api.document.InvalidDocumentTypeException;
 import gr.novotrade.novocore.core.api.document.NewSalesDocumentSeries;
 import gr.novotrade.novocore.core.api.document.SalesDocumentSeriesService;
 import gr.novotrade.novocore.core.api.document.SalesDocumentSeriesView;
@@ -34,19 +35,19 @@ class SalesDocumentSeriesServiceImpl implements SalesDocumentSeriesService {
     @Override
     @Transactional(readOnly = true)
     public List<SalesDocumentSeriesView> all() {
-        return toViews(repository.findAllByOrderByAbbreviationAsc());
+        return toViews(repository.findAllByOrderBySortCodeAsc());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<SalesDocumentSeriesView> active() {
-        return toViews(repository.findByActiveTrueOrderByAbbreviationAsc());
+        return toViews(repository.findByActiveTrueOrderBySortCodeAsc());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<SalesDocumentSeriesView> ofDocumentType(long documentTypeId) {
-        return toViews(repository.findByDocumentTypeIdOrderByAbbreviationAsc(documentTypeId));
+        return toViews(repository.findByDocumentTypeIdOrderBySortCodeAsc(documentTypeId));
     }
 
     @Override
@@ -74,8 +75,10 @@ class SalesDocumentSeriesServiceImpl implements SalesDocumentSeriesService {
 
         SalesDocumentType documentType = documentTypes.findById(request.documentTypeId())
                 .orElseThrow(() -> DocumentTypeNotFoundException.sales(request.documentTypeId()));
+        requireUsableDocumentType(documentType);
 
         requireTargetExists(request.transformableIntoSeriesId());
+        requireSortCodeIsFree(request.sortCode());
 
         SalesDocumentSeries saved = repository.save(new SalesDocumentSeries(
                 abbreviation,
@@ -83,7 +86,8 @@ class SalesDocumentSeriesServiceImpl implements SalesDocumentSeriesService {
                 documentType,
                 request.channel(),
                 request.getsMark(),
-                request.transformableIntoSeriesId()));
+                request.transformableIntoSeriesId(),
+                request.sortCode()));
 
         auditLog.record("sales-document-series.created", ENTITY_TYPE,
                 String.valueOf(saved.getId()), Map.of(
@@ -115,6 +119,26 @@ class SalesDocumentSeriesServiceImpl implements SalesDocumentSeriesService {
         series.describe(corrected);
         auditLog.record("sales-document-series.described", ENTITY_TYPE, String.valueOf(id),
                 Map.of("previousDescription", previous, "description", corrected));
+        return toView(series);
+    }
+
+    @Override
+    @Transactional
+    public SalesDocumentSeriesView changeSortCode(long id, int sortCode) {
+        SalesDocumentSeries series = repository.findById(id)
+                .orElseThrow(() -> DocumentSeriesNotFoundException.sales(id));
+        if (series.getSortCode() == sortCode) {
+            return toView(series);
+        }
+        // ⚠️ NO in-use freeze here, and the contrast with the three fields below is the point:
+        // reordering a list is normal, and a sort code appears on no document. See V34.
+        requireSortCodeIsFree(sortCode);
+
+        int previous = series.getSortCode();
+        series.changeSortCode(sortCode);
+        auditLog.record("sales-document-series.sort-code-changed", ENTITY_TYPE, String.valueOf(id),
+                Map.of("previousSortCode", String.valueOf(previous),
+                        "sortCode", String.valueOf(sortCode)));
         return toView(series);
     }
 
@@ -158,6 +182,7 @@ class SalesDocumentSeriesServiceImpl implements SalesDocumentSeriesService {
 
         SalesDocumentType documentType = documentTypes.findById(documentTypeId)
                 .orElseThrow(() -> DocumentTypeNotFoundException.sales(documentTypeId));
+        requireUsableDocumentType(documentType);
 
         long previous = series.getDocumentType().getId();
         series.changeDocumentType(documentType);
@@ -264,6 +289,64 @@ class SalesDocumentSeriesServiceImpl implements SalesDocumentSeriesService {
                 Map.of("abbreviation", series.getAbbreviation()));
     }
 
+    /**
+     * ⚠️ <strong>A DRAFT or DEACTIVATED document type may not be SET on a series.</strong>
+     *
+     * <h2>Why this exists at all — R2's live leg, 2026-08-04</h2>
+     *
+     * <p>Until R2b <strong>there was no server-side check whatsoever.</strong> This method resolved
+     * the type and never read {@code isActive()}, so the <em>only</em> guard was the create screen's
+     * active-only picker — and the edit screen did not even have that, offering every type including
+     * the inactive ones. An adapter or a direct API call was never constrained at all.
+     *
+     * <p>The owner's live leg proved it in the data rather than in theory: <strong>both</strong>
+     * series he created point at an inactive type — one deactivated, one a draft that was never
+     * activated. <strong>A path where the screen was load-bearing and nothing behind it was.</strong>
+     *
+     * <h2>⚠️ THE ORDER OF THESE TWO TESTS IS LOAD-BEARING</h2>
+     *
+     * <p><strong>A draft is ALWAYS inactive</strong> — {@code sales_document_type_active_has_stock_behaviour}
+     * forces {@code active = false} while either stock flag is null. So testing "inactive" first
+     * would catch every draft as well and give it the milder message, and the specific reason would
+     * never be reachable. Draft is tested first, and this comment is why.
+     *
+     * <p>They are genuinely different failures. <strong>A draft is the worse of the two:</strong> its
+     * stock behaviour is undecided, so a document recorded in a series pointing at it could not post
+     * correctly — R1b branches inventory consumption on exactly that value. Deactivated merely means
+     * "not for new documents", which is an ordinary retirement.
+     *
+     * <h2>⚠️ SETTING IS REFUSED; HOLDING IS NOT</h2>
+     *
+     * <p>This runs on <strong>create</strong> and on <strong>change</strong> — the two places a type
+     * is <em>set</em>. Deactivating a type does <strong>not</strong> break the series already
+     * pointing at it, and must not: deactivation would become destructive and nobody would use it.
+     * The same distinction R2 drew for the abbreviation freeze, in the other direction.
+     */
+    private static void requireUsableDocumentType(SalesDocumentType documentType) {
+        if (documentType.isDraft()) {
+            throw new InvalidDocumentTypeException(
+                    "Document type \"" + documentType.getDescription() + "\" is a draft: its stock "
+                            + "behaviour is undecided, so a document recorded in a series pointing "
+                            + "at it could not post correctly — whether it consumes inventory has "
+                            + "no answer yet. Set both stock flags on the type first.");
+        }
+        if (!documentType.isActive()) {
+            throw new InvalidDocumentTypeException(
+                    "Document type \"" + documentType.getDescription() + "\" is inactive, so it is "
+                            + "not for new documents and a new series must not be pointed at it. "
+                            + "Series that already use it are unaffected and keep working.");
+        }
+    }
+
+    /** Unique so the ordering is deterministic — two rows sharing one would order arbitrarily. */
+    private void requireSortCodeIsFree(int sortCode) {
+        if (repository.existsBySortCode(sortCode)) {
+            throw new InvalidDocumentSeriesException(
+                    "Sort code " + sortCode + " is already used by another sales document series. "
+                            + "Sort codes are unique so the list has one definite order.");
+        }
+    }
+
     private void requireTargetExists(Long targetSeriesId) {
         if (targetSeriesId != null && !repository.existsById(targetSeriesId)) {
             throw DocumentSeriesNotFoundException.sales(targetSeriesId);
@@ -304,6 +387,7 @@ class SalesDocumentSeriesServiceImpl implements SalesDocumentSeriesService {
                 series.getChannel(),
                 series.isGetsMark(),
                 series.getTransformableIntoSeriesId(),
+                series.getSortCode(),
                 inUse,
                 series.isActive());
     }

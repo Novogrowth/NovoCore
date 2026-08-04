@@ -8,6 +8,7 @@ import {
   useSalesDocumentTypeControllerClearAadeInvoiceType,
   useSalesDocumentTypeControllerCreate,
   useSalesDocumentTypeControllerDeactivate,
+  useSalesDocumentTypeControllerChangeSortCode,
   useSalesDocumentTypeControllerDescribe,
   useSalesDocumentTypeControllerDocumentType,
   useSalesDocumentTypeControllerDocumentTypes,
@@ -120,6 +121,7 @@ export function SalesDocumentTypeDetail() {
   })
 
   const describe = useSalesDocumentTypeControllerDescribe()
+  const sortCode = useSalesDocumentTypeControllerChangeSortCode()
   const stock = useSalesDocumentTypeControllerChangeStockBehaviour()
   const mydata = useSalesDocumentTypeControllerChangeMydataTransmissionRequired()
   const mapAade = useSalesDocumentTypeControllerMapToAadeInvoiceType()
@@ -145,6 +147,9 @@ export function SalesDocumentTypeDetail() {
       backLabel={t('docTypes.backToSalesList')}
       onDescribe={async (description) =>
         applyResponse(await describe.mutateAsync({ id: typeId, data: { description } }))
+      }
+      onSortCode={async (value) =>
+        applyResponse(await sortCode.mutateAsync({ id: typeId, data: { sortCode: value } }))
       }
       onStockBehaviour={async (affectsStock, transfersStock) =>
         applyResponse(

@@ -105,25 +105,25 @@ class R1bWriteContractIT {
 
         long movingTypeId = Json.createdId(owner.post("/api/sales-document-types", """
                 {"description":"R1B Moving","affectsStock":true,"transfersStock":true,
-                 "requiresMydataTransmission":true}
+                 "requiresMydataTransmission":true,"sortCode":100}
                 """), "the stock-moving type");
         long nonMovingTypeId = Json.createdId(owner.post("/api/sales-document-types", """
                 {"description":"R1B Non-moving","affectsStock":false,"transfersStock":false,
-                 "requiresMydataTransmission":true}
+                 "requiresMydataTransmission":true,"sortCode":110}
                 """), "the non-stock-moving type");
 
         movingSeriesId = Json.createdId(owner.post("/api/sales-document-series", """
                 {"abbreviation":"R1B-W","description":"R1b web series","documentTypeId":%d,
-                 "channel":"ECOMMERCE","getsMark":false}
+                 "channel":"ECOMMERCE","getsMark":false,"sortCode":120}
                 """.formatted(movingTypeId)), "the web series");
         nonMovingSeriesId = Json.createdId(owner.post("/api/sales-document-series", """
                 {"abbreviation":"R1B-T","description":"R1b invoice series","documentTypeId":%d,
-                 "channel":"STORE_AND_PHONE","getsMark":false}
+                 "channel":"STORE_AND_PHONE","getsMark":false,"sortCode":130}
                 """.formatted(nonMovingTypeId)), "the non-moving series");
         // ⚠️ No channel at all — the self-supply shape. Recording against it must be refused.
         channelLessSeriesId = Json.createdId(owner.post("/api/sales-document-series", """
                 {"abbreviation":"R1B-SELF","description":"R1b self-supply series",
-                 "documentTypeId":%d,"getsMark":false}
+                 "documentTypeId":%d,"getsMark":false,"sortCode":140}
                 """.formatted(movingTypeId)), "the channel-less series");
         // ⚠️ NO OPENING STOCK, DELIBERATELY, AND IT MAKES THE TEST STRONGER RATHER THAN WEAKER.
         //
@@ -264,11 +264,11 @@ class R1bWriteContractIT {
     void inactiveReferenceDataIsRefused() {
         long typeId = Json.createdId(owner.post("/api/sales-document-types", """
                 {"description":"R1B Retired","affectsStock":true,"transfersStock":true,
-                 "requiresMydataTransmission":true}
+                 "requiresMydataTransmission":true,"sortCode":150}
                 """), "the type to retire");
         long seriesId = Json.createdId(owner.post("/api/sales-document-series", """
                 {"abbreviation":"R1B-X","description":"R1b retiring series","documentTypeId":%d,
-                 "channel":"SKROUTZ","getsMark":false}
+                 "channel":"SKROUTZ","getsMark":false,"sortCode":160}
                 """.formatted(typeId)), "the series to retire");
 
         // It works first, so the refusals below are about the deactivation and not the fixture.

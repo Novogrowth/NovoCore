@@ -61,7 +61,21 @@ export function OptionSelect({
       onValueChange={onValueChange}
       disabled={disabled}
     >
-      <SelectTrigger id={id} aria-label={ariaLabel} className={className}>
+      {/*
+        ⚠️ `w-full` overrides `SelectTrigger`'s `w-fit` (R2b §5).
+
+        The trigger sizes to its content by default, so in a constrained column a long option is
+        squeezed and `line-clamp-1` cuts it. That bit the AADE invoice-type picker, whose options
+        read `code — description · group` and are the longest in the application.
+
+        ⚠️ **What is cut is the END, not the start** — `line-clamp-1` truncates trailing text, so the
+        `code —` prefix was never at risk and the *group* suffix was what disappeared. That
+        correction matters because the opposite was written into two documents before it was
+        checked; see PROGRESS.md, R2b §5.
+
+        A width change only. F10 still owns the general styling sweep.
+      */}
+      <SelectTrigger id={id} aria-label={ariaLabel} className={className ?? 'w-full'}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

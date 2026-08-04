@@ -39,6 +39,7 @@
   "settings.documents": "Παραστατικά & στρογγυλοποίηση",
   "settings.email": "Email / SMTP",
   "settings.modules": "Υπομονάδες",
+  "settings.paymentMethods": "Τρόποι πληρωμής",
   "settings.purchaseDocumentSeries": "Σειρές αγορών",
   "settings.purchaseDocumentTypes": "Τύποι παραστατικών αγορών",
   "settings.retention": "Διατήρηση δεδομένων",

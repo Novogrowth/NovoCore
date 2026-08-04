@@ -18,6 +18,7 @@ export interface SalesDocumentSeriesView {
   channel?: SalesChannel;
   getsMark: boolean;
   transformableIntoSeriesId?: number;
+  sortCode: number;
   inUse: boolean;
   active: boolean;
 }

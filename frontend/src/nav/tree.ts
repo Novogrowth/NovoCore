@@ -360,6 +360,16 @@ export const NAV_TREE: readonly NavNode[] = [
             endpoint: 'GET /api/purchase-document-series',
           },
           {
+            // R2b: the twin of delivery methods. It was missed by a scoping error rather than an
+            // implementation gap — see `PaymentMethodsList` — and is seed-only, like the AADE
+            // codification, because a new method needs an AccountSystemKey and two behaviour flags.
+            id: 'settings.paymentMethods',
+            path: '/settings/payment-methods',
+            requires: view(Section.SALES),
+            status: 'BUILT',
+            endpoint: 'GET /api/payment-methods',
+          },
+          {
             id: 'settings.deliveryMethods',
             path: '/settings/delivery-methods',
             requires: view(Section.SALES),

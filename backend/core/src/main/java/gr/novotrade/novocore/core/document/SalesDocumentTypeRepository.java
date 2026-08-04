@@ -11,9 +11,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
  */
 interface SalesDocumentTypeRepository extends JpaRepository<SalesDocumentType, Long> {
 
-    List<SalesDocumentType> findAllByOrderByDescriptionAsc();
 
-    List<SalesDocumentType> findByActiveTrueOrderByDescriptionAsc();
+    /**
+     * ⚠️ Ordered by {@code sort_code}. That is what the column exists for — the previous default
+     * ordered by description, which is the Greek alphabet and therefore arbitrary to the person
+     * reading the list. See {@code V34}.
+     */
+    List<SalesDocumentType> findAllByOrderBySortCodeAsc();
+
+    List<SalesDocumentType> findByActiveTrueOrderBySortCodeAsc();
 
     /**
      * Types whose stock behaviour is undecided — drafts.
@@ -22,7 +28,10 @@ interface SalesDocumentTypeRepository extends JpaRepository<SalesDocumentType, L
      * a different thing from a retired type: the two look identical in a list and have entirely
      * different fixes.
      */
-    List<SalesDocumentType> findByAffectsStockIsNullOrTransfersStockIsNullOrderByDescriptionAsc();
+    List<SalesDocumentType> findByAffectsStockIsNullOrTransfersStockIsNullOrderBySortCodeAsc();
+
+    /** Unique per table, so the ordering is deterministic. */
+    boolean existsBySortCode(int sortCode);
 
     Optional<SalesDocumentType> findByDescriptionIgnoreCase(String description);
 }

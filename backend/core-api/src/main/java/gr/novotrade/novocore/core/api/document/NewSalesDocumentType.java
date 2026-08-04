@@ -18,6 +18,10 @@ import gr.novotrade.novocore.core.api.shared.Required;
  * @param aadeInvoiceTypeId null where the document is operational rather than a tax document.
  *     ⚠️ Six of the owner's nineteen types are exactly that, so null here is ordinary rather than
  *     exceptional, and there is deliberately no sentinel code to use instead.
+ *
+ * @param sortCode ⚠️ Ordering only — see the view. <strong>Required</strong>, because the
+ *     column is {@code NOT NULL}: unlike {@code sales_invoice.series_id}, a sort code has no
+ *     truth value, so giving one fabricates nothing.
  */
 public record NewSalesDocumentType(
         @Mandatory String description,
@@ -29,17 +33,20 @@ public record NewSalesDocumentType(
         Boolean affectsStock,
         Boolean transfersStock,
         @Mandatory Boolean requiresMydataTransmission,
-        Long aadeInvoiceTypeId) {
+        Long aadeInvoiceTypeId,
+        @Mandatory Integer sortCode) {
 
     public NewSalesDocumentType {
+        Required.field(sortCode, "sortCode");
         Required.text(description, "description");
         Required.field(requiresMydataTransmission, "requiresMydataTransmission");
     }
 
     /** A type whose stock behaviour is already known — the ordinary case once R2 exists. */
     public static NewSalesDocumentType decided(String description, boolean affectsStock,
-            boolean transfersStock, boolean requiresMydataTransmission, Long aadeInvoiceTypeId) {
+            boolean transfersStock, boolean requiresMydataTransmission, Long aadeInvoiceTypeId,
+            int sortCode) {
         return new NewSalesDocumentType(description, affectsStock, transfersStock,
-                requiresMydataTransmission, aadeInvoiceTypeId);
+                requiresMydataTransmission, aadeInvoiceTypeId, sortCode);
     }
 }

@@ -99,6 +99,41 @@ the summary.
   same time and for the same reason: it was a snapshot duplicating `PROGRESS.md` and the roadmap, and a
   second record that drifts is exactly what let the backend queue and the frontend roadmap disagree
   about item 3 for a week. **Regenerate a summary on demand rather than maintaining one.**
+- ✅ **R2b is DONE — 2026-08-04.** Five sections out of R2's live leg, two of which started from a
+  wrong premise. Spec **237 → 247 operations**. Backend and frontend both green.
+  - ⚠️⚠️ **The stale-list defect was OLDER than R2 and sat in ALL THIRTEEN create forms.** Not one
+    invalidated its list; R2 **copied the pattern faithfully, including the defect**. ⚠️ **It heals
+    itself in 30 seconds** (`staleTime`), which is why seven screens shipped with it and why it read
+    as "the browser being slow" — it only becomes constant when somebody creates fifty rows in a
+    sitting. Fixed **globally**, one `MutationCache.onSuccess`, with a **structural** test asserting
+    the handler exists: with the fix global, deleting it leaves every screen test passing.
+  - ⚠️⚠️ **There was NO server-side check that a series' document type is usable** — the create
+    screen's picker was the only guard, the edit screen had none, and an adapter had none.
+    Now refused on create *and* change, both sides, 422. ⚠️ **Draft is tested BEFORE inactive**: a
+    draft is always inactive, so the other order gives every draft the milder message. ⚠️ **Setting
+    is refused, holding is not** — deactivating a type never breaks the series already using it.
+  - ✅ **`sort_code` on four tables (`V34`), integer and `NOT NULL`.** ⚠️ **The owner overruled a
+    nullable proposal, and the reason transfers nowhere else**: `series_id` stayed nullable because
+    backfilling would *invent a series nobody authored*, a false statement about a legal document.
+    **A sort code has no truth value**, so a backfill fabricates nothing. Freely editable — it is
+    ordering, not identity, and appears on no document.
+  - ⭐ **Payment methods had NO SCREEN because of a SCOPING ERROR, not an implementation gap.**
+    "`SettlementMethod` is an enum, so nothing to edit" was carried into R2's scope; delivery
+    methods — a near-identical row in the same specification — got full CRUD. **No create was right;
+    no screen was not.** ⚠️ **The brief's premise was also wrong: the myDATA codes have been on the
+    enum since it was written**, so they are read from it and **not stored** — nothing to drift. A
+    test holds table and enum together **in both directions**.
+  - ✅ **The `active` guard was built, and the condition was checked.** It is **not** in the method
+    §2 touched — it is `SalesInvoiceServiceImpl.compute(...)`, the recording path, where `settlementMethod`
+    has its **one** caller-settable site. A credit note inherits its method from the invoice —
+    holding, not setting — so it is deliberately unguarded.
+  - 🐛 **The AADE picker truncation claim was WRONG and had been amplified.** `line-clamp-1` cuts the
+    **END**, so the `code —` prefix was safe and the group suffix was lost — and that wrong claim was
+    the stated reason for pulling the item out of F10. Fixed anyway (`w-full`); the record is
+    corrected rather than quietly edited. 📌 One question still open: the owner said "cell", which may
+    mean a list column instead.
+  - ⭐ **The live-leg lesson is now in `CLAUDE.md`: a live-leg block is DERIVED from the screens a
+    step ships, never composed freehand.** R2's had ten rows against twelve items.
 - ⚠️ **The next step is F5.** ⚠️ **R2 is DONE — 2026-08-04.** Six settings screens over R1a's six
   tables, and **it grew a backend sub-part mid-step**: seven new routes (230 → **237** operations)
   making a series' `abbreviation`, `documentTypeId` and `getsMark`, and a delivery method's

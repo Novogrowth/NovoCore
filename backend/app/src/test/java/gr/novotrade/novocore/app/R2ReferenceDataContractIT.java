@@ -99,11 +99,11 @@ class R2ReferenceDataContractIT {
 
         typeId = Json.createdId(owner.post("/api/sales-document-types", """
                 {"description":"R2 Retail receipt","affectsStock":true,"transfersStock":true,
-                 "requiresMydataTransmission":true}
+                 "requiresMydataTransmission":true,"sortCode":100}
                 """), "the document type");
         otherTypeId = Json.createdId(owner.post("/api/sales-document-types", """
                 {"description":"R2 Plain invoice","affectsStock":false,"transfersStock":false,
-                 "requiresMydataTransmission":true}
+                 "requiresMydataTransmission":true,"sortCode":110}
                 """), "the second document type");
     }
 
@@ -218,6 +218,92 @@ class R2ReferenceDataContractIT {
     }
 
     // ===============================================================================================
+    // ⚠️ R2b §2 — a draft or deactivated document type may not be SET on a series
+    // ===============================================================================================
+
+    @Test
+    @DisplayName("⚠️ a DRAFT type is refused on create AND on change, naming the undecided stock behaviour")
+    void aDraftDocumentTypeMayNotBeSetOnASeries() {
+        // A draft: both stock flags omitted, so the type saves inactive with the question open.
+        long draftType = Json.createdId(owner.post("/api/sales-document-types", """
+                {"description":"R2 Draft type","requiresMydataTransmission":true,"sortCode":900}
+                """), "the draft type");
+
+        // ⚠️ THE NEGATIVE CONTROL. The refusals below are only evidence if the SAME request
+        // succeeds against a usable type — otherwise a guard that refused everything would pass.
+        long fine = createSeries("R2-OK-TYPE", "R2 series against a usable type");
+        assertThat(Json.ok(owner.get("/api/sales-document-series/" + fine), "the series")
+                .get("documentTypeId").asLong())
+                .isEqualTo(typeId);
+
+        ResponseEntity<String> onCreate = owner.post("/api/sales-document-series", """
+                {"abbreviation":"R2-DRAFT","description":"against a draft","documentTypeId":%d,
+                 "channel":"STORE_AND_PHONE","getsMark":false,"sortCode":910}
+                """.formatted(draftType));
+        refusedBecauseDraft(onCreate);
+
+        ResponseEntity<String> onChange = owner.put(
+                "/api/sales-document-series/" + fine + "/document-type", """
+                {"documentTypeId":%d}""".formatted(draftType));
+        refusedBecauseDraft(onChange);
+    }
+
+    @Test
+    @DisplayName("⚠️ a DEACTIVATED type is refused too, with a different reason — and holding one is not")
+    void aDeactivatedDocumentTypeMayNotBeSetOnASeries() {
+        long retired = Json.createdId(owner.post("/api/sales-document-types", """
+                {"description":"R2 Retired type","affectsStock":false,"transfersStock":false,
+                 "requiresMydataTransmission":true,"sortCode":920}
+                """), "the type about to be retired");
+
+        // ⭐ A series pointed at it WHILE IT IS STILL ACTIVE. This is the holding case, and it is
+        // what proves the rule refuses SETTING rather than breaking what already exists.
+        long holder = Json.createdId(owner.post("/api/sales-document-series", """
+                {"abbreviation":"R2-HOLD","description":"points at it already","documentTypeId":%d,
+                 "channel":"STORE_AND_PHONE","getsMark":false,"sortCode":930}
+                """.formatted(retired)), "the series that will hold a retired type");
+
+        Json.succeeded(owner.post("/api/sales-document-types/" + retired + "/deactivate", "{}"),
+                "deactivating the type");
+
+        // ⚠️ SETTING IS REFUSED …
+        ResponseEntity<String> refused = owner.post("/api/sales-document-series", """
+                {"abbreviation":"R2-DEAD","description":"against a retired type","documentTypeId":%d,
+                 "channel":"STORE_AND_PHONE","getsMark":false,"sortCode":940}
+                """.formatted(retired));
+        assertThat(refused.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+        assertThat(refused.getBody())
+                .contains("is inactive")
+                .contains("not for new documents");
+        assertThat(refused.getBody())
+                .as("a deactivated type is not a draft and must not borrow the draft's reason")
+                .doesNotContain("stock behaviour is undecided");
+
+        // ⭐ … AND HOLDING IS NOT. The series that already pointed at it still reads and still works.
+        // Without this, deactivation would be destructive and nobody would use it.
+        assertThat(Json.ok(owner.get("/api/sales-document-series/" + holder), "the holder")
+                .get("documentTypeId").asLong())
+                .as("deactivating a type must not break the series already pointing at it")
+                .isEqualTo(retired);
+        Json.ok(owner.patch("/api/sales-document-series/" + holder + "/description", """
+                {"description":"still editable"}"""), "editing a series whose type was retired");
+    }
+
+    /**
+     * ⚠️ A draft is <strong>always</strong> inactive — the CHECK forces it — so this asserts the
+     * message is the DRAFT one rather than the milder inactive one. Test the two in the other order
+     * in the service and every draft silently gets the wrong reason.
+     */
+    private static void refusedBecauseDraft(ResponseEntity<String> response) {
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+        assertThat(response.getBody())
+                .as("a draft's stock behaviour is undecided, which is a worse problem than being "
+                        + "retired and must say so")
+                .contains("is a draft")
+                .contains("stock behaviour is undecided");
+    }
+
+    // ===============================================================================================
     // The purchase series and delivery methods — correction reachable, refusal structurally not
     // ===============================================================================================
 
@@ -226,16 +312,16 @@ class R2ReferenceDataContractIT {
     void aPurchaseSeriesIsCorrectable() {
         long purchaseType = Json.createdId(owner.post("/api/purchase-document-types", """
                 {"description":"R2 Supplier invoice","affectsStock":true,"transfersStock":false,
-                 "requiresMydataTransmission":true}
+                 "requiresMydataTransmission":true,"sortCode":120}
                 """), "the purchase type");
         long otherPurchaseType = Json.createdId(owner.post("/api/purchase-document-types", """
                 {"description":"R2 Goods receipt note","affectsStock":true,"transfersStock":false,
-                 "requiresMydataTransmission":false}
+                 "requiresMydataTransmission":false,"sortCode":130}
                 """), "the second purchase type");
 
         long seriesId = Json.createdId(owner.post("/api/purchase-document-series", """
                 {"abbreviation":"R2-P-TYPO","description":"R2 purchase series",
-                 "documentTypeId":%d,"getsMark":false}
+                 "documentTypeId":%d,"getsMark":false,"sortCode":140}
                 """.formatted(purchaseType)), "the purchase series");
 
         assertThat(Json.text(Json.ok(owner.patch("/api/purchase-document-series/" + seriesId
@@ -280,12 +366,21 @@ class R2ReferenceDataContractIT {
 
     // ===============================================================================================
 
+    /**
+     * ⚠️ The sort code is drawn from a counter, not written as a literal. This helper is called by
+     * several tests against one shared database, and sort codes are unique per table — a fixed value
+     * would collide on the second call. Nothing here asserts an order; distinctness is all it needs.
+     */
     private long createSeries(String abbreviation, String description) {
         return Json.createdId(owner.post("/api/sales-document-series", """
                 {"abbreviation":"%s","description":"%s","documentTypeId":%d,
-                 "channel":"STORE_AND_PHONE","getsMark":false}
-                """.formatted(abbreviation, description, typeId)), "the series " + abbreviation);
+                 "channel":"STORE_AND_PHONE","getsMark":false,"sortCode":%d}
+                """.formatted(abbreviation, description, typeId, SORT_CODES.incrementAndGet())),
+                "the series " + abbreviation);
     }
+
+    private static final java.util.concurrent.atomic.AtomicInteger SORT_CODES =
+            new java.util.concurrent.atomic.AtomicInteger(5000);
 
     /**
      * One recorded sale, which is the whole of what "used" means.

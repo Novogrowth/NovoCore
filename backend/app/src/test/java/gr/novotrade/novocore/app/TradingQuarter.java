@@ -80,6 +80,13 @@ import tools.jackson.databind.JsonNode;
  */
 final class TradingQuarter {
 
+    /**
+     * ⚠️ Sort codes are unique per table. These fixtures assert nothing about ORDER — the value is
+     * arbitrary and only has to be distinct, which is exactly why an arbitrary one is safe here.
+     */
+    private static final java.util.concurrent.atomic.AtomicInteger SORT_CODES =
+            new java.util.concurrent.atomic.AtomicInteger(9000);
+
     // The quarter. Every document falls on one of these, and the boundaries are load-bearing:
     // JANUARY_FIRST and MARCH_LAST are what the date-range filters are asserted against.
     static final LocalDate JANUARY_FIRST = LocalDate.of(2026, 1, 5);
@@ -287,21 +294,21 @@ final class TradingQuarter {
         // isolated; here it would silently remove one side of the whole-scenario invariant.
         long salesType = created("/api/sales-document-types",
                 NewSalesDocumentType.decided(
-                        "TEST-DOCTYPE-01 Retail receipt", true, true, true, null),
+                        "TEST-DOCTYPE-01 Retail receipt", true, true, true, null, SORT_CODES.incrementAndGet()),
                 "the stock-moving sales document type");
         handles.put("doctype:sales", salesType);
 
         handles.put("series:store", created("/api/sales-document-series",
                 new NewSalesDocumentSeries("TEST-ALP", "TEST Store and phone series",
-                        salesType, SalesChannel.STORE_AND_PHONE, false, null),
+                        salesType, SalesChannel.STORE_AND_PHONE, false, null, SORT_CODES.incrementAndGet()),
                 "the store series"));
         handles.put("series:web", created("/api/sales-document-series",
                 new NewSalesDocumentSeries("TEST-ALPW", "TEST Web series",
-                        salesType, SalesChannel.ECOMMERCE, false, null),
+                        salesType, SalesChannel.ECOMMERCE, false, null, SORT_CODES.incrementAndGet()),
                 "the web series"));
         handles.put("series:skroutz", created("/api/sales-document-series",
                 new NewSalesDocumentSeries("TEST-ALPK", "TEST Skroutz series",
-                        salesType, SalesChannel.SKROUTZ, false, null),
+                        salesType, SalesChannel.SKROUTZ, false, null, SORT_CODES.incrementAndGet()),
                 "the Skroutz series"));
 
         // ⚠️ THE PURCHASE SIDE AND THE DELIVERY METHODS — R2's S.4, and they are NOT needed by this
@@ -320,13 +327,13 @@ final class TradingQuarter {
         // products above, and carry no more authority than those do.
         long purchaseType = created("/api/purchase-document-types",
                 new NewPurchaseDocumentType(
-                        "TEST-PURCHASE-DOCTYPE-01 Supplier invoice", true, false, true, null),
+                        "TEST-PURCHASE-DOCTYPE-01 Supplier invoice", true, false, true, null, SORT_CODES.incrementAndGet()),
                 "the purchase document type");
         handles.put("doctype:purchase", purchaseType);
 
         handles.put("series:purchase", created("/api/purchase-document-series",
                 new NewPurchaseDocumentSeries("TEST-TPY", "TEST Supplier invoice series",
-                        purchaseType, false, null),
+                        purchaseType, false, null, SORT_CODES.incrementAndGet()),
                 "the purchase series"));
 
         handles.put("delivery:courier", created("/api/delivery-methods",

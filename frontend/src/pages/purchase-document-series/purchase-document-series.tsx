@@ -8,6 +8,7 @@ import {
   getPurchaseDocumentSeriesControllerOneSeriesQueryKey,
   usePurchaseDocumentSeriesControllerChangeAbbreviation,
   usePurchaseDocumentSeriesControllerChangeDocumentType,
+  usePurchaseDocumentSeriesControllerChangeSortCode,
   usePurchaseDocumentSeriesControllerChangeGetsMark,
   usePurchaseDocumentSeriesControllerClearTransformationTarget,
   usePurchaseDocumentSeriesControllerCreate,
@@ -114,6 +115,7 @@ export function PurchaseDocumentSeriesDetail() {
 
   const describe = usePurchaseDocumentSeriesControllerDescribe()
   const abbreviation = usePurchaseDocumentSeriesControllerChangeAbbreviation()
+  const sortCode = usePurchaseDocumentSeriesControllerChangeSortCode()
   const documentType = usePurchaseDocumentSeriesControllerChangeDocumentType()
   const getsMark = usePurchaseDocumentSeriesControllerChangeGetsMark()
   const mapTarget = usePurchaseDocumentSeriesControllerMapTransformationTarget()
@@ -151,6 +153,9 @@ export function PurchaseDocumentSeriesDetail() {
         applyResponse(
           await abbreviation.mutateAsync({ id: seriesId, data: { abbreviation: value } }),
         )
+      }
+      onSortCode={async (value) =>
+        applyResponse(await sortCode.mutateAsync({ id: seriesId, data: { sortCode: value } }))
       }
       onDocumentType={async (documentTypeId) =>
         applyResponse(await documentType.mutateAsync({ id: seriesId, data: { documentTypeId } }))

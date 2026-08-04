@@ -14,4 +14,5 @@ export interface NewSalesDocumentType {
   transfersStock?: boolean;
   requiresMydataTransmission: boolean;
   aadeInvoiceTypeId?: number;
+  sortCode: number;
 }

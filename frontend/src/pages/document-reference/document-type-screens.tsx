@@ -20,6 +20,7 @@ import {
   fromAnswer,
   isCoherent,
   isDraft,
+  sortCodeOf,
   toAnswer,
   type DocumentTypeView,
   type NewDocumentTypeBody,
@@ -54,6 +55,7 @@ export interface DocumentTypeDetailProps {
   backLabel: string
   onDescribe: (description: string) => Promise<unknown>
   onStockBehaviour: (affectsStock: boolean, transfersStock: boolean) => Promise<unknown>
+  onSortCode: (sortCode: number) => Promise<unknown>
   onMydata: (required: boolean) => Promise<unknown>
   onAade: (aadeInvoiceTypeId: number | null) => Promise<unknown>
   onActivate: () => void
@@ -71,6 +73,7 @@ export function DocumentTypeDetail({
   backLabel,
   onDescribe,
   onStockBehaviour,
+  onSortCode,
   onMydata,
   onAade,
   onActivate,
@@ -148,6 +151,25 @@ export function DocumentTypeDetail({
           >
             {(value, setValue) => (
               <Input value={value} onChange={(event) => setValue(event.target.value)} />
+            )}
+          </FieldEditor>
+
+          {/* ⚠️ FREELY EDITABLE, and the contrast with the fields around it is the point:
+              reordering a list is normal, and a sort code appears on no document. */}
+          <FieldEditor<string>
+            label={t('docTypes.column.sortCode')}
+            value={String(type.sortCode)}
+            display={String(type.sortCode)}
+            editable={editable}
+            isValid={(value) => value.trim() !== ''}
+            onSave={(value) => onSortCode(sortCodeOf(value.trim()))}
+          >
+            {(value, setValue) => (
+              <Input
+                inputMode="numeric"
+                value={value}
+                onChange={(event) => setValue(event.target.value.replace(/[^0-9]/g, ''))}
+              />
             )}
           </FieldEditor>
 
@@ -324,6 +346,7 @@ export function DocumentTypeCreateForm({
   pending: boolean
 }) {
   const [description, setDescription] = useState('')
+  const [sortCode, setSortCode] = useState('')
   const [affects, setAffects] = useState<StockAnswer>('undecided')
   const [transfers, setTransfers] = useState<StockAnswer>('undecided')
   /**  is 'nobody has answered', which must stay distinguishable from 'answered no'. */
@@ -334,7 +357,9 @@ export function DocumentTypeCreateForm({
   // than a checkbox — an unticked box sends `false`, which the server accepts happily, and "not a
   // tax document" would then be indistinguishable from "nobody said". F4's units-of-measure form
   // made the same call for the same reason.
-  const complete = description.trim() !== '' && mydata !== '' && isCoherent(affects, transfers)
+  const complete =
+    description.trim() !== '' && sortCode.trim() !== '' && mydata !== '' &&
+    isCoherent(affects, transfers)
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
@@ -346,6 +371,7 @@ export function DocumentTypeCreateForm({
 
     onSubmit({
       description: description.trim(),
+      sortCode: sortCodeOf(sortCode),
       // ⚠️ OMITTED when undecided, never sent as `false`. `NewSalesDocumentType`'s flags are
       // nullable Booleans precisely so an absent one means "not decided" — and the row is then
       // created as an inactive draft rather than as a type that silently never moves stock.
@@ -374,6 +400,20 @@ export function DocumentTypeCreateForm({
                 id="description"
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="sortCode">{t('docTypes.column.sortCode')}</Label>
+              <p className="text-muted-foreground text-sm">{t('docTypes.sortCode.help')}</p>
+              {/* ⚠️ Digits only, and NOT `<input type="number">` — that is banned by an ESLint
+                  rule. A sort code is a plain count, so none of the decimal-input machinery
+                  applies; restricting the text is what keeps a fraction or a separator out. */}
+              <Input
+                id="sortCode"
+                inputMode="numeric"
+                value={sortCode}
+                onChange={(event) => setSortCode(event.target.value.replace(/[^0-9]/g, ''))}
               />
             </div>
 
