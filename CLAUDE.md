@@ -330,21 +330,40 @@ then run against the fix; `WebAuthorizationRulesTest.clientMistakesAreNotProgram
 the *probe* as the subject — is the apparatus alive.** The second is the more general and the easier
 to skip, because a green run feels like an answer.
 
-⚠️ **It happened again in R1b (2026-08-04), and the mechanism was new: a test selector that matched
-nothing.** The stock branch's negative control was run against the deliberately-broken code with
+⚠️ **It happened again in R1b (2026-08-04), the mechanism was new — and it is now CLOSED BY
+CONFIGURATION rather than by this paragraph.**
+
+The stock branch's negative control was run against deliberately-broken code with
 `mvn -pl core -am verify -Dit.test='SalesInvoiceIT#aNonStockMovingTypeConsumesNothing+aStockMovingTypeStillConsumes'`,
 and it reported **`BUILD SUCCESS`**. The branch really had been removed; the source on disk said so.
 **Failsafe never matched the `Class#a+b` selector, ran nothing, and `-Dfailsafe.failIfNoSpecifiedTests=false`
-turned "measured nothing" into a green build.** Re-run with the plain `SalesInvoiceIT` selector —
-which had been *seen* to run 46 tests twenty minutes earlier — it failed correctly, on exactly the one
-test, with the other passing.
+turned "measured nothing" into a green build.**
 
-**The general form, and it is worth more than the flag: `failIfNoSpecifiedTests=false` converts a
-typo into a pass.** It is necessary in a `-am` reactor, because upstream modules legitimately contain
-none of the named tests — so it cannot simply be dropped. **The remedy is to assert that the thing
-ran**, not to trust the exit status: `grep -c "Running <the test class>"` on the log, or a test count
-you have seen before. ⚠️ **A selector you have not watched succeed is not a selector you may believe
-a negative result from.**
+⚠️ **This is the reason the fix is a pom change and not another sentence here.** The rule *"if the
+negative control passes, every other result in that run is void"* already existed, in this file, above
+this line — and it cannot help, because **the run reported success**. There was nothing for the rule to
+fire on. **Four earlier members of this family were also already covered by written rules.** A defence
+that depends on the session noticing is the thing that just failed; the only lever left is the tool.
+
+**✅ THE FIX, 2026-08-04: `failIfNoSpecifiedTests` is pinned `true` in the `<configuration>` of BOTH
+surefire and failsafe in `backend/pom.xml`.** Neither plugin carried the setting before — both were
+simply on their default, which is already `true` — so **nothing in the repository was ever wrong; the
+`false` only ever came from a command line.** Pinning it in `<configuration>` is what makes that
+command line inert: **an explicit plugin `<configuration>` value beats the user property a `-D` flag
+feeds**, so `-Dfailsafe.failIfNoSpecifiedTests=false` now does nothing. Proven by running the exact
+command shape that silently passed and watching it fail.
+
+⚠️ **The cost is real, is not hidden, and is the reason to read before "fixing" a build that refuses a
+selector: `-am` together with `-Dtest`/`-Dit.test` no longer works.** A reactor build visits modules
+that legitimately do not contain the named test — the aggregator has no tests at all — and each of
+those now fails. **The replacement is to run the module's whole suite** (`mvn -pl core -am verify`),
+which is what a negative control should use anyway, since it is the invocation that cannot report
+success while measuring nothing. A build with **no** selector is completely unaffected; the flag only
+engages when one is given.
+
+⚠️ **Do not re-open it by adding `-Dfailsafe.failIfNoSpecifiedTests=false` back.** It will not work,
+and the error message unhelpfully suggests exactly that flag — that suggestion comes from the plugin
+and predates the pin.
 
 **2. A piped build hides its own failure. Do not pipe one, or set `-o pipefail`.**
 
@@ -782,8 +801,23 @@ whatever is sitting in `target/failsafe-reports` — including the previous run'
 
 **So a targeted rerun after any failing run reports the OLD failure**, attributed to the module you
 did not touch, in a command that never executed it. It is the stale-artefact family's shape exactly:
-the thing that answered was not the thing under test. **`clean` before a targeted `verify` that
-follows a red one**, or delete the reports.
+the thing that answered was not the thing under test.
+
+**The mechanism, measured 2026-08-04:** failsafe writes `target/failsafe-reports/failsafe-summary.xml`,
+and `verify` reads it. When `integration-test` matched nothing it **did not rewrite** the summary — so
+`verify` read the previous run's, which recorded a failure.
+
+⚠️ **There is no configuration parameter for this — none exists that makes `verify` distrust a summary
+it did not write.** But **the `failIfNoSpecifiedTests` pin above closes the path that produced it**,
+and that was verified rather than assumed: with a failing summary deliberately planted in `core`, the
+same command now fails at **`integration-test`, naming the real problem** ("No tests matching
+pattern"), before `verify` ever reads the stale file. The phantom *"There are test failures in
+novocore-core"* no longer appears.
+
+📌 **The residual, stated because it is what is left:** invoking `mvn failsafe:verify` as a **bare
+goal** still reads a stale summary and still reports the old failure. That needs somebody to run the
+goal on its own, which nothing here does. **For that case only, `clean` first** — it is discipline,
+not configuration, and it is a much smaller surface than what the pin removed.
 
 ### ⚠️ A record that goes on the wire is asked for every accessor, not just its components
 

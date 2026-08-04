@@ -121,6 +121,18 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
+          <!--
+            ⚠️ PINNED, SO `-D…=false` CANNOT TURN IT OFF. This is a configuration lever, not a
+            default: an explicit plugin <configuration> value beats the user property the `-D`
+            flag feeds, so `-Dsurefire.failIfNoSpecifiedTests=false` is inert against this.
+
+            It is pinned because the written rule was not enough. R1b's negative control was run
+            against deliberately-broken code with a `Class#a+b` selector that failsafe never
+            matched; nothing ran, and `-D…=false` turned "measured nothing" into BUILD SUCCESS.
+            The rule saying a passing negative control voids the run cannot help when the run
+            reports success — which is exactly what it reported. See CLAUDE.md.
+          -->
+          <failIfNoSpecifiedTests>true</failIfNoSpecifiedTests>
           <systemPropertyVariables>
             <novocore.postgres.image>${postgres.docker.image}</novocore.postgres.image>
           </systemPropertyVariables>
@@ -139,6 +151,8 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
         <configuration>
+          <!-- ⚠️ Pinned for the same reason as surefire above, and this is the plugin that bit. -->
+          <failIfNoSpecifiedTests>true</failIfNoSpecifiedTests>
           <systemPropertyVariables>
             <novocore.postgres.image>${postgres.docker.image}</novocore.postgres.image>
           </systemPropertyVariables>

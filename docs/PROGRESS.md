@@ -220,14 +220,31 @@ reported **`BUILD SUCCESS`**. The branch really had been removed. **Failsafe nev
 `Class#a+b` selector, ran nothing, and `-Dfailsafe.failIfNoSpecifiedTests=false` turned "measured
 nothing" into green.** Re-run with the plain class selector it failed correctly, on exactly one test.
 
-⚠️ **`failIfNoSpecifiedTests=false` converts a typo into a pass**, and it cannot simply be dropped —
-in a `-am` reactor upstream modules legitimately contain none of the named tests. **The remedy is to
-assert the thing ran** (`grep -c "Running <class>"`), not to trust the exit status.
+✅ **CLOSED BY CONFIGURATION, 2026-08-04, not by a rule.** ⚠️ **The rule it violated already existed**
+— *"if the negative control passes, every other result in that run is void"* — and could not fire,
+because the run reported **success**. Four earlier members of this family were also already covered by
+written rules. So the lever had to be the tool.
 
-📌 **A third, smaller one:** after that red run, a targeted `verify` on a *different* module reported
-*"There are test failures in novocore-core"* — no core test had run. **`failsafe:verify` fails on
-whatever is sitting in `target/failsafe-reports`, including the previous run's.** Both are written up
-in `CLAUDE.md` under the stale-artefact family.
+⭐ **Neither pom carried `failIfNoSpecifiedTests` at all**, for surefire or failsafe: both were on
+their default, which is **already `true`**. **Nothing in the repository was ever wrong — the `false`
+only ever came from a command line.** The fix is therefore to **pin `true` in the `<configuration>`
+of both plugins**, because an explicit `<configuration>` value beats the user property a `-D` feeds.
+`-Dfailsafe.failIfNoSpecifiedTests=false` is now inert. **Proven by running the exact command shape
+that silently passed and watching it fail**, and by confirming a selector-free build is unaffected.
+
+⚠️ **The cost, stated rather than hidden: `-am` together with `-Dtest`/`-Dit.test` no longer works** —
+a reactor visits modules that legitimately lack the named test, and each now fails. **The replacement
+is the module's whole suite** (`mvn -pl core -am verify`), which is the invocation a negative control
+should use anyway, since it cannot report success while measuring nothing.
+
+📌 **The third, smaller one is closed by the same pin.** After that red run, a targeted `verify` on a
+*different* module reported *"There are test failures in novocore-core"* — no core test had run.
+**The mechanism:** failsafe writes `failsafe-summary.xml` and `verify` reads it; when
+`integration-test` matched nothing it **did not rewrite** the summary, so `verify` read the previous
+run's. ⚠️ **No configuration parameter exists for that** — but with a failing summary deliberately
+planted, the same command now fails at `integration-test` naming the real problem, **before** `verify`
+reads the stale file. **Residual:** `mvn failsafe:verify` as a *bare goal* still reads a stale summary;
+that one is `clean`-and-discipline, and nothing in this repository invokes it that way.
 
 ### ⭐ The derived-accessor guard — its own step, with a measured scope
 
