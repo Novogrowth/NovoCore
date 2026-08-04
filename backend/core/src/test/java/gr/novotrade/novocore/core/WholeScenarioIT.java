@@ -16,6 +16,8 @@ import gr.novotrade.novocore.core.api.bundle.NewBundleComponent;
 import gr.novotrade.novocore.core.api.charge.ChargeTypeService;
 import gr.novotrade.novocore.core.api.charge.ChargeTypeView;
 import gr.novotrade.novocore.core.api.customer.CustomerService;
+import gr.novotrade.novocore.core.api.document.SalesDocumentSeriesService;
+import gr.novotrade.novocore.core.api.document.SalesDocumentTypeService;
 import gr.novotrade.novocore.core.api.customer.NewCustomer;
 import gr.novotrade.novocore.core.api.inventory.InventoryLotView;
 import gr.novotrade.novocore.core.api.inventory.InventoryService;
@@ -67,6 +69,7 @@ import gr.novotrade.novocore.core.api.tax.VatStatus;
 import gr.novotrade.novocore.core.backup.PostgresTools;
 import gr.novotrade.novocore.core.backup.StubDriveServer;
 import gr.novotrade.novocore.core.testsupport.LedgerInvariants;
+import gr.novotrade.novocore.core.testsupport.SalesDocumentFixture;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -159,6 +162,24 @@ class WholeScenarioIT extends AbstractCoreIntegrationTest {
     @Autowired private SettingsService settings;
     @Autowired private BackupService backups;
     @Autowired private PostgresTools postgres;
+    /**
+     * The series the scenario's four sales are recorded in — R1b made one mandatory.
+     *
+     * <p>⚠️ Stock-moving, deliberately: this scenario's whole point is that the ledger and the lots
+     * agree end to end, and a non-stock-moving series would make that agreement vacuous by removing
+     * one side of it.
+     */
+    private SalesDocumentFixture documents;
+
+    private long series(SalesChannel channel) {
+        if (documents == null) {
+            documents = new SalesDocumentFixture(salesDocumentTypes, salesSeries, "WSIT");
+        }
+        return documents.stockMoving(channel);
+    }
+
+    @Autowired private SalesDocumentTypeService salesDocumentTypes;
+    @Autowired private SalesDocumentSeriesService salesSeries;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private ApplicationContext applicationContext;
 
@@ -294,7 +315,7 @@ class WholeScenarioIT extends AbstractCoreIntegrationTest {
         // ADR 0010's whole point: the part of the freight belonging to stock already gone cannot
         // ride on a unit cost, because those units are not there to carry it.
         long onAccountSaleId = salesInvoices.record(NewSalesInvoice.of(
-                wholesalerId, SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                wholesalerId, series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
                 "GO-2026-0001", MAY,
                 List.of(
                         // Product default 13%, customer override 13%, and an explicit 24% on the
@@ -320,20 +341,20 @@ class WholeScenarioIT extends AbstractCoreIntegrationTest {
 
         // --- A cash sale, and the bundle -----------------------------------------------------
         long cashSaleId = salesInvoices.record(NewSalesInvoice.of(
-                walkInId, SalesChannel.STORE_AND_PHONE, SettlementMethod.CASH,
+                walkInId, series(SalesChannel.STORE_AND_PHONE), SettlementMethod.CASH,
                 "GO-2026-0002", JUNE,
                 List.of(NewSalesInvoiceLine.product(
                         beansId, Quantity.of(5L), UnitCost.ofEur("18.000000"))))).id();
 
         long bundleSaleId = salesInvoices.record(NewSalesInvoice.of(
-                walkInId, SalesChannel.STORE_AND_PHONE, SettlementMethod.CARD_POS,
+                walkInId, series(SalesChannel.STORE_AND_PHONE), SettlementMethod.CARD_POS,
                 "GO-2026-0003", JUNE,
                 List.of(NewSalesInvoiceLine.product(
                         bundleId, Quantity.of(1L), UnitCost.ofEur("150.000000"))))).id();
 
         // --- Overselling: Q17's negative stock, recorded and flagged rather than blocked ----
         long oversoldSaleId = salesInvoices.record(NewSalesInvoice.of(
-                walkInId, SalesChannel.SKROUTZ, SettlementMethod.SKROUTZ,
+                walkInId, series(SalesChannel.SKROUTZ), SettlementMethod.SKROUTZ,
                 "GO-2026-0004", JULY,
                 List.of(NewSalesInvoiceLine.product(
                         filtersId, Quantity.of(500L), UnitCost.ofEur("6.000000"))))).id();

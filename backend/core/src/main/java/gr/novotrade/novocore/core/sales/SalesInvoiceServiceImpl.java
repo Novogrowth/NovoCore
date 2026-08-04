@@ -11,6 +11,10 @@ import gr.novotrade.novocore.core.api.charge.ChargeTypeService;
 import gr.novotrade.novocore.core.api.charge.ChargeTypeView;
 import gr.novotrade.novocore.core.api.customer.CustomerService;
 import gr.novotrade.novocore.core.api.customer.CustomerView;
+import gr.novotrade.novocore.core.api.document.SalesDocumentSeriesService;
+import gr.novotrade.novocore.core.api.document.SalesDocumentSeriesView;
+import gr.novotrade.novocore.core.api.document.SalesDocumentTypeService;
+import gr.novotrade.novocore.core.api.document.SalesDocumentTypeView;
 import gr.novotrade.novocore.core.api.inventory.InventoryService;
 import gr.novotrade.novocore.core.api.inventory.NewStockConsumption;
 import gr.novotrade.novocore.core.api.inventory.SaleReference;
@@ -88,6 +92,8 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
     private final SalesInvoiceRepository invoices;
     private final CreditNoteRepository creditNotes;
     private final CustomerService customers;
+    private final SalesDocumentSeriesService salesSeries;
+    private final SalesDocumentTypeService salesDocumentTypes;
     private final ProductService products;
     private final BundleService bundles;
     private final ChargeTypeService chargeTypes;
@@ -100,7 +106,9 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
     private final AuditLogService auditLog;
 
     SalesInvoiceServiceImpl(SalesInvoiceRepository invoices, CreditNoteRepository creditNotes,
-            CustomerService customers, ProductService products, BundleService bundles,
+            CustomerService customers, SalesDocumentSeriesService salesSeries,
+            SalesDocumentTypeService salesDocumentTypes,
+            ProductService products, BundleService bundles,
             ChargeTypeService chargeTypes, ChartOfAccountsService chartOfAccounts,
             VatClassService vatClasses, VatExemptionReasonService exemptionReasons,
             InventoryService inventory, JournalService journal, SettingsService settings,
@@ -108,6 +116,8 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
         this.invoices = invoices;
         this.creditNotes = creditNotes;
         this.customers = customers;
+        this.salesSeries = salesSeries;
+        this.salesDocumentTypes = salesDocumentTypes;
         this.products = products;
         this.bundles = bundles;
         this.chargeTypes = chargeTypes;
@@ -141,15 +151,17 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
      */
     private Computation compute(NewSalesInvoice request) {
         Objects.requireNonNull(request, "request");
+        SeriesContext series = resolveSeries(request.seriesId());
         CustomerView customer = customers.require(request.customerId());
         if (!customer.active()) {
             throw new InvalidSalesInvoiceException(
                     "Customer '" + customer.name() + "' is inactive, so nothing new should be sold to "
                             + "them. A customer is deactivated precisely so that stops.");
         }
-        if (invoices.existsStandingInvoice(request.documentNumber())) {
+        if (invoices.existsStandingInvoice(request.seriesId(), request.documentNumber())) {
             throw new InvalidSalesInvoiceException(
-                    "Sales invoice '" + request.documentNumber() + "' has already been recorded. "
+                    "Sales invoice '" + request.documentNumber() + "' has already been recorded in "
+                            + "series '" + series.series().abbreviation() + "'. "
                             + "Recording it twice would state the same revenue and the same output VAT "
                             + "twice. Reverse the one already recorded if it was wrong; a reversed "
                             + "invoice releases its number.");
@@ -167,7 +179,7 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
                                 + "not convert between currencies and will not silently pick one "
                                 + "(ADR 0005), so an invoice spanning two has no total to post.");
             }
-            priced.add(price(line, customer, request.channel(), currency, roundingMode));
+            priced.add(price(line, customer, series.channel(), currency, roundingMode));
         }
 
         Money computedGross = Money.zero(currency);
@@ -185,7 +197,75 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
 
         requireWithinCashLimit(request.settlementMethod(), receivable);
 
-        return new Computation(customer, priced, computedGross, rounding, receivable, currency);
+        return new Computation(customer, series, priced, computedGross, rounding, receivable,
+                currency);
+    }
+
+    /**
+     * The series a document is recorded in, and the three things R1b makes it decide.
+     *
+     * <p><strong>Everything about a sale that used to be typed in beside it now comes from here.</strong>
+     * The channel is the series' own, so ΑΛΠW being the web series makes an invoice in it a web sale
+     * by definition; the document type is reached through the series rather than named separately,
+     * so the two cannot disagree about what kind of document this is.
+     *
+     * <p>All four refusals live here rather than at the call sites, because {@code compute} is what
+     * {@code record} and {@code preview} share — so an entry screen learns that a series is
+     * unusable <em>before</em> the operator submits, which is most of what a preview is for.
+     */
+    private SeriesContext resolveSeries(long seriesId) {
+        SalesDocumentSeriesView series = salesSeries.require(seriesId);
+        if (!series.active()) {
+            throw new InvalidSalesInvoiceException(
+                    "Sales document series '" + series.abbreviation() + "' is inactive, so nothing "
+                            + "new should be recorded in it. A series is deactivated precisely so "
+                            + "that stops; an inactive series stays readable so the documents "
+                            + "already numbered in it remain explicable.");
+        }
+
+        SalesDocumentTypeView documentType = salesDocumentTypes.require(series.documentTypeId());
+        if (!documentType.active()) {
+            throw new InvalidSalesInvoiceException(
+                    "Sales document series '" + series.abbreviation() + "' is of type '"
+                            + documentType.description() + "', which is inactive. "
+                            + (documentType.isDraft()
+                                    ? "It is a draft — its stock behaviour has not been decided yet, "
+                                            + "so recording against it could not say whether stock "
+                                            + "moves."
+                                    : "A retired type describes documents already issued under it, "
+                                            + "so a new one cannot use it."));
+        }
+
+        // ⚠️ THE CHANNEL-LESS REFUSAL. sales_invoice.channel is NOT NULL and is deliberately NOT
+        // relaxed to accommodate this: the constraint is what holds an open question open.
+        if (series.channel() == null) {
+            throw new InvalidSalesInvoiceException(
+                    "Sales document series '" + series.abbreviation() + "' has no sales channel, so "
+                            + "it is not a series a sale can be recorded in. The self-supply series "
+                            + "(Στοιχείο Αυτοπαράδοσης / Ιδιοχρησιμοποίησης) are exactly this: the "
+                            + "customer is the issuer, and there is no channel to attribute revenue "
+                            + "to. Novocore cannot record one yet — self-supply has no posting rule, "
+                            + "the revenue leg has no candidate account, and which accounts carry "
+                            + "each leg is an accountant's question rather than one to guess at. "
+                            + "This is refused rather than stored against a made-up channel, because "
+                            + "a refusal keeps the question visible. Roadmap step R3 answers it.");
+        }
+
+        // ⚠️ Unreachable today, and written anyway. The table CHECK
+        // sales_document_type_active_has_stock_behaviour means an ACTIVE type always has both stock
+        // flags decided, and an inactive one has already been refused above. But null here means
+        // NOBODY HAS DECIDED, and reading it as false would silently record "no stock moved" for a
+        // question nobody answered — the exact confusion the nullable column exists to prevent
+        // (A.6: "a false is a guess wearing a value's clothes"). If that CHECK is ever relaxed,
+        // this fails loudly instead of quietly skipping the consumption.
+        if (documentType.affectsStock() == null) {
+            throw new InvalidSalesInvoiceException(
+                    "Sales document type '" + documentType.description() + "' does not say whether "
+                            + "documents of this type move stock, so recording one could not decide "
+                            + "whether to consume any. Decide its stock behaviour first.");
+        }
+
+        return new SeriesContext(series, documentType, series.channel());
     }
 
     @Override
@@ -237,7 +317,8 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
 
         long entryId = post(request, customer, priced, rounding, receivable, currency).id();
 
-        SalesInvoice invoice = new SalesInvoice(customer.id(), request.channel(),
+        SalesInvoice invoice = new SalesInvoice(customer.id(), computation.series().channel(),
+                request.seriesId(),
                 request.settlementMethod(), request.documentNumber(), request.invoiceDate(),
                 request.description(), request.statedTotal(), rounding.amount(),
                 rounding.neededReview(), rounding.acceptedBy(), rounding.acceptedAt(),
@@ -255,11 +336,28 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
         // pointing at a line that does not exist yet is the problem a match created before its line is.
         invoices.flush();
 
-        consumeStock(saved, priced, customer, request.invoiceDate());
+        // ⚠️ THE STOCK BRANCH, AND IT IS SILENT BY DECISION.
+        //
+        // ΑΛΠ and ΤΠΔΑ combine sale and transport, so stock moves. A plain Τιμολόγιο is purely
+        // sales and does not reduce it — the goods leave on a separate dispatch document (18b),
+        // and this business issues both routinely. A non-moving type therefore creates NO
+        // stock_consumption row at all: not a pending one, not a placeholder, not a row with a
+        // marker on it. stock_consumption's source CHECK is deliberately NOT widened, because
+        // there is nothing new to record.
+        //
+        // There is also no state, no flag and no warning anywhere else. That is the owner's
+        // decision, taken as a decision: an indicator nobody acts on is a second thing to keep
+        // true. ⚠️ The consequence is real and is recorded rather than mitigated — until 18b
+        // exists, stock figures are incomplete for every non-stock-moving sales document, which
+        // is a routine share of real sales.
+        if (computation.series().affectsStock()) {
+            consumeStock(saved, priced, customer, request.invoiceDate());
+        }
 
         auditLog.record("sales-invoice.recorded", ENTITY_TYPE, String.valueOf(saved.getId()), Map.of(
                 "customer", customer.name(),
                 "number", saved.getDocumentNumber(),
+                "series", computation.series().series().abbreviation(),
                 "channel", saved.getChannel().name(),
                 "settlementMethod", saved.getSettlementMethod().name(),
                 "invoiceDate", saved.getInvoiceDate().toString(),
@@ -322,7 +420,10 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
 
         // No lines of its own: everything a reader needs is on the original, which stays exactly as
         // posted, and duplicating them would give one sale two statements of itself.
+        // The series is carried for the same reason the channel is: a reversal that showed no
+        // series while its original had one would read as a document from before series existed.
         SalesInvoice reversal = new SalesInvoice(original.getCustomerId(), original.getChannel(),
+                original.getSeriesId(),
                 original.getSettlementMethod(), original.getDocumentNumber(), reversalDate,
                 reason == null || reason.isBlank() ? null : reason.trim(), null,
                 Money.zero(original.getRoundingAmount().currency()), false, null, null, null,
@@ -745,6 +846,15 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
                 .orElseThrow(() -> new SalesInvoiceNotFoundException(invoiceId));
     }
 
+    /** The series' abbreviation for display, or null where the invoice predates series (R1b). */
+    private String seriesAbbreviationOf(Long seriesId) {
+        return seriesId == null
+                ? null
+                : salesSeries.find(seriesId)
+                        .map(SalesDocumentSeriesView::abbreviation)
+                        .orElse(null);
+    }
+
     private static void requireOrderedRange(LocalDate from, LocalDate to) {
         Objects.requireNonNull(from, "from");
         Objects.requireNonNull(to, "to");
@@ -791,14 +901,16 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
                 invoices.findByReversalOfId(invoice.getId()).map(SalesInvoice::getId).orElse(null),
                 // The statutory identifiers, read straight off the row. Null on every invoice as
                 // of R1a and that is correct: Novocore never obtains a ΜΑΡΚ itself, and nothing in
-                // this phase is entitled to supply one. The series abbreviation is resolved by
-                // R1b, which is the step that gives an invoice a series.
+                // this phase is entitled to supply one.
                 invoice.getMark(),
                 invoice.getUid(),
                 invoice.getQrUrl(),
                 invoice.getTransmissionStatus(),
                 invoice.getSeriesId(),
-                null,
+                // R1b resolves the abbreviation, which R1a left null because nothing had a series.
+                // `find` rather than `require`: an invoice recorded before R1b has no series at
+                // all, and a reading path must not throw on the ordinary history it exists to show.
+                seriesAbbreviationOf(invoice.getSeriesId()),
                 lineViews);
     }
 
@@ -888,6 +1000,29 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
     }
 
     /**
+     * The series a sale is recorded in, its document type, and the channel that follows from them.
+     *
+     * <p>Resolved once in {@link #resolveSeries} and carried, rather than looked up again where each
+     * is needed. The channel is a component of its own even though it is {@code series.channel()},
+     * because {@link #resolveSeries} has already refused a null one — so a reader here does not have
+     * to re-establish that it cannot be null, and no caller is tempted to handle a case that cannot
+     * arrive.
+     *
+     * @param documentType what decides whether recording this document consumes stock. ⚠️
+     *     {@code affectsStock} is non-null by the time this exists; {@link #resolveSeries} refuses
+     *     otherwise, because null means <em>nobody has decided</em> and never <em>false</em>.
+     */
+    private record SeriesContext(
+            SalesDocumentSeriesView series,
+            SalesDocumentTypeView documentType,
+            SalesChannel channel) {
+
+        boolean affectsStock() {
+            return Boolean.TRUE.equals(documentType.affectsStock());
+        }
+    }
+
+    /**
      * Everything worked out from a request, before anything is written.
      *
      * <p>The single value {@link #record} and {@link #preview} share, which is what makes "the
@@ -895,6 +1030,7 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
      */
     private record Computation(
             CustomerView customer,
+            SeriesContext series,
             List<PricedLine> priced,
             Money computedGross,
             Rounding rounding,

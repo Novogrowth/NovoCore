@@ -1,7 +1,6 @@
 # NovoCore — Build Progress
 
-*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-08-03 (U3 —
-documentation only; the last code step is R1a).*
+*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-08-04 (R1b).*
 
 *Close-out now also pushes to `origin` automatically (`CLAUDE.md`), so this file no longer tracks
 unpushed commits.*
@@ -39,8 +38,21 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | S1 | **Substring search** — `pg_trgm` + `unaccent`, one shared mechanism, five screens | **Done** — migrations **V28** and **V29**, 17 GIN trigram indexes, `TextSearch` + `SearchFilter`, `?search=` on five routes. **Two findings**, one of which was invisible to the entire test suite until the test database was made to match the real one. See below |
 | F4 | **Settings** — three config pages, VAT classes and units of measure, plus search and sorting | **Done** — migration **V30**, 4 GIN trigram indexes, `?search=` on 2 more routes, **22 sub-parts all with verdicts** (21 approved, 1 added mid-step), and `F4WriteContractIT` (15 tests) which **corrected a premise the step was built on**. Two findings. See below |
 | R1a | **Document reference data (backend)** — the two-layer document model | **Done, committed** `aa1eda4` + `c5f9a97` — `aade_invoice_type` (55 seeded), the business's own document-type, series and delivery-method lists (all shipped **empty**), the statutory-codification contract with an ArchUnit rule, myDATA payment codes, statutory identifiers on `sales_invoice`, and the three artefact seeds. Migrations **V31**, **V32**. **54 new operations.** All 48 sub-parts have verdicts. See below |
+| R1b | **Document reference data (behavioural)** — the series becomes what a sale names | **Done, committed** — `seriesId` mandatory on `NewSalesInvoice`, `channel` removed and **derived from the series**, the consumption path branches **silently** on the document type's `affectsStock`, and three refusals (channel-less, inactive series, inactive type). Migration **V33** (comment only). **No new operations.** ⚠️ **Two defects found, both invisible before this step**; ⚠️ **the derived-accessor guard left R1b and became step W1** on a measurement. All 22 sub-parts have verdicts. See below |
 | U3 | **Eleven design decisions written into the repository** — D5, D4, D1, D3, D2, M0, vouchers, the shared gate | **Done, documentation only** — no production code, no schema, no migration, no test changed. D4 split (half already answered), M0 split into M0a/M0b, the per-order shipping address moved to step 22, voucher creation modes recorded against step 21, the Woo one-time load separated from the Woo adapter at step 19, and the **shared gate before step 24** recorded. Nothing ⚪ was promoted or reordered beyond those placements. See below |
 | 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress. F0–F4, S1 and S2 done. ⚠️ Next is Q1 (the backend queue), then R1, then F5** — reprioritised 2026-08-02. Foundations `94e17cd`, Products `56e3726` + guards `28c4119` + brand pass, then the render-loop fix `3458ee6`, F0 (the seed pass), F1 Suppliers `b406b27`, F2 Customers `496c7be`, F3 Users & Roles `aea0e56`, then **S1** (search), **S2** (sorting) and **F4** (Settings). **307 frontend tests, 31 files, green.** Per-step detail in `docs/novocore-roadmap.md`; decisions and what each step left behind in *Step 16 — the frontend* below |
+
+**Tests, measured 2026-08-04 (after R1b): 1,457 passing, 0 failing, 1 skipped, `mvn clean verify`
+exit 0; 230 operations, 223 schemas, 167 declaring `required`. Frontend: 310 across 31 files,
+typecheck/lint/knip/build green.** R1b added **17** backend tests (1,440 → 1,457) — 9 in
+`SalesInvoiceIT`, 8 in the new `R1bWriteContractIT` — and **no operations, no schemas and no change
+to the `required` count**: its entire spec diff is **four lines on one schema** (`channel` →
+`seriesId` on `NewSalesInvoice`). Migration **V33**, comment only. ⚠️ **That final run did not pass
+`-Dnovocore.openapi.write=true`**, so `OpenApiSpecIT`'s drift check ran against the **committed**
+spec rather than rewriting it — which is what makes "the spec in the repository matches the code" a
+measurement rather than a claim.
+
+*(The paragraph below is R1a's, kept with its own figures — correct in its step's context.)*
 
 **Tests, measured 2026-08-03 (after R1a): 1,440 passing, 0 failing, 1 skipped, `mvn clean verify`
 exit 0; 230 operations, 223 schemas, 167 declaring `required`. Frontend: 310 across 31 files,
@@ -73,6 +85,216 @@ Step 16a added 36 (1152 → 1188) and four routes (133 → 137): `GET /api/me`,
 **S1 added 34 (1326 → 1360) and one route (174 → 175)** — the five list routes gained a *parameter* rather than an operation; the one new route is `PATCH /api/products/{id}/brand`. The spec diff is 108 lines of additions and **0 deletions**. **Step 16b added 138 (1188 → 1326) and 37 routes (137 → 174)** — 18 users/roles, 3 journal, 3
 settings, 13 lookup administration. The OpenAPI spec was regenerated and the operation sets diffed
 directly rather than trusting the line count: **0 removed, 37 added, 174 total.**
+
+---
+
+## ▶ R1b — document reference data, behavioural. **Phase 0 reported and approved 2026-08-04**
+
+**Written at the moment of approval, one line per sub-part, per `CLAUDE.md` §*An approved proposal
+is a checklist, not a paragraph*.** Phase 0 corrected four premises before a line was written; each
+correction is recorded against the line it changed rather than summarised.
+
+### 📋 The checklist
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| **B.0** | Environment: Docker daemon, Compose stack, **app-image rebuild**, Vite dev server | ✅ **Done.** ⚠️ **The rebuild was not insurance — the image was genuinely stale.** The new container applied **V31 and V32** on boot (`Current version of schema "public": 30`), so the image that had been running **predated R1a entirely**. Startup reports **230 handlers**, matching the committed spec. Vite on `http://127.0.0.1:5173/`; ⚠️ `https://localhost/` is **not** the frontend — Caddy proxies everything to the app, which serves no static assets and answers 401 |
+| **R1b-1a** | `seriesId` becomes **mandatory** on `NewSalesInvoice`, guarded with `Required.field` | ✅ **Done**, `@Mandatory Long seriesId`. ⚠️ **NOT `documentTypeId`** — see premise correction 1 |
+| **R1b-1b** | `SalesInvoiceServiceImpl` branches on the series' document type's `affectsStock` before `consumeStock` | ✅ **Done.** `resolveSeries(...)` resolves series → type → channel once and carries it in `SeriesContext`; `record` calls `consumeStock` only when `affectsStock` is true |
+| **R1b-1c** | ⚠️ **SILENT** — no pending state, no marker, no warning | ✅ **Done, and asserted as an ABSENCE.** `R1bWriteContractIT` checks the wire body carries no property naming a stock gap, because "we deliberately report nothing" and "somebody forgot the field" are indistinguishable otherwise |
+| **R1b-1d** | `stock_consumption`'s source CHECK is **not** widened | ✅ **Done** — untouched. A non-moving type creates no row, so there is nothing new to permit |
+| **R1b-1e** | Tests for the new branch **with a negative control** | ⭐ **Done, and the control earned its keep TWICE.** `aStockMovingTypeStillConsumes` is the paired positive case; then the branch was **removed and the suite re-run**, and `aNonStockMovingTypeConsumesNothing` failed exactly as required. ⚠️ **The first attempt at that defect run reported PASS while running nothing** — see the findings below |
+| **R1b-2a** | **Channel derived from the series** and removed from `NewSalesInvoice` | ✅ **Done.** Spec diff is 4 lines: `channel` → `seriesId` on one schema, and nothing else |
+| **R1b-2b** | **REFUSE** a channel-less series, with a message naming what R3 is waiting on | ✅ **Done** in `compute(...)`, so **preview refuses what record refuses**. 422 with the reason; asserted over real HTTP |
+| **R1b-2c** | `sales_invoice.channel` stays `NOT NULL` — **not relaxed** | ✅ **Done, and asserted.** `SalesInvoiceIT` queries `information_schema` for `is_nullable = 'NO'`, so relaxing it later fails the build rather than silently working |
+| **R1b-2d** | **F5 has no channel field** — recorded where F5 will see it | ✅ **Done** — roadmap footnote ʷ (F5's own row), `SalesInvoiceService.record`'s javadoc, `NewSalesInvoice`'s javadoc, `CLAUDE.md` §6b, and the primer. ⚠️ F5 needs a **series picker** instead, and it is mandatory |
+| **R1b-3** | **Refuse recording against an inactive series or document type** | ✅ **Done.** Both refusals name what is inactive; the draft case says so specifically. Proven over HTTP by recording successfully *first*, so the refusal is about the deactivation and not the fixture |
+| **R1b-4** | `series_id` **stays NULLABLE**; reason **at the column**; a line for **step 24** | ✅ **Done.** Migration **V33**, comment only — no column change, no data change. Step 24 gains roadmap footnote ˢᵉʳ |
+| **R1b-5** | `reverse()` copies `series_id` onto the reversal row | ✅ **Done**, and asserted (`aReversalCarriesTheSeries`) |
+| **R1b-6** | Record that **`documentType` becomes mandatory THROUGH the series** | ✅ **Done** — `NewSalesInvoice`'s javadoc, `V33`'s header, `CLAUDE.md` §6b, the roadmap and the primer all say a reader will find no `document_type_id` column and that this is the design |
+| **S.1** | Spec regenerated; client regenerated; **every drifted fixture reported BY NAME** | ✅ **Done. Exactly ONE fixture drifted:** `frontend/src/api/generated/model/newSalesInvoice.ts`. ⭐ **And four did NOT, which is worth stating because R1a had five:** `client-shape.test.ts` (230 operations / 134 writes — R1b adds no operation), `spec-hygiene.test.ts` (230 / 167 declaring `required` — the schema still declares five, a different fifth), `enums.json` (`SalesChannel` is untouched and still on the response side), and **no page fixtures, because F5 does not exist** |
+| **S.2** | Contract ITs against the **real running server** for the changed write routes | ✅ **Done.** `R1bWriteContractIT` — 8 tests over real HTTP, JSON written as literals rather than serialised from the record, driving `POST /api/sales-invoices` and `/preview` |
+| **S.3** | `CLAUDE.md`, `PROGRESS.md`, the primer and the roadmap updated | ✅ **Done** — all four, in this close-out |
+| **S.4** | ⚠️ **NO DEV SEED.** Fixtures self-create; S.4 stays **fully** deferred to R2 | ✅ **Done as a correction, and nothing was built.** `TradingQuarter` creates its types and series **over HTTP** exactly as it creates customers and products; core ITs use `SalesDocumentFixture`. **No migration, no seed.** S.4 remains R2's |
+| **N.1** | Record the **LiveSeedTest residue** | ✅ **Done** — primer and this file. `TEST-` document types and series will be the **first rows those tables hold** when R2's screens open; consistent with the residue already left for customers and products, and flagged so it is not a surprise |
+| **N.2** | Record the **F6 inconsistency** | ✅ **Done** — new roadmap footnote ᶠ⁶: after R1b, sales `affects_stock` is read and purchase `affects_stock` is not, while `V31` lines 314–321 carry the column's strongest justification |
+| **N.3** | Record `NewPurchaseInvoice`'s `requireNonNull` / `IllegalArgumentException` — record, do **not** fix | ✅ **Done, and NOT fixed.** In footnote ᶠ⁶ with its measured shape: a 4xx that names the field, so no guard fires and it is **not a live defect** — only a different message from the `Required.field` route on the same kind of record |
+| **N.4** | Record the **derived-accessor guard as its own step** | ✅ **Done.** New roadmap row **W1** with footnote ʷ¹, carrying the mechanism, the `suedByUs` proof, the 32/66 measurement and the generator-route recommendation |
+
+### ⚠️ Four premises Phase 0 corrected, before anything was built
+
+**1. "documentType becomes mandatory on `NewSalesInvoice`" was written before the schema was on the
+table, and could not be built literally.** `sales_invoice` carries **`series_id` and no
+`document_type_id`** (`V32`), and `sales_document_series.document_type_id` is `NOT NULL`. So the
+series supplies **both** the channel and the document type. Two independently settable fields could
+disagree — which is exactly what R1b-2's own argument rejects for channel (*one fact, one place*).
+**One new mandatory component: `seriesId`. The document type becomes mandatory THROUGH it.**
+
+**2. No dev seed is needed, and S.4 is not partially undone.** The Phase 0 prompt assumed a small
+seed addition would be required. It is not: **every fixture already creates its own reference data**
+— `TradingQuarter` builds suppliers, customers, products, accounts and assets **over HTTP** and can
+create a type and a series the same way (R1a shipped 22 type routes and 18 series routes);
+`DocumentReferenceDataIT` already does it in-process. **Zero new seed, zero new migration**, and
+**S.4 stays fully deferred to R2**, whose row already says so.
+
+**3. The blast-radius list was missing two files, in both directions.** Measured by counting
+construction sites, 2026-08-04: **54 sites of `NewSalesInvoice` across six files** — `SalesInvoiceIT`
+(32), `TradingQuarter` (9), `CreditNoteIT` (5), `WholeScenarioIT` (4), `SettlementIT` (2),
+`RefusalMatrix` (2). ⚠️ **`SettlementIT` was absent from the expected list**, including its shared
+`saleOf(...)` fixture that every settlement test runs through. ⚠️ **`ReadBackChecks` was absent and
+is an ASSERTION site** — it asserts `channel == "ECOMMERCE"` on the wire body, which makes it the
+**canary**: the one place a wrong fixture surfaces as a wire-level failure rather than a compile
+error. And **`PermissionSweepIT` constructs nothing** (its bodies are literal `{}`); **`LiveSeedTest`
+constructs nothing** — both are affected only transitively.
+
+**4. ⚠️ The derived-accessor guard is not a sub-part. It is its own step, and the survey is why.**
+See *The derived-accessor guard — its own step* below.
+
+### 📋 Every existing test R1b changed, and whether it was construction or assertion
+
+**54 construction sites of `NewSalesInvoice` across six files, plus three files that needed something
+other than a constructor argument. ⚠️ Exactly ONE change touched anything other than construction, and
+it is the fourth row — read its reason.**
+
+| File | What changed | Kind |
+|---|---|---|
+| `SalesInvoiceIT` | 32 sites: `SalesChannel.X` → `series(SalesChannel.X)`. Two `@Autowired` beans and a `SalesDocumentFixture` helper added | **Construction** |
+| `TradingQuarter` | 9 sites → `id("series:web"/"series:store"/"series:skroutz")`; the three series and one document type now **created over HTTP** in the catalogue phase | **Construction** |
+| `CreditNoteIT` | 5 sites. ⚠️ The shared `sale(…, SalesChannel channel)` helper **keeps its signature** and maps channel→series in one place, so 18 call sites read exactly as before | **Construction** |
+| `WholeScenarioIT` | 4 sites | **Construction** |
+| `SettlementIT` | 2 sites, one of them the shared `openSale(...)` fixture every settlement test runs through | **Construction** |
+| `RefusalMatrix` | 2 sites; the now-unused `SalesChannel` import removed | **Construction** |
+| `SalesInvoiceIT.duplicateNumberIsRefusedByTheDatabase` | ⚠️ The **raw SQL `INSERT` gained `series_id`**. Its assertion is untouched | **Construction — see below** |
+| `TradingQuarterOverHttpIT` | Two **excuses deleted** — `POST /api/sales-document-types` and `POST /api/sales-document-series` are now genuinely driven | **Construction** |
+
+⚠️ **NO ASSERTION WAS CHANGED IN ANY TEST.** The four the step was told to watch all passed unmodified:
+`SalesInvoiceIT`'s `SALES_STORE_AND_PHONE` account assertions, `CreditNoteIT`'s `SALES_SKROUTZ` one,
+`CreditNoteIT`'s `assertThat(note.channel()).isEqualTo(SalesChannel.SKROUTZ)` — which is now the
+strongest evidence the derivation works, since **nothing in the request says SKROUTZ any more** — and
+`ReadBackChecks`' wire assertion `channel == "ECOMMERCE"`, the canary, which needed no edit at all.
+
+**Why the raw INSERT had to change, and why it is construction rather than assertion.** That test
+bypasses the service to prove the *database* refuses a duplicate. Its INSERT omitted `series_id`, so
+under `(COALESCE(series_id, -1), upper(document_number))` it landed in a different group from the
+service-recorded invoice — **a legitimately different document, correctly not refused.** The test was
+no longer building a duplicate. It builds one again now; what it asserts is unchanged. ⭐ A companion
+test was **added** for the complementary fact (`theSameNumberInAnotherSeriesIsAllowed`), which was
+unobservable before R1b because every row's series was null.
+
+📌 **One near-miss worth recording.** A first attempt rewrote `CreditNoteIT` with a regex, which also
+rewrote `assertThat(note.channel()).isEqualTo(SalesChannel.SKROUTZ)` — **an assertion** — and changed a
+helper's parameter type. It was reverted and redone by hand. **A bulk edit across 54 sites cannot tell
+a constructor argument from an assertion**, and this step's whole rule is that the difference matters.
+
+### ⭐ R1b's findings — two defects, both invisible before this step
+
+#### 1. ⚠️ Two enforcements of one rule, agreeing only because of what the data happened to look like
+
+**Found by a test written to DOCUMENT the new behaviour, not to hunt a bug — which is the only reason
+it was found.**
+
+Document-number uniqueness is enforced twice on purpose: by the database trigger and partial unique
+index, and by `SalesInvoiceRepository.existsStandingInvoice`, so the refusal explains itself instead
+of arriving as a constraint name. **R1a changed one of them and not the other.** `V32` made the key
+`(COALESCE(series_id, -1), upper(document_number))` because ΑΛΠ-1 and ΤΠΔΑ-1 are two different
+documents; the service query kept checking the number **globally**.
+
+⭐ **The two still agreed perfectly, and R1a's own migration says why** — *"With every row's series
+NULL, which is every row today, the index is EXACTLY today's global index."* **That sentence is true,
+and it is also exactly why the divergence was invisible.** The moment R1b gave an invoice a series,
+the database allowed the second document and the service refused it: **the per-series key C.6 spent a
+whole sub-part getting right would have been unreachable, enforced by nothing, with a green suite.**
+
+**Fixed** — the query is series-scoped and reproduces the database's null semantics explicitly
+(`existing.seriesId IS NULL AND :seriesId IS NULL`), because a naïve `=` would make two nulls **not**
+collide and silently drop the guarantee for every pre-R1b invoice. Both directions are now asserted,
+in `SalesInvoiceIT` and over HTTP. **The general lesson is in `CLAUDE.md`:** an argument of the form
+*"identical for every existing row"* is a statement about data, not code, and it is also a list of
+the places that will diverge once the data changes.
+
+#### 2. ⚠️ A negative control reported PASS while running nothing
+
+**The stock branch's control was run against deliberately-broken code** —
+`-Dit.test='SalesInvoiceIT#aNonStockMovingTypeConsumesNothing+aStockMovingTypeStillConsumes'` — and
+reported **`BUILD SUCCESS`**. The branch really had been removed. **Failsafe never matched the
+`Class#a+b` selector, ran nothing, and `-Dfailsafe.failIfNoSpecifiedTests=false` turned "measured
+nothing" into green.** Re-run with the plain class selector it failed correctly, on exactly one test.
+
+⚠️ **`failIfNoSpecifiedTests=false` converts a typo into a pass**, and it cannot simply be dropped —
+in a `-am` reactor upstream modules legitimately contain none of the named tests. **The remedy is to
+assert the thing ran** (`grep -c "Running <class>"`), not to trust the exit status.
+
+📌 **A third, smaller one:** after that red run, a targeted `verify` on a *different* module reported
+*"There are test failures in novocore-core"* — no core test had run. **`failsafe:verify` fails on
+whatever is sitting in `target/failsafe-reports`, including the previous run's.** Both are written up
+in `CLAUDE.md` under the stale-artefact family.
+
+### ⭐ The derived-accessor guard — its own step, with a measured scope
+
+**It was folded into R1b assuming it was small. Phase 0 measured it and it is not, and that is the
+finding rather than an inconvenience.**
+
+**The rule, framed as CONTRACT FIDELITY:** the properties **Jackson writes** must equal the
+properties **`OpenApiSchema` documents**. That gives every record two honest ways to comply —
+delete the accessor, or document it — instead of one style prohibition.
+
+⚠️ **THE MECHANISM IS JACKSON, NOT ASM, and the probe proved why.** 8a needed ASM because it needed
+*argument attribution*; here the question is *"what would Jackson call this"*, and the only correct
+oracle is Jackson: `ObjectMapper.acceptJsonFormatVisitor(...)` — which builds the real serializer —
+compared against `Class.getRecordComponents()`. **The proof:** a control record shaped exactly like
+R1a's defect showed that Jackson **did not publish `issuedByUs`** — it stripped the `is` prefix and
+published **`suedByUs`**. Nobody would derive that by reading, and reimplementing Jackson's naming
+rules in ASM would be a second implementation that agrees until it does not.
+
+⭐ **It needs no exemption list.** `equals`/`hashCode`/`toString` are not accessors, static factories
+are static, the compact constructor is not a method, and **`…IfAny()` is invisible to Jackson** —
+all four fall out of the mechanism. ✅ `CLAUDE.md`'s claim that `…IfAny()` is the safe exception is
+**confirmed, and for a better reason than the one recorded**: not merely that it cannot throw, but
+that Jackson never sees it.
+
+**📊 The measured scope, 2026-08-04.** Probe scanned **203 records** with `NovoCoreJsonModule`
+registered (so `Money`, `Quantity`, `UnitCost` and `Rate` correctly drop out — they have custom
+serialisers). **46 records serialise beyond their components; 32 of them are schemas on the
+committed API surface, shipping 66 properties the spec does not document.** Confirmed behaviourally
+on at least one: a real `writeValueAsString` of a real `SalesDocumentTypeView` emits
+`"draft":false`, which is in no schema.
+
+```
+AccountView[contra, settlementTarget]        CreditNoteView[inForce, reversal, reversed]
+CustomerCreditView[exhausted, untouched]     CustomerView[mergeable, systemRecord]
+FreightAllocationView[reversal, reversed]    GoodsReceiptLineView[awaitingInvoice, serialized]
+GoodsReceiptView[inForce, reversal, ...]     GrIrMatchView[unfavourable]
+InventoryLotView[open]                       JournalEntrySummaryView[amendable, reversal, reversed]
+JournalEntryView[amendable, balanced, ...]   JournalLineView[debit]
+NewGoodsReceiptLine[serialized]              NewPurchaseInvoiceLine[exempt, inventory]
+NewSalesInvoiceLine[exempt, product, ...]    NewStockWriteOff[serialized]
+OpenItem[fullySettled, untouched]            OpenItemRef[customerSide]
+ProductView[redacted, stocked]               PurchaseDocumentTypeView[draft]
+PurchaseInvoiceLineView[awaitingDelivery,…]  PurchaseInvoiceView[inForce, reversal, reversed]
+SalesDocumentTypeView[draft]                 SalesInvoiceLineView[bundle, exempt]
+SalesInvoiceView[inForce, reversal, ...]     SerializedUnitView[onHand, sellable]
+SettingView[unset]                           SettlementView[fullyAllocated, receipt]
+StockConsumptionView[inForce, return, ...]   StockLevels[empty, oversold]
+StockWriteOffView[reversal, reversed, ...]   VatClassView[zeroRated]
+```
+
+**None is a live defect.** Nothing sets `additionalProperties: false` (2 of 223 schemas do, neither
+of these), the generated TypeScript simply lacks the fields, and no client breaks. **What is wrong
+is that the contract lies about 32 schemas** — the silent half `CLAUDE.md` predicted and said
+nothing would ever report. **It is the first time this project has had a real number on that
+question.**
+
+⭐ **EVALUATE THE GENERATOR ROUTE FIRST when that step is scoped.** Teaching `OpenApiSchema` to
+describe what Jackson serialises would document all 66 in **one change** instead of editing 66
+records, and the rule would then verify the generator rather than police records. ⚠️ **It is not
+free:** 8a's rule makes primitives `required`, so 66 new required booleans means fixture
+reconciliation across 32 schemas. **Weigh it there, not here.**
+
+**Placement: the `app` module, against the real Boot-configured mapper bean** — the probe used a
+`JsonMapper` built in a test, and the thing that decides must be the thing that answers.
+
+⚠️ **R1b must not ADD a violation.** Review discipline rather than a rule, since the rule does not
+exist yet: the records R1b writes carry no derived accessors.
 
 ---
 
@@ -578,7 +800,8 @@ F6, purchasing.
 | **8b — consumer cleanup** | ⚪ **OPTIONAL, and not a correctness step.** 8a already regenerated the client and made the suite green; what remains is *taking advantage* of the new contract — removing `?.`/`??` guards on fields that can no longer be undefined. ⚠️ **The test-account decision attaches here** and should be settled *before* it starts |
 | **R1a — document reference data, additive** | ✅ **DONE, 2026-08-03**, commits `aa1eda4` + `c5f9a97`. Six new tables, 54 new routes, a new architecture rule, one deletion. **All 48 sub-parts have a verdict**; 46 done, S.4 deferred to R2, E.3 a finding. **Four premise corrections and one defect only the real server could find** — see R1a's findings. No live leg: R1a ships no screens |
 | **U3 — eleven design decisions recorded** | ✅ **DONE, 2026-08-03. Documentation only** — no code, no schema, no migration, no test. It does **not** change what is next. Four placements applied (M0a unblocked, M0b gated, D2 before step 19, and two requirements moved into steps 21 and 22); **the shared before-24 gate recorded as a decision**; nothing else promoted or reordered. **D1/D3-versus-F5 is stated as a trade in the roadmap, not resolved** |
-| **R1b — document reference data, behavioural** | 🔴 **NEXT.** Two lines: `documentType` becomes mandatory on `NewSalesInvoice` and the consumption path branches on `affectsStock`; and **channel becomes authoritative from the series**. ⚠️ It changes what **every sales-invoice test constructs**, which is the whole reason the split exists |
+| **R1b — document reference data, behavioural** | ✅ **DONE, 2026-08-04.** All 22 sub-parts have verdicts, none is "still open". ⚠️ **`seriesId`, not `documentTypeId`** — the document type is mandatory *through* the series, because `sales_invoice` has `series_id` and no `document_type_id`. Channel derived from the series; a channel-less series **refused**, not accommodated. **Nothing outstanding** |
+| **W1 — a serialised record's wire shape must equal its documented shape** | ⚪ **NEW, unscheduled, created 2026-08-04 out of R1b's Phase 0.** ⚠️ **32 committed schemas ship 66 undocumented properties** — measured, not estimated. None is a live defect; the contract lies about all 32. ⭐ **Evaluate the generator route first** — one change to `OpenApiSchema` documents all 66. Detail in the roadmap under ʷ¹ |
 | **R2 — document reference data, screens** | 🔴 After R1b. ⚠️ **Full CRUD**, not the read-plus-activate shape F4 built — the owner authors these rows. He creates his 19 document types and their series here, **choosing each AADE type himself**. ⚠️ Needs a **live browser leg**, and therefore an app-image rebuild |
 | **F5 — Sales Invoice + Credit Note** | 🔴 **No longer next.** ⚠️ It decides the create/preview/commit pattern F6–F8 all reuse, so it is worth disproportionate scrutiny — but ⚠️ **see the open decision in the roadmap**: since documents arrive already issued, F5 before step 18 is a data-entry screen for documents created elsewhere, and much of it disappears when the Go adapter lands |
 | ~~⚠️ **Backend queue item 8 — promote to first?**~~ | ✅ **DECIDED 2026-08-03, and the answer was neither.** Not promoted within Q1 and not left last: **lifted out of the queue** into its own step, split 8a/8b, placed after Q1 and before R1. The open decision is removed from the roadmap and replaced by the step |

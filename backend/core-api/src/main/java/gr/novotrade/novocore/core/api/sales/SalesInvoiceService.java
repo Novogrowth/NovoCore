@@ -55,11 +55,43 @@ public interface SalesInvoiceService {
      *       {@code ledger.rounding.mode}; VAT is that net at the class's rate, rounded once;
      *   <li>a bundle is decomposed by {@code BundleService} and the component lines are
      *       <strong>stored</strong>, not recomputed later — brief §5's two linked levels;
-     *   <li>stock leaves: pooled goods FIFO, a serial-tracked line by the units it named, each of
-     *       which is marked {@code SOLD} and carries the customer and this line (brief §5);
+     *   <li>stock leaves <strong>if the document type says it does</strong> — see below: pooled goods
+     *       FIFO, a serial-tracked line by the units it named, each of which is marked {@code SOLD}
+     *       and carries the customer and this line (brief §5);
      *   <li>the gross is compared against {@link NewSalesInvoice#statedTotal()} and the difference
      *       posted to {@code Rounding differences} — see below.
      * </ul>
+     *
+     * <h2>⚠️ The series decides three things, and two of them are refusals (R1b)</h2>
+     *
+     * <p>{@link NewSalesInvoice#seriesId()} is mandatory, and everything below follows from it rather
+     * than from anything a caller states separately.
+     *
+     * <p><strong>1. Channel is derived, not settable.</strong> The invoice's {@link SalesChannel} is
+     * the series' own — ΑΛΠW is the web series, so an invoice in it is a web sale by definition — and
+     * it is what decides which {@code Sales} account the revenue credits. ⚠️ <strong>There is no
+     * channel field on this request and therefore none on any screen that binds it, F5 included.</strong>
+     *
+     * <p><strong>2. A channel-less series is REFUSED.</strong> {@code sales_invoice.channel} is
+     * {@code NOT NULL} and is deliberately <em>not</em> relaxed. A series with no channel is not a
+     * sales channel at all — the self-supply series (Στοιχείο Αυτοπαράδοσης / Ιδιοχρησιμοποίησης)
+     * are exactly that, since the customer is the issuer. Novocore cannot record one yet: self-supply
+     * has no posting rule, the revenue leg has no candidate account, and which accounts carry each leg
+     * is an accountant's question. <strong>The refusal is what keeps that question open</strong>
+     * instead of papering over it with a widened column and a made-up channel. Roadmap step R3
+     * answers it.
+     *
+     * <p><strong>3. Whether stock moves at all, and this is SILENT.</strong> The series names a
+     * document type, and {@code affectsStock} on that type decides. ΑΛΠ and ΤΠΔΑ combine sale and
+     * transport, so stock moves; a plain Τιμολόγιο is purely sales and <strong>creates no stock
+     * consumption whatever</strong> — no row, no pending state, no marker, no warning. That is a
+     * decision rather than an omission. ⚠️ <strong>Its consequence is a known limitation:</strong>
+     * until a dispatch document exists (18b), stock figures are incomplete for every non-stock-moving
+     * sales document, which is a routine share of real sales.
+     *
+     * <p><strong>An inactive series, or an active series of an inactive type, is refused</strong> —
+     * the same rule products and VAT classes already follow, and the reason R1a left document-type
+     * deactivation unguarded: nothing referenced a type until now.
      *
      * <p><strong>Stock never blocks a sale</strong> (Q17, ADR 0008). Pooled stock may go negative in
      * aggregate; the shortfall is recorded on the consumption and is queryable. A <em>serialized</em>
@@ -75,8 +107,11 @@ public interface SalesInvoiceService {
      * @throws InvalidSalesInvoiceException if the customer or a product is unknown or inactive; if a
      *     line mixes currencies with the rest; if a line's shape disagrees with whether its product is
      *     serial-tracked; if a cash sale reaches {@code SettingKeys.CASH_PAYMENT_LIMIT}; if the
-     *     document number duplicates an invoice that still stands; or if a rounding difference above
-     *     the threshold has not been accepted
+     *     document number duplicates an invoice that still stands; if a rounding difference above
+     *     the threshold has not been accepted; or — R1b — if the series is inactive, its document
+     *     type is inactive, or the series has no sales channel
+     * @throws gr.novotrade.novocore.core.api.document.DocumentSeriesNotFoundException if
+     *     {@link NewSalesInvoice#seriesId()} names no series
      * @throws gr.novotrade.novocore.core.api.tax.VatClassNotDeterminableException if a line's rate
      *     cannot be resolved at any level — there is deliberately no fallback rate
      * @throws gr.novotrade.novocore.core.api.inventory.InvalidStockConsumptionException if a named

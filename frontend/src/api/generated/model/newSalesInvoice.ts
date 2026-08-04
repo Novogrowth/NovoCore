@@ -9,12 +9,11 @@
  */
 import type { Money } from './money';
 import type { NewSalesInvoiceLine } from './newSalesInvoiceLine';
-import type { SalesChannel } from './salesChannel';
 import type { SettlementMethod } from './settlementMethod';
 
 export interface NewSalesInvoice {
   customerId: number;
-  channel: SalesChannel;
+  seriesId: number;
   settlementMethod: SettlementMethod;
   documentNumber?: string;
   invoiceDate: string;

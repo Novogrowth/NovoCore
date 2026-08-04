@@ -5,11 +5,14 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import gr.novotrade.novocore.core.AbstractCoreIntegrationTest;
+import gr.novotrade.novocore.core.testsupport.SalesDocumentFixture;
 import gr.novotrade.novocore.core.api.account.AccountSystemKey;
 import gr.novotrade.novocore.core.api.account.AccountView;
 import gr.novotrade.novocore.core.api.account.BalanceSide;
 import gr.novotrade.novocore.core.api.account.ChartOfAccountsService;
 import gr.novotrade.novocore.core.api.customer.CustomerService;
+import gr.novotrade.novocore.core.api.document.SalesDocumentSeriesService;
+import gr.novotrade.novocore.core.api.document.SalesDocumentTypeService;
 import gr.novotrade.novocore.core.api.customer.CustomerView;
 import gr.novotrade.novocore.core.api.customer.NewCustomer;
 import gr.novotrade.novocore.core.api.inventory.InventoryService;
@@ -112,6 +115,22 @@ class SettlementIT extends AbstractCoreIntegrationTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    @Autowired
+    private SalesDocumentTypeService salesDocumentTypes;
+
+    @Autowired
+    private SalesDocumentSeriesService salesSeries;
+
+    /** The series every sale in this class is recorded in — stock-moving, as they always were. */
+    private SalesDocumentFixture documents;
+
+    private long series(SalesChannel channel) {
+        if (documents == null) {
+            documents = new SalesDocumentFixture(salesDocumentTypes, salesSeries, "SETIT");
+        }
+        return documents.stockMoving(channel);
+    }
+
     // ---------------------------------------------------------------------------------------
     // Fixtures
     // ---------------------------------------------------------------------------------------
@@ -135,7 +154,7 @@ class SettlementIT extends AbstractCoreIntegrationTest {
         ProductView product = goods(sku);
         inventory.receive(NewInventoryLot.pooled(product.id(), Quantity.of(quantity + 5),
                 UnitCost.ofEur("40.000000"), MARCH, StockLocation.INVENTORY));
-        return salesInvoices.record(NewSalesInvoice.of(buyer.id(), SalesChannel.ECOMMERCE,
+        return salesInvoices.record(NewSalesInvoice.of(buyer.id(), series(SalesChannel.ECOMMERCE),
                 SettlementMethod.ON_ACCOUNT, number("SETIT-SI"), JULY,
                 List.of(NewSalesInvoiceLine.product(
                         product.id(), Quantity.of(quantity), UnitCost.ofEur("100.000000")))));
@@ -253,7 +272,7 @@ class SettlementIT extends AbstractCoreIntegrationTest {
                     UnitCost.ofEur("40.000000"), MARCH, StockLocation.INVENTORY));
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.STORE_AND_PHONE, SettlementMethod.CASH,
+                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.CASH,
                     number("SETIT-SI"), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("100.000000")))));

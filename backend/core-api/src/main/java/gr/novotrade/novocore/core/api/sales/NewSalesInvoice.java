@@ -2,6 +2,7 @@ package gr.novotrade.novocore.core.api.sales;
 
 import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
+import gr.novotrade.novocore.core.api.shared.Required;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
@@ -24,8 +25,30 @@ import java.util.Optional;
  * agreed to it. Null means nothing external stated a total, and then there is nothing to compare
  * against and no rounding difference by definition.
  *
+ * <p><strong>⚠️ There is no {@code channel} here, and its absence is the decision (R1b).</strong> A
+ * sale's {@link SalesChannel} comes from its {@link #seriesId() series} and is not independently
+ * settable: ΑΛΠW is the web series, so an invoice in it is a web sale <em>by definition</em> rather
+ * than by someone remembering to tick a box. One fact, one place, and no way for the two to
+ * disagree. <strong>F5 therefore has no channel field</strong> — there is nothing for it to bind.
+ *
  * @param settlementMethod brief §6's settlement automation. Decides which account the invoice debits
  *     and therefore whether it is an open item at all — see {@link SettlementMethod}.
+ * @param seriesId the numbering series this document belongs to. <strong>Mandatory since R1b</strong>,
+ *     and it carries two things rather than one:
+ *     <ul>
+ *       <li>the <strong>channel</strong>, read straight off the series. ⚠️ A series whose channel is
+ *           null is <em>not a sales channel</em> — the self-supply series genuinely are not, since
+ *           the customer is the issuer — and recording against one is <strong>refused</strong>.
+ *           {@code sales_invoice.channel} stays {@code NOT NULL}; see
+ *           {@code SalesInvoiceService#record} for why that is a refusal rather than a relaxed
+ *           constraint.
+ *       <li>the <strong>document type</strong>, through {@code sales_document_series.document_type_id},
+ *           which is {@code NOT NULL}. ⚠️ <strong>This is how the document type became mandatory —
+ *           THROUGH the series.</strong> There is deliberately no {@code documentTypeId} here and no
+ *           {@code document_type_id} column on {@code sales_invoice}: two independently settable
+ *           fields could disagree about which type a document is, which is the same defect the
+ *           channel rule above exists to prevent. The type is what decides whether stock moves.
+ *     </ul>
  * @param roundingAcceptedBy who agreed to a rounding difference larger than the threshold, or null.
  *     Q15's remainder answered: the confirmation happens at entry and is recorded on the record,
  *     because the person who can explain the difference is the one holding the document, not whoever
@@ -33,7 +56,7 @@ import java.util.Optional;
  */
 public record NewSalesInvoice(
         long customerId,
-        @Mandatory SalesChannel channel,
+        @Mandatory Long seriesId,
         @Mandatory SettlementMethod settlementMethod,
         String documentNumber,
         @Mandatory LocalDate invoiceDate,
@@ -44,7 +67,10 @@ public record NewSalesInvoice(
         @Mandatory List<NewSalesInvoiceLine> lines) {
 
     public NewSalesInvoice {
-        Objects.requireNonNull(channel, "channel");
+        // Required.field rather than requireNonNull, because a caller omitting this has made a
+        // client's mistake and not a programming error: it answers 400 naming the field, through
+        // InvalidInputException, instead of "Malformed request body".
+        Required.field(seriesId, "seriesId");
         Objects.requireNonNull(settlementMethod, "settlementMethod");
         Objects.requireNonNull(invoiceDate, "invoiceDate");
         Objects.requireNonNull(lines, "lines");
@@ -76,27 +102,27 @@ public record NewSalesInvoice(
         }
     }
 
-    public static NewSalesInvoice of(long customerId, SalesChannel channel,
+    public static NewSalesInvoice of(long customerId, long seriesId,
             SettlementMethod settlementMethod, String documentNumber, LocalDate invoiceDate,
             List<NewSalesInvoiceLine> lines) {
-        return new NewSalesInvoice(customerId, channel, settlementMethod, documentNumber,
+        return new NewSalesInvoice(customerId, seriesId, settlementMethod, documentNumber,
                 invoiceDate, null, null, null, null, lines);
     }
 
     /** The same request, compared against what the issuing system says the gross came to. */
     public NewSalesInvoice statedAs(Money externalGrossTotal) {
-        return new NewSalesInvoice(customerId, channel, settlementMethod, documentNumber, invoiceDate,
+        return new NewSalesInvoice(customerId, seriesId, settlementMethod, documentNumber, invoiceDate,
                 description, externalGrossTotal, roundingAcceptedBy, roundingNote, lines);
     }
 
     /** The same request, with a larger-than-threshold rounding difference explicitly accepted. */
     public NewSalesInvoice acceptingRoundingDifference(String acceptedBy, String note) {
-        return new NewSalesInvoice(customerId, channel, settlementMethod, documentNumber, invoiceDate,
+        return new NewSalesInvoice(customerId, seriesId, settlementMethod, documentNumber, invoiceDate,
                 description, statedTotal, acceptedBy, note, lines);
     }
 
     public NewSalesInvoice describedAs(String invoiceDescription) {
-        return new NewSalesInvoice(customerId, channel, settlementMethod, documentNumber, invoiceDate,
+        return new NewSalesInvoice(customerId, seriesId, settlementMethod, documentNumber, invoiceDate,
                 invoiceDescription, statedTotal, roundingAcceptedBy, roundingNote, lines);
     }
 

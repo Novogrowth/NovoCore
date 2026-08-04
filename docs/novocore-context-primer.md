@@ -99,10 +99,11 @@ the summary.
   same time and for the same reason: it was a snapshot duplicating `PROGRESS.md` and the roadmap, and a
   second record that drifts is exactly what let the backend queue and the frontend roadmap disagree
   about item 3 for a week. **Regenerate a summary on demand rather than maintaining one.**
-- ⚠️ **The next step is R1b.** The running order is now **R1b → R2 → F5**. ⚠️ **R1 was split into
-  R1a and R1b on 2026-08-03 and R1a is DONE** (commits `aa1eda4` + `c5f9a97`) — see the R1a bullet
-  below. The split is test-facing: R1a could not change what any existing test asserts, and R1b
-  changes what *every* sales-invoice test constructs. Q1 and 8a are both done
+- ⚠️ **The next step is R2.** The running order is now **R2 → F5**. ⚠️ **R1 was split into R1a and
+  R1b on 2026-08-03; both are DONE** — R1a on 2026-08-03 (`aa1eda4` + `c5f9a97`), **R1b on
+  2026-08-04**. The split was test-facing: R1a could not change what any existing test asserts, and
+  R1b changed what *every* sales-invoice test constructs. ⚠️ **A new step, W1, was created out of
+  R1b's Phase 0** — see the R1b bullet. Q1 and 8a are both done
   (2026-08-03); **8b dropped to ⚪ optional** and is off the critical path. F5 is still not next for
   the reason it was not next on 2026-08-02: the backend queue was prioritised ahead of it in a design
   conversation that existed only in chat until then, while three documents still said F5. It is the
@@ -178,6 +179,46 @@ the summary.
   `Required.field`; `PATCH /api/roles/{id}/description`; the duplicate `operationId` fixed, the
   generator taught to **refuse** one, and the frontend workaround deleted; the eight boolean primitives
   boxed.
+- ✅ **Step R1b is DONE — 2026-08-04.** ⚠️ **The approved checklist said "`documentType` becomes
+  mandatory" and that could not be built literally**: `sales_invoice` has `series_id` and **no
+  `document_type_id` column**, and a series carries a `NOT NULL` type. Two settable references could
+  disagree about what kind of document a row is. **So there is ONE new mandatory component,
+  `seriesId`, and the document type is mandatory THROUGH it.** Migration **V33** (comment only).
+  - **Channel is DERIVED from the series and removed from `NewSalesInvoice`.** ΑΛΠW is the web
+    series, so an invoice in it is a web sale by definition. ⚠️ **F5 therefore has no channel field**
+    — it needs a *series picker* instead, and it is mandatory.
+  - ⚠️ **The stock branch is SILENT, by decision.** A document type whose `affectsStock` is false
+    creates **no `stock_consumption` row at all** — no pending state, no marker, no warning, nothing
+    queryable — and `stock_consumption`'s source CHECK was not widened. **This CORRECTS the primer's
+    old claim** that the state would be queryable. The limitation is real and is recorded in
+    `CLAUDE.md` rather than represented in the data. Do not add an indicator back.
+  - ⚠️ **Three refusals, all in the shared `compute(...)` so a preview refuses what a record would:**
+    a **channel-less series** (self-supply — `sales_invoice.channel` was **not** relaxed; the refusal
+    is what holds **R3**'s question open), an **inactive series**, and an **inactive document type**
+    (the guard R1a's A.8 deliberately left unbuilt).
+  - ⚠️ **`sales_invoice.series_id` stays NULLABLE** — the service requires it, the column permits it.
+    `NOT NULL` would mean backfilling a series nobody authored. **Whether migrated history carries a
+    series is step 24's question**; the reason is written at the column in `V33`.
+  - ⭐ **Two defects found, both invisible before this step.** The service's duplicate-number check
+    was still **global** while `V32` had made the database key **per-series** — they agreed only
+    because every row's series was null, so R1a's C.6 key would have been enforced by nothing. And a
+    **negative control reported PASS while running nothing**, because a `Class#a+b` failsafe selector
+    matched no tests. Both are written up in `CLAUDE.md`.
+  - ✅ **No dev seed, and S.4 stays FULLY deferred to R2.** Fixtures self-create their types and
+    series exactly as they already create customers and products — `TradingQuarter` over HTTP,
+    `SalesDocumentFixture` in-process. ⚠️ **Consequence for R2:** `LiveSeedTest` now writes `TEST-`
+    document types and series into the development database, so those will be the **first rows those
+    tables hold** when R2's screens open. Consistent with the residue it already leaves for customers
+    and products, and flagged so it is not a surprise.
+  - **Purchase is untouched, deliberately.** `purchase_document_type` becomes mandatory at **F6**;
+    the one inconsistency that leaves is recorded in F6's roadmap footnote.
+- ⚪ **W1 is a NEW step, created 2026-08-04 out of R1b's Phase 0: a serialised record's wire shape
+  must equal its documented shape.** It was scoped as one of R1b's three lines; measuring it first
+  showed **32 committed schemas would fail it**, shipping **66 undocumented properties**, so it left
+  R1b rather than landing with a baseline. ⚠️ **The mechanism is Jackson, not ASM** — the probe showed
+  Jackson does not publish `issuedByUs`, it strips the `is` prefix and publishes **`suedByUs`**.
+  ⭐ **Evaluate the generator route first**: teaching `OpenApiSchema` to describe what Jackson writes
+  documents all 66 in one change. Full detail in the roadmap under ʷ¹.
 - ✅ **Step R1a is DONE — 2026-08-03, two commits** (`aa1eda4` the rewritten checklist, `c5f9a97`
   the build). Six new tables, **54 new operations** (176 → 230), migrations **V31** and **V32**, a
   new architecture rule, one deletion. **All 48 sub-parts have a verdict**: 46 done, S.4 explicitly

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import gr.novotrade.novocore.core.AbstractCoreIntegrationTest;
+import gr.novotrade.novocore.core.testsupport.SalesDocumentFixture;
 import gr.novotrade.novocore.core.api.account.AccountSystemKey;
 import gr.novotrade.novocore.core.api.account.BalanceSide;
 import gr.novotrade.novocore.core.api.account.ChartOfAccountsService;
@@ -15,6 +16,9 @@ import gr.novotrade.novocore.core.api.customer.CustomerService;
 import gr.novotrade.novocore.core.api.customer.CustomerSystemKey;
 import gr.novotrade.novocore.core.api.customer.CustomerView;
 import gr.novotrade.novocore.core.api.customer.NewCustomer;
+import gr.novotrade.novocore.core.api.document.DocumentSeriesNotFoundException;
+import gr.novotrade.novocore.core.api.document.SalesDocumentSeriesService;
+import gr.novotrade.novocore.core.api.document.SalesDocumentTypeService;
 import gr.novotrade.novocore.core.api.inventory.InvalidStockConsumptionException;
 import gr.novotrade.novocore.core.api.inventory.InventoryService;
 import gr.novotrade.novocore.core.api.inventory.NewInventoryLot;
@@ -124,6 +128,30 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    @Autowired
+    private SalesDocumentTypeService salesDocumentTypes;
+
+    @Autowired
+    private SalesDocumentSeriesService salesSeries;
+
+    /**
+     * The series every sale in this class is recorded in — R1b made one mandatory.
+     *
+     * <p>⚠️ <strong>Stock-moving, and that is what keeps this class's assertions true rather than
+     * merely passing.</strong> Every test here predates R1b and was written against a sale that
+     * consumes stock; giving them a non-stock-moving series would silently stop the consumptions
+     * they assert on. The channel each test used to pass is now the channel of the series it names,
+     * so the accounts they assert are the accounts they always asserted.
+     */
+    private SalesDocumentFixture documents;
+
+    private long series(SalesChannel channel) {
+        if (documents == null) {
+            documents = new SalesDocumentFixture(salesDocumentTypes, salesSeries, "SIIT");
+        }
+        return documents.stockMoving(channel);
+    }
+
     /** The seeded {@code Delivery} charge type (V7), by name — its id is not fixed. */
     private long deliveryChargeTypeId() {
         return chargeTypes.all().stream()
@@ -178,7 +206,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "20.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.STORE_AND_PHONE, SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.ON_ACCOUNT,
                     number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(2L), UnitCost.ofEur("50.000000")))));
@@ -215,7 +243,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "20.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT, number(), JULY,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT, number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(3L), UnitCost.ofEur("50.000000")))));
 
@@ -245,7 +273,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             ProductView repair = service("SIIT-03", "80.00");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.STORE_AND_PHONE, SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.ON_ACCOUNT,
                     number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             repair.id(), Quantity.of(1L), UnitCost.ofEur("80.000000")))));
@@ -269,7 +297,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
                     .findFirst().orElseThrow().id();
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT, number(), JULY,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT, number(), JULY,
                     List.of(
                             NewSalesInvoiceLine.product(
                                     beans.id(), Quantity.of(1L), UnitCost.ofEur("50.000000")),
@@ -299,7 +327,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(reduced.id(), 5L, "40.000000");
 
             salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.SKROUTZ, SettlementMethod.ON_ACCOUNT, number(), VAT_DAY,
+                    buyer.id(), series(SalesChannel.SKROUTZ), SettlementMethod.ON_ACCOUNT, number(), VAT_DAY,
                     List.of(
                             NewSalesInvoiceLine.product(
                                     standard.id(), Quantity.of(1L), UnitCost.ofEur("100.000000")),
@@ -334,7 +362,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
                     customer("Override").id(), vatClasses.requireByCode("1131").id());
 
             SalesInvoiceView fromCustomer = salesInvoices.record(NewSalesInvoice.of(
-                    overridden.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                    overridden.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
                     number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("100.000000")))));
@@ -343,7 +371,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             assertThat(fromCustomer.vatTotal()).isEqualTo(Money.ofEur("13.00"));
 
             SalesInvoiceView fromLine = salesInvoices.record(NewSalesInvoice.of(
-                    overridden.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                    overridden.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
                     number(), JULY,
                     List.of(NewSalesInvoiceLine
                             .product(beans.id(), Quantity.of(1L), UnitCost.ofEur("100.000000"))
@@ -376,7 +404,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "8.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    retail.id(), SalesChannel.STORE_AND_PHONE, SettlementMethod.CASH,
+                    retail.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.CASH,
                     number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("20.000000")))));
@@ -399,7 +427,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "8.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    retail.id(), SalesChannel.STORE_AND_PHONE, SettlementMethod.CARD_POS,
+                    retail.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.CARD_POS,
                     number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("20.000000")))));
@@ -417,7 +445,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "8.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.BANK_DEPOSIT,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.BANK_DEPOSIT,
                     number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("20.000000")))));
@@ -437,7 +465,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
 
             assertThatExceptionOfType(InvalidSalesInvoiceException.class)
                     .isThrownBy(() -> salesInvoices.record(NewSalesInvoice.of(
-                            retail.id(), SalesChannel.STORE_AND_PHONE, SettlementMethod.CASH,
+                            retail.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.CASH,
                             number(), JULY,
                             List.of(NewSalesInvoiceLine.product(
                                     machine.id(), Quantity.of(1L), UnitCost.ofEur("600.000000"))))))
@@ -458,7 +486,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             List<Long> ids = new ArrayList<>();
             for (int i = 0; i < 12; i++) {
                 ids.add(salesInvoices.record(NewSalesInvoice.of(
-                        buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                        buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
                         number(), JULY,
                         List.of(NewSalesInvoiceLine.product(
                                 beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000")))))
@@ -633,7 +661,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 100L, "4.000000");
 
             NewSalesInvoice request = NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
                     number(), JULY,
                     List.of(
                             NewSalesInvoiceLine.product(
@@ -680,7 +708,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
 
             long entriesBefore = journal.entriesBetween(JULY, JULY).size();
             NewSalesInvoice request = NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
                     documentNumber, JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000"))));
@@ -717,7 +745,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "4.000000");
 
             NewSalesInvoice request = NewSalesInvoice.of(
-                            buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                            buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
                             number(), JULY,
                             List.of(NewSalesInvoiceLine.product(
                                     beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000"))))
@@ -758,13 +786,13 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             // before they have filled in the rest of the form.
             String taken = number();
             salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT, taken, JULY,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT, taken, JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000")))));
 
             assertThatExceptionOfType(InvalidSalesInvoiceException.class)
                     .isThrownBy(() -> salesInvoices.preview(NewSalesInvoice.of(
-                            buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                            buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
                             taken, JULY,
                             List.of(NewSalesInvoiceLine.product(
                                     beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000"))))))
@@ -773,7 +801,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             // A cash sale over the statutory limit is refused before it is priced into existence.
             assertThatExceptionOfType(InvalidSalesInvoiceException.class)
                     .isThrownBy(() -> salesInvoices.preview(NewSalesInvoice.of(
-                            buyer.id(), SalesChannel.STORE_AND_PHONE, SettlementMethod.CASH,
+                            buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.CASH,
                             number(), JULY,
                             List.of(NewSalesInvoiceLine.product(
                                     beans.id(), Quantity.of(1L), UnitCost.ofEur("5000.000000"))))));
@@ -792,7 +820,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "4.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                            buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                            buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
                             number(), JULY,
                             List.of(NewSalesInvoiceLine.product(
                                     beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000"))))
@@ -817,7 +845,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "4.000000");
 
             NewSalesInvoice request = NewSalesInvoice.of(
-                            buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                            buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
                             number(), JULY,
                             List.of(NewSalesInvoiceLine.product(
                                     beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000"))))
@@ -850,7 +878,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "4.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT, number(), JULY,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT, number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000")))));
 
@@ -874,7 +902,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
                     MARCH, StockLocation.INVENTORY, List.of("SIIT-SN-A", "SIIT-SN-B")));
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.STORE_AND_PHONE, SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.ON_ACCOUNT,
                     number(), JULY,
                     List.of(NewSalesInvoiceLine.serializedProduct(
                             machine.id(), UnitCost.ofEur("2400.000000"), List.of("SIIT-SN-B")))));
@@ -908,7 +936,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
                     MARCH, StockLocation.INVENTORY, List.of("SIIT-SN-C")));
 
             salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.STORE_AND_PHONE, SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.ON_ACCOUNT,
                     number(), JULY,
                     List.of(NewSalesInvoiceLine.serializedProduct(
                             machine.id(), UnitCost.ofEur("2400.000000"), List.of("SIIT-SN-C")))));
@@ -918,7 +946,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             // arrive to back it with. So this refuses instead of recording a shortfall.
             assertThatExceptionOfType(InvalidStockConsumptionException.class)
                     .isThrownBy(() -> salesInvoices.record(NewSalesInvoice.of(
-                            buyer.id(), SalesChannel.STORE_AND_PHONE, SettlementMethod.ON_ACCOUNT,
+                            buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.ON_ACCOUNT,
                             number(), JULY,
                             List.of(NewSalesInvoiceLine.serializedProduct(machine.id(),
                                     UnitCost.ofEur("2400.000000"), List.of("SIIT-SN-C"))))))
@@ -927,7 +955,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             // And a serial nobody ever received is a lookup failure, which is a different answer.
             assertThatExceptionOfType(SerializedUnitNotFoundException.class)
                     .isThrownBy(() -> salesInvoices.record(NewSalesInvoice.of(
-                            buyer.id(), SalesChannel.STORE_AND_PHONE, SettlementMethod.ON_ACCOUNT,
+                            buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.ON_ACCOUNT,
                             number(), JULY,
                             List.of(NewSalesInvoiceLine.serializedProduct(machine.id(),
                                     UnitCost.ofEur("2400.000000"), List.of("SIIT-SN-NOPE"))))));
@@ -952,7 +980,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
                     NewBundleComponent.one(grinder.id()), NewBundleComponent.one(beans.id())));
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT, number(), JULY,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT, number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             bundle.id(), Quantity.of(1L), UnitCost.ofEur("135.000000")))));
 
@@ -985,7 +1013,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
                     NewBundleComponent.one(grinder.id()), NewBundleComponent.one(beans.id())));
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT, number(), JULY,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT, number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             bundle.id(), Quantity.of(1L), UnitCost.ofEur("135.000000")))));
             List<Money> before = invoice.lines().getFirst().components().stream()
@@ -1018,7 +1046,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             String documentNumber = number();
 
             NewSalesInvoice request = NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
                     documentNumber, JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000"))));
@@ -1039,7 +1067,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
 
             assertThatExceptionOfType(InvalidSalesInvoiceException.class)
                     .isThrownBy(() -> salesInvoices.record(NewSalesInvoice.of(
-                            buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                            buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
                             number(), JULY,
                             List.of(NewSalesInvoiceLine.product(
                                     beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000"))))))
@@ -1059,7 +1087,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "20.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT, number(), JULY,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT, number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(2L), UnitCost.ofEur("50.000000")))));
             assertThat(inventory.sellableStockOf(beans.id())).isEqualTo(Quantity.of(8L));
@@ -1082,7 +1110,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "20.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT, number(), JULY,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT, number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("50.000000")))));
             salesInvoices.reverse(invoice.id(), JULY, null);
@@ -1090,6 +1118,194 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             assertThatExceptionOfType(InvalidSalesInvoiceException.class)
                     .isThrownBy(() -> salesInvoices.reverse(invoice.id(), JULY, null))
                     .withMessageContaining("already been reversed");
+        }
+    }
+
+    /**
+     * R1b — what the series decides.
+     *
+     * <p>Three refusals and one silent branch. The branch is the one worth reading carefully: a
+     * document type that does not move stock creates <strong>no consumption row at all</strong>, and
+     * nothing anywhere says so. That is a decision, and a test is the only place it is visible.
+     */
+    @Nested
+    @DisplayName("R1b — the series decides the channel, the stock behaviour, and three refusals")
+    class TheSeriesDecides {
+
+        /** Its own fixture namespace, so deactivating a type here cannot affect another test. */
+        private SalesDocumentFixture own(String suffix) {
+            return new SalesDocumentFixture(salesDocumentTypes, salesSeries, "SIIT" + suffix);
+        }
+
+        private SalesInvoiceView saleIn(long seriesId, ProductView product) {
+            return salesInvoices.record(NewSalesInvoice.of(
+                    customer("Series " + seriesId).id(), seriesId, SettlementMethod.ON_ACCOUNT,
+                    number(), JULY,
+                    List.of(NewSalesInvoiceLine.product(
+                            product.id(), Quantity.of(2L), UnitCost.ofEur("50.000000")))));
+        }
+
+        @Test
+        @DisplayName("a stock-moving type consumes — the NEGATIVE CONTROL for the branch below")
+        void aStockMovingTypeStillConsumes() {
+            // ⚠️ This test is why the next one means anything. "No consumption row" is also what
+            // a broken branch, a broken fixture or a sale that never happened would produce, and
+            // those are indistinguishable from a correct skip by looking at the absence alone.
+            // This asserts that the SAME code path, differing only in affectsStock, does consume.
+            ProductView beans = goods("SIIT-R1B-01", "50.00");
+            stock(beans.id(), 10L, "20.000000");
+
+            SalesInvoiceView invoice = saleIn(series(SalesChannel.ECOMMERCE), beans);
+
+            Long consumptionId = invoice.lines().getFirst().stockConsumptionId();
+            assertThat(consumptionId)
+                    .as("a stock-moving document type must still take the goods off the shelf")
+                    .isNotNull();
+            assertThat(inventory.requireConsumption(consumptionId).quantityFilled())
+                    .isEqualTo(Quantity.of(2L));
+        }
+
+        @Test
+        @DisplayName("a non-stock-moving type creates NO consumption row, and says nothing about it")
+        void aNonStockMovingTypeConsumesNothing() {
+            ProductView beans = goods("SIIT-R1B-02", "50.00");
+            stock(beans.id(), 10L, "20.000000");
+            Quantity before = inventory.stockOf(beans.id()).total();
+
+            SalesInvoiceView invoice = saleIn(
+                    own("-NS").nonStockMoving(SalesChannel.ECOMMERCE), beans);
+
+            assertThat(invoice.lines().getFirst().stockConsumptionId())
+                    .as("a plain Τιμολόγιο is purely a sale: the goods leave later on a dispatch "
+                            + "document (18b), so nothing is consumed here")
+                    .isNull();
+            assertThat(inventory.stockOf(beans.id()).total())
+                    .as("stock is untouched, not merely unrecorded")
+                    .isEqualTo(before);
+            assertThat(jdbc.queryForObject(
+                    "SELECT count(*) FROM stock_consumption WHERE product_id = ?",
+                    Long.class, beans.id()))
+                    .as("no row at all — not a pending one, and stock_consumption's source CHECK "
+                            + "is deliberately not widened, because there is nothing new to record")
+                    .isZero();
+
+            // ⚠️ And the revenue side is entirely unaffected: the sale posts, the ledger balances,
+            // and only the cost entry is absent. That asymmetry is the known limitation, recorded
+            // rather than mitigated.
+            assertThat(invoice.journalEntryId()).isNotNull();
+            assertThat(journal.requireEntry(invoice.journalEntryId()).isBalanced()).isTrue();
+        }
+
+        @Test
+        @DisplayName("the channel comes from the series, not from the caller")
+        void theChannelComesFromTheSeries() {
+            ProductView beans = goods("SIIT-R1B-03", "50.00");
+            stock(beans.id(), 10L, "20.000000");
+
+            SalesInvoiceView invoice = saleIn(series(SalesChannel.SKROUTZ), beans);
+
+            assertThat(invoice.channel())
+                    .as("nothing in the request said SKROUTZ — the series did")
+                    .isEqualTo(SalesChannel.SKROUTZ);
+            assertThat(journal.requireEntry(invoice.journalEntryId()).lines())
+                    .anySatisfy(line -> assertThat(line.accountId())
+                            .isEqualTo(accountId(AccountSystemKey.SALES_SKROUTZ)));
+            assertThat(invoice.seriesAbbreviation())
+                    .as("R1a left this null because nothing had a series; R1b resolves it")
+                    .isNotNull();
+        }
+
+        @Test
+        @DisplayName("a channel-less series is REFUSED, and the message says what R3 is waiting on")
+        void aChannelLessSeriesIsRefused() {
+            ProductView beans = goods("SIIT-R1B-04", "50.00");
+            stock(beans.id(), 10L, "20.000000");
+            long selfSupply = own("-CL").channelLess();
+
+            assertThatExceptionOfType(InvalidSalesInvoiceException.class)
+                    .isThrownBy(() -> saleIn(selfSupply, beans))
+                    .withMessageContaining("no sales channel")
+                    .withMessageContaining("Αυτοπαράδοσης")
+                    .withMessageContaining("R3");
+
+            // ⚠️ The constraint is what holds the question open, so it must still be there.
+            assertThat(jdbc.queryForObject("""
+                    SELECT is_nullable FROM information_schema.columns
+                     WHERE table_name = 'sales_invoice' AND column_name = 'channel'
+                    """, String.class))
+                    .as("sales_invoice.channel must stay NOT NULL — R1b refuses rather than relaxes")
+                    .isEqualTo("NO");
+        }
+
+        @Test
+        @DisplayName("an inactive series is refused, and so is an active series of an inactive type")
+        void inactiveSeriesAndTypesAreRefused() {
+            ProductView beans = goods("SIIT-R1B-05", "50.00");
+            stock(beans.id(), 20L, "20.000000");
+
+            SalesDocumentFixture retired = own("-X");
+            long seriesId = retired.stockMoving(SalesChannel.ECOMMERCE);
+            // It works before anything is deactivated, so the refusals below are about the
+            // deactivation and not about the fixture.
+            assertThat(saleIn(seriesId, beans).id()).isPositive();
+
+            salesSeries.deactivate(seriesId);
+            assertThatExceptionOfType(InvalidSalesInvoiceException.class)
+                    .isThrownBy(() -> saleIn(seriesId, beans))
+                    .withMessageContaining("is inactive");
+            salesSeries.reactivate(seriesId);
+
+            long typeId = retired.stockMovingTypeId(SalesChannel.ECOMMERCE);
+            salesDocumentTypes.deactivate(typeId);
+            assertThatExceptionOfType(InvalidSalesInvoiceException.class)
+                    .isThrownBy(() -> saleIn(seriesId, beans))
+                    .withMessageContaining("which is inactive");
+            salesDocumentTypes.reactivate(typeId);
+        }
+
+        @Test
+        @DisplayName("a preview refuses exactly what a record refuses")
+        void previewRefusesTheSameThings() {
+            // compute() is shared, which is the point: an entry screen must learn that a series is
+            // unusable before the operator submits, not after.
+            ProductView beans = goods("SIIT-R1B-06", "50.00");
+            stock(beans.id(), 10L, "20.000000");
+            long selfSupply = own("-CL").channelLess();
+
+            assertThatExceptionOfType(InvalidSalesInvoiceException.class)
+                    .isThrownBy(() -> salesInvoices.preview(NewSalesInvoice.of(
+                            customer("Preview refusal").id(), selfSupply,
+                            SettlementMethod.ON_ACCOUNT, number(), JULY,
+                            List.of(NewSalesInvoiceLine.product(
+                                    beans.id(), Quantity.of(1L), UnitCost.ofEur("50.000000"))))))
+                    .withMessageContaining("no sales channel");
+        }
+
+        @Test
+        @DisplayName("a reversal carries the original's series")
+        void aReversalCarriesTheSeries() {
+            ProductView beans = goods("SIIT-R1B-07", "50.00");
+            stock(beans.id(), 10L, "20.000000");
+
+            SalesInvoiceView invoice = saleIn(series(SalesChannel.ECOMMERCE), beans);
+            SalesInvoiceView reversal =
+                    salesInvoices.reverse(invoice.id(), JULY, "R1b series carry");
+
+            assertThat(reversal.seriesId())
+                    .as("a reversal showing no series while its original has one would read as a "
+                            + "document from before series existed")
+                    .isEqualTo(invoice.seriesId());
+            assertThat(reversal.channel()).isEqualTo(invoice.channel());
+        }
+
+        @Test
+        @DisplayName("a series that names nothing is a 404's exception, not a validation failure")
+        void anUnknownSeriesIsNotFound() {
+            ProductView beans = goods("SIIT-R1B-08", "50.00");
+            stock(beans.id(), 10L, "20.000000");
+
+            assertThatExceptionOfType(DocumentSeriesNotFoundException.class)
+                    .isThrownBy(() -> saleIn(999_999_999L, beans));
         }
     }
 
@@ -1158,23 +1374,62 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             String documentNumber = number();
 
             SalesInvoiceView first = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
                     documentNumber, JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000")))));
 
             // Case-insensitively, so 'si-1' and 'SI-1' are the one document they obviously are.
+            //
+            // ⚠️ THE INSERT NAMES THE SAME SERIES, and since R1b it has to. The key is
+            // (COALESCE(series_id, -1), upper(document_number)) — R1a's C.6 — so a row with a NULL
+            // series and one with a real series are in different groups and are NOT duplicates of
+            // each other. Omitting series_id here would insert a legitimately different document
+            // and the trigger would correctly stay silent, which is exactly what this test did on
+            // the first run after R1b. The assertion below is unchanged; what changed is that the
+            // row being inserted now IS the duplicate this test always meant it to be.
             assertThatThrownBy(() -> jdbc.update("""
-                    INSERT INTO sales_invoice (customer_id, channel, settlement_method,
+                    INSERT INTO sales_invoice (customer_id, channel, series_id, settlement_method,
                         document_number, invoice_date, rounding_amount, rounding_amount_currency,
                         journal_entry_id)
-                    VALUES (?, 'ECOMMERCE', 'ON_ACCOUNT', ?, DATE '2026-07-20', 0, 'EUR',
+                    VALUES (?, 'ECOMMERCE', ?, 'ON_ACCOUNT', ?, DATE '2026-07-20', 0, 'EUR',
                             (SELECT max(id) FROM journal_entry))
-                    """, buyer.id(), documentNumber.toUpperCase(java.util.Locale.ROOT)))
+                    """, buyer.id(), first.seriesId(),
+                    documentNumber.toUpperCase(java.util.Locale.ROOT)))
                     .isInstanceOf(org.springframework.dao.DataAccessException.class);
 
             assertThat(salesInvoices.require(first.id()).documentNumber())
                     .isEqualTo(documentNumber);
+        }
+
+        @Test
+        @DisplayName("the same number in a DIFFERENT series is not a duplicate — R1a's C.6, now live")
+        void theSameNumberInAnotherSeriesIsAllowed() {
+            // The other half of the rule above, and it was unobservable until R1b: with every row's
+            // series NULL, (COALESCE(series_id, -1), number) behaved exactly like the global index
+            // it replaced, so nothing in the suite could tell the two designs apart. Now that an
+            // invoice names a series, ΑΛΠ-1 and ΤΠΔΑ-1 are the two different documents they really
+            // are — which is the whole reason C.6 changed the key.
+            CustomerView buyer = customer("Two series");
+            ProductView beans = goods("SIIT-28", "10.00");
+            stock(beans.id(), 20L, "4.000000");
+            String documentNumber = number();
+
+            SalesInvoiceView inWeb = salesInvoices.record(NewSalesInvoice.of(
+                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
+                    documentNumber, JULY,
+                    List.of(NewSalesInvoiceLine.product(
+                            beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000")))));
+
+            SalesInvoiceView inStore = salesInvoices.record(NewSalesInvoice.of(
+                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.ON_ACCOUNT,
+                    documentNumber, JULY,
+                    List.of(NewSalesInvoiceLine.product(
+                            beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000")))));
+
+            assertThat(inWeb.documentNumber()).isEqualTo(inStore.documentNumber());
+            assertThat(inWeb.seriesId()).isNotEqualTo(inStore.seriesId());
+            assertThat(inWeb.id()).isNotEqualTo(inStore.id());
         }
     }
 }

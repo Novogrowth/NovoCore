@@ -135,8 +135,15 @@ class SalesInvoice extends AuditableEntity {
     private TransmissionStatus transmissionStatus = TransmissionStatus.UNKNOWN;
 
     /**
-     * The numbering series. Null through R1a — every existing invoice predates series, and R1a
-     * cannot change what any existing test asserts. R1b makes it the source of the channel.
+     * The numbering series, and since R1b the source of {@link #channel}.
+     *
+     * <p>⚠️ <strong>The column stays nullable and the service is what requires it.</strong> That is
+     * a deliberate departure from A.7's principle that a constraint the database holds cannot be
+     * bypassed by a second write path, and the reason is that every invoice recorded before R1b has
+     * no series: making the column {@code NOT NULL} would mean backfilling a series nobody authored,
+     * which is the same fabrication the empty seed exists to prevent. <strong>Whether migrated
+     * history carries a series is step 24's question</strong> and is deliberately not pre-empted
+     * here. The same reasoning is written at the column itself, in {@code V33}.
      */
     @Column(name = "series_id")
     private Long seriesId;
@@ -150,12 +157,14 @@ class SalesInvoice extends AuditableEntity {
     protected SalesInvoice() {
     }
 
-    SalesInvoice(long customerId, SalesChannel channel, SettlementMethod settlementMethod,
+    SalesInvoice(long customerId, SalesChannel channel, Long seriesId,
+            SettlementMethod settlementMethod,
             String documentNumber, LocalDate invoiceDate, String description, Money statedTotal,
             Money roundingAmount, boolean roundingNeededReview, String roundingAcceptedBy,
             Instant roundingAcceptedAt, String roundingNote, Long reversalOfId) {
         this.customerId = customerId;
         this.channel = channel;
+        this.seriesId = seriesId;
         this.settlementMethod = settlementMethod;
         this.documentNumber = documentNumber;
         this.invoiceDate = invoiceDate;

@@ -14487,14 +14487,15 @@
       },
       "NewSalesInvoice" : {
         "type" : "object",
-        "required" : [ "customerId", "channel", "settlementMethod", "invoiceDate", "lines" ],
+        "required" : [ "customerId", "seriesId", "settlementMethod", "invoiceDate", "lines" ],
         "properties" : {
           "customerId" : {
             "type" : "integer",
             "format" : "int64"
           },
-          "channel" : {
-            "$ref" : "#/components/schemas/SalesChannel"
+          "seriesId" : {
+            "type" : "integer",
+            "format" : "int64"
           },
           "settlementMethod" : {
             "$ref" : "#/components/schemas/SettlementMethod"

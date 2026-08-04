@@ -330,6 +330,22 @@ then run against the fix; `WebAuthorizationRulesTest.clientMistakesAreNotProgram
 the *probe* as the subject — is the apparatus alive.** The second is the more general and the easier
 to skip, because a green run feels like an answer.
 
+⚠️ **It happened again in R1b (2026-08-04), and the mechanism was new: a test selector that matched
+nothing.** The stock branch's negative control was run against the deliberately-broken code with
+`mvn -pl core -am verify -Dit.test='SalesInvoiceIT#aNonStockMovingTypeConsumesNothing+aStockMovingTypeStillConsumes'`,
+and it reported **`BUILD SUCCESS`**. The branch really had been removed; the source on disk said so.
+**Failsafe never matched the `Class#a+b` selector, ran nothing, and `-Dfailsafe.failIfNoSpecifiedTests=false`
+turned "measured nothing" into a green build.** Re-run with the plain `SalesInvoiceIT` selector —
+which had been *seen* to run 46 tests twenty minutes earlier — it failed correctly, on exactly the one
+test, with the other passing.
+
+**The general form, and it is worth more than the flag: `failIfNoSpecifiedTests=false` converts a
+typo into a pass.** It is necessary in a `-am` reactor, because upstream modules legitimately contain
+none of the named tests — so it cannot simply be dropped. **The remedy is to assert that the thing
+ran**, not to trust the exit status: `grep -c "Running <the test class>"` on the log, or a test count
+you have seen before. ⚠️ **A selector you have not watched succeed is not a selector you may believe
+a negative result from.**
+
 **2. A piped build hides its own failure. Do not pipe one, or set `-o pipefail`.**
 
 **The mechanism, because the instruction on its own is forgettable and the mechanism is not:** a
@@ -446,13 +462,38 @@ names is the same list the code is about.**
 
 **6. Known limitation, and it must stay visible.** Until a dispatch document exists (18b), **stock
 figures are incomplete for every non-stock-moving sales document**, which is a routine share of real
-sales. The document is recorded, the ledger posts, stock is left untouched, and the document must sit
-in a **queryable** "stock not yet moved" state so the gap is measurable rather than merely known.
+sales. The document is recorded, the ledger posts, and stock is left untouched.
 
-**6b. Channel comes from the SERIES, and that is settled (R1a decided it; R1b implements it).**
+⚠️ **CORRECTED 2026-08-04 (R1b). This paragraph used to end "…and the document must sit in a
+queryable *stock not yet moved* state so the gap is measurable rather than merely known." That is NOT
+what was built, and the difference is a decision rather than an omission.** The behaviour is
+**SILENT**: a document type whose `affectsStock` is false creates **no `stock_consumption` row at
+all** — no pending row, no marker, no flag, no warning, nothing queryable. `stock_consumption`'s
+source CHECK was deliberately **not** widened, because there is nothing new to record.
+
+**The owner's decision, taken as a decision.** An indicator nobody acts on is a second thing to keep
+true, and an earlier scope carried one which was removed on purpose. **Do not add one back on the
+grounds that it would be helpful.** The limitation is real and stays recorded here; what changed is
+that it is recorded *here* rather than represented in the data.
+
+**6b. Channel comes from the SERIES. ✅ BUILT IN R1b, 2026-08-04.**
 A sales invoice's channel is **not independently settable**. ΑΛΠW is the web series, so an invoice in
 it is a web sale **by definition** rather than by someone remembering to tick a box — which means
-**F5 has no channel field**.
+**F5 has no channel field**. `NewSalesInvoice` has no `channel` component; it has a **mandatory
+`seriesId`**, and the channel is read off the series.
+
+⚠️ **The document type is mandatory THROUGH the series, and there is deliberately no
+`documentTypeId`.** `sales_invoice` has `series_id` and **no `document_type_id` column**;
+`sales_document_series.document_type_id` is `NOT NULL`, so naming a series names a type. Two
+independently settable references could disagree about what kind of document a row is — the same
+defect the channel rule exists to prevent. **A future reader looking for a document-type column will
+not find one, and that is the design.**
+
+⚠️ **`sales_invoice.series_id` is NULLABLE and the service is what requires it.** A deliberate
+departure from A.7's *"a constraint the database holds cannot be bypassed"*: `NOT NULL` would mean
+backfilling every pre-R1b invoice with a series nobody authored, which is the fabrication the empty
+seed exists to prevent. **Whether migrated history carries a series is step 24's question** and is
+not pre-empted. The reason is written at the column, in `V33`.
 
 - ⚠️ `sales_document_series.channel` is **nullable, and null means "this series is not a sales
   channel"** — which the self-supply series genuinely are not, since the customer is the issuer.
@@ -461,10 +502,16 @@ it is a web sale **by definition** rather than by someone remembering to tick a 
   someone to fill it, and a purchase series carrying `ECOMMERCE` would be storable, meaningless and
   indistinguishable from data. **Its absence is the decision, so a test asserts the absence** — "there
   is no route" and "the route silently does nothing" look identical to a caller.
-- ⚠️ **`sales_invoice.channel` is `NOT NULL` and that constraint is NOT to be relaxed.** R1b must
-  **refuse** to record an invoice against a channel-less series rather than widening the column:
-  self-supply has no posting rule yet (blocked on the accountant), and the constraint is what holds
-  that question open instead of papering over it. **R3 resolves both together.**
+- ✅ **`sales_invoice.channel` is `NOT NULL`, it was NOT relaxed, and R1b refuses instead.**
+  Recording against a channel-less series raises `InvalidSalesInvoiceException` — 422 with a message
+  naming self-supply, saying that the revenue leg has no candidate account, that which accounts carry
+  each leg is an accountant's question, and that **R3** answers it. The refusal lives in
+  `compute(...)`, which `record` and `preview` share, so an entry screen learns before the operator
+  submits. **The constraint is what holds the question open; do not widen it.** R3 resolves both.
+- ✅ **An inactive series, or an active series whose document type is inactive, is also refused** —
+  the same shape as the existing "Product … is inactive" and "VAT class … is inactive" rules. This is
+  the guard R1a's A.8 deliberately left unbuilt, on the grounds that nothing referenced a document
+  type until something did.
 
 **7. `Στοιχείο Αυτοπαράδοσης` (self-supply)** covers internal consumption and moving inventory into
 fixed assets. The customer is the issuer, so it needs a **protected self-customer record** on the
@@ -725,6 +772,19 @@ to you in the vocabulary of the thing you were investigating.
 fix.** `-pl X` without `-am`, and any `install` that did not reach every module, are the two ways
 this repository produces it.
 
+#### ⚠️ And a fifth way, found in R1b: `failsafe:verify` reads reports it did not write
+
+**2026-08-04.** After a deliberate defect run left one failing test, the next command —
+`mvn -pl app -am verify -Dit.test='TradingQuarterOverHttpIT'` — reported **`There are test failures`
+in `novocore-core`**. No core test had run: the selector matches nothing there, so failsafe wrote no
+reports. **`failsafe:verify` is a separate goal from `failsafe:integration-test`, and it fails on
+whatever is sitting in `target/failsafe-reports` — including the previous run's.**
+
+**So a targeted rerun after any failing run reports the OLD failure**, attributed to the module you
+did not touch, in a command that never executed it. It is the stale-artefact family's shape exactly:
+the thing that answered was not the thing under test. **`clean` before a targeted `verify` that
+follows a red one**, or delete the reports.
+
 ### ⚠️ A record that goes on the wire is asked for every accessor, not just its components
 
 **Found in R1a, 2026-08-03, and the 500 it produced was luck.**
@@ -754,6 +814,41 @@ same reason this was not: they cannot throw.
 no-arg public accessor on the view, and an integration test asserting the **wire body** carries
 exactly the documented properties. ⚠️ Neither is general — **they cover one record.** The general
 version would be a rule over every response record, and it is not built; watch for this in review.
+
+### ⚠️ Two enforcements of one rule that agree by construction will diverge the day the construction changes
+
+**Found in R1b, 2026-08-04, by a test written to document the new behaviour rather than to hunt a
+bug — which is the only reason it was found at all.**
+
+Document-number uniqueness is enforced **twice, deliberately**: by a database trigger and partial
+unique index, and by `SalesInvoiceRepository.existsStandingInvoice` in the service, so the refusal
+explains itself instead of arriving as a constraint name. That duplication is correct and is written
+down as such.
+
+**R1a changed one of them and not the other, and nothing could have noticed.** `V32` made the
+database key `(COALESCE(series_id, -1), upper(document_number))` — because ΑΛΠ-1 and ΤΠΔΑ-1 are two
+different documents that both legitimately carry the number 1 — while the service query kept checking
+the number **globally**. ⭐ **The two still agreed perfectly**, because every row's `series_id` was
+null, so every row sat in one group. R1a's own migration says exactly this and treats it as the proof
+the change was safe: *"With every row's series NULL — which is every row today — the index is EXACTLY
+today's global index."* **That sentence is true, and it is also the reason the divergence was
+invisible.**
+
+**The moment R1b gave an invoice a series, the database allowed the second document and the service
+refused it.** The per-series key R1a paid a whole sub-part (C.6) to get right would have been
+**unreachable** — enforced by nothing, contradicted by the layer above, and with a green suite.
+
+**The general rule: when a schema change is justified by "this is byte-for-byte the current behaviour
+because of what the data happens to look like today", that justification is also a list of the places
+that will silently disagree once the data stops looking like that.** Write the list down at the time.
+The tell is any argument of the form *"identical for every existing row"* — it is a statement about
+data, not about code, and code is what will be wrong later.
+
+⚠️ **It is not enough to fix the query.** The fix has to encode the *same* null semantics the database
+uses: `COALESCE(series_id, -1)` and the trigger's `IS NOT DISTINCT FROM` both make two nulls collide,
+and a naïve `existing.seriesId = :seriesId` would make them **not** collide — silently dropping the
+guarantee for every invoice recorded before R1b, which is precisely the trap C.6 documents for the
+index and which repeats one layer up.
 
 Do all six before ending the session — don't ask for confirmation on whether to do them, only flag anything unusual you find while doing so (e.g., uncommitted changes you didn't expect, tests that were failing when you started).
 

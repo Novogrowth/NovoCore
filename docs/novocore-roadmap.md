@@ -22,9 +22,10 @@ figure that cannot be measured is left blank with a reason, never filled with a 
 `Out` is tokens generated; `In` is input + cache-creation + cache-read — **read the warning under
 *How the actual figures were derived* before drawing any conclusion from that column.**
 
-**Current state, measured 2026-08-03 (after R1a):** **1,440 backend tests** (0 failures, 0 errors,
+**Current state, measured 2026-08-04 (after R1b):** **1,457 backend tests** (0 failures, 0 errors,
 1 skipped, `mvn clean verify` exit 0), **310 frontend tests across 31 files**, **230 API operations
-and 223 schemas, 167 of which declare `required`**.
+and 223 schemas, 167 of which declare `required`** — ⚠️ **R1b changed no operation and no schema
+count**; its whole spec diff is four lines on one schema.
 
 ---
 
@@ -96,8 +97,9 @@ frontend work that must land before any adapter is built.
 |   8b | Consumer cleanup — optional ᵈᵉᶜ         |     — |        |       | ⚪ Optional      |
 |  R1a | Document reference data — additive ʳ    |     — |    1.9 |  529k | 🟢 Done         |
 |   U3 | Eleven design decisions recorded ᵘ³     |     — |    0.2 |   90k | 🟢 Done         |
-|  R1b | Document reference data — behavioural ʳᵇ |     — |        |       | 🟡 **Current**  |
-|   R2 | Document reference data (screens) ʳ²    |     — |        |       | 🔴 Not started  |
+|  R1b | Document reference data — behavioural ʳᵇ |     — |    1.5 |  286k | 🟢 Done         |
+|   W1 | Serialised-record contract fidelity ʷ¹  |     — |        |       | ⚪ Unscheduled   |
+|   R2 | Document reference data (screens) ʳ²    |     — |        |       | 🟡 **Current**  |
 |   R3 | Self-supply posting paths ˢ             |     — |        |       | ⚪ Blocked — accountant |
 |   D1 | Supplier/customer codes + alias ᵈ¹      |     — |        |       | ⚪ Placement TBD |
 |   D2 | Product categories, 3 levels ᵗ          |     — |        |       | ⚪ Before the Woo load (19) |
@@ -108,7 +110,7 @@ frontend work that must land before any adapter is built.
 |  M0b | Trial import, one real year ᵐ⁰          |     — |        |       | ⚪ After D1/D3/D4, before 24 |
 |   U2 | Split `PROGRESS.md` / `HISTORY.md` ᵘ²   |     — |        |       | ⚪ Unscheduled   |
 |   F5 | Sales Invoice + Credit Note ʷ           |     — |        |       | 🔴 Not started  |
-|   F6 | Purchase Invoice + Goods Receipt        |     — |        |       | 🔴 Not started  |
+|   F6 | Purchase Invoice + Goods Receipt ᶠ⁶     |     — |        |       | 🔴 Not started  |
 |   F7 | Receipts, Payments, Transfers           |     — |        |       | 🔴 Not started  |
 |   F8 | Freight, Journal, Write-offs            |     — |        |       | 🔴 Not started  |
 |   F9 | Operational read views                  |     — |        |       | 🔴 Not started  |
@@ -123,11 +125,18 @@ several of them are backend schema work rather than screens. Adding 8.0 across t
 present an estimate for the frontend as an estimate for the phase — so the F-row subtotal is stated
 separately instead, where a reader scanning a column of dashes will actually meet it.
 
-**Q1, 8a and R1a are all 🟢 Done (2026-08-03) and step R1b is `🟡 Current`.** The running order is
-in `PROGRESS.md` under *What is next, in one place*, and it is now **R1b → R2 → F5**. ⚠️ **R1 split
-into R1a and R1b on 2026-08-03**, and the boundary is test-facing: R1a cannot change what any
-existing test asserts, and R1b changes what *every* sales-invoice test constructs — so a red build
-in R1a is a failure in new code, and in R1b it could be either. ⚠️ **8a and 8b were
+**Q1, 8a, R1a and R1b are all 🟢 Done (R1b on 2026-08-04) and step R2 is `🟡 Current`.** The running
+order is in `PROGRESS.md` under *What is next, in one place*, and it is now **R2 → F5**. ⚠️ **R1 split
+into R1a and R1b on 2026-08-03**, and the boundary was test-facing: R1a could not change what any
+existing test asserts, and R1b changed what *every* sales-invoice test constructs — so a red build
+in R1a was a failure in new code, and in R1b it could be either. **That split paid for itself:** every
+one of R1b's 54 construction sites compiled or failed as a construction problem, and the two genuine
+defects it surfaced were both immediately distinguishable from fixture noise.
+
+⚠️ **W1 is new, added 2026-08-04, and it is R1b's Phase 0 refusing to be folded in.** The
+derived-accessor guard was scoped as one of R1b's three lines; measuring it first showed **32
+committed schemas would fail it**, so it left R1b entirely rather than being landed with a baseline.
+See ʷ¹ — the measurement is the valuable part and it is recorded there. ⚠️ **8a and 8b were
 not new work invented here**: they are backend queue item 8, lifted out of Q1 and given their own rows
 so the placement decision is visible in the sequence rather than buried in a queue — see ᵈᵉᶜ.
 
@@ -197,7 +206,7 @@ end. This is the gate before adapters and modules open up.
 |   21 | ACS Courier adapter ᵃᶜˢ                 |   1.3 | 🔴 Not started  |
 |   22 | Sales Order Fulfillment module ˢᵒᶠ       |   2.5 | 🔴 Not started  |
 |   23 | File import adapter                     |   1.0 | 🔴 Not started  |
-|   24 | Manager.io migration, parallel run ᵐᵍ    |   2.5 | 🔴 Not started  |
+|   24 | Manager.io migration, parallel run ᵐᵍ ˢᵉʳ |   2.5 | 🔴 Not started  |
 |   25 | Clearing Checks module ᶻ                |   2.0 | 🔴 Not started  |
 |   26 | Price Tag Printing module               |   0.7 | 🔴 Not started  |
 |   27 | Purchase Orders module                  |   1.5 | 🔴 Not started  |
@@ -762,20 +771,61 @@ be user-creatable because more will be needed.
 Reasoning in full in `PROGRESS.md` under *Why the model changed*; the governing statement is
 `CLAUDE.md` §*The document model*, item 5.
 
-**ʳᵇ R1b — document reference data, behavioural.** Two sub-parts, both recorded in `PROGRESS.md`
-with their reasoning so this step does not re-derive them. **1.** `documentType` becomes mandatory on
-`NewSalesInvoice` and `SalesInvoiceServiceImpl` branches on `affectsStock` before `consumeStock` —
-⚠️ **silently**: no pending state, no marker, no warning, and a non-moving type simply creates no
-consumption row. **2.** ⚠️ **Channel becomes authoritative from the series**, so an invoice's channel
-is no longer independently settable and **F5 has no channel field**. `sales_invoice.channel` is
-`NOT NULL` and the self-supply series have no channel: **do not relax that constraint** — refuse to
-record against a channel-less series instead, because self-supply has no posting rule yet and the
-constraint is what holds that question open. R3 resolves both together.
+**ʳᵇ R1b — document reference data, behavioural. ✅ DONE 2026-08-04.** ⚠️ **The approved checklist
+said "`documentType` becomes mandatory on `NewSalesInvoice`" and that could not be built literally** —
+`sales_invoice` has `series_id` and **no `document_type_id` column**, and a series carries a
+`NOT NULL` document type. Two independently settable references could disagree about what kind of
+document a row is, which is the same defect the channel rule exists to prevent. **So there is ONE new
+mandatory component, `seriesId`, and the document type is mandatory THROUGH it.**
 
-⚠️ **The whole reason R1a and R1b are separate steps:** R1b changes what **every sales-invoice test
-constructs** — `TradingQuarter`, `WholeScenarioIT`, `SalesInvoiceIT`, `CreditNoteIT`,
-`PermissionSweepIT`, `RefusalMatrix`, `LiveSeedTest` and the frontend fixtures. A failure in R1a was
-a failure in new code; a failure in R1b could be either.
+What landed: **1.** `seriesId` mandatory on `NewSalesInvoice` (`Required.field`), `channel` removed
+from it entirely. **2.** `SalesInvoiceServiceImpl` branches on the series' document type's
+`affectsStock` before `consumeStock` — ⚠️ **silently**: a non-moving type creates **no
+`stock_consumption` row at all**, no marker, no warning, and the source CHECK was not widened.
+**3.** Channel derived from the series; **F5 therefore has no channel field**. **4.** Three refusals
+in `compute(...)` — a channel-less series, an inactive series, and an inactive document type — so a
+*preview* refuses what a *record* would. **5.** `reverse()` carries the series. **6.** `V33`, comment
+only, writing at the column why `series_id` stays nullable while the service requires it.
+
+⚠️ **`sales_invoice.channel` was NOT relaxed and `series_id` was NOT made `NOT NULL`.** The first is a
+refusal that holds R3's question open; the second would mean backfilling a series nobody authored, and
+**whether migrated history carries a series is step 24's question** — see ᵐ⁰ and step 24.
+
+⭐ **Two defects found, and both were invisible before this step.** A test written to *document* the
+new behaviour found that the service's duplicate-number check was still **global** while `V32` had
+made the database key **per-series** — the two agreed only because every row's series was null, so
+R1a's C.6 key would have been unreachable, enforced by nothing. And the negative control for the stock
+branch **reported PASS while running nothing**, because a `Class#a+b` failsafe selector matched no
+tests and `failIfNoSpecifiedTests=false` turned that into a green build. Both are written up in
+`CLAUDE.md`.
+
+**ʷ¹ W1 — a serialised record's wire shape must equal its documented shape.** ⚠️ **Scoped out of R1b
+on 2026-08-04 after measuring it, and the measurement is the point.** The rule: **the properties
+Jackson writes must equal the properties `OpenApiSchema` documents** — two honest ways to comply,
+delete the accessor or document it.
+
+📊 **Measured 2026-08-04 by a throwaway probe over 203 records: 46 serialise beyond their components,
+and 32 of those are schemas on the committed API surface, shipping 66 properties the spec does not
+document.** Confirmed behaviourally on `SalesDocumentTypeView`, whose real serialisation emits
+`"draft":false`. **None is a live defect** — nothing sets `additionalProperties: false`, the generated
+TypeScript simply lacks the fields — **but the contract lies about 32 schemas**, which is the silent
+half `CLAUDE.md` predicted nothing would ever report. A rule 32 committed schemas fail cannot land
+green, so it is its own step rather than a baseline.
+
+⚠️ **THE MECHANISM IS JACKSON, NOT ASM.** 8a needed ASM for *argument attribution*; here the question
+is *what would Jackson call this*, and the only correct oracle is Jackson —
+`ObjectMapper.acceptJsonFormatVisitor` against `Class.getRecordComponents()`. **The proof:** a control
+shaped like R1a's defect showed Jackson does **not** publish `issuedByUs` — it strips the `is` prefix
+and publishes **`suedByUs`**. Nobody derives that by reading. ⭐ It also needs **no exemption list**:
+`equals`/`hashCode`/`toString`, static factories, the compact constructor and the `…IfAny()` idiom are
+all invisible to Jackson by construction, which independently confirms `CLAUDE.md`'s claim that
+`…IfAny()` is safe — and for a better reason than the one recorded.
+
+⭐ **EVALUATE THE GENERATOR ROUTE FIRST.** Teaching `OpenApiSchema` to describe what Jackson serialises
+documents all 66 in **one change** instead of editing 66 records, and the rule then verifies the
+generator rather than policing records. ⚠️ Not free: 8a's rule makes primitives `required`, so 66 new
+required booleans means fixture reconciliation across 32 schemas. **Weigh it at scoping.** The rule
+belongs in the **app module against the real Boot-configured mapper bean**.
 
 **ʳ² R2 — document reference data, screens.** ⚠️ **FULL CRUD, not the read-plus-activate shape F4
 built for VAT classes.** The owner authors these rows — he creates his 15 sales and 4 purchase
@@ -930,7 +980,43 @@ kept because it was the owner's initial instinct:** M0 exists to find gaps **whi
 still free** — run it after eleven screens exist and every finding costs screens too. **And it does
 not need F11**: it is an import, not data entry.
 
-**ʷ F5 — Sales Invoice + Credit Note.** Decides the document interaction pattern F6–F8 reuse. ⚠️ **But
+**ᶠ⁶ F6 — Purchase Invoice + Goods Receipt. ⚠️ Two things R1b left it, recorded 2026-08-04 so they
+are not rediscovered.**
+
+- **`purchase_document_type` becomes mandatory HERE, not in R1b.** R1b was sales-only, deliberately:
+  the purchase side already separates the document from the stock movement through Goods Receipt and
+  GR/IR, `NewPurchaseInvoice` has no series, type or channel, and including it would have roughly
+  doubled R1b's blast radius for no behaviour F6 does not need anyway. **Confirmed against the code
+  in R1b's Phase 0, not assumed.**
+- ⚠️ **The one inconsistency this leaves, stated plainly:** after R1b, **`sales_document_type.affects_stock`
+  is READ and `purchase_document_type.affects_stock` is NOT** — while `V31` lines 314–321 carry the
+  strongest justification that column has anywhere (the `2062` ΤΔΑΑ / `2041` Δελτίο Παραλαβής pair, a
+  purchase document bringing stock in with no payable behind it). **A reader arriving at F6 will find
+  a column documented as load-bearing that nothing loads. It is waiting for F6, not forgotten.**
+- 📌 **`NewPurchaseInvoice` uses `Objects.requireNonNull` and `IllegalArgumentException` for caller
+  mistakes**, where the codebase now prescribes `Required.field`. **Not a live defect** — Jackson wraps
+  it and `WebExceptionHandler.unreadableBody` answers a 4xx naming the field, so no guard fires — but
+  it is a different message from the `Required.field` route on the same kind of record. **Recorded, not
+  fixed:** touching it in R1b would have breached the sales-only boundary for a tidy. On the backend
+  queue.
+
+**ˢᵉʳ Step 24 also owns a question R1b deliberately did not answer.** `sales_invoice.series_id` is
+**nullable**, and the service — not the column — is what requires it. Making it `NOT NULL` would mean
+backfilling every pre-R1b invoice with a series **nobody authored**, which is exactly the fabrication
+the empty seed exists to prevent. **Whether migrated history carries a series is this step's decision**
+(with M0b), and if it answers it, tightening the column becomes possible then. The reason is written at
+the column in `V33` as a deliberate departure from A.7.
+
+**ʷ F5 — Sales Invoice + Credit Note.** ⚠️ **F5 HAS NO CHANNEL FIELD, and that is settled rather than
+an omission (R1b, 2026-08-04).** A sales invoice's channel comes from its **series** — ΑΛΠW is the web
+series, so an invoice in it is a web sale by definition rather than by someone remembering to tick a
+box. `NewSalesInvoice` has no `channel` component, so there is nothing for a form to bind. What F5
+**does** need is a **series picker**, and it is mandatory: the series supplies the channel *and* the
+document type, and the document type decides whether recording the sale moves stock at all. ⚠️ A
+channel-less series (self-supply) is **refused** by the backend with a message pointing at R3 — a
+screen should not offer one, but must render the refusal if it does.
+
+Decides the document interaction pattern F6–F8 reuse. ⚠️ **But
 see the open decision above**: since documents arrive already issued, F5 before step 18 is a
 data-entry screen for documents created elsewhere. Also carries the **transformation requirement** — an
 employee correcting a mistake must transform a document into the correct series or a return document in

@@ -31,21 +31,37 @@ interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long> {
     Optional<SalesInvoice> findByReversalOfId(long invoiceId);
 
     /**
-     * Whether this number is already held by an invoice that still stands.
+     * Whether this number is already held, <strong>in this series</strong>, by an invoice that still
+     * stands.
      *
      * <p>A reversing document deliberately carries the original's number, and once an invoice has been
      * reversed its number is released for a correct re-entry — so "still stands" means neither a
      * reversal nor reversed. The same rule the database enforces by trigger; stated here as well so
      * the failure explains itself instead of arriving as a constraint name.
+     *
+     * <p>⚠️ <strong>SCOPED TO THE SERIES SINCE R1b, and it had to be.</strong> {@code V32} made the
+     * database key {@code (COALESCE(series_id, -1), upper(document_number))} because ΑΛΠ-1 and ΤΠΔΑ-1
+     * are two different documents that both legitimately carry the number 1. This query was written
+     * when there were no series, and it checked the number <em>globally</em>. That agreed with the
+     * database only by accident: every row's series was null, so every row was in one group. The
+     * moment R1b gave an invoice a series the two rules diverged — the database allowed the second
+     * document and this refused it — and <strong>the per-series key R1a built would have been
+     * unreachable</strong>, enforced by nothing and contradicted by the layer above.
+     *
+     * <p>{@code IS NOT DISTINCT FROM} in SQL terms, spelled out here because JPQL has no such
+     * operator: a null series must collide with a null series, or the guarantee is lost for exactly
+     * the rows that have it today — every invoice recorded before R1b.
      */
     @Query("""
             SELECT COUNT(existing) > 0 FROM SalesInvoice existing
             WHERE upper(existing.documentNumber) = upper(:documentNumber)
+              AND (existing.seriesId = :seriesId
+                   OR (existing.seriesId IS NULL AND :seriesId IS NULL))
               AND existing.reversalOfId IS NULL
               AND NOT EXISTS (SELECT 1 FROM SalesInvoice reversal
                                WHERE reversal.reversalOfId = existing.id)
             """)
-    boolean existsStandingInvoice(String documentNumber);
+    boolean existsStandingInvoice(Long seriesId, String documentNumber);
 
     /** Q15's query: the invoices whose rounding difference somebody had to accept. */
     @Query("""

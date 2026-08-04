@@ -9,7 +9,6 @@ import gr.novotrade.novocore.core.api.purchasing.NewPurchaseInvoice;
 import gr.novotrade.novocore.core.api.purchasing.NewPurchaseInvoiceLine;
 import gr.novotrade.novocore.core.api.sales.NewSalesInvoice;
 import gr.novotrade.novocore.core.api.sales.NewSalesInvoiceLine;
-import gr.novotrade.novocore.core.api.sales.SalesChannel;
 import gr.novotrade.novocore.core.api.sales.SettlementMethod;
 import gr.novotrade.novocore.core.api.settlement.NewAllocation;
 import gr.novotrade.novocore.core.api.settlement.NewSettlement;
@@ -378,7 +377,7 @@ final class RefusalMatrix {
      */
     private String withAmountAsANumber() {
         String valid = Json.write(NewSalesInvoice.of(
-                quarter.id("customer:cafe"), SalesChannel.STORE_AND_PHONE,
+                quarter.id("customer:cafe"), quarter.id("series:store"),
                 SettlementMethod.ON_ACCOUNT, "TEST-SI-REFUSED-001", TradingQuarter.MARCH_LAST,
                 List.of(NewSalesInvoiceLine.charge(
                         quarter.id("charge:Delivery"), Money.ofEur("7.77")))));
@@ -390,7 +389,7 @@ final class RefusalMatrix {
 
     private String withQuantityAsANumber() {
         String valid = Json.write(NewSalesInvoice.of(
-                quarter.id("customer:cafe"), SalesChannel.STORE_AND_PHONE,
+                quarter.id("customer:cafe"), quarter.id("series:store"),
                 SettlementMethod.ON_ACCOUNT, "TEST-SI-REFUSED-002", TradingQuarter.MARCH_LAST,
                 List.of(NewSalesInvoiceLine.product(quarter.id("product:beans"),
                         Quantity.of(7L), UnitCost.ofEur("18.000000")))));

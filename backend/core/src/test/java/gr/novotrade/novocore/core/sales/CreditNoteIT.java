@@ -5,12 +5,15 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import gr.novotrade.novocore.core.AbstractCoreIntegrationTest;
+import gr.novotrade.novocore.core.testsupport.SalesDocumentFixture;
 import gr.novotrade.novocore.core.api.account.AccountSystemKey;
 import gr.novotrade.novocore.core.api.account.BalanceSide;
 import gr.novotrade.novocore.core.api.account.ChartOfAccountsService;
 import gr.novotrade.novocore.core.api.customer.CustomerService;
 import gr.novotrade.novocore.core.api.customer.CustomerView;
 import gr.novotrade.novocore.core.api.customer.NewCustomer;
+import gr.novotrade.novocore.core.api.document.SalesDocumentSeriesService;
+import gr.novotrade.novocore.core.api.document.SalesDocumentTypeService;
 import gr.novotrade.novocore.core.api.inventory.InventoryService;
 import gr.novotrade.novocore.core.api.inventory.NewInventoryLot;
 import gr.novotrade.novocore.core.api.inventory.SerializedUnitStatus;
@@ -96,6 +99,12 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    @Autowired
+    private SalesDocumentTypeService salesDocumentTypes;
+
+    @Autowired
+    private SalesDocumentSeriesService salesSeries;
+
     // ---------------------------------------------------------------------------------------
     // Fixtures
     // ---------------------------------------------------------------------------------------
@@ -119,9 +128,25 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
                 UnitCost.ofEur(unitCost), MARCH, StockLocation.INVENTORY));
     }
 
+    /**
+     * The series a sale in this class is recorded in — R1b made one mandatory.
+     *
+     * <p>⚠️ Stock-moving, because a credit note that brings stock back needs a sale that took it
+     * out. A non-stock-moving series would leave the returning tests asserting against consumptions
+     * that were never created.
+     */
+    private SalesDocumentFixture documents;
+
+    private long series(SalesChannel channel) {
+        if (documents == null) {
+            documents = new SalesDocumentFixture(salesDocumentTypes, salesSeries, "CNIT");
+        }
+        return documents.stockMoving(channel);
+    }
+
     private SalesInvoiceView sale(CustomerView buyer, ProductView product, long quantity,
             String unitPrice, SalesChannel channel) {
-        return salesInvoices.record(NewSalesInvoice.of(buyer.id(), channel,
+        return salesInvoices.record(NewSalesInvoice.of(buyer.id(), series(channel),
                 SettlementMethod.ON_ACCOUNT, number("CNIT-SI"), JULY,
                 List.of(NewSalesInvoiceLine.product(
                         product.id(), Quantity.of(quantity), UnitCost.ofEur(unitPrice)))));
@@ -360,7 +385,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "8.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.STORE_AND_PHONE, SettlementMethod.CASH,
+                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.CASH,
                     number("CNIT-SI"), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("20.000000")))));
@@ -398,7 +423,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "8.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
                     number("CNIT-SI"), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("20.000000")))));
@@ -521,7 +546,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
                     MARCH, StockLocation.INVENTORY, List.of("CNIT-SN-1")));
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.STORE_AND_PHONE, SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.ON_ACCOUNT,
                     number("CNIT-SI"), JULY,
                     List.of(NewSalesInvoiceLine.serializedProduct(
                             machine.id(), UnitCost.ofEur("2400.000000"), List.of("CNIT-SN-1")))));
@@ -549,7 +574,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
                     vatClasses.requireByCode("1410").id(), Money.ofEur("80.00")));
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), SalesChannel.STORE_AND_PHONE, SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.ON_ACCOUNT,
                     number("CNIT-SI"), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             repair.id(), Quantity.of(1L), UnitCost.ofEur("80.000000")))));

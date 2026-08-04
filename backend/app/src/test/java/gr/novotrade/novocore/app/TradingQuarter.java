@@ -9,6 +9,8 @@ import gr.novotrade.novocore.core.api.asset.NewAsset;
 import gr.novotrade.novocore.core.api.banking.NewBankTransfer;
 import gr.novotrade.novocore.core.api.bundle.NewBundleComponent;
 import gr.novotrade.novocore.core.api.customer.NewCustomer;
+import gr.novotrade.novocore.core.api.document.NewSalesDocumentSeries;
+import gr.novotrade.novocore.core.api.document.NewSalesDocumentType;
 import gr.novotrade.novocore.core.api.inventory.NewStockWriteOff;
 import gr.novotrade.novocore.core.api.inventory.WriteOffReason;
 import gr.novotrade.novocore.core.api.product.NewProduct;
@@ -268,6 +270,37 @@ final class TradingQuarter {
                 "defining the starter kit");
         handles.put("product:kit", kit);
 
+        // ⚠️ THE DOCUMENT TYPES AND SERIES, CREATED OVER HTTP LIKE EVERYTHING ELSE HERE.
+        //
+        // R1b made `seriesId` mandatory on a sales invoice, so this narrative needs series before
+        // it can record one. They are created through the API rather than seeded, deliberately:
+        // sales_document_type and sales_document_series ship EMPTY from V31 so the owner authors
+        // his own in R2, and a dev seed would put rows in front of him that he did not create.
+        // Building them here is the same thing this class already does for customers and products.
+        //
+        // ⚠️ Both types move stock, so every sale below consumes exactly as it did before R1b —
+        // which is what keeps the read-back checks and the ledger/lot reconciliation meaningful.
+        // The non-stock-moving branch is exercised in SalesInvoiceIT, where a single sale can be
+        // isolated; here it would silently remove one side of the whole-scenario invariant.
+        long salesType = created("/api/sales-document-types",
+                NewSalesDocumentType.decided(
+                        "TEST-DOCTYPE-01 Retail receipt", true, true, true, null),
+                "the stock-moving sales document type");
+        handles.put("doctype:sales", salesType);
+
+        handles.put("series:store", created("/api/sales-document-series",
+                new NewSalesDocumentSeries("TEST-ALP", "TEST Store and phone series",
+                        salesType, SalesChannel.STORE_AND_PHONE, false, null),
+                "the store series"));
+        handles.put("series:web", created("/api/sales-document-series",
+                new NewSalesDocumentSeries("TEST-ALPW", "TEST Web series",
+                        salesType, SalesChannel.ECOMMERCE, false, null),
+                "the web series"));
+        handles.put("series:skroutz", created("/api/sales-document-series",
+                new NewSalesDocumentSeries("TEST-ALPK", "TEST Skroutz series",
+                        salesType, SalesChannel.SKROUTZ, false, null),
+                "the Skroutz series"));
+
         // Customers. The seeded retail customer is structural (ADR 0009 / Q10) and is found rather
         // than created; the two near-duplicates exist so match-suggestions has something to suggest.
         handles.put("customer:wholesale", created("/api/customers",
@@ -380,7 +413,7 @@ final class TradingQuarter {
         long standard = id("vat:1410");
 
         NewSalesInvoice firstSale = NewSalesInvoice.of(
-                id("customer:wholesale"), SalesChannel.ECOMMERCE, SettlementMethod.ON_ACCOUNT,
+                id("customer:wholesale"), id("series:web"), SettlementMethod.ON_ACCOUNT,
                 "TEST-SI-2026-0001", JANUARY_LAST,
                 List.of(
                         // Product default 13%, customer override 13%, and an explicit 24%
@@ -483,14 +516,14 @@ final class TradingQuarter {
      */
     void februaryTheBundleAndAMachineSell() {
         handles.put("sale:bundle", created("/api/sales-invoices",
-                NewSalesInvoice.of(id("customer:cafe"), SalesChannel.STORE_AND_PHONE,
+                NewSalesInvoice.of(id("customer:cafe"), id("series:store"),
                         SettlementMethod.CARD_POS, "TEST-SI-2026-0002", FEBRUARY_MID,
                         List.of(NewSalesInvoiceLine.product(
                                 id("product:kit"), Quantity.of(1L), UnitCost.ofEur("150.000000")))),
                 "the bundle sale"));
 
         handles.put("sale:machine", created("/api/sales-invoices",
-                NewSalesInvoice.of(id("customer:cafe"), SalesChannel.STORE_AND_PHONE,
+                NewSalesInvoice.of(id("customer:cafe"), id("series:store"),
                         SettlementMethod.BANK_DEPOSIT, "TEST-SI-2026-0003", FEBRUARY_MID,
                         List.of(NewSalesInvoiceLine.serializedProduct(id("product:machine"),
                                 UnitCost.ofEur("1450.000000"), List.of("TEST-SN-0001")))),
@@ -499,7 +532,7 @@ final class TradingQuarter {
         // Skroutz, so all three revenue channels are exercised — the only place channel exists in
         // the model is which Sales account gets credited (step 3).
         handles.put("sale:skroutz", created("/api/sales-invoices",
-                NewSalesInvoice.of(id("customer:cafe-similar"), SalesChannel.SKROUTZ,
+                NewSalesInvoice.of(id("customer:cafe-similar"), id("series:skroutz"),
                         SettlementMethod.SKROUTZ, "TEST-SI-2026-0004", FEBRUARY_MID,
                         List.of(NewSalesInvoiceLine.product(
                                 id("product:beans"), Quantity.of(6L), UnitCost.ofEur("18.000000")))),
@@ -508,7 +541,7 @@ final class TradingQuarter {
         // An intra-EU B2B sale: VAT-free under a named article, so the line states an exemption
         // reason rather than a zero rate. Q9's whole point — exempt is not zero-rated.
         handles.put("sale:eu", created("/api/sales-invoices",
-                NewSalesInvoice.of(id("customer:eu"), SalesChannel.ECOMMERCE,
+                NewSalesInvoice.of(id("customer:eu"), id("series:web"),
                         SettlementMethod.ON_ACCOUNT, "TEST-SI-2026-0005", FEBRUARY_LAST,
                         List.of(NewSalesInvoiceLine
                                 .product(id("product:beans"), Quantity.of(10L),
@@ -637,7 +670,7 @@ final class TradingQuarter {
 
         // Overselling: 500 filters against the hundred received.
         handles.put("sale:oversold", created("/api/sales-invoices",
-                NewSalesInvoice.of(id("customer:cafe"), SalesChannel.SKROUTZ,
+                NewSalesInvoice.of(id("customer:cafe"), id("series:skroutz"),
                         SettlementMethod.SKROUTZ, "TEST-SI-2026-0006", MARCH_MID,
                         List.of(NewSalesInvoiceLine.product(
                                 id("product:filters"), Quantity.of(500L),
@@ -1037,7 +1070,7 @@ final class TradingQuarter {
         // only settlement method that leaves a receivable, which is the whole point of it — so this
         // is a service-only ON_ACCOUNT sale, moving no stock and owing 40.00 plus VAT.
         long onAccountSale = created("/api/sales-invoices",
-                NewSalesInvoice.of(id("customer:cafe"), SalesChannel.STORE_AND_PHONE,
+                NewSalesInvoice.of(id("customer:cafe"), id("series:store"),
                         SettlementMethod.ON_ACCOUNT, "TEST-SI-2026-0008", MARCH_LAST,
                         List.of(NewSalesInvoiceLine.product(
                                 id("product:install"), Quantity.of(1L), UnitCost.ofEur("40.000000")))),
@@ -1089,7 +1122,7 @@ final class TradingQuarter {
         // A sale of the installation service alone: no stock moves, so the reversal is a clean
         // mirror with no lot to have been re-costed underneath it (ADR 0011).
         long strandedSale = created("/api/sales-invoices",
-                NewSalesInvoice.of(id("customer:cafe"), SalesChannel.STORE_AND_PHONE,
+                NewSalesInvoice.of(id("customer:cafe"), id("series:store"),
                         SettlementMethod.ON_ACCOUNT, "TEST-SI-2026-0007", MARCH_LAST,
                         List.of(NewSalesInvoiceLine.product(
                                 id("product:install"), Quantity.of(1L), UnitCost.ofEur("40.000000")))),
@@ -1105,7 +1138,7 @@ final class TradingQuarter {
         // credited, so 1.000000 cannot be. Crediting more than was sold would reclaim output VAT
         // that was never charged." Another case of the system being right and the narrative wrong.
         JsonNode creditable = Json.ok(api.post("/api/sales-invoices", NewSalesInvoice.of(
-                        id("customer:cafe"), SalesChannel.STORE_AND_PHONE,
+                        id("customer:cafe"), id("series:store"),
                         SettlementMethod.ON_ACCOUNT, "TEST-SI-2026-0009", MARCH_LAST,
                         List.of(NewSalesInvoiceLine.product(id("product:install"),
                                 Quantity.of(1L), UnitCost.ofEur("40.000000"))))),
