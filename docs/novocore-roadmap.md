@@ -107,6 +107,7 @@ frontend work that must land before any adapter is built.
 |      | **▼ THE DECIDED SEQUENCE — the row order below IS the decision** ˢᵉᑫ | | | | |
 |   W1 | Serialised-record contract fidelity ʷ¹  |     — |    1.5 |  356k | 🟢 Done         |
 |   F5 | Sales Invoice + Credit Note ʷ           |     — |        |       | 🟡 **Current**  |
+|   N1 | Release a reversed document's number ⁿ¹ |     — |        |       | ⚪ Direction settled, unbuilt |
 |   D1 | Supplier/customer codes + alias ᵈ¹      |     — |        |       | ⚪ After F5, with D3 ˢᵉᑫ |
 |   D3 | Customer/supplier addresses ᵈ³          |     — |        |       | ⚪ After F5, with D1 ˢᵉᑫ |
 |   D4 | Internal document numbers ᵈ⁴            |     — |        |       | ⚪ After F5, with D5 ˢᵉᑫ |
@@ -1168,6 +1169,35 @@ one action, with series, products and customer auto-filled, **never re-keyed**; 
 or cancelled order. **That behaviour needs the Go adapter**; R1 stores only which series a series may
 transform into.
 
+**ⁿ¹ N1 — a reversed document's number becomes available again.** ⚠️ **The DIRECTION is settled (owner,
+2026-08-05); the BUILD is deliberately not F5's.** F5 found three enforcements of document-number
+uniqueness disagreeing and measured the consequence over HTTP: reverse an invoice, re-record it under
+its own number in the same series, and the server answered **`500`** in Boot's legacy body shape. The
+same defect exists twice — `sales_invoice_number_idx` and `credit_note_number_idx`.
+
+**The owner's reasoning, which is the part no reading of the code could supply:** a reversal in
+Novocore undoes **Novocore's own mis-recording** of a document Go issued. It is **not** a cancellation
+of an issued document — Greek law has no such thing; an error in an issued document is corrected by a
+credit invoice. Go's document still exists under its number and must be recorded again correctly,
+**so the number has to become available.** The partial unique index is therefore the enforcement that
+is wrong; the trigger and the service message are right.
+
+**Why it is its own row rather than a line in F5:** a partial index cannot express *"not reversed"* by
+itself, and the fix carries a design question that must not be answered by accident — ⚠️ **a trigger's
+`NOT EXISTS` is not a substitute for a unique index under concurrent inserts.** Measured on the live
+database with a positive control: session A held an uncommitted duplicate, session B inserted the same
+number for the same supplier and was **accepted**. `purchase_invoice` has **no unique index on its
+number at all** and is exposed to exactly that today, which is a second thing for this row to settle.
+**Whatever replaces the index must keep the concurrency guarantee.**
+
+**Nothing dangerous is left open in the meantime.** F5's A.1b makes the violation answer `422` with a
+readable detail, and `DocumentNumberReuseIT` asserts only what holds either way — never a 5xx, always
+an RFC 7807 detail — so the day N1 lands, those assertions fail in the safe direction.
+
+📌 **And N1 is itself transitional in the longer run:** once the adapter exists, the correction for a
+wrong mirror is a **re-fetch from the source**, not a reversal. Reversal exists because humans
+currently type the mirror by hand — see `CLAUDE.md` §1b.
+
 **ˣ X1 — general integration outbox.** The fourth architectural non-negotiable — *a core operation never
 waits on an external call* — **has no implementation.** Confirmed 2026-08-02: every `outbox` reference
 in the backend is email, backup or attachment, and `backend/adapters` and `backend/modules` contain
@@ -1181,6 +1211,30 @@ concern" rule this should be built once, before the first adapter. For myDATA in
 ⚠️ **Adapter ID-mapping tables have no designed lifecycle either**, and it belongs with X1: external ID
 reuse, deleted-then-recreated external records, and two adapters disagreeing about which core record an
 external ID resolves to are all unanswered. An adapter-time design item.
+
+### ⭐ X1's FIRST CONCRETE REQUIREMENTS — settled by the owner 2026-08-05. **Record only; do not build**
+
+⚠️ **This also answers a question that was previously left open: X1 was thought unspecifiable before a
+real adapter exists. It is not.** Three requirements are fully specified now, and they are **CORE, not
+adapter** — they must be settled *before* the adapter is built rather than invented by it.
+
+**The failure they exist to prevent, in the owner's own framing, and it is not a latency problem — a
+loading screen does not cover it:**
+
+> Novocore submits an order. Go issues the document. AADE returns a ΜΑΡΚ. **The response to Novocore is
+> then lost.** The document **legally exists** and Novocore does not know it. The operator retries, and
+> there are now **two legally issued documents for one sale** — correctable only by a credit note.
+
+| # | Requirement |
+|---|---|
+| **a** | **An idempotency key on the order submission**, so a retry cannot produce a second document |
+| **b** | **A persisted *submitted, outcome unknown* state**, so a restarted Novocore can **ask what happened** rather than guess. This is the pull-based reconciliation the architecture rules already require |
+| **c** | **A user-visible unresolved state — never an error that invites a retry.** An error message beside a button is an instruction to do the one thing that doubles the damage |
+
+📌 **Requirement (c) is a UI obligation as much as a backend one**, and the screen that will need it —
+the sales document list — is being built in F5, before the adapter exists. It is recorded here rather
+than built there, because inventing an unresolved state with nothing to produce it is how a marker
+nobody maintains gets added (the same argument that removed R1b's *stock not yet moved* indicator).
 
 **ʸ 18b — dispatch document.** Placed with the Go adapter because Go already issues the δελτία, so the
 dispatch document is most likely another **received** document rather than a Novocore-authored one —
@@ -1232,6 +1286,24 @@ voucher — so **the customer entity holds one (billing) address** and this is w
 ⚠️ **There is no order entity anywhere in this system today**; step 22 is where one *will* exist,
 which is precisely why the requirement is recorded here rather than left in D3 waiting on a table
 that does not exist. See ᵈ³.
+
+### ⚠️ AN OPEN STRUCTURAL QUESTION, recorded 2026-08-05. **Deliberately NOT resolved**
+
+**The order is the thing that gets issued, and it is scheduled four phases after the screens that
+depend on it.** Both paths in `CLAUDE.md` §1b run through an **order** — customer, lines, prices,
+channel — which is submitted to the invoicing software for issuance and later receives a document
+back. **Novocore has no order entity. It is this step, in Phase 4, while F5–F9 build the document
+screens in Phase 2.**
+
+⚠️ **And the order and the document are TWO LINKED OBJECTS, not one object filled in progressively.**
+The issued document may not match the order: **Go applies its own VAT resolution, its own rounding and
+its own numbering.** A design that treats the document as the order with extra fields would have no
+way to represent the ordinary case where they differ — which is also the case a reconciliation check
+exists to find.
+
+**This is recorded as an open question and nothing is decided from it.** It is stated here, and
+against F5 in `PROGRESS.md`, so that whoever reaches step 22 knows the question predates them and
+whoever extends a document screen knows not to answer it by accident.
 
 **ᵐᵍ 24 — the migration is the shared deadline for six ⚪ rows.** D5, D4, D1, D3, M0 and R3 all have
 to land before real data does — see *The ⚪ rows share a deadline* under Phase 2 for the per-item

@@ -18,6 +18,18 @@ The governing statement is `CLAUDE.md`, *The document model*; the identifier dec
   the document receives its ΜΑΡΚ and QR code there. **Legal issuance always runs through an external
   transmission path — Prosvasis Go today, a certified Πάροχος at step 40 — and that does not change in
   any phase.** A sales document appears in Novocore only *after* it legally exists.
+- ⚠️ **A SALES DOCUMENT IS A MIRROR, and the record form is a TEST HARNESS (owner, 2026-08-05).**
+  The invoicing software is the **only** issuer. Novocore sends an **order** via API, that software
+  issues, and Novocore **fetches the issued document back** for internal filing; "issuing" from a
+  Novocore screen means **sending the order again**. ⚠️ **So a sales invoice will NEVER be recorded by
+  hand in real operation** — the core works standalone **for testing purposes only**. **F5's list and
+  detail screens and the whole recording path are permanent product; the record FORM is
+  transitional**, and so is the credit-note form (thinner still — nobody will ever type a credit
+  note) and the **reversal mechanism**, whose replacement once the adapter exists is a **re-fetch from
+  the source**. Full statement in `CLAUDE.md` §1b. ⚠️ **Open structural question, deliberately
+  unresolved:** both paths run through an **order**, Novocore has no order entity (step 22, Phase 4)
+  while the screens are Phase 2 — and **the order and the document are two linked objects, not one
+  filled in progressively**, because Go applies its own VAT resolution, rounding and numbering.
 - **Numbers are recorded, never generated — until step 40.** No sequence, no counter, no
   allocation-at-commit. What changes at 40 is narrower than it sounds: Novocore begins allocating the
   **series number** and composing the document, transmitting via the Πάροχος instead of handing the job

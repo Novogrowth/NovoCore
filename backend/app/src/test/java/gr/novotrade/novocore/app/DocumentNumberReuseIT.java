@@ -33,9 +33,21 @@ import tools.jackson.databind.JsonNode;
  * <p>Three things enforce document-number uniqueness: a service pre-check, a table trigger, and a
  * partial unique index on {@code … WHERE reversal_of_id IS NULL}. The first two <em>release</em> a
  * reversed document's number; the index does not, because its predicate excludes the
- * <em>reversing</em> row and not the reversed one. <strong>Which of the three is wrong is an open
- * question</strong> — it turns on whether Prosvasis Go reissues a corrected document under its
- * original number, which is not a fact this repository holds (F5 A.1a/A.1c).
+ * <em>reversing</em> row and not the reversed one.
+ *
+ * <p>⚠️ <strong>THE DIRECTION IS SETTLED AND THE FIX IS NOT BUILT (owner, 2026-08-05).</strong> The
+ * number <strong>is</strong> released, so <strong>the partial unique index is the enforcement that is
+ * wrong</strong>; the trigger and the service message are right. The reasoning is not derivable from
+ * this codebase and is recorded in {@code CLAUDE.md} §2b and against roadmap row <strong>N1</strong>:
+ * a reversal in Novocore undoes <em>Novocore's own mis-recording</em> of a document Go issued, not a
+ * cancellation of an issued document — Greek law has no such thing, and an error in an issued
+ * document is corrected by a credit invoice. Go's document still exists under its number and must be
+ * recorded again correctly.
+ *
+ * <p><strong>It is N1's to build, not F5's</strong>, because a partial index cannot express
+ * <em>"not reversed"</em> by itself and the replacement must keep the concurrency guarantee the index
+ * currently provides — a trigger's {@code NOT EXISTS} does not, which was measured rather than
+ * argued.
  *
  * <p>So these tests assert <strong>the part that is settled regardless of that answer</strong>: the
  * caller is told, in a body they can read, that the document was refused. <strong>Never a 5xx.</strong>
@@ -43,10 +55,10 @@ import tools.jackson.databind.JsonNode;
  * at all and both routes answered {@code 500} in Boot's legacy shape — no {@code detail}, not RFC
  * 7807, indistinguishable from the server having crashed.
  *
- * <p>⚠️ <strong>When A.1c settles the direction, tighten these.</strong> If the number is released,
- * the re-record becomes {@code 201} and these assertions become wrong in the safe direction — they
- * will fail, which is the point. If it is not released, the refusal becomes a 422 naming the rule in
- * domain terms and the generic wording asserted here is what should stop appearing.
+ * <p>⚠️ <strong>WHEN N1 LANDS, THESE GO RED, AND THAT IS THE POINT.</strong> The re-record becomes
+ * {@code 201}, so {@code refusedReadably} will fail on a success — loudly, in the safe direction,
+ * naming the exact place to update. <strong>Left exactly as it is until then</strong>: they assert
+ * the half that holds either way, which is what makes them useful while the fix is unbuilt.
  */
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,

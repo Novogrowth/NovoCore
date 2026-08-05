@@ -102,6 +102,26 @@ function LabelledSelect({
 /**
  * Recording a sale that already exists.
  *
+ * <h2>⚠️⚠️ THIS FORM IS TRANSITIONAL — A TEST HARNESS. DO NOT POLISH IT</h2>
+ *
+ * **Settled by the owner on 2026-08-05, and it is not a comment on the current build's maturity.** A
+ * sales document in Novocore is a **mirror** of what the invoicing software issued. Novocore sends an
+ * **order** via API, that software issues the document, and Novocore **fetches the issued document
+ * back** for filing; "issuing" from a Novocore screen means sending the order again. **So a sales
+ * invoice will never be recorded by hand in real operation** — the core works standalone *for testing
+ * purposes only*.
+ *
+ * **What that means for whoever opens this file next.** The *list* and *detail* screens are permanent
+ * product, and so is the recording **path** behind this form — a document issued at the counter in Go
+ * still arrives through `SalesInvoiceService.record`. **This form is neither.** Richer line editing,
+ * serial-number pickers, keyboard flow, inline product search: all of it is effort spent on a screen
+ * scheduled to be deleted. It needs to be **correct**, not **polished**.
+ *
+ * Full statement in `CLAUDE.md` §1b. ⚠️ The order entity this will eventually be replaced by does not
+ * exist — it is roadmap step 22, in Phase 4 — and **the order and the issued document are two linked
+ * objects, not one filled in progressively**, because Go applies its own VAT resolution, rounding and
+ * numbering. That is recorded as an open structural question; do not answer it from here.
+ *
  * <h2>⚠️ NOTHING HERE ISSUES ANYTHING</h2>
  *
  * Novocore never obtains a ΜΑΡΚ. Prosvasis Go issued this document, AADE holds it, and this form

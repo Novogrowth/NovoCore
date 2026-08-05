@@ -137,6 +137,47 @@ verdict is a finding.
 F5 decides the document interaction pattern F6–F8 reuse, and it is the first step to reach the
 **recording** path — where several of R1b's and R2b's constraints have never met data.
 
+### ⭐ OWNER DECISIONS OF 2026-08-05 — recorded before the remaining code, and they RESHAPE the step
+
+⚠️ **Read these before touching anything in F5.** They were settled in a design conversation and are
+written here, in `CLAUDE.md` and in the roadmap in the same session, per the rule that a design
+conversation gets the same close-out discipline as a build step.
+
+**1. A sales document in Novocore is a MIRROR, and the record form is a TEST HARNESS.**
+The invoicing software is the only issuer; Novocore sends an **order**, that software issues, and
+Novocore **fetches the issued document back**. "Issuing" from a Novocore screen means sending the
+order again. ⚠️ **A sales invoice will never be recorded by hand in real operation** — the core works
+standalone **for testing purposes only**. Full statement in `CLAUDE.md` §1b. **F5's deliverables
+therefore split three ways:**
+
+| Part | Status |
+|---|---|
+| List and detail screens | **PERMANENT PRODUCT** — people read mirrored documents daily |
+| The recording **path** (service, refusals, posting, stock) | **PERMANENT** — a document issued at the counter in Go still arrives through it |
+| The record **form** | ⚠️ **TRANSITIONAL, a test harness.** Correct, not polished |
+
+**2. D is scoped DOWN.** Nobody will ever type a credit note. **D.1 list and D.2 detail stay full
+product quality; D.3/D.4 become minimal** — enough to exercise the recording path, its derived fields
+and its refusals, with preview and rounding acceptance only so far as the path needs exercising. **Do
+not build the polished version.** D.5 stays, and see decision 4 for why reversal is itself temporary.
+
+**3. X1 gained three concrete requirements** — idempotency key, a persisted *submitted, outcome
+unknown* state, and a **user-visible unresolved state that never invites a retry**. They are **core,
+not adapter**. ⭐ This also closes a question previously left open: X1 was thought unspecifiable
+before a real adapter exists, and it is not. **Recorded in the roadmap under ˣ; not built.**
+
+**4. A.1c's direction is SETTLED — the number IS released — and is deliberately NOT built in F5.**
+It has its own roadmap row, **N1**. The reasoning: a reversal undoes **Novocore's own mis-recording**
+of a document Go issued, not a cancellation of an issued document — Greek law has no such thing. So
+the partial unique index is the wrong enforcement. ⚠️ **It is not built here because a partial index
+cannot express *"not reversed"* and the fix must not silently drop the concurrency guarantee.** A.1b
+already prevents the raw 500. `DocumentNumberReuseIT` stays exactly as it is.
+
+**5. An open structural question, recorded and NOT resolved:** both paths run through an **order**,
+Novocore has no order entity (step 22, Phase 4) and the screens that depend on it are Phase 2 — and
+**the order and the document are two linked objects, not one filled in progressively**, because Go
+applies its own VAT resolution, rounding and numbering. Recorded against step 22 and here.
+
 ### 🅟 Phase 0 — the premises, measured rather than read
 
 **Method:** a throwaway `F5Phase0ProbeIT` in the app module (real Boot server, real HTTP, real
@@ -163,6 +204,95 @@ negative control. App image rebuilt first, unconditionally.
 | **P.15** | ⚠️ **Live-leg precondition nobody had recorded:** the owner's two real series are `TEST99` (channel NULL, draft type) and `TEST2` (`ECOMMERCE`, deactivated type), so **neither can record an invoice today**. Reactivating type 1 makes `TEST2` the only recordable series |
 | **P.16** | **Collation measured on the live stack** (`datcollate = C`, PG 17.10, `el-GR-x-icu` available). The two orders differ only where text carries Greek letters or mixed case; on Latin document numbers they agree, numeric ordering off in both. ⚠️ **A Spring Data `Sort` cannot express `COLLATE`**, so applying it means leaving the `Pageable`-driven path for that property |
 | **P.17** | ⚠️ **My own first `install` was piped to `tail` and reported `INSTALL_EXIT=0` over a compilation failure** — `CLAUDE.md`'s piped-build trap, caught by reading the output. Every later build used `set -o pipefail` and the documented two-step |
+
+### 🅘 The three investigations, and what each established
+
+**A.1a — the provenance search. The claim is a real decision, and the SALES side contradicts it.**
+
+`git log -S "releases its number"` returns three commits. The **origin is step 8, `c6e2513`,
+migration `V16` — purchase invoices, not sales.** Its comment argues the design out loud:
+
+> *"**A TRIGGER RATHER THAN A UNIQUE INDEX**, because the rule is not row-local and a partial index
+> cannot express it. […] once an invoice has been reversed, re-entering it correctly under the same
+> supplier number is the ordinary thing to want, **because the commonest reason to reverse one is
+> that it was typed wrong**. […] The alternative — a `superseded` flag maintained alongside
+> `reversal_of_id` — would be a second copy of a fact, free to disagree with the first."*
+
+⭐ **And `V16` backs it correctly:** `CREATE INDEX purchase_invoice_number_idx` — **non-unique**.
+Verified on the live database: `purchase_invoice` has exactly two unique constraints,
+`journal_entry_id` and `reversal_of_id`. **The purchase side is coherent.**
+
+⚠️ **Step 9 (`29e9dcd`, `V17`) copied the rule to sales, repeated the same comment —** *"a trigger
+rather than a partial unique index"* **— and then created that index 25 lines later.** `V32` rebuilt
+it per-series in R1a, faithfully preserving the contradiction. **So the defect is not the rule; it is
+that the sales side contradicted its own written decision.** The owner has since settled the
+direction — see decision 4 — and the argument `V16` recorded was about *Novocore's* data entry, which
+is not the same claim as one about Go's numbering.
+
+**A.1d — the family is TWO INSTANCES OF ONE DEFECT, not a broad class.**
+
+⚠️ **There is no `DataIntegrityViolationException` handler in `WebExceptionHandler` at all**, so any
+constraint a service does not pre-check escapes to Boot's default. One probe posted 13
+caller-reachable unique constraints twice each:
+
+| Result | Constraints |
+|---|---|
+| **Refused cleanly** (422 with a written reason) | product SKU, product EAN, customer VAT, username, role name, asset code, sales-document-type description and sort code, delivery-method abbreviation, sales-series abbreviation and sort code |
+| 🐛 **Escaped as a bare `500`** | `sales_invoice_number_idx`, `credit_note_number_idx` |
+
+Both escapees are **the same defect twice** — a partial unique index on `… WHERE reversal_of_id IS
+NULL` sitting under a service check and a trigger that both release the number.
+
+⚠️ **Three candidates first answered `400` because my bodies were wrong** (`vatStatus` missing,
+`legalName` vs `name`, `rawPassword`), so they never reached their constraint — W1's P.9 shape
+exactly. **They were fixed and re-run rather than reported as a clean sweep**, which is the only
+reason the sweep means anything.
+
+⚠️ **`supplier` has no unique index on `vat_number` at all** — noticed while reading the catalogue.
+Nothing to escape, so not a defect; recorded because `customer_vat_number_unique` exists and the
+asymmetry is the kind that reads as an oversight later.
+
+**The concurrency measurement, which reshaped N1.** A `BEFORE INSERT` trigger's `NOT EXISTS` cannot
+see uncommitted rows and takes no lock. Measured on the live database with a **positive control**
+(same transaction → the trigger refuses, so the apparatus is alive): session A held an uncommitted
+`RACE-PROBE-1`, session B inserted the same number for the same supplier and was **`INSERT 0 1` —
+accepted**. Both rolled back; **0 rows left**. So "make the index agree with the message" would trade
+away a real guarantee, and `purchase_invoice` is exposed to this today.
+
+**The `upper(document_number)` Greek case measurement (C.3's basis).**
+Live stack, `datcollate = C`, PostgreSQL 17.10, `el-GR-x-icu` available:
+
+```
+byte order (locale C, today):  Alpha-1 | zeta-1 | ΑΛΠ-10 | ΑΛΠ-2 | ΑΛΦΑ-1 | ΩΜΕΓΑ-1 | άλφα-1
+el-GR-x-icu (the app's order): ΑΛΠ-10 | ΑΛΠ-2 | ΑΛΦΑ-1 | άλφα-1 | ΩΜΕΓΑ-1 | Alpha-1 | zeta-1
+```
+
+On **realistic** document numbers the two agree unless the text carries Greek letters or mixed case:
+
+```
+C  : ALP-1 | TEST-SI-2026-0001 | TEST-SI-2026-0002 | TEST-SI-2026-0010 | alp-2 | ΑΛΠ 1 | ΤΠΔΑ 1
+ICU: ΑΛΠ 1 | ΤΠΔΑ 1 | ALP-1 | alp-2 | TEST-SI-2026-0001 | TEST-SI-2026-0002 | TEST-SI-2026-0010
+```
+
+Numeric ordering is off in **both** (`-0010` before `-0002`), consistent with `collation.test.ts`.
+⚠️ **And `SpringPaging` builds a Spring Data `Sort`, which cannot express `COLLATE`** — so applying it
+means leaving the `Pageable`-driven path for that one property. **That is why B.4 is deferred rather
+than cheap**, and why the deferral is conditional on what a real Go document number looks like.
+
+**B.6 — the island reduced rate is NOT implemented, and there is no place for it to sit.**
+
+Three facts, measured. **(1)** The mapping exists as **data only** — `vat_class.reduced_counterpart_id`,
+seeded in `V5` with the real chains (24→17, 13→9, 6→4→1041), with admin routes. **(2)** Nothing
+outside `..core.tax..` reads it; `SalesInvoiceServiceImpl.price` resolves through `VatClassPrecedence`
+and takes `vatClass.ratePercent()` directly. **It is a lookup table waiting for a rule.** **(3)** No
+input could feed such a rule anyway — `Customer` has no address, postcode or region, and structured
+addresses are **D3**, scheduled *after* F5.
+
+⚠️ **The part recorded at `VatClassPrecedence` for whoever gets the accountant's answer:** an island
+rate is a fact about a **destination**, so it may not merely *reorder* line → customer → product — it
+plausibly enters as a **fourth input none of the three carries**, and **per-document rather than
+per-customer**, which is the shape D3 already records for addresses. **F5's line form is built
+directly on `VatClassPrecedence.resolve` and is downstream of that answer.**
 
 ### 🅐 Finding 1 — split at approval, because the message is the least authoritative of the three
 
@@ -232,6 +362,53 @@ therefore established before it is implemented, in either direction.
 | # | Sub-part | Verdict |
 |---|---|---|
 | **F.1** | `F5WriteContractIT` — the **literal JSON the screens build**, sent to a real server over real HTTP, on the `F4WriteContractIT` pattern. A screen test over `msw` proves wiring, never contract | |
+
+### 🅡 RECONCILIATION as of 2026-08-05 — **F5 is INCOMPLETE. Committed to a branch, not to `main`**
+
+**Branch `f5-sales-invoice-credit-note`, commit `10f3e26`, pushed to `origin`.** Backend **1,488
+tests, 0 failures, 1 skipped, `mvn clean verify` exit 0**; frontend **368/368**, typecheck clean,
+lint at its 3-warning pre-R2 baseline. Spec unchanged at **247 operations / 231 schemas**.
+
+⚠️ **Numbering note, because the approval conversation and this checklist use the same letters
+differently in one place.** The owner's message referred to *"B.3/B.4"* for the sort-key and
+collation decisions and *"B.5"* for the report-only item — **those map exactly onto B.3, B.4 and B.5
+below.** **B.6 is the VAT precedence coupling**, which was added *at* approval as a new sub-part and
+has no earlier number. There is no gap and no renumbering.
+
+| # | Verdict |
+|---|---|
+| **A.1a** | ✅ **Done** — provenance traced to step 8 `V16`; the sales side contradicts its own comment. See 🅘 |
+| **A.1b** | ✅ **Done** — `DataIntegrityViolationException` → 422 with a readable detail. **Proven against the defect** in a throwaway worktree: 2 failures naming the exact `500` body, positive control unaffected |
+| **A.1c** | ⏸️ **Direction settled, DEFERRED to its own roadmap row N1** — owner decision 4. Not built, deliberately |
+| **A.1d** | ✅ **Done** — the family is two instances of one defect. See 🅘 |
+| **A.2** | ✅ **Done** — `Required.text` + `@Mandatory` on both `documentNumber`s. Spec diff 2 lines; generated type `documentNumber?: string` → `documentNumber: string` |
+| **A.3** | ✅ **Done** — `DocumentNumberReuseIT`, 3 tests, asserting only what holds either way. **Stays as it is** per decision 4 |
+| **A.4** | ✅ **Done** — draft branch recorded unreachable by construction at `resolveSeries` |
+| **B.1** | ✅ **Done** — `search=` on both routes; `TextSearch.matchingRelated` + `CustomerSearch` + `SalesDocumentSeriesSearch`. ⭐ **The dotted path S1 built for exactly this case cannot serve it** — it needs a mapped association and every cross-aggregate reference here is a scalar id |
+| **B.2** | ✅ **Done** — migration **V36**, 4 GIN trigram indexes, `TextSearchIT` extended. 5 new search tests, including one that plants a null series with SQL and proves the invoice is **not** dropped — the property the `IN`-versus-join choice exists for |
+| **B.3** | ✅ **Decided at approval** — `CUSTOMER_NAME` **not** added to `SalesInvoiceSort`. Reason recorded at the columns file |
+| **B.4** | ⏸️ **Deferred at approval, reason recorded.** ⚠️ Conditional on the owner's check of whether a real Go document number carries Greek letters. The `Pageable`/`COLLATE` note is at the code |
+| **B.5** | ✅ **Reported, not fixed** — an unknown `customerId` and an unknown `seriesId` both answer a bare `404 "Not found."` |
+| **B.6** | ✅ **Done** — island rate absent; coupling recorded at `VatClassPrecedence` and in 🅘 |
+| **C.1** | ✅ **Done** — list opens on 1 Jan → today, range visible and changeable |
+| **C.2** | ✅ **Done** — the repository's **first three `meta.sortKey`s**, taken from the generated enum |
+| **C.3** | ✅ **Done** — detail screen read-only throughout; statutory block is plain text with its reason |
+| **C.4–C.6** | ✅ **Done** — record form, mandatory series picker, no channel/document-type field, preview-before-submit, conditional acceptance control. ⚠️ **TRANSITIONAL per decision 1** |
+| **C.7** | ✅ **Done** — `<Refusal>` on every mutation |
+| **C.8** | ✅ **Done** — reversal action with its refusals |
+| **C.9** | 🔴 **STILL OPEN** — **no screen test exists for any of the three C screens.** They are typechecked and linted and **not exercised** |
+| **D.1–D.5** | 🔴 **STILL OPEN** — and now **scoped down** per decision 2 |
+| **E.1–E.5** | ⛔ **Out of scope**, unchanged |
+| **F.1** | 🔴 **STILL OPEN** — `F5WriteContractIT` not written |
+
+⭐ **Two things the guardrails caught in F5's own new code, both worth keeping:**
+
+- **`tsc` refused the reversal form** because `ReversalCommand.reason` is mandatory (`Required.text`),
+  and the record argues why — *"a reversal that says nothing about why leaves the ledger internally
+  consistent and unexplainable."* It had been written as optional. **That is 8a's and A.2's contract
+  work paying for itself on this step's own code, the same hour A.2 extended it.**
+- The ESLint money rule caught `Number(id)` — correct to disable with a reason, and it forced the
+  single-currency decision to be stated at the code instead of `'EUR'` scattered through the form.
 
 ### 🅛 The live leg — **DERIVED from the screens and routes F5 ships**
 

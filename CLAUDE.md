@@ -548,6 +548,46 @@ the document receives a ΜΑΡΚ and a QR code at that moment. **Legal issuance 
 external transmission path — Prosvasis Go today, a certified Πάροχος at step 40 — and that does not
 change in any phase.** A sales document appears in Novocore only *after* it legally exists.
 
+### ⚠️ 1b. A SALES DOCUMENT IN NOVOCORE IS A MIRROR. Settled by the owner, 2026-08-05
+
+**This is stronger than rule 1 and it changes how the screens are read.** The invoicing software —
+Prosvasis Go today, another system or a certified Πάροχος later — is the **only** issuer. Novocore's
+sales documents are a **mirror of what that third party created**. There are two paths and the owner
+states the second is the first with a different trigger:
+
+1. Novocore sends an **order** to the invoicing software via API; that software issues the document;
+   Novocore **fetches the issued document back** for internal filing.
+2. "Issuing" from a Novocore screen means **sending the order again**, after which (1) follows.
+
+⚠️ **THE CONSEQUENCE, and it must not be mistaken for a limitation of the current build: a sales
+invoice will NEVER be recorded by hand in real operation.** The core must work standalone, without
+adapters, **for testing purposes only**.
+
+**So F5's deliverables split, and the split is the thing to carry:**
+
+| Part | Status |
+|---|---|
+| **List and detail screens** | **PERMANENT PRODUCT.** People will read mirrored documents daily |
+| **The recording PATH** — service, refusals, posting, stock consumption | **PERMANENT.** A document issued directly in Go at the counter still arrives through it |
+| **The record FORM** | ⚠️ **TRANSITIONAL — a test harness.** Correct, not polished. It has no production caller once the adapter exists |
+
+**A reader who does not know this will "finish" the record form** — richer line editing, serial-number
+pickers, keyboard flow — and that is effort spent on a screen scheduled to be deleted. The same
+applies to the credit-note record form, which is thinner still: **nobody will ever type a credit
+note.**
+
+⚠️ **The reversal mechanism is TRANSITIONAL too.** Once the adapter exists, the correction for a
+wrong mirror is a **re-fetch from the source**, not a reversal. Reversal exists because humans
+currently type the mirror by hand. See §2b for what that means for the number.
+
+⚠️ **An open structural question follows from this and is deliberately NOT resolved here.** Both
+paths run through an **order** — customer, lines, prices, channel — which is submitted for issuance
+and later receives a document back. **Novocore has no order entity; it is roadmap step 22, in Phase
+4, while the screens that depend on it are being built in Phase 2.** And the issued document may not
+match the order: Go applies its own VAT resolution, rounding and numbering, so **the order and the
+document are two linked objects, not one object filled in progressively.** Recorded against step 22
+and against F5; do not attempt to resolve it while building a screen.
+
 **2. Numbers are recorded, never generated — until step 40.** No sequence, no counter, no
 allocation-at-commit. What changes at step 40 is narrower than it sounds: Novocore begins allocating
 the **series number** and composing the document itself, transmitting via the Πάροχος adapter instead
@@ -567,6 +607,37 @@ counters, **none of step 40's machinery**. Decided 2026-08-03 (U3); scope and th
 questions are in the roadmap under ᵈ⁴. **A sales or purchase document number is still captured, never
 generated** — that half of D4 was already answered by this rule and needs nothing built.
 
+### ⚠️ 2b. A REVERSED DOCUMENT'S NUMBER IS RELEASED. Direction settled 2026-08-05; NOT YET BUILT
+
+**F5 found three enforcements of document-number uniqueness disagreeing, and the owner settled which
+one is wrong.** The reasoning is the part to keep, because it is not derivable from the code:
+
+> **A reversal in Novocore undoes Novocore's own MIS-RECORDING of a document Go issued.** It is not a
+> cancellation of an issued document — **Greek law has no such thing**; an error in an issued document
+> is corrected by a credit invoice. Go's document still exists under its number and **must be recorded
+> again correctly**, so the number has to become available.
+
+**So the partial unique index is the enforcement that is wrong. The trigger and the service message
+are right.** Concretely, on both `sales_invoice` and `credit_note`:
+
+```sql
+CREATE UNIQUE INDEX …_number_idx ON … (… upper(document_number)) WHERE reversal_of_id IS NULL;
+```
+
+that predicate excludes the **reversing** row and **not the reversed one**, so the reversed document
+holds its number for ever — while the service check and the trigger both release it, and the
+service's own refusal message *tells the operator to reverse and re-record*.
+
+⚠️ **DELIBERATELY NOT BUILT IN F5, and it has its own roadmap row.** A partial index cannot express
+*"not reversed"* by itself, and the fix carries a real design question: **a trigger's `NOT EXISTS` is
+not a substitute for a unique index under concurrent inserts.** That was measured, not argued — two
+sessions inserting the same supplier invoice number, one holding it uncommitted, and the second was
+**accepted**. `purchase_invoice` has no unique index on its number at all and is exposed to exactly
+that today. **Whatever replaces the index must keep the concurrency guarantee.**
+
+**Nothing dangerous is left open in the meantime:** F5's A.1b makes the violation answer `422` with a
+readable detail instead of Boot's legacy `500`, so the operator is told rather than shown a crash.
+
 **3. Naming rule: no operation, class, method or route may be named `issue`, `issueInvoice` or
 `issuance`.** Use `requestIssuance`, `submitForIssuance`, `recordIssuedDocument` — or, for the
 ordinary case of learning about a document that already exists, `record`, which is what
@@ -579,7 +650,18 @@ ordinary case of learning about a document that already exists, `record`, which 
   existed until 2026-08-02, and its `operationId` `SalesController_issue` sat in the committed spec
   and the generated TypeScript client. It was renamed to `record` / `recordNote` in the same session
   the rule was written, **deliberately rather than being queued**: a naming rule with a known standing
-  violation is a rule people stop believing. The controller method is `recordNote` and not `record`
+  violation is a rule people stop believing.
+- ✅ **RE-VERIFIED 2026-08-05, because those two were raised again as standing violations. They are
+  not.** Measured against the committed surface: **zero** `operationId`s contain `issue`,
+  `CreditNoteService` declares `record(NewCreditNote)`, and **no production identifier anywhere in
+  `backend/` is named `issue`/`issueInvoice`/`issuance`.** The remaining textual hits are prose the
+  rule explicitly permits — *"a mistyped amount is a correction rather than a re-issue"*, *"has
+  already been issued"* in a refusal message. **The belief that they are still on the surface is
+  itself out of date, and this line exists so the next person does not re-fix a fixed thing.**
+- 📌 **One genuine residual, and it is a test method name, not the surface:**
+  `CreditNoteIT.previewAgreesWithIssue`. An identifier, so technically in scope; harmless, since no
+  client sees it. **Left deliberately** — renaming it is a one-line change for whoever next touches
+  that class, and recording it is worth more than a drive-by edit that muddies an unrelated diff. The controller method is `recordNote` and not `record`
   because `SalesController_record` already exists for sales invoices, and a second duplicate
   `operationId` is exactly the defect backend queue item 1 is open against.
 
