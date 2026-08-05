@@ -410,6 +410,39 @@ has no earlier number. There is no gap and no renumbering.
 - The ESLint money rule caught `Number(id)` — correct to disable with a reason, and it forced the
   single-currency decision to be stated at the code instead of `'EUR'` scattered through the form.
 
+### 🅗 HANDOVER — **a fresh session starts here**
+
+⚠️ **F5 is unfinished and is on branch `f5-sales-invoice-credit-note`, not `main`.** Both commits are
+pushed. Nothing is broken: every suite is green at the branch head. **Do not merge to `main` until
+the four open items below are closed**, because the three sales screens are unexercised.
+
+**Concrete next actions, in the order they are worth doing:**
+
+1. **C.9 — screen tests for the three sales screens.** `sales-invoices-list.tsx`,
+   `sales-invoice-detail.tsx` and `sales-invoice-record.tsx` are **typechecked and linted and have no
+   test at all.** Copy `products.test.tsx`'s shape, including the standing *"rendering sends no
+   write"* assertion, and ⚠️ **make the `msw` handlers record their writes** — a static fixture now
+   shows pre-edit data after a save, because the app refetches where it used to trust `setQueryData`.
+2. **D, thin** — list and detail at full product quality; the record form **minimal**, per owner
+   decision 2. Write the *"test harness for a workflow with no production caller"* reason at the code,
+   as `sales-invoice-record.tsx` now does for its own form.
+3. **F.1 — `F5WriteContractIT`.** The literal JSON the screens build, sent to a real server over real
+   HTTP, on `F4WriteContractIT`'s pattern. ⚠️ A screen test proves wiring, never contract.
+4. **Close-out** — the six actions, including the app-image rebuild before the live leg and the
+   `Actual` hours/tokens columns, **measured, never estimated**.
+
+**Two things already prepared for whoever continues:**
+
+- **The live-leg block below is derived and ready**, including L.0's precondition. ⚠️ **L.15's
+  expected result is now known**: N1 is unbuilt, so re-recording a reversed number is refused with a
+  readable 422 rather than succeeding. Update that row when N1 lands.
+- ⚠️ **A stray git worktree exists at `…/Temp/claude/f5-probe`** (clean, detached at `1239b6f`), kept
+  for prove-against-the-defect runs. **Remove it with `git worktree remove` at close-out.**
+
+📌 **Two questions are with the owner and block nothing:** whether a real Prosvasis Go document number
+carries Greek letters (decides B.4), and the accountant's answer on island-rate precedence (decides
+whether F5's line form is reopened — see B.6).
+
 ### 🅛 The live leg — **DERIVED from the screens and routes F5 ships**
 
 ⚠️ **L.0 is a precondition this session performs, not something the owner does:** rebuild the app
