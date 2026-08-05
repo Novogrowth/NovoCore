@@ -365,9 +365,10 @@ therefore established before it is implemented, in either direction.
 
 ### 🅡 RECONCILIATION as of 2026-08-05 — **F5 is INCOMPLETE. Committed to a branch, not to `main`**
 
-**Branch `f5-sales-invoice-credit-note`, commit `10f3e26`, pushed to `origin`.** Backend **1,488
-tests, 0 failures, 1 skipped, `mvn clean verify` exit 0**; frontend **368/368**, typecheck clean,
-lint at its 3-warning pre-R2 baseline. Spec unchanged at **247 operations / 231 schemas**.
+**Branch `f5-sales-invoice-credit-note`, pushed to `origin`; head `fef8497` as of 2026-08-05.**
+Backend **1,488 tests, 0 failures, 1 skipped, `mvn clean verify` exit 0**; frontend **379 across 40
+files**, typecheck clean, lint at its 3-warning pre-R2 baseline, knip clean. Spec unchanged at
+**247 operations / 231 schemas**.
 
 ⚠️ **Numbering note, because the approval conversation and this checklist use the same letters
 differently in one place.** The owner's message referred to *"B.3/B.4"* for the sort-key and
@@ -396,7 +397,7 @@ has no earlier number. There is no gap and no renumbering.
 | **C.4–C.6** | ✅ **Done** — record form, mandatory series picker, no channel/document-type field, preview-before-submit, conditional acceptance control. ⚠️ **TRANSITIONAL per decision 1** |
 | **C.7** | ✅ **Done** — `<Refusal>` on every mutation |
 | **C.8** | ✅ **Done** — reversal action with its refusals |
-| **C.9** | 🔴 **STILL OPEN** — **no screen test exists for any of the three C screens.** They are typechecked and linted and **not exercised** |
+| **C.9** | ⚠️ **PARTLY DONE.** `sales.test.tsx` — **11 tests** over the list and detail, and ⭐ **they found a real date defect in the screen they were written against** (`toISOString` on a calendar date; fixed in `lib/calendar-date.ts`). 🔴 **The RECORD FORM still has no test** |
 | **D.1–D.5** | 🔴 **STILL OPEN** — and now **scoped down** per decision 2 |
 | **E.1–E.5** | ⛔ **Out of scope**, unchanged |
 | **F.1** | 🔴 **STILL OPEN** — `F5WriteContractIT` not written |
@@ -418,11 +419,17 @@ the four open items below are closed**, because the three sales screens are unex
 
 **Concrete next actions, in the order they are worth doing:**
 
-1. **C.9 — screen tests for the three sales screens.** `sales-invoices-list.tsx`,
-   `sales-invoice-detail.tsx` and `sales-invoice-record.tsx` are **typechecked and linted and have no
-   test at all.** Copy `products.test.tsx`'s shape, including the standing *"rendering sends no
-   write"* assertion, and ⚠️ **make the `msw` handlers record their writes** — a static fixture now
-   shows pre-edit data after a save, because the app refetches where it used to trust `setQueryData`.
+1. **C.9 — PARTLY DONE. `sales.test.tsx` covers the list and the detail (11 tests); the RECORD FORM
+   still has none.** ⚠️ Test the form's **preview-then-accept** path in particular: a preview
+   answering `roundingNeedsAcceptance: true` must make the acceptance fields appear and must keep the
+   Record button disabled until a name is typed. Copy `products.test.tsx`'s shape, keep the standing
+   *"rendering sends no write"* assertion, and ⚠️ **make the `msw` handlers record their writes** — a
+   static fixture shows pre-edit data after a save.
+   📌 **`trackRequests` drops the query string** (`new URL(...).pathname`), so anything asserting a
+   query parameter must capture the URL in the handler, as `sales.test.tsx` does.
+   ⭐ **Writing those 11 tests found a real defect in the screen they were written against** — the
+   default range opened on 31 December because `toISOString()` converts local midnight to UTC. Fixed
+   in `lib/calendar-date.ts`; **the record form has not had that kind of scrutiny yet.**
 2. **D, thin** — list and detail at full product quality; the record form **minimal**, per owner
    decision 2. Write the *"test harness for a workflow with no production caller"* reason at the code,
    as `sales-invoice-record.tsx` now does for its own form.
