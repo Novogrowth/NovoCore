@@ -62,6 +62,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -502,7 +503,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             long customerId = salesInvoices.require(all.getFirst()).customerId();
 
             PageResponse<SalesInvoiceView> first =
-                    salesInvoices.pageOfCustomer(customerId, PageRequest.of(0, 5));
+                    salesInvoices.pageOfCustomer(customerId, null, PageRequest.of(0, 5));
 
             assertThat(first.items()).hasSize(5);
             assertThat(first.totalElements())
@@ -518,7 +519,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             assertThat(first.hasPrevious()).isFalse();
 
             PageResponse<SalesInvoiceView> last =
-                    salesInvoices.pageOfCustomer(customerId, PageRequest.of(2, 5));
+                    salesInvoices.pageOfCustomer(customerId, null, PageRequest.of(2, 5));
             assertThat(last.items()).as("the last page holds the remainder").hasSize(2);
             assertThat(last.size()).isEqualTo(5);
             assertThat(last.hasNext()).isFalse();
@@ -544,7 +545,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
 
             List<Long> seen = new ArrayList<>();
             for (int page = 0; page < 4; page++) {
-                salesInvoices.pageOfCustomer(customerId,
+                salesInvoices.pageOfCustomer(customerId, null,
                                 PageRequest.of(page, 4, SalesInvoiceSort.INVOICE_DATE.name(),
                                         SortDirection.ASC))
                         .items().forEach(invoice -> seen.add(invoice.id()));
@@ -562,11 +563,11 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             List<Long> all = twelveOnOneDay("SIIT-PG3");
             long customerId = salesInvoices.require(all.getFirst()).customerId();
 
-            List<Long> ascending = salesInvoices.pageOfCustomer(customerId,
+            List<Long> ascending = salesInvoices.pageOfCustomer(customerId, null,
                             PageRequest.of(0, 12, SalesInvoiceSort.INVOICE_DATE.name(),
                                     SortDirection.ASC))
                     .items().stream().map(SalesInvoiceView::id).toList();
-            List<Long> descending = salesInvoices.pageOfCustomer(customerId,
+            List<Long> descending = salesInvoices.pageOfCustomer(customerId, null,
                             PageRequest.of(0, 12, SalesInvoiceSort.INVOICE_DATE.name(),
                                     SortDirection.DESC))
                     .items().stream().map(SalesInvoiceView::id).toList();
@@ -586,7 +587,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             // The routes bind `sort` to the enum so this is unreachable over HTTP — this is the
             // guard that holds if a service is called from somewhere else.
             assertThatExceptionOfType(IllegalArgumentException.class)
-                    .isThrownBy(() -> salesInvoices.pageOfCustomer(customerId,
+                    .isThrownBy(() -> salesInvoices.pageOfCustomer(customerId, null,
                             PageRequest.of(0, 5, "GROSS_TOTAL", SortDirection.ASC)))
                     .withMessageContaining("INVOICE_DATE");
         }
@@ -597,7 +598,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             CustomerView nobody = customer("Paging empty");
 
             PageResponse<SalesInvoiceView> page =
-                    salesInvoices.pageOfCustomer(nobody.id(), PageRequest.firstPage());
+                    salesInvoices.pageOfCustomer(nobody.id(), null, PageRequest.firstPage());
 
             assertThat(page.items()).isEmpty();
             assertThat(page.totalElements()).isZero();
@@ -627,7 +628,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             List<Long> unpaged = salesInvoices.ofCustomer(customerId).stream()
                     .map(SalesInvoiceView::id).toList();
             List<Long> paged = salesInvoices
-                    .pageOfCustomer(customerId, PageRequest.of(0, PageRequest.MAX_SIZE))
+                    .pageOfCustomer(customerId, null, PageRequest.of(0, PageRequest.MAX_SIZE))
                     .items().stream().map(SalesInvoiceView::id).toList();
 
             assertThat(paged)
@@ -1430,6 +1431,118 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             assertThat(inWeb.documentNumber()).isEqualTo(inStore.documentNumber());
             assertThat(inWeb.seriesId()).isNotEqualTo(inStore.seriesId());
             assertThat(inWeb.id()).isNotEqualTo(inStore.id());
+        }
+    }
+
+    /**
+     * Target-list row 8 — searching a document by things that are not on it (F5 B.1).
+     *
+     * <p>The customer's name and the series' abbreviation live on other tables, reached by subquery
+     * on a scalar id rather than by a mapped association. {@code TextSearch.matchingRelated} says
+     * why; this says that it works, and — more importantly — that it does not do the one thing a
+     * join would have done.
+     */
+    @Nested
+    @DisplayName("searching a sales invoice — row 8 of the target list")
+    class Searching {
+
+        private CustomerView buyer;
+        private ProductView beans;
+        private long webSeries;
+        private String documentNumber;
+
+        /**
+         * ⚠️ Fresh fixtures per test, and <strong>never on {@code VAT_DAY}</strong>.
+         *
+         * <p>Two traps this class documents and I walked into both. Nothing here rolls back, so a
+         * fixed SKU would be refused the second time this runs — hence the counter. And {@code
+         * VAT_DAY} is reserved: {@code Vat.outputVatCarriesItsDimension} queries that date and sums
+         * every invoice on it, so recording anything else there makes a passing test fail with an
+         * arithmetic that looks like a costing bug.
+         */
+        @BeforeEach
+        void recordOne() {
+            int unique = NUMBERS.incrementAndGet();
+            buyer = customer("Καφεκοπτεία Σινιόρ " + unique);
+            beans = goods("SIIT-SEARCH-" + unique, "10.00");
+            stock(beans.id(), 50L, "4.000000");
+            webSeries = series(SalesChannel.ECOMMERCE);
+            documentNumber = "SEARCHABLE-" + unique;
+
+            salesInvoices.record(NewSalesInvoice.of(buyer.id(), webSeries,
+                    SettlementMethod.ON_ACCOUNT, documentNumber, JULY,
+                    List.of(NewSalesInvoiceLine.product(
+                            beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000")))));
+        }
+
+        private List<String> numbersMatching(String term) {
+            return salesInvoices
+                    .pageOfCustomer(buyer.id(), term, PageRequest.of(0, PageRequest.MAX_SIZE))
+                    .items().stream()
+                    .map(SalesInvoiceView::documentNumber)
+                    .toList();
+        }
+
+        @Test
+        @DisplayName("by its own document number, as a substring")
+        void byDocumentNumber() {
+            assertThat(numbersMatching("SEARCHABLE")).contains(documentNumber);
+            assertThat(numbersMatching("no-such-text")).isEmpty();
+        }
+
+        @Test
+        @DisplayName("by the CUSTOMER's name, which is on another table entirely")
+        void byCustomerName() {
+            // Case- and accent-insensitive through the same normalisation as every other search,
+            // because the term and the column go through the one SQL function.
+            assertThat(numbersMatching("σινιορ")).contains(documentNumber);
+        }
+
+        @Test
+        @DisplayName("by the SERIES' abbreviation, likewise")
+        void bySeriesAbbreviation() {
+            String abbreviation = salesSeries.require(webSeries).abbreviation();
+            assertThat(numbersMatching(abbreviation)).contains(documentNumber);
+        }
+
+        @Test
+        @DisplayName("a blank term is no filter at all, not a filter matching nothing")
+        void blankIsNoFilter() {
+            assertThat(numbersMatching(null)).contains(documentNumber);
+            assertThat(numbersMatching("   ")).contains(documentNumber);
+        }
+
+        /**
+         * ⚠️ <strong>The reason the mechanism is a subquery and not a join, asserted rather than
+         * argued.</strong>
+         *
+         * <p>{@code sales_invoice.series_id} is nullable and every invoice recorded before R1b has
+         * none — which is every invoice in the production database as of 2026-08-05. A dotted JPA
+         * path would have produced an INNER JOIN to the series, and an inner join drops rows whose
+         * key is null. So searching for <em>anything</em> would have silently hidden the whole of
+         * the pre-R1b history, while looking like it was working perfectly.
+         *
+         * <p>The null series is planted with SQL because <strong>no route can create one</strong> —
+         * the service has required a series since R1b. That is exactly the shape of the rows this
+         * has to keep working for: history, not new data.
+         */
+        @Test
+        @DisplayName("an invoice with NO series still appears in a search — an inner join would drop it")
+        void aSeriesLessInvoiceIsNotDropped() {
+            String orphanNumber = "ORPHAN-" + NUMBERS.incrementAndGet();
+            long orphanId = salesInvoices.record(NewSalesInvoice.of(buyer.id(), webSeries,
+                    SettlementMethod.ON_ACCOUNT, orphanNumber, JULY,
+                    List.of(NewSalesInvoiceLine.product(
+                            beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000"))))).id();
+
+            jdbc.update("update sales_invoice set series_id = null where id = ?", orphanId);
+
+            assertThat(numbersMatching("ORPHAN"))
+                    .as("a pre-R1b invoice has no series, and searching must not make it disappear")
+                    .contains(orphanNumber);
+            assertThat(numbersMatching("σινιορ"))
+                    .as("nor when the term matches through the customer subquery instead")
+                    .contains(orphanNumber);
         }
     }
 }

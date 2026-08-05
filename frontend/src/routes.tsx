@@ -13,6 +13,9 @@ import { CustomerCreate } from '@/pages/customers/customer-create'
 import { CustomerDetail } from '@/pages/customers/customer-detail'
 import { CustomersList } from '@/pages/customers/customers-list'
 import { AdaptersGrid, ModulesGrid } from '@/pages/registry-grid'
+import { SalesInvoiceDetail } from '@/pages/sales/sales-invoice-detail'
+import { SalesInvoiceRecord } from '@/pages/sales/sales-invoice-record'
+import { SalesInvoicesList } from '@/pages/sales/sales-invoices-list'
 import {
   DocumentSettings,
   EmailSettings,
@@ -97,6 +100,7 @@ const SCREENS: Record<string, () => ReactElement> = {
   '/settings/delivery-methods': DeliveryMethodsList,
   '/settings/payment-methods': PaymentMethodsList,
   '/settings/aade-invoice-types': AadeInvoiceTypesList,
+  '/sales/invoices': SalesInvoicesList,
 }
 
 /**
@@ -145,6 +149,11 @@ const CHILD_ROUTES: { path: string; owner: string; element: () => ReactElement }
   // ⚠️ NO `/new`, for the same reason as the AADE codification: adding a payment method needs an
   // AccountSystemKey and two behaviour flags, so it is a code change rather than a form.
   { path: '/settings/payment-methods/:method', owner: 'settings.paymentMethods', element: PaymentMethodDetail },
+  // ⚠️ NO `/sales/invoices/:id/edit`, and the absence is the design rather than a gap. A posted
+  // document is immutable (ADR 0006) and the backend has no route to change one — measured, not
+  // assumed: PATCH answers 404 and DELETE answers 405. Correction is reversal or a credit note.
+  { path: '/sales/invoices/new', owner: 'sales.invoices', element: SalesInvoiceRecord },
+  { path: '/sales/invoices/:id', owner: 'sales.invoices', element: SalesInvoiceDetail },
 ]
 
 function RouteElement({ node, screen }: { node: NavNode; screen?: () => ReactElement }) {

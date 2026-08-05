@@ -6,6 +6,8 @@ import gr.novotrade.novocore.core.api.account.ChartOfAccountsService;
 import gr.novotrade.novocore.core.api.audit.AuditLogService;
 import gr.novotrade.novocore.core.api.customer.CustomerService;
 import gr.novotrade.novocore.core.api.customer.CustomerView;
+import gr.novotrade.novocore.core.customer.CustomerSearch;
+import gr.novotrade.novocore.core.support.TextSearch;
 import gr.novotrade.novocore.core.api.inventory.InventoryService;
 import gr.novotrade.novocore.core.api.inventory.StockConsumptionView;
 import gr.novotrade.novocore.core.api.ledger.JournalEntryView;
@@ -43,6 +45,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -315,23 +319,23 @@ class CreditNoteServiceImpl implements CreditNoteService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CreditNoteView> againstInvoice(long salesInvoiceId) {
-        return creditNotes.findBySalesInvoiceIdOrderByIdAsc(salesInvoiceId).stream()
-                .map(this::toView)
-                .toList();
+    public List<CreditNoteView> againstInvoice(long salesInvoiceId, String search) {
+        Specification<CreditNote> ofInvoice = (root, query, builder) ->
+                builder.equal(root.get("salesInvoiceId"), salesInvoiceId);
+        return listed(ofInvoice, search, "id");
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<CreditNoteView> ofCustomer(long customerId) {
-        return creditNotes.findByCustomerIdOrderByCreditNoteDateAscIdAsc(customerId).stream()
-                .map(this::toView)
-                .toList();
+    public List<CreditNoteView> ofCustomer(long customerId, String search) {
+        Specification<CreditNote> ofCustomer = (root, query, builder) ->
+                builder.equal(root.get("customerId"), customerId);
+        return listed(ofCustomer, search, "creditNoteDate");
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<CreditNoteView> between(LocalDate from, LocalDate to) {
+    public List<CreditNoteView> between(LocalDate from, LocalDate to, String search) {
         Objects.requireNonNull(from, "from");
         Objects.requireNonNull(to, "to");
         if (from.isAfter(to)) {
@@ -339,7 +343,31 @@ class CreditNoteServiceImpl implements CreditNoteService {
                     "Date range " + from + " to " + to + " runs backwards. An empty result would look "
                             + "identical to a period with no credit notes in it.");
         }
-        return creditNotes.findByCreditNoteDateBetweenOrderByCreditNoteDateAscIdAsc(from, to).stream()
+        Specification<CreditNote> withinRange = (root, query, builder) ->
+                builder.between(root.get("creditNoteDate"), from, to);
+        return listed(withinRange, search, "creditNoteDate");
+    }
+
+    /**
+     * Target-list row 8 for credit notes: the document number, and the customer it is for.
+     *
+     * <p>Reached by subquery on {@code customerId} rather than by a mapped association, for the
+     * reasons written at {@code TextSearch.matchingRelated}. {@code credit_note.customer_id} is
+     * {@code NOT NULL}, so no credit note can fall out of its own list — but the mechanism is the
+     * same one the sales invoice uses, where {@code series_id} genuinely is nullable, and using two
+     * different mechanisms for one row of the target list is how they come to disagree.
+     */
+    private static Specification<CreditNote> matching(String search) {
+        return TextSearch.<CreditNote>matching(search, "documentNumber")
+                .or(CustomerSearch.matchingCustomer(search, "customerId"));
+    }
+
+    /** One shape for all three lists, so the ordering and the search cannot drift between them. */
+    private List<CreditNoteView> listed(
+            Specification<CreditNote> scope, String search, String orderBy) {
+        return creditNotes.findAll(scope.and(matching(search)),
+                        Sort.by(Sort.Order.asc(orderBy), Sort.Order.asc("id")))
+                .stream()
                 .map(this::toView)
                 .toList();
     }

@@ -103,14 +103,33 @@ public interface CreditNoteService {
     /** @throws CreditNoteNotFoundException if absent */
     CreditNoteView require(long creditNoteId);
 
-    /** Every credit note against one sale, oldest first. */
-    List<CreditNoteView> againstInvoice(long salesInvoiceId);
+    /**
+     * Every credit note against one sale, oldest first.
+     *
+     * <p>⚠️ <strong>All three list methods take {@code search}, including this one, where it is
+     * nearly useless</strong> — a single sale has one or two credit notes against it. It is here
+     * because the route offers one search box over three alternative lookups, and a parameter that
+     * works on two of them and is silently ignored on the third is the defect F5's Phase 0 measured
+     * on this very surface: {@code ?search=} used to be accepted and do nothing, returning the full
+     * list and looking like it had filtered.
+     *
+     * <p>Null or blank means no filter, never "match nothing".
+     */
+    List<CreditNoteView> againstInvoice(long salesInvoiceId, String search);
 
-    /** Every credit note for one customer, oldest first. */
-    List<CreditNoteView> ofCustomer(long customerId);
+    /** Every credit note for one customer, oldest first. Same {@code search} as {@link #againstInvoice}. */
+    List<CreditNoteView> ofCustomer(long customerId, String search);
 
-    /** Credit notes in a date range, both ends inclusive, oldest first. Includes reversals. */
-    List<CreditNoteView> between(LocalDate from, LocalDate to);
+    /**
+     * Credit notes in a date range, both ends inclusive, oldest first. Includes reversals.
+     *
+     * <p>{@code search} matches the document number and the customer's name and VAT number
+     * (target-list row 8). ⚠️ <strong>The series is not searched here and is on the sales invoice
+     * side only</strong>: a credit note has no series of its own, so reaching one would mean a
+     * second hop through the invoice it corrects, for a list that is not paged and is bounded by a
+     * date range. Recorded as a decision rather than left to look like an oversight.
+     */
+    List<CreditNoteView> between(LocalDate from, LocalDate to, String search);
 
     Optional<CreditNoteView> findByJournalEntry(long journalEntryId);
 }

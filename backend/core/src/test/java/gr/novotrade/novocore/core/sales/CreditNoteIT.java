@@ -253,7 +253,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
             creditNotes.preview(request);
             creditNotes.preview(request);
 
-            assertThat(creditNotes.againstInvoice(invoice.id()))
+            assertThat(creditNotes.againstInvoice(invoice.id(), null))
                     .as("previewing twice issued nothing")
                     .isEmpty();
 

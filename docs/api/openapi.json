@@ -1979,6 +1979,13 @@
             "type" : "string",
             "format" : "date"
           }
+        }, {
+          "name" : "search",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -10137,6 +10144,13 @@
             "format" : "date"
           }
         }, {
+          "name" : "search",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
           "name" : "page",
           "in" : "query",
           "required" : false,
@@ -15141,7 +15155,7 @@
       },
       "NewCreditNote" : {
         "type" : "object",
-        "required" : [ "salesInvoiceId", "creditNoteDate", "lines" ],
+        "required" : [ "salesInvoiceId", "documentNumber", "creditNoteDate", "lines" ],
         "properties" : {
           "salesInvoiceId" : {
             "type" : "integer",
@@ -15560,7 +15574,7 @@
       },
       "NewSalesInvoice" : {
         "type" : "object",
-        "required" : [ "customerId", "seriesId", "settlementMethod", "invoiceDate", "lines" ],
+        "required" : [ "customerId", "seriesId", "settlementMethod", "documentNumber", "invoiceDate", "lines" ],
         "properties" : {
           "customerId" : {
             "type" : "integer",

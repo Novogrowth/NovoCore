@@ -585,7 +585,7 @@ class SettlementServiceImpl implements SettlementService {
         List<OpenItem> items = new ArrayList<>();
         if (partyType == PartyType.CUSTOMER) {
             salesInvoices.ofCustomer(partyId).forEach(invoice -> items.add(toOpenItem(invoice)));
-            creditNotes.ofCustomer(partyId).forEach(note -> items.add(toOpenItem(note)));
+            creditNotes.ofCustomer(partyId, null).forEach(note -> items.add(toOpenItem(note)));
             customerCreditsOf(partyId).forEach(credit -> items.add(toOpenItem(credit)));
         } else {
             purchaseInvoices.ofSupplier(partyId).forEach(invoice -> items.add(toOpenItem(invoice)));
@@ -601,7 +601,7 @@ class SettlementServiceImpl implements SettlementService {
         if (partyType == PartyType.CUSTOMER) {
             salesInvoices.between(BEGINNING, FOREVER)
                     .forEach(invoice -> items.add(toOpenItem(invoice)));
-            creditNotes.between(BEGINNING, FOREVER).forEach(note -> items.add(toOpenItem(note)));
+            creditNotes.between(BEGINNING, FOREVER, null).forEach(note -> items.add(toOpenItem(note)));
             customerCredits.findAllByOrderByCreditDateAscIdAsc().stream().map(this::toView)
                     .forEach(credit -> items.add(toOpenItem(credit)));
         } else {

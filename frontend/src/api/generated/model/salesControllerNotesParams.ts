@@ -13,4 +13,5 @@ customerId?: number;
 salesInvoiceId?: number;
 from?: string;
 to?: string;
+search?: string;
 };

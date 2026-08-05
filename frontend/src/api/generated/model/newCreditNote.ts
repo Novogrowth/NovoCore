@@ -12,7 +12,7 @@ import type { NewCreditNoteLine } from './newCreditNoteLine';
 
 export interface NewCreditNote {
   salesInvoiceId: number;
-  documentNumber?: string;
+  documentNumber: string;
   creditNoteDate: string;
   description?: string;
   statedTotal?: Money;

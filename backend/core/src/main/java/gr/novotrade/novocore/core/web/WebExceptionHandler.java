@@ -79,6 +79,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -442,6 +444,72 @@ class WebExceptionHandler {
     ProblemDetail invalidInput(InvalidInputException exception) {
         log.info("Invalid request: {}", exception.getMessage());
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, message(exception));
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // 422 — a rule the DATABASE holds, which no service pre-checked
+    // -------------------------------------------------------------------------------------------
+
+    /**
+     * The safety net for a constraint that reaches the wire, added by F5 (A.1b, 2026-08-05).
+     *
+     * <h2>What it is for, and what it is deliberately not</h2>
+     *
+     * <p>Before this, there was <strong>no handler for {@link DataIntegrityViolationException} at
+     * all</strong>, so any database constraint a service did not pre-check escaped to Boot's default
+     * and answered <strong>500 in the legacy body shape</strong> — no {@code detail}, not RFC 7807,
+     * and indistinguishable to a caller from the server having crashed. Measured on two routes; see
+     * below.
+     *
+     * <p><strong>422, not 500.</strong> The request was understood and a rule about the data refused
+     * it. A caller cannot fix it by correcting their JSON, which is what a 400 would imply, and it is
+     * not an internal failure, which is what a 500 claims.
+     *
+     * <h2>⚠️ Why the message is generic, when every other 422 on this surface says everything</h2>
+     *
+     * <p>The obvious implementation is a map from constraint name to a written sentence. That is
+     * rejected, and for the reason {@code V16} rejected a {@code superseded} flag beside
+     * {@code reversal_of_id}: <strong>it would be a second copy of a rule that already lives in a
+     * service, free to disagree with the first.</strong> The rules stay where they are; this decides
+     * only the <em>shape</em> of the answer when one of them was not consulted.
+     *
+     * <p>The raw exception is also not echoed. It carries the constraint name, the index expression
+     * and the offending key — internal state, and exactly what {@code CLAUDE.md} says a programming
+     * error must not return.
+     *
+     * <p><strong>So: reaching here at all is a defect, and it is logged as one.</strong> A caller
+     * gets an honest, actionable sentence; a maintainer gets the constraint in the log. The right fix
+     * for any occurrence is a pre-check in the service that explains itself, after which this stops
+     * being reached for that rule.
+     *
+     * <h2>The two occurrences that produced it, both the same defect</h2>
+     *
+     * <p>{@code sales_invoice_number_idx} and {@code credit_note_number_idx} are partial unique
+     * indexes on {@code … WHERE reversal_of_id IS NULL}. That predicate excludes the <em>reversing</em>
+     * row and <strong>not the reversed one</strong> — while the service check and the table trigger
+     * both release a reversed document's number. So re-recording a corrected document under its
+     * original number answered 500 on both routes. This handler stops that being a 500; <strong>which
+     * of the three enforcements is wrong is F5's A.1c</strong> and is a separate question.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    ProblemDetail dataIntegrityViolation(DataIntegrityViolationException exception) {
+        // WARN, with the exception: a constraint reaching the web layer means a service did not
+        // pre-check a rule the database holds. The caller's answer is below; this is the maintainer's.
+        log.warn("A database constraint reached the web layer, so some service did not pre-check it. "
+                + "The caller was answered 422 generically; the fix is a pre-check that explains "
+                + "itself.", exception);
+
+        if (exception instanceof DuplicateKeyException) {
+            return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "This would duplicate a record that already exists, and a uniqueness rule "
+                            + "refused it. Nothing was saved. If you are re-entering a document "
+                            + "that was corrected or reversed, its identifying value may still be "
+                            + "held by the original.");
+        }
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY,
+                "A data consistency rule refused this. Nothing was saved. This is a rule the "
+                        + "database holds rather than one this request could describe, so it is "
+                        + "worth reporting if you cannot see what is wrong with what you sent.");
     }
 
     /**

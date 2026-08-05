@@ -3,6 +3,8 @@ package gr.novotrade.novocore.core.support;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -90,11 +92,14 @@ public final class TextSearch {
      *     {@link #escapeLikeWildcards}.
      * @param properties entity property names, in the JPA sense. A dotted path
      *     ({@code "customer.name"}) is walked and works — <strong>note that it produces an inner
-     *     join</strong>, so a row whose association is null drops out of the results entirely. That
-     *     is why nothing in this step uses one: every column searched today is on the root entity.
-     *     It is supported because the first transactional document list will want to search by
-     *     customer name, and discovering then that the mechanism cannot express it would mean
-     *     rewriting it.
+     *     join</strong>, so a row whose association is null drops out of the results entirely. Every
+     *     column searched through this method is on the root entity.
+     *     <p>⚠️ <strong>The dotted path was written for the transactional document lists and cannot
+     *     serve them — established in F5, 2026-08-05.</strong> It needs a mapped association, and
+     *     this codebase does not have one to use: {@code SalesInvoice.customerId} and
+     *     {@code seriesId} are scalar {@code Long}s, as every cross-aggregate reference here is, so
+     *     {@code "customer.name"} would not resolve at all. Use {@link #matchingRelated} for that,
+     *     and see its javadoc for why a subquery is the right answer rather than a workaround.
      * @throws IllegalArgumentException if no property is named. An internal failure by design —
      *     this is our own call site asking to search nothing, never something a caller can send.
      */
@@ -129,6 +134,87 @@ public final class TextSearch {
                 anyColumn.add(builder.like(haystack, needle, ESCAPE));
             }
             return builder.or(anyColumn.toArray(new Predicate[0]));
+        };
+    }
+
+    /**
+     * Rows whose <strong>counterparty or series</strong> matches the term — reached through a scalar
+     * id rather than through a mapped association.
+     *
+     * <h2>Why a subquery, and why not the other two options</h2>
+     *
+     * <p>A document's searchable fields include things that are not on the document: a customer's
+     * name and VAT number, a series' abbreviation. Target-list row 8 names them. Three ways exist
+     * and two are wrong here:
+     *
+     * <ul>
+     *   <li><strong>A mapped association plus {@link #matching}'s dotted path.</strong> Rejected:
+     *       every cross-aggregate reference in this core is a scalar id, deliberately, and adding a
+     *       {@code @ManyToOne} to one entity purely so a search string can walk it changes the
+     *       model to suit a query. It also produces an <strong>inner join</strong>, which would drop
+     *       a document whose reference is null — harmless for {@code customer_id}, which is
+     *       {@code NOT NULL}, and <em>not</em> harmless for {@code series_id}, which is nullable on
+     *       every invoice recorded before R1b.
+     *   <li><strong>Denormalising the customer's name onto the document.</strong> Rejected: a second
+     *       copy of a fact, stale the first time somebody corrects a customer's name — the same
+     *       objection {@code V16} raised against a {@code superseded} flag beside
+     *       {@code reversal_of_id}.
+     *   <li><strong>A subquery on the id.</strong> What this does. No model change, no copy, and a
+     *       row with a null reference simply does not match rather than disappearing.
+     * </ul>
+     *
+     * <p><strong>It is meant to be OR-ed with {@link #matching}</strong>, which is why a blank term
+     * yields an always-true predicate here too: {@code matching(blank).or(matchingRelated(blank))}
+     * has to mean <em>no filter</em>, exactly as each half does alone.
+     *
+     * <p>The related columns still need their own GIN trigram indexes — the subquery is a search
+     * like any other. {@code customer.name} and {@code customer.vat_number} have had theirs since
+     * {@code V28}; the series columns gained theirs in {@code V36}.
+     *
+     * @param term what the operator typed, raw
+     * @param idProperty the scalar id property on the root entity — {@code "customerId"}
+     * @param relatedType the entity that id points at
+     * @param relatedProperties properties on that entity to match, in the JPA sense
+     */
+    public static <E, R> Specification<E> matchingRelated(String term, String idProperty,
+            Class<R> relatedType, String... relatedProperties) {
+        Objects.requireNonNull(idProperty, "idProperty");
+        Objects.requireNonNull(relatedType, "relatedType");
+        if (relatedProperties.length == 0) {
+            throw new IllegalArgumentException(
+                    "TextSearch.matchingRelated needs at least one property to search.");
+        }
+
+        String trimmed = term == null ? null : term.trim();
+        if (trimmed == null || trimmed.isEmpty()) {
+            return (root, query, builder) -> builder.conjunction();
+        }
+        String pattern = "%" + escapeLikeWildcards(trimmed) + "%";
+
+        return (root, query, builder) -> {
+            if (query == null) {
+                // Not reachable from findAll(spec, pageable); stated so a caller who reaches it some
+                // other way gets this rather than a NullPointerException three frames down.
+                throw new IllegalStateException(
+                        "TextSearch.matchingRelated needs a CriteriaQuery to attach a subquery to.");
+            }
+            Subquery<Long> matchingIds = query.subquery(Long.class);
+            Root<R> related = matchingIds.from(relatedType);
+            Expression<String> needle =
+                    builder.function(NORMALISE, String.class, builder.literal(pattern));
+
+            List<Predicate> anyColumn = new ArrayList<>(relatedProperties.length);
+            for (String property : relatedProperties) {
+                Expression<String> haystack =
+                        builder.function(NORMALISE, String.class, related.get(property));
+                anyColumn.add(builder.like(haystack, needle, ESCAPE));
+            }
+            matchingIds.select(related.get("id")).where(builder.or(anyColumn.toArray(new Predicate[0])));
+
+            // `in` rather than `exists`: a null id yields UNKNOWN, which is false in a WHERE — so an
+            // invoice with no series is simply not matched BY THIS predicate, and stays in the result
+            // through whatever it is OR-ed with. An inner join would have removed it from the query.
+            return root.get(idProperty).in(matchingIds);
         };
     }
 
