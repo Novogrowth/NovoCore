@@ -11,6 +11,7 @@ import { useListState } from '@/components/data-table/use-list-state'
 import { PlusIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { localIsoDate } from '@/lib/calendar-date'
 import { Label } from '@/components/ui/label'
 
 import { salesInvoiceColumns } from './sales-invoice-columns'
@@ -30,9 +31,9 @@ import { salesInvoiceColumns } from './sales-invoice-columns'
  */
 function currentYear(): { from: string; to: string } {
   const today = new Date()
-  const iso = (date: Date) => date.toISOString().slice(0, 10)
-  return { from: iso(new Date(today.getFullYear(), 0, 1)), to: iso(today) }
+  return { from: `${today.getFullYear()}-01-01`, to: localIsoDate(today) }
 }
+
 
 /**
  * Sales invoices — **recorded, never issued**.

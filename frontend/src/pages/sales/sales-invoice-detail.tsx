@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { localIsoDate } from '@/lib/calendar-date'
 import { formatMoney, formatQuantity, formatUnitCost } from '@/lib/decimal'
 
 /**
@@ -293,7 +294,7 @@ function StatutoryIdentifiers({ invoice }: { invoice: SalesInvoiceView }) {
 function ReversalAction({ invoiceId }: { invoiceId: number }) {
   const { t } = useTranslation('common')
   const [open, setOpen] = useState(false)
-  const [reversalDate, setReversalDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [reversalDate, setReversalDate] = useState(() => localIsoDate(new Date()))
   const [reason, setReason] = useState('')
 
   // No invalidation of its own: `createQueryClient` invalidates every query on any successful

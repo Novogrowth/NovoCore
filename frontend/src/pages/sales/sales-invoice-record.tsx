@@ -28,6 +28,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { localIsoDate } from '@/lib/calendar-date'
 import { formatMoney } from '@/lib/decimal'
 
 /**
@@ -164,7 +165,7 @@ export function SalesInvoiceRecord() {
     SettlementMethod.ON_ACCOUNT,
   )
   const [documentNumber, setDocumentNumber] = useState('')
-  const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [invoiceDate, setInvoiceDate] = useState(() => localIsoDate(new Date()))
   const [description, setDescription] = useState('')
   const [statedTotal, setStatedTotal] = useState<Money | undefined>(undefined)
   const [roundingAcceptedBy, setRoundingAcceptedBy] = useState('')
