@@ -662,6 +662,64 @@ this inside F5** — F5 keeps `SettlementMethod` exactly as it is.
 argument, and that placement is this session's reading of his reason, **not a fifth requirement he
 stated.**
 
+### ⏸️ HANDOVER — **stopped at a clean point 2026-08-06, on branch `r4-payment-methods`. NOT compacted through**
+
+⚠️ **Stopped on the owner's standing instruction** — *"if you approach your context limit, stop at a
+clean point and write a handover rather than compacting through a build."* **This is that handover.**
+Three commits on the branch; **the tree compiles and nothing is half-built.**
+
+| Commit | What |
+|---|---|
+| `8f1947d` | Part 1 — R2c deferred and split, R4 promoted, the chart-of-accounts decision (C1) |
+| `5fffa4a` | The approved checklist written **at the moment of approval**, plus `CLAUDE.md`'s new anti-pattern (S.3) |
+| `56b06e7` | **`V37`** — the whole migration, plus the AADE README's note 5 (**G.1**, **G.2**) |
+
+**Sub-parts with a verdict so far: A.1 ✅ · A.2 ✅ · A.5 ✅ · G.1 ✅ · G.2 ✅ · S.3 ✅ (schema and
+documentation halves).** ⚠️ **Every other row is untouched and still needs one.** A.6's *decision* is
+encoded in `V37`; its **Java** half is not written.
+
+#### ⭐ What the next session must not re-derive — the two findings that cost this one the most
+
+1. ⚠️ **Annex 8.12's codes are NOT in any XSD.** `paymentMethods-v2.0.1.xsd` defines no code list;
+   the type is a **range** (`xs:int`, 1–8) in `InvoicesDoc-v2.0.1.xsd`. `CLAUDE.md`'s *"codes come
+   from the XSD enumerations"* **has no safe side here** — both halves come from the annex.
+   ✅ **Already read and seeded: code `3` is `Μετρητά`.** Full note in `docs/aade/v2.0.1/README.md`
+   §5. 📌 **`pdftoppm` and ImageMagick are absent on this machine and the Read tool's PDF rendering
+   therefore fails; PyMuPDF (`import fitz`) is installed and works.**
+2. ⚠️ **The inactive-payment-method guard has NO automated test**, and `PROGRESS.md` says it is
+   verified in `R2ReferenceDataContractIT`, which has no payment-method case at all. That is **A.10**
+   and **S.1**, and it is one of `CLAUDE.md`'s two new worked examples.
+
+#### The next action, in order — nothing here is a decision, all of it is execution
+
+1. **`core-api`** — `AadePaymentMethodView` + service on the `StatutoryCodification<V>` contract;
+   `PaymentMethodView` rewritten (surrogate `id`, `accountId`, `aadePaymentMethodId`, `inUse`,
+   ⚠️ **`settlesImmediately()` derived from `accountId != null`**, no `subjectToCashLimit` field);
+   `NewPaymentMethod`; `NewSalesInvoice.settlementMethod` → `@Mandatory Long paymentMethodId`.
+2. ⚠️ **G.1's Java half is the one thing still needing a judgement, and the input is now in hand.**
+   The cash limit derives from the method's AADE article being **code 3**, as a **named constant with
+   the rasterised-read citation** — deliberately **not** a column on the codification, because the
+   €500 limit is *Greek law as Novocore applies it*, not an attribute AADE published, and the
+   codification must stay a faithful copy. 📌 **State the residual rather than closing it: a method
+   with a NULL article gets no limit** (G.2 makes that reachable), so `subjectToCashLimit` is
+   `article == 3`, and a cash-like method created with no article is a hole. **Report it to the
+   owner; do not invent a second signal to plug it.**
+3. **`core`** — entity, repository, `PaymentMethodServiceImpl` (+`create`), controller (+create and
+   the four edit routes), `SalesInvoiceServiceImpl` (`requireActivePaymentMethod`, the posting branch
+   now reading `account_id` instead of `AccountSystemKey`), `CreditNoteServiceImpl`.
+4. **Delete `SettlementMethod` and `SettlementMethodMydataCodeTest`** (B.2) — ⚠️ **96
+   `SettlementMethod.<CONST>` sites across 8 backend test files**, measured; `SalesInvoiceIT` alone
+   has 38. Expect a compile-driven sweep exactly like R1b's 54 construction sites.
+5. **A.9, A.10** — extend `DocumentReferenceGraphIT` with `payment_method`; write the missing guard
+   test **and prove it red against the removed guard first**.
+6. **Spec + client regen (B.3)**, then the frontend (C.1–C.4, D.1, D.2).
+7. **A.3's reset** — `docker/reset-trading-data.sql` must be **re-runnable** and must leave R4's
+   live-leg preconditions re-establishable. ⚠️ **L.0 has to say what the owner clicks**, or **L.9 and
+   L.10 cannot run**.
+
+📌 **`V37` is proven but NOT YET APPLIED to the dev database** — it was validated in a rolled-back
+transaction. The live schema is still pre-R4, and the app image is current as of `8f1947d`.
+
 ### 📋 THE APPROVED BUILD CHECKLIST — **written at the moment of approval, 2026-08-06, before any code**
 
 **Per `CLAUDE.md` §*An approved proposal is a checklist, not a paragraph*.** Every row gets a verdict
