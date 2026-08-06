@@ -111,7 +111,8 @@ export function SalesInvoiceDetail() {
             {t(`SalesChannel.${document.channel}`, { ns: 'enums' })}
           </ReadOnly>
           <ReadOnly label={t('salesInvoices.field.settlementMethod')}>
-            {t(`SettlementMethod.${document.settlementMethod}`, { ns: 'enums' })}
+            {/* ⚠️ R4/C.4: the row's own description, not an i18n enum label. */}
+            {document.paymentMethodDescription}
           </ReadOnly>
           <ReadOnly label={t('salesInvoices.field.description')}>
             {document.description ?? <UnsetValue />}

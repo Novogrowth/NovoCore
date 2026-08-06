@@ -254,7 +254,7 @@ export function CreditNoteRecord() {
                 {t(`SalesChannel.${sale.channel}`, { ns: 'enums' })}
               </Figure>
               <Figure label={t('creditNotes.field.settlementMethod')}>
-                {t(`SettlementMethod.${sale.settlementMethod}`, { ns: 'enums' })}
+                {sale.paymentMethodDescription}
               </Figure>
               <Figure label={t('creditNotes.field.series')}>
                 {sale.seriesAbbreviation ?? '—'}

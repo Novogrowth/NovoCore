@@ -7,7 +7,6 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import {
   AccessLevel,
   Section,
-  SettlementMethod,
   type Me,
   type PaymentMethodView,
 } from '@/api/generated/model'
@@ -53,10 +52,15 @@ const viewer: Me = aUser({
 })
 
 const cash: PaymentMethodView = {
-  method: SettlementMethod.CASH,
+  id: 1,
   abbreviation: 'ΜΕΤΡ',
   description: 'Μετρητά',
-  mydataPaymentCode: 3,
+  aadePaymentMethodId: 3,
+  aadePaymentMethodCode: 3,
+  aadePaymentMethodDescription: 'Μετρητά',
+  accountId: 10,
+  accountName: 'Ταμείο',
+  inUse: false,
   settlesImmediately: true,
   subjectToCashLimit: true,
   sortCode: 10,
@@ -65,7 +69,13 @@ const cash: PaymentMethodView = {
 
 /** ⚠️ One of the three whose AADE code is genuinely open and was deliberately not invented. */
 const stripe: PaymentMethodView = {
-  method: SettlementMethod.STRIPE,
+  id: 2,
+  aadePaymentMethodId: 1,
+  aadePaymentMethodDescription: 'Επαγ. Λογαριασμός Πληρωμών Ημεδαπής',
+  accountId: 11,
+  aadePaymentMethodCode: 1,
+  accountName: 'Stripe',
+  inUse: false,
   abbreviation: 'STRP',
   description: 'Stripe',
   settlesImmediately: true,

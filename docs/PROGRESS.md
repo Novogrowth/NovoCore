@@ -691,7 +691,27 @@ resumption point: the step was scoped at 26 sub-parts and six of them consumed a
 rule's own scoping paragraph — which had exempted *reasons* from needing a checkable referent, two
 commits before a reason was the thing that went wrong.
 
-🟡 **2026-08-06, LATER — ALL MODULES BUILD AND RUN; THREE SPEC-DRIFT TESTS FAIL BY DESIGN.**
+🟢 **2026-08-06, FINAL — THE BACKEND IS GREEN ACROSS EVERY MODULE. Verdicts quoted:**
+
+```
+./mvnw clean verify                 (every module, from clean)
+[INFO] BUILD SUCCESS
+  core-api ....... 66 tests     core ........... 806 tests
+  app ............ 296 tests (+15, 1 skipped: the deliberate LiveSeedTest skip)
+  architecture ... 33 tests     284 tests in the earlier surefire pass
+```
+
+🔴 **THE FRONTEND IS NOT GREEN: 5 failures of 402, all in `payment-methods.test.tsx`**, and they are
+**C.1's file** — the screen still tests the seed-only model (`Open` for an absent myDATA code,
+*"description and sort code, and nothing else"*, the no-Add convention's affordance assertions).
+**C.1 was excluded from the session; those five are exactly its work and nothing else fails.**
+`tsc -b --force` is **clean**, and `npm test` is **397 passed / 5 failed / 41 files**.
+
+**Spec 247 → 257 operations, 231 → 237 schemas.** Client regenerated in the same commit.
+
+*(The earlier record below is kept for its verdict at the time.)*
+
+🟡 **2026-08-06, EARLIER — ALL MODULES BUILD AND RUN; THREE SPEC-DRIFT TESTS FAIL BY DESIGN.**
 
 ```
 ./mvnw clean verify          (every module, from clean)
@@ -714,7 +734,17 @@ build is not green and is not claimed to be.**
 📌 **The single next action is the regen** — `./mvnw verify -Dnovocore.openapi.write=true`, then the
 client, then a re-run. Nothing else is known to be failing.
 
-### ⚠️ THE SORT-CODE COLLISION IS NOT CLOSED. It is still FOUR allocators, and that is a known hole
+### ✅ THE SORT-CODE ALLOCATOR IS CLOSED — one allocator, in production. *(The open record follows.)*
+
+**`NewPaymentMethod.sortCode` is `Integer` and nullable; null means *append at the end*, and
+`PaymentMethodServiceImpl` resolves it to `max + 10`. All four test-side allocators are deleted.**
+⚠️ **The UNIQUE constraint stays and was not dropped quietly:** the column is what a picker is ordered
+by, so two rows sharing a code makes the order between them arbitrary and the list shuffles between
+requests. Defaulting fabricates nothing — `V34` already records that *a sort code has no truth value*
+until somebody chooses one, so supplying *at the end* declines to make the caller invent an answer
+rather than inventing one.
+
+### ⚠️ *(SUPERSEDED)* THE SORT-CODE COLLISION IS NOT CLOSED. It was FOUR allocators
 
 **Reported as a strategy question rather than as four fixed failures, because fixing the failures did
 not fix the cause.** Sort codes are `UNIQUE` on `payment_method`, and the allocators are:

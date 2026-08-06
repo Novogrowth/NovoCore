@@ -12,7 +12,7 @@ import {
   usePaymentMethodControllerPaymentMethods,
   usePaymentMethodControllerReactivate,
 } from '@/api/generated/endpoints/payment-method/payment-method'
-import { Section, SettlementMethod, type PaymentMethodView } from '@/api/generated/model'
+import { Section, type PaymentMethodView } from '@/api/generated/model'
 import { usePermissions } from '@/auth/permissions'
 import { DataTable } from '@/components/data-table/data-table'
 import { useListState } from '@/components/data-table/use-list-state'
@@ -95,22 +95,22 @@ export function PaymentMethodsList() {
         list={list}
         isLoading={methods.isLoading}
         emptyMessage={t('paymentMethods.empty')}
-        getRowId={(row: PaymentMethodView) => String(row.method)}
+        getRowId={(row: PaymentMethodView) => String(row.id)}
       />
     </div>
   )
 }
 
 export function PaymentMethodDetail() {
-  const { method } = useParams<{ method: string }>()
+  const { id } = useParams<{ id: string }>()
   const { t } = useTranslation('common')
   const permissions = usePermissions()
   const queryClient = useQueryClient()
 
   // ⚠️ The enum constant IS the identity — there is no surrogate id, so no Number() here.
-  const settlementMethod = method as SettlementMethod
+  const paymentMethodId = Number(id)
 
-  const query = usePaymentMethodControllerPaymentMethod(settlementMethod)
+  const query = usePaymentMethodControllerPaymentMethod(paymentMethodId)
 
   const describe = usePaymentMethodControllerDescribe()
   const sortCode = usePaymentMethodControllerChangeSortCode()
@@ -121,7 +121,7 @@ export function PaymentMethodDetail() {
 
   const applyResponse = (updated: PaymentMethodView) => {
     queryClient.setQueryData(
-      getPaymentMethodControllerPaymentMethodQueryKey(settlementMethod),
+      getPaymentMethodControllerPaymentMethodQueryKey(paymentMethodId),
       updated,
     )
     void queryClient.invalidateQueries({ queryKey: ['/api/payment-methods'] })
@@ -152,7 +152,7 @@ export function PaymentMethodDetail() {
               disabled={reactivate.isPending}
               onClick={() =>
                 reactivate.mutate(
-                  { method: settlementMethod },
+                  { id: paymentMethodId },
                   { onSuccess: () => void query.refetch() },
                 )
               }
@@ -166,7 +166,7 @@ export function PaymentMethodDetail() {
               disabled={deactivate.isPending}
               onClick={() =>
                 deactivate.mutate(
-                  { method: settlementMethod },
+                  { id: paymentMethodId },
                   { onSuccess: () => void query.refetch() },
                 )
               }
@@ -190,7 +190,7 @@ export function PaymentMethodDetail() {
         <CardContent className="space-y-1">
           <ReadOnlyField
             label={t('paymentMethods.column.method')}
-            value={t(`SettlementMethod.${row.method}`, { ns: 'enums' })}
+            value={row.aadePaymentMethodDescription}
             reason={t('paymentMethods.methodIsIdentity')}
           />
 
@@ -209,7 +209,7 @@ export function PaymentMethodDetail() {
             onSave={async (value) =>
               applyResponse(
                 await describe.mutateAsync({
-                  method: settlementMethod,
+                  id: paymentMethodId,
                   data: { description: value.trim() },
                 }),
               )
@@ -229,7 +229,7 @@ export function PaymentMethodDetail() {
             onSave={async (value) =>
               applyResponse(
                 await sortCode.mutateAsync({
-                  method: settlementMethod,
+                  id: paymentMethodId,
                   data: { sortCode: sortCodeOf(value.trim()) },
                 }),
               )
@@ -248,9 +248,9 @@ export function PaymentMethodDetail() {
           <ReadOnlyField
             label={t('paymentMethods.column.mydataCode')}
             value={
-              row.mydataPaymentCode === undefined
+              row.aadePaymentMethodCode === undefined
                 ? t('paymentMethods.mydataOpen')
-                : String(row.mydataPaymentCode)
+                : String(row.aadePaymentMethodCode)
             }
             reason={t('paymentMethods.mydataFromEnum')}
           />

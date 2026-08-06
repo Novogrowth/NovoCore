@@ -35,7 +35,7 @@ describe('the committed OpenAPI spec', () => {
   it('describes the surface the client is generated from', () => {
     // 176 before R1a, which added 54; 230 before R2, which added 7 on 2026-08-04 — see
     // `client-shape.test.ts` for the breakdown by route group.
-    expect(all.length).toBe(247)
+    expect(all.length).toBe(257)
   })
 
   it('declares a section and a level on every route', () => {
@@ -214,6 +214,8 @@ describe('the committed OpenAPI spec', () => {
      * not this one. That is why +7 routes and +3 here is the right arithmetic rather than a
      * mismatch.
      *
+     * 182 after R4 (2026-08-06): the AADE payment-method codification view and its description
+     * request, `NewPaymentMethod`, and the four payment-method correction requests.
      * 175 after R2b (2026-08-04): `SortCodeRequest`, `PaymentMethodView`, and the two payment-method
      * request records, plus `PaymentMethodSortCodeRequest`. The four document records that gained
      * `sortCode` were ALREADY declaring, so they move the property count and not this one.
@@ -224,6 +226,6 @@ describe('the committed OpenAPI spec', () => {
     expect(
       declaring.length,
       'the number of schemas declaring required fields changed — read the comment above before updating this number',
-    ).toBe(175)
+    ).toBe(182)
   })
 })

@@ -80,7 +80,9 @@ const invoice: SalesInvoiceView = {
   customerId: 7,
   customerName: 'Καφεκοπτεία Σινιόρ',
   channel: 'ECOMMERCE',
-  settlementMethod: 'ON_ACCOUNT',
+  paymentMethodId: 1,
+  paymentMethodDescription: 'Επί πιστώσει',
+  settlesImmediately: false,
   documentNumber: 'ΑΛΠ-1042',
   invoiceDate: '2026-07-20',
   netTotal: { amount: '37.00', currency: 'EUR' },
@@ -214,6 +216,28 @@ const server = setupServer(
   http.get('http://localhost/api/sales-invoices/500', () => HttpResponse.json(invoice)),
   http.get('http://localhost/api/sales-document-series', () =>
     HttpResponse.json({ items: [webSeries] }),
+  ),
+  // ⚠️ R4: the record form reads its methods from the API rather than from an enum.
+  http.get('http://localhost/api/payment-methods', () =>
+    HttpResponse.json({
+      items: [
+        {
+          id: 1,
+          abbreviation: 'ΕΠΙΤ',
+          description: 'Επί πιστώσει',
+          aadePaymentMethodId: 5,
+          aadePaymentMethodCode: 5,
+          aadePaymentMethodDescription: 'Επί Πιστώσει',
+          accountId: 20,
+          accountName: 'Πελάτες',
+          settlesImmediately: false,
+          subjectToCashLimit: false,
+          sortCode: 10,
+          inUse: false,
+          active: true,
+        },
+      ],
+    }),
   ),
   http.get('http://localhost/api/customers', () => HttpResponse.json({ items: [customer] })),
   http.get('http://localhost/api/products', () => HttpResponse.json({ items: [product] })),
@@ -444,17 +468,30 @@ describe('the sales invoice record form', () => {
     expect(screen.getByLabelText('Series')).toBeInTheDocument()
   })
 
-  it('offers a settlement method the server may well refuse, rather than hiding it', async () => {
+  it('offers ACTIVE payment methods only — R4/C.3 supersedes F5 here', async () => {
     renderRecord()
     await screen.findByRole('heading', { name: 'Record invoice' })
 
     /*
-     * R2b's `active` guard refuses recording against a deactivated payment method with a sentence
-     * naming it. This form deliberately offers every method: an option quietly missing from a list
-     * is a worse answer than a refusal that explains itself, and it is the R2b finding in reverse —
-     * a screen's filter standing in for a rule. The picker must therefore not be empty.
+     * ⚠️ THIS TEST ASSERTED THE OPPOSITE UNTIL R4, AND THE REVERSAL IS THE OWNER'S DECISION.
+     *
+     * F5's argument was that offering every method — deactivated ones included — is better than an
+     * option quietly missing, because the server's refusal explains itself and a screen's filter
+     * standing in for a rule is the R2b finding in reverse.
+     *
+     * ⭐ It does not survive contact with a form that CREATES a document. There is no "current one"
+     * to preserve here, which is the whole thing R2b's active-plus-current-labelled pattern exists
+     * for, and offering an option solely in order to refuse it afterwards is worse than not
+     * offering it. The picker reads /api/payment-methods?active=true.
+     *
+     * ⚠️ The SERVER GUARD STAYS either way. The picker is not the guard — SalesInvoiceIT's A.10
+     * asserts the refusal, and it was proven red against the removed guard.
      */
-    expect(screen.getByLabelText('Settlement method')).toHaveTextContent('On account')
+    // ⚠️ And nothing is PRESELECTED any more. The old default was SettlementMethod.ON_ACCOUNT —
+    // an enum constant that always existed. There is no enum and the list starts empty, so a
+    // default would mean the form picking one of the owner's rows on his behalf.
+    expect(screen.getByLabelText('Settlement method')).toBeInTheDocument()
+    expect(screen.getByLabelText('Settlement method')).not.toHaveTextContent('Επί πιστώσει')
   })
 
   /**

@@ -106,11 +106,9 @@ export function CreditNoteDetail() {
             label={t('creditNotes.field.settlementMethod')}
             hint={t('creditNotes.derivedHint')}
           >
-            {document.settlementMethod ? (
-              t(`SettlementMethod.${document.settlementMethod}`, { ns: 'enums' })
-            ) : (
-              <UnsetValue />
-            )}
+            {/* ⚠️ R4/C.4: the row's OWN description, not an i18n enum label. A payment method is
+                business data now, and business data is one Greek string — see NewPaymentMethod. */}
+            {document.paymentMethodDescription ?? <UnsetValue />}
           </ReadOnly>
           <ReadOnly label={t('creditNotes.field.description')}>
             {document.description ?? <UnsetValue />}

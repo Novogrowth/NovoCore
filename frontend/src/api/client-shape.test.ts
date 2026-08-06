@@ -91,7 +91,7 @@ describe('the generated client', () => {
   it('covers the whole surface', () => {
     // An anti-vacuity guard: if the generated output moved, every assertion below would pass
     // against an empty string and report a green build for a check that examined nothing.
-    expect(all.length).toBe(247)
+    expect(all.length).toBe(257)
     expect(source.length).toBeGreaterThan(100_000)
   })
 
@@ -117,9 +117,9 @@ describe('the generated client', () => {
     // `.../sort-code` routes — the business's own ordering key, which is what an employee's list
     // is sorted by — and six on `/api/payment-methods`, a table that had no screen at all because
     // "SettlementMethod is an enum" was carried into R2's scope as "nothing to edit".
-    expect(writes.length).toBe(149)
+    expect(writes.length).toBe(156)
     // 96 before R2b; the two new reads are `GET /api/payment-methods` and its single-row route.
-    expect(reads.length).toBe(98)
+    expect(reads.length).toBe(101)
   })
 
   it('wires every write as a mutation', () => {

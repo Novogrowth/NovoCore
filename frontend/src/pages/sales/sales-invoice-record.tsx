@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import { useCustomerControllerCustomers } from '@/api/generated/endpoints/customer/customer'
 import { useProductControllerProducts } from '@/api/generated/endpoints/product/product'
+import { usePaymentMethodControllerPaymentMethods } from '@/api/generated/endpoints/payment-method/payment-method'
 import { useSalesDocumentSeriesControllerSeries } from '@/api/generated/endpoints/sales-document-series/sales-document-series'
 import {
   useSalesControllerPreview,
@@ -12,7 +13,6 @@ import {
 import { useTaxLookupControllerChargeTypes } from '@/api/generated/endpoints/tax-lookup/tax-lookup'
 import {
   SalesLineType,
-  SettlementMethod,
   type Money,
   type NewSalesInvoice,
   type NewSalesInvoiceLine,
@@ -161,9 +161,7 @@ export function SalesInvoiceRecord() {
 
   const [seriesId, setSeriesId] = useState<string | null>(null)
   const [customerId, setCustomerId] = useState<string | null>(null)
-  const [settlementMethod, setSettlementMethod] = useState<string | null>(
-    SettlementMethod.ON_ACCOUNT,
-  )
+  const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null)
   const [documentNumber, setDocumentNumber] = useState('')
   const [invoiceDate, setInvoiceDate] = useState(() => localIsoDate(new Date()))
   const [description, setDescription] = useState('')
@@ -174,6 +172,9 @@ export function SalesInvoiceRecord() {
   const [lines, setLines] = useState<LineDraft[]>([emptyLine(0)])
 
   const series = useSalesDocumentSeriesControllerSeries({ active: true })
+  // ⚠️ R4/C.3 — ACTIVE ONLY, and that SUPERSEDES the comment further down this file.
+  // Payment methods are user-authored rows now, so there is no enum to enumerate.
+  const paymentMethods = usePaymentMethodControllerPaymentMethods({ active: true })
   const customers = useCustomerControllerCustomers({ active: true })
   const products = useProductControllerProducts({ active: true })
   const chargeTypes = useTaxLookupControllerChargeTypes({ active: true })
@@ -200,7 +201,7 @@ export function SalesInvoiceRecord() {
     return {
       customerId: identifier(customerId),
       seriesId: identifier(seriesId),
-      settlementMethod: settlementMethod as SettlementMethod,
+      paymentMethodId: Number(paymentMethodId),
       documentNumber,
       invoiceDate,
       ...(description ? { description } : {}),
@@ -294,14 +295,14 @@ export function SalesInvoiceRecord() {
            * can reach it.
            */}
           <LabelledSelect
-            id="settlementMethod"
+            id="paymentMethodId"
             label={t('salesInvoices.field.settlementMethod')}
-            value={settlementMethod}
-            onValueChange={setSettlementMethod}
-            options={Object.values(SettlementMethod).map((method) => ({
-              value: method,
-              label: t(`SettlementMethod.${method}`, { ns: 'enums' }),
-            }))}
+            value={paymentMethodId}
+            onValueChange={setPaymentMethodId}
+            options={idOptions(
+              paymentMethods.data?.items ?? [],
+              (item) => item.description,
+            )}
           />
           <div className="space-y-1">
             <Label htmlFor="description">{t('salesInvoices.field.description')}</Label>

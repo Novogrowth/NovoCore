@@ -28,7 +28,7 @@ export function paymentMethodColumns(t: TFunction): ColumnDef<PaymentMethodView,
       accessorKey: 'abbreviation',
       header: sortableHeader(t('paymentMethods.column.abbreviation')),
       cell: ({ row }) => (
-        <Link to={`${BASE}/${row.original.method}`} className="font-medium hover:underline">
+        <Link to={`${BASE}/${row.original.id}`} className="font-medium hover:underline">
           {row.original.abbreviation}
         </Link>
       ),
@@ -41,13 +41,13 @@ export function paymentMethodColumns(t: TFunction): ColumnDef<PaymentMethodView,
     },
     {
       id: 'mydataPaymentCode',
-      accessorFn: (method) => method.mydataPaymentCode,
+      accessorFn: (method) => method.aadePaymentMethodCode,
       header: sortableHeader(t('paymentMethods.column.mydataCode')),
       // ⚠️ An absent code is genuinely OPEN — AADE's code for ACS cash-on-delivery, PayPal and
       // Stripe has not been established and was deliberately not invented. A dash would read as
       // "nobody filled it in", which is a different and false statement.
       cell: ({ row }) =>
-        row.original.mydataPaymentCode ?? (
+        row.original.aadePaymentMethodCode ?? (
           <Badge variant="outline" title={t('paymentMethods.mydataOpenTitle')}>
             {t('paymentMethods.mydataOpen')}
           </Badge>
