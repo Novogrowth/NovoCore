@@ -4,7 +4,7 @@
 **Status:** Accepted — accounts and ledger support implemented in build step 7 (migrations V14, V15);
 the invoice side arrives in steps 8 and 9
 
-Answers **Q14**, the one item in `PROGRESS.md` recorded as a real design gap in the brief rather
+Answers **Q14**, the one item in `HISTORY.md` recorded as a real design gap in the brief rather
 than a clarification.
 
 ## Decision

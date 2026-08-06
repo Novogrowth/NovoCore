@@ -57,7 +57,7 @@ import tools.jackson.databind.JsonNode;
  *   <li><strong>Credentials come from the environment.</strong> Not from a system property, not from a
  *       file, not from an argument — so the password does not reach a shell history, a build log, a
  *       process list or a transcript. Same standing rule the Drive refresh tokens are handled under
- *       (see {@code PROGRESS.md}'s closed credential incident).
+ *       (see {@code HISTORY.md}'s closed credential incident).
  *   <li><strong>The target must be free of trading data.</strong> Step 15's D4 settled this: fresh
  *       only, refuse otherwise, and say why. The API deliberately has no update-or-insert semantics
  *       (step 14's D4 — commands, not CRUD), so a re-run cannot be idempotent, and a second quarter

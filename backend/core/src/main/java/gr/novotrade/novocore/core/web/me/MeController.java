@@ -82,7 +82,7 @@ class MeController {
      * changing someone's role or deactivating an account does not take effect on a live session
      * until it ends. Fixing that properly is a decision about per-request freshness with real cost
      * attached, not something to slip in behind an identity endpoint — it is recorded in
-     * {@code PROGRESS.md} rather than quietly half-solved here.
+     * {@code HISTORY.md} rather than quietly half-solved here.
      */
     @GetMapping(path = "/api/me", produces = MediaType.APPLICATION_JSON_VALUE)
     Me me() {

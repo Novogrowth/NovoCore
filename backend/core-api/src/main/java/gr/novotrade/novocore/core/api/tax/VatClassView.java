@@ -88,7 +88,7 @@ public record VatClassView(
      * The VAT on a net amount, rounded once with the mode stated explicitly.
      *
      * <p>Arithmetic only. This says nothing about which accounts the VAT posts to or whether it
-     * is computed per line or per document — that is unresolved (PROGRESS.md Q14) and belongs to
+     * is computed per line or per document — that is unresolved (HISTORY.md Q14) and belongs to
      * the journal engine. It lives here so the multiply-and-round-once step exists in exactly one
      * place instead of being rewritten at every call site, which is where per-line cent
      * discrepancies come from.

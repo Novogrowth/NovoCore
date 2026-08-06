@@ -2,7 +2,7 @@
 -- V31 — DOCUMENT REFERENCE DATA (R1a). TWO LAYERS, AND THE DISTINCTION IS WHO AUTHORS A ROW
 -- =========================================================================================
 --
--- Governed by `CLAUDE.md` §"The document model", item 5, and by `docs/PROGRESS.md` under
+-- Governed by `CLAUDE.md` §"The document model", item 5, and by `docs/HISTORY.md` under
 -- "Why the model changed". Read one of those before changing anything here.
 --
 -- -----------------------------------------------------------------------------------------

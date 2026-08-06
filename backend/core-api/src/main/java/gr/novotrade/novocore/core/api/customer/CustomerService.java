@@ -19,7 +19,7 @@ import java.util.Optional;
  * merge aliases the old id forward and never rewrites history, which needs an alias table and a
  * decision about what happens to postings already made under the retired id. Neither exists until
  * the ledger does (step 7), and building half of it now would mean a merge that appears to work
- * and loses references. Recorded in {@code PROGRESS.md} rather than stubbed.
+ * and loses references. Recorded in {@code HISTORY.md} rather than stubbed.
  *
  * <p>There is no delete, for the reason stated across the core: history and journal lines.
  */

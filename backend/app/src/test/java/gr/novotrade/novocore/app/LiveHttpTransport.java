@@ -23,7 +23,7 @@ import org.springframework.web.util.DefaultUriBuilderFactory;
  * against a random test port, and — for the seed pass that populates the live Compose database —
  * against a real server over HTTPS". Step 15 shipped 15a and 15b and the seam kept exactly one
  * implementation, so the live Compose database was never populated by anything. See the F0 section of
- * {@code PROGRESS.md}.
+ * {@code HISTORY.md}.
  *
  * <h2>Three decisions worth reading before changing this</h2>
  *

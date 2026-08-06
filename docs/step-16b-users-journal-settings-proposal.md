@@ -80,14 +80,21 @@ technically immutable value — or the missing write route reads like an oversig
 The brief says: *"Human-facing journal entry numbering (continuous, source-prefixed) was decided but
 never built."*
 
-`PROGRESS.md:3194` records the opposite, explicitly:
+`HISTORY.md`, *Step 14 → Not blocking anything, but unanswered*, records the opposite, explicitly:
 
 > **Q40** Does a journal entry need a human-facing entry number? The id is the handle today. […] it
 > carries a format decision nobody has been asked — per-year reset? a prefix per source? Nothing was
 > guessed.
 
-and Q40 still appears in the *blocking* list at `PROGRESS.md:3609`, widened by step 10 to cover
-freight allocations too. The context primer says the same. So there is no decision to implement.
+and Q40 still appears under *Also still open*, widened by step 10 to cover freight allocations too.
+The context primer says the same. So there is no decision to implement.
+
+> ⚠️ **Corrected by U2a, 2026-08-06, and the way it was wrong is the point.** Both citations above
+> were **line numbers** — `PROGRESS.md:3194` and `PROGRESS.md:3609` — and **both had drifted long
+> before U2a touched anything**: 3194 had become Q1's guard-count table and 3609 F4's javadoc
+> finding. Neither mentioned Q40. Nothing failed, and nothing could have. **A reference by line
+> number into an append-only file is broken by construction** — see `CLAUDE.md`, *a citation by line
+> number into an append-only file*. Cited by section now.
 
 **Recommendation: defer, and say so in the listing.** Reasons, in order of weight:
 

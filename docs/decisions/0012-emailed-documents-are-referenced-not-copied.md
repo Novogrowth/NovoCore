@@ -145,7 +145,7 @@ Scope, so it is neither over- nor under-applied:
 - **`attachmentsOf` returns no bytes**; whether a filename is itself restricted is the `Section`
   question, which is the half of Q44 still open.
 
-Recorded in three places on purpose: here, in `PROGRESS.md`, and in `EmailSender.downloadAttachment`'s
+Recorded in three places on purpose: here, in `HISTORY.md`, and in `EmailSender.downloadAttachment`'s
 own javadoc — the last being where whoever wires the screen will actually be looking.
 
 ## Status of the step 11 reasoning that was kept

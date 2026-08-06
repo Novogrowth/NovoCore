@@ -14,7 +14,7 @@ import { NEEDS_EXEMPTION_REASON, NEEDS_VAT_NUMBER } from './vat-status'
  *
  * ⚠️ **What it cannot catch:** a change to what an *existing* status requires — if `NON_EU_EXPORT`
  * started requiring an exemption reason tomorrow, nothing here would know. That needs the flags on
- * the wire, which is a backend change and is recorded in `PROGRESS.md`.
+ * the wire, which is a backend change and is recorded in `HISTORY.md`.
  */
 describe('the VAT status rules mirrored from the backend', () => {
   it('names only statuses that exist', () => {

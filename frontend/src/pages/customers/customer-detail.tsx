@@ -34,7 +34,7 @@ import { Input } from '@/components/ui/input'
  * **Those controls are shown disabled with the reason, never hidden.** Hiding them would leave
  * somebody hunting for a setting that exists on every other customer; leaving them live would send
  * a request the backend refuses — today, for two of the three, with a bare `400` carrying no
- * message at all (see `PROGRESS.md`, backend item 4). Disabled-with-a-reason is the only one of the
+ * message at all (see `HISTORY.md`, backend item 4). Disabled-with-a-reason is the only one of the
  * three that tells the truth.
  *
  * ⚠️ **The reasons are written here rather than fetched, and that is a mirror.** The backend has

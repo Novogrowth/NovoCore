@@ -145,7 +145,7 @@ eleven sites.
 
 ⚠️ **It does not close the drift class, and should not be relied on as if it did.** A reference-typed
 field that is mandatory in fact is still optional in the generated types, so a fixture can still omit
-one. Only the backend declaring those (`PROGRESS.md` item 8) lets `tsc` catch it — and no test in
+one. Only the backend declaring those (`HISTORY.md` item 8) lets `tsc` catch it — and no test in
 this repository can catch it honestly, because every other candidate source of truth about the wire
 is hand-authored here.
 

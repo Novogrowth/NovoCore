@@ -54,7 +54,7 @@ transaction.
 
 ### Alternatives considered
 
-1. **Immutable for everything.** The original recommendation in `PROGRESS.md`, and the safest.
+1. **Immutable for everything.** The original recommendation in `HISTORY.md`, and the safest.
    Rejected because it makes the common case — a mistyped receipt — as expensive as the rare one,
    and a ledger where most reversals are typos is one where nobody reads reversals.
 2. **Editable for everything, relying on the audit log.** Rejected: the audit log is NovoCore's own

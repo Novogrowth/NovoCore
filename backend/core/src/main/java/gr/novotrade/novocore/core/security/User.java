@@ -27,7 +27,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
  *
  * <p>One role per user. Brief §7's "multiple custom roles" is read as the system supporting many
  * role <em>definitions</em>, not many roles per person — the natural reading for a company of
- * this size, and recorded in {@code PROGRESS.md} as an interpretation to correct if wrong.
+ * this size, and recorded in {@code HISTORY.md} as an interpretation to correct if wrong.
  */
 @Entity
 @Table(name = "app_user")

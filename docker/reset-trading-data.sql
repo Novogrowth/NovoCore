@@ -8,7 +8,7 @@
 --   * The Google Drive OAuth client secrets and refresh tokens live in the `setting` table, put
 --     there once during commissioning. They are NOT in docker/.env, which holds three keys — the
 --     database password, the site address and the backup encryption key. Dropping the volume means
---     re-running the consent flow for two Google accounts, and (see PROGRESS.md's closed incident)
+--     re-running the consent flow for two Google accounts, and (see HISTORY.md's closed incident)
 --     creating fresh destination folders under the new grants, because a `drive.file` grant is
 --     per-file and does not survive re-consent.
 --   * NOVOCORE_BOOTSTRAP_OWNER_USERNAME/_PASSWORD are deliberately blank once an owner exists, so

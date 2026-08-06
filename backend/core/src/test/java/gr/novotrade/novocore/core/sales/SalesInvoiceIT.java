@@ -1284,7 +1284,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
          * ⚠️ <strong>R4 A.10 — the guard this asserts shipped in R2b with NO TEST AT ALL, and a
          * document said otherwise.</strong>
          *
-         * <p>{@code PROGRESS.md} recorded the payment-method {@code active} guard as
+         * <p>{@code HISTORY.md} recorded the payment-method {@code active} guard as
          * <em>"verified in {@code R2ReferenceDataContractIT} over real HTTP"</em>. That class has no
          * payment-method case; its {@code "not for new documents"} assertion is the <em>document
          * type</em> refusal. {@code PaymentMethodIT} round-trips deactivate and never records an

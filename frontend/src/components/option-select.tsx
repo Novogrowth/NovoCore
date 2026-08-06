@@ -71,7 +71,7 @@ export function OptionSelect({
         ⚠️ **What is cut is the END, not the start** — `line-clamp-1` truncates trailing text, so the
         `code —` prefix was never at risk and the *group* suffix was what disappeared. That
         correction matters because the opposite was written into two documents before it was
-        checked; see PROGRESS.md, R2b §5.
+        checked; see HISTORY.md, R2b §5.
 
         A width change only. F10 still owns the general styling sweep.
       */}

@@ -15,7 +15,7 @@ target/
 
 # The F0 seed runner. It is written to hold the Owner password in plain text between being
 # filled in and being deleted, and it sits in the repository root where `git add -A` would
-# find it. Ignored so that window cannot end in a commit. See docs/PROGRESS.md's F0 section.
+# find it. Ignored so that window cannot end in a commit. See docs/HISTORY.md's F0 section.
 /seed.ps1
 
 # Claude Code's per-checkout permission allow/deny list. It is a statement about what one

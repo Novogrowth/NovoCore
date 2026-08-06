@@ -34,7 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>{@code ProductService} has plain reads for the core's own costing and posting rules — a FIFO
  * calculation cannot work from a blanked cost — and {@code ...For(viewer)} variants that apply
- * {@code ProductView.redactedFor}. {@code PROGRESS.md} flagged the risk in step 5 and named this
+ * {@code ProductView.redactedFor}. {@code HISTORY.md} flagged the risk in step 5 and named this
  * controller as the thing to review for it: <em>anything answering a request from a person must use
  * the {@code For} variants.</em>
  *

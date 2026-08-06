@@ -12,7 +12,7 @@ import { VatStatus } from '@/api/generated/model'
  * `vat-status.test.ts` pins both sets against the spec's enum, so a value **added** to
  * `VatStatus` fails here rather than silently defaulting to "requires nothing". It cannot catch a
  * change to what an existing value requires; that would need the flags on the wire, which is a
- * backend change and is noted in `PROGRESS.md`.
+ * backend change and is noted in `HISTORY.md`.
  *
  * From `VatStatus.java`: `DOMESTIC(false, false)`, `INTRA_EU_B2B(true, false)`,
  * `NON_EU_EXPORT(false, false)`, `EXEMPT(false, true)`, `OTHER(false, false)`.

@@ -169,7 +169,7 @@ a body of `{"name": "..."}`).
 
 ### D7 — The product redaction convention becomes an enforced rule
 
-`PROGRESS.md` flags this explicitly and says the first Products controller must be reviewed for it:
+`HISTORY.md` flags this explicitly and says the first Products controller must be reviewed for it:
 
 > `ProductService` has plain read methods (unredacted, for the core's own costing rules) and
 > `...For(viewer)` variants that redact. **Anything answering a request from a person must use the

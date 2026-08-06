@@ -20,7 +20,7 @@ package gr.novotrade.novocore.core.api.tax;
  * </ul>
  *
  * <p>Deliberately no method here says what VAT to charge or where it posts. That is the open VAT
- * posting design (PROGRESS.md Q14), and an enum quietly asserting "intra-EU means zero" would be
+ * posting design (HISTORY.md Q14), and an enum quietly asserting "intra-EU means zero" would be
  * that decision made by accident, in the wrong place.
  *
  * <p><strong>Nothing validates a VAT number against VIES.</strong> The AADE/VIES lookup is its own

@@ -52,7 +52,7 @@ it.** A mock, a stub, an intercepted request or a fixture cannot, because it ret
 told to return. This is not advice about test *coverage* — screen tests over a mock server are
 correct and stay. It is about what a given check is *evidence for*.
 
-**It has already produced a confident, wrong entry in `PROGRESS.md`.** The Products create form was
+**It has already produced a confident, wrong entry in `HISTORY.md`.** The Products create form was
 cleared as working by a headless-browser check that **intercepted `POST /api/products` and answered
 it with a fabricated `201`** — deliberately, to avoid writing to the development database. The check
 captured the payload, the payload read correctly, and the screen navigated to the new product. Every
@@ -1055,7 +1055,7 @@ Ask before implementing. Several entity field lists and mechanisms in the brief 
 
 **When a proposal with more than one sub-part is approved, write the approval into `docs/PROGRESS.md` as an explicit checklist — one line per sub-part — at the moment it is approved.** Not as prose describing what was agreed. Prose is where a sub-part goes to be forgotten, because a summary of what *was* built reads as complete no matter what is missing from it.
 
-**This rule exists because it has already cost something.** Step 15's proposal had three commits in it — 15a, 15b and **15c, the seed pass that populates the live Compose database** — and the step was agreed at *full* scope, which included 15c. 15a and 15b landed. 15c did not. `PROGRESS.md` recorded "15a — the harness", "15b, completed", and **never mentioned 15c in either direction** — not delivered, not deferred, not cut. Nothing was wrong with any sentence in that close-out; it was accurate about everything it described. The gap was that it summarised what was built instead of reconciling against what was approved.
+**This rule exists because it has already cost something.** Step 15's proposal had three commits in it — 15a, 15b and **15c, the seed pass that populates the live Compose database** — and the step was agreed at *full* scope, which included 15c. 15a and 15b landed. 15c did not. `HISTORY.md` recorded "15a — the harness", "15b, completed", and **never mentioned 15c in either direction** — not delivered, not deferred, not cut. Nothing was wrong with any sentence in that close-out; it was accurate about everything it described. The gap was that it summarised what was built instead of reconciling against what was approved.
 
 The cost surfaced two steps later, in the frontend: the development database held nothing but Flyway's own seed, the first real screen correctly showed an empty table, and a session was spent proving the data had never existed rather than building anything. The seam 15c needed (`HttpTransport`) had been sitting in the repository the whole time with a javadoc naming the driver that was never written.
 
@@ -1138,17 +1138,80 @@ a later reader — or a later paragraph in the same file — quotes it as curren
 disagree, exactly as they did over backend queue item 3, except that here **both records were written
 by someone who checked.**
 
-⚠️ **`PROGRESS.md` is known to contain unswept instances of this** — per-step route and test counts
+⚠️ **`HISTORY.md` is known to contain unswept instances of this** — per-step route and test counts
 that are correct in their step's context and wrong lifted out. The headline ones were date-stamped
-during U1; the rest were deliberately not swept, and that is stated rather than claimed as done. The
-sweep belongs with **U2**, the `PROGRESS.md`/`HISTORY.md` split.
+during U1; the rest were deliberately not swept, and that is stated rather than claimed as done.
+
+⚠️ **This paragraph used to end *"the sweep belongs with U2"*, and U2's own checklist never contained
+it — which is §*An approved proposal is a checklist* failing one level up.** Corrected by U2a,
+2026-08-06: **the sweep is roadmap row `U4`**, and it is **deferred rather than scheduled**.
+
+⭐ **The reason to re-price it rather than inherit it, which is the part worth keeping.** The split
+did not merely postpone the sweep — **it changed what the sweep is worth.** `HISTORY.md`'s header
+states the file is not authoritative for current state, so every figure inside it is now framed by
+its container; the danger this rule exists to name — a figure lifted out and read as current — is
+substantially reduced by the split itself. **Executing the sweep on the original justification would
+be acting on a reason that no longer holds.** And it **edits** historical entries, which is why it
+could not share a session with a split whose whole safety property was that it changed no content.
+
+### ⚠️ A citation by LINE NUMBER into an append-only file is broken by construction
+
+**Cite a section heading or a step id. Never a line number.** An append-only file grows above the
+thing you cited, so the number is wrong the next time anybody appends — and **nothing anywhere
+reports it**. No test reads a prose citation, no build fails, and the reference goes on looking
+precise while pointing somewhere else entirely.
+
+**The worked examples, found by U2a on 2026-08-06 and already broken when it found them:**
+`docs/step-16b-users-journal-settings-proposal.md` cited `PROGRESS.md:3194` for a Q40 record and
+`PROGRESS.md:3609` for Q40 in a blocking list. **By the time anyone looked, 3194 was Q1's
+guard-count table and 3609 was F4's javadoc finding.** Neither mentioned Q40. They had drifted as
+the file grew, independently of any split, and the drift was invisible.
+
+📌 **This is the same family as *a claim recorded at close-out is a CLAIM*** — a checkable referent
+that nobody checked — arriving through the citation rather than through the claim. **The difference
+worth noting: a wrong claim can at least be grepped. A wrong line number resolves to real text, which
+reads as confirmation.**
+
+### ⚠️ An item deferred inside a step's record has no owner once that record closes
+
+**When something is marked *deferred*, *queued* or *unscheduled* inside a step's write-up, it gets a
+roadmap row AT THAT MOMENT — not when somebody later notices it.** A step's record closes and stops
+being read; anything living only inside it stops being tracked, silently, and the tell is that
+nothing ever fails.
+
+**Four worked examples, all found by U2a while splitting `PROGRESS.md`, and all of which a purely
+chronological split would have archived without a sound:**
+
+| Buried in | Now | What was owed |
+|---|---|---|
+| **F5's B.4** | roadmap **F5b** | An `el-GR-x-icu` collation on `DOCUMENT_NUMBER`, conditional on an owner check that is still outstanding |
+| **W1's *Queued out of W1*** | roadmap **W1c** | Two consumer clean-ups, marked *Queued*, tracked nowhere |
+| **R1's decision A** | roadmap **R1c** | The Fees question — *"unscheduled, not forgotten"*, with no row to be unforgotten in |
+| **8a's design item H.2** | roadmap **8c** | A discriminated union modelled flat, with a named trigger (**F6**) and nothing watching for it |
+
+⚠️ **And one of the four had a SECOND record describing a row that did not exist.** The primer stated
+that F5's B.4 *"had its own roadmap row"*. It did not — there was no such row until U2a created one.
+**A document asserting that something is tracked is worse than silence**, because it ends the search.
+
+**The tell to listen for is the same grammar every time:** *"deferred, with its own row"*,
+*"queued"*, *"recorded, not built"*. **Each is a claim that somebody else is holding it.** Check that
+they are — `grep` the roadmap for the row.
 
 ## Session close-out
 
 When the user says "close the session" (or clearly equivalent phrasing like "let's stop here" or "end session"), perform these six actions **in this order**, regardless of what step or task is in progress:
 
 1. **Reconcile every approved checklist this session touched.** For each sub-part of every proposal in play, state which of exactly three things it is: **done** (and how it was verified), **explicitly deferred** (with the reason, and where it is now recorded so it can be picked up), or **still open**. Reconcile against the *approved* list, not against memory of what was worked on — the failure mode this exists to catch is a sub-part nobody has thought about since it was approved, and a summary written from what was built cannot see it. **A sub-part with no verdict is a finding**, and says so in the close-out. If a proposal was approved this session and never written down as a checklist, write it down now, then reconcile against it.
-2. **Update `docs/PROGRESS.md`.** Record: which step(s) were worked on, what's now done and verified, what's still open or blocked (including any question numbers from the product brief), and the concrete next action for the following session. Overwrite stale status, don't just append. The reconciliation from step 1 goes here, as the checklist with its verdicts — not as a paragraph summarising them.
+2. **Update `docs/PROGRESS.md`, and move the closed step into `docs/HISTORY.md`.** Record: which step(s) were worked on, what's now done and verified, what's still open or blocked (including any question numbers from the product brief), and the concrete next action for the following session. Overwrite stale status, don't just append. The reconciliation from step 1 goes here, as the checklist with its verdicts — not as a paragraph summarising them.
+
+   ⚠️ **Since U2a (2026-08-06) this is FOUR moves, not one**, and skipping the middle two is how a live obligation gets archived:
+
+   1. **Verdict every row in place**, in `PROGRESS.md`, where the current step's section lives.
+   2. ⚠️ **Extract the step's live residuals FIRST** — anything deferred, queued, unscheduled or awaiting an answer. Each gets a **roadmap row** (see §*An item deferred inside a step's record has no owner*) and a line in `PROGRESS.md`'s open-items section. **Do this before the section moves, not after.**
+   3. **Move the closed section to `docs/HISTORY.md`**, at the top under the index, and add its index row. Append corrections inside entries; never edit one in place.
+   4. **Flip the step's row in `PROGRESS.md`'s single status table.**
+
+   ⚠️ **There is EXACTLY ONE status table in this repository's documentation, and it is in `PROGRESS.md`.** `HISTORY.md`'s index carries **no status column**, deliberately. Do not add a summary table above the real one, a convenience copy below it, or a per-step status list anywhere else — **eight scattered status locations inside one file is what U2a existed to fix**, and the roadmap already owns the sequence and the scheduling glyphs.
 3. **Update `docs/novocore-context-primer.md`.** Reflect any changes to build status, resolved decisions, or open items so the primer stays accurate for a fresh chat session. Don't let it drift out of sync with what actually happened.
 4. **Update `docs/novocore-roadmap.md`.** Move any step that finished to 🟢 Done, mark the next one **Current**, and fill in the `Actual` hours and token columns for the work this session covered. **Measure, never estimate** — see below. **There is one roadmap.** `docs/novocore-frontend-roadmap.md` was deleted on 2026-08-02 and merged into it; backend and frontend are one sequence because several steps span both. Do not recreate a second roadmap file — a second record of the same thing is what let the backend queue and the frontend roadmap disagree about item 3 for a week.
 5. **Commit, once, covering everything.** Stage and commit all outstanding changes — the session's work *and* the three documents above — in a single commit whose message summarizes what was done this session. If the work is incomplete or known-broken, say so explicitly in the message rather than implying it's finished.

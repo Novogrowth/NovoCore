@@ -116,7 +116,7 @@ So the proposed rule is:
   in step 15, each with a test;
 - **decisions** (something that needs a ruling, not a fix) — a Q-number, raised before the fix, same
   as every previous step;
-- **accepted limitations** — recorded in `PROGRESS.md` with the reason, not silently left.
+- **accepted limitations** — recorded in `HISTORY.md` with the reason, not silently left.
 
 This is what makes step 15's size uncertain, and it is the right uncertainty to accept.
 

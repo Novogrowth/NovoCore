@@ -7,7 +7,7 @@ because they no longer proceed independently — several steps below span both.
 **Legend:** 🟢 Done · 🟡 **Current** · 🔴 Not started · ⚪ Placement proposed, not decided, or optional
 
 **Step IDs are deliberately not renumbered.** `0`–`16b` (backend), `F0`–`F11` (frontend) and `S1`/`S2`
-keep the identifiers used in `PROGRESS.md`, commit messages and every ADR. New work takes new prefixes
+keep the identifiers used in `HISTORY.md`, commit messages and every ADR. New work takes new prefixes
 (`Q`, `R`, `D`, `X`, `M`, `U`) rather than displacing anything.
 
 **`U` = a session that changes documentation and governance and produces no production code.** U1 is
@@ -134,7 +134,13 @@ frontend work that must land before any adapter is built.
 |   C2 | Cash limit is TWO thresholds — needs a retail/B2B distinction ᶜ² | — |  |  | ⚪ Raised by R4, 2026-08-06 ᶜ² |
 |   D2 | Product categories, 3 levels ᵗ          |     — |        |       | ⚪ Before the Woo load (19) |
 |   R3 | Self-supply posting paths ˢ             |     — |        |       | ⚪ Not schedulable — accountant |
-|   U2 | Split `PROGRESS.md` / `HISTORY.md` ᵘ²   |     — |        |       | ⚪ Whenever a session has slack |
+|  U2a | Split `PROGRESS.md` / `HISTORY.md` ᵘ²   |     — |        |       | 🟢 Done |
+|  U2b | The split's drift guards ᵘ²ᵇ            |     — |        |       | 🔴 **Next after R4** — not optional |
+|   U4 | The dated-figure sweep ᵘ⁴               |     — |        |       | ⚪ Deferred, **re-price before scheduling** |
+|  F5b | `el-GR-x-icu` on `DOCUMENT_NUMBER` ᶠ⁵ᵇ  |     — |        |       | ⚪ Conditional on an owner check |
+|  W1c | W1's two consumer clean-ups ʷ¹ᶜ         |     — |        |       | ⚪ Queued |
+|  R1c | Fees / *Έξοδα και κρατήσεις* ʳ¹ᶜ        |     — |        |       | ⚪ Cut from R1, unscheduled |
+|   8c | `NewPurchaseInvoiceLine`'s flat union ⁸ᶜ |    — |        |       | ⚪ **Trigger: before F6 binds it** |
 |  M0a | Manager chart mapping — no code ᵐ⁰      |     — |        |       | ⚪ Unblocked, any time |
 |  M0b | Trial import, one real year ᵐ⁰          |     — |        |       | ⚪ After D1/D3/D4, before 24 |
 |   8b | Consumer cleanup — optional ᵈᵉᶜ         |     — |        |       | ⚪ Optional      |
@@ -214,8 +220,10 @@ column, cosmetic) is now an entry in F10's display-defects list; 2b (sort code a
 their destinations — see ʳ²ᶜ. **It is not a schedulable item any more and must not be picked up as one.**
 
 **Q1, 8a, R1a, R1b, R2 and R2b are all 🟢 Done (R1b, R2 and R2b on 2026-08-04).** The running
-order is above, in the table, and **`PROGRESS.md`'s *What is next, in one place* follows it rather
-than restating it.** ⚠️ **R1 split
+order is above, in the table. ⚠️ **`PROGRESS.md`'s *What is next, in one place* no longer exists** —
+U2a merged it into that file's **single status table**, because two status tables covering
+overlapping sets of steps is exactly the drift this file's own rules exist to prevent. **This table
+remains the record of the SEQUENCE; `PROGRESS.md` carries the STATUS.** ⚠️ **R1 split
 into R1a and R1b on 2026-08-03**, and the boundary was test-facing: R1a could not change what any
 existing test asserts, and R1b changed what *every* sales-invoice test constructs — so a red build
 in R1a was a failure in new code, and in R1b it could be either. **That split paid for itself:** every
@@ -256,7 +264,7 @@ used to end *"the individual slots are NOT [decided]"* and *"whether D1 and D3 l
 is an open decision below"*. **Both were answered by the owner's sequencing decision on 2026-08-04**:
 **D1 + D3 + D4 + D5 are one block, after F5 and before F6** — see ˢᵉᑫ above and the rows themselves.
 U3's four placements stand unchanged (M0a unblocked; M0b after D1/D3/D4; D2 before the Woo load; two
-requirements moved into steps 21 and 22). Full reasoning in `PROGRESS.md` under *U3*.
+requirements moved into steps 21 and 22). Full reasoning in `HISTORY.md` under *U3*.
 
 ⚠️ **What the sequencing decision did NOT change: the gate is still what matters.** Four of the six
 now have slots, and a slot is a weaker guarantee than a deadline — **a block that slips as a block
@@ -488,7 +496,7 @@ is finding defects and it found nine, each needing a decision, a root-cause fix 
 nine were recurrences of one pattern, which meant naming an anti-pattern and building three guards.
 **The single most useful calibration point in this file: an estimate for "validate what we built" is
 really an estimate for finding nothing.** Steps 24 and 25 have the same character. Full detail in
-`PROGRESS.md`.
+`HISTORY.md`.
 
 **ᵐ Step 16a — four backend prerequisites, plus session eviction** (`fad0d11`), a defect latent since
 step 4. The four: `GET /api/me`; `PATCH /api/me/language` (**V27**); preview endpoints for sales
@@ -528,12 +536,12 @@ brand pass itself was 0.20 h and 96k out. Given its own row so a measured figure
 per-session table is condensed away.
 
 **ᶠ⁰ F0 — the seed pass had never been written.** Step 15's proposal scheduled it as commit 15c, the
-step was agreed at full scope, 15a and 15b landed and 15c did not, and `PROGRESS.md` never mentioned it
+step was agreed at full scope, 15a and 15b landed and 15c did not, and `HISTORY.md` never mentioned it
 in either direction. This is why an approved proposal is written down as a checklist, one line per part,
 at the moment of approval. Built as `521a601`. **Re-seeding is `docker/reset-trading-data.sql`, never
 `docker compose down -v`** — on this stack `down -v` also destroys the commissioned Google Drive refresh
 tokens and the Owner account, neither reproducible from `docker/.env`. The fixture's exact contents,
-measured off the seeded database, are in `PROGRESS.md`.
+measured off the seeded database, are in `HISTORY.md`.
 
 **ᶠ²ᵃ The customer VAT class override — deferred out of F2, and moved to step 18 on 2026-08-02.**
 `vatClassOverrideId` and `PATCH …/vat-class-override` exist and are customer-only; *"this customer is
@@ -580,7 +588,7 @@ restoration: it still has exactly one row, and that row now sits where the work 
 **ᵘ¹ U1 — roadmap unification and documentation reconciliation** (2026-08-02). Not a build step and it
 never had an estimate: two roadmap files became this one, fourteen design decisions that existed only
 in chat were written into the repository, ADR 0016 was added, and **the credit-note rename landed —
-U1's, not Q1's**. Its findings are in `PROGRESS.md` under *Roadmap unification*. U1 is what the `U`
+U1's, not Q1's**. Its findings are in `HISTORY.md` under *Roadmap unification*. U1 is what the `U`
 prefix defined at the top of this file means.
 
 ✅ **U1 carries the credit-note rename.** `CreditNoteService.issue(NewCreditNote)` → `record(...)`,
@@ -767,22 +775,85 @@ themselves are small diffs.
 **Item 3 is closed as stale.** It asked for an owner decision between a real search endpoint and
 relabelling the products filter box. **That decision was made and the work delivered by S1** on
 2026-08-01 — `?search=` exists on seven routes, the box sends it, and `sku=`/`ean=` stay exact for
-scanners. `PROGRESS.md` still listed it as *"needs an owner decision first"*; the two records
-disagreed and `PROGRESS.md` was the stale one.
+scanners. `HISTORY.md` still listed it as *"needs an owner decision first"*; the two records
+disagreed and `HISTORY.md` was the stale one.
 
-**ᵘ² U2 — split `PROGRESS.md`.** 📍 **Confirmed 2026-08-04 as OUTSIDE the sequence: whenever a session
-has slack.** It is not "next" and never blocks anything, which is precisely why it needs a row that
-says so — an unscheduled item sitting in a sequence reads as skipped rather than as unscheduled.
-⚪ **Unscheduled, and deliberately not started.** That file is **~6,000
-lines, append-only, and the first file every session reads.** It contains per-step route counts and
-test counts that are correct in their own context and wrong lifted out; **the headline ones were
-date-stamped during U1, the rest were not swept — stated rather than claimed.**
+**ᵘ² U2a — split `PROGRESS.md` / `HISTORY.md`. 🟢 DONE 2026-08-06.** `PROGRESS.md` was **9,577 lines,
+811 KB, ~200k tokens**, and the first file every session read. It is now **1,396 lines**;
+`HISTORY.md` is **8,339**, append-only, indexed by step id, with a header stating it is **not
+authoritative for current state**.
 
-The shape: **`PROGRESS.md` becomes short and always-current** — state, next step, open items.
-**Everything historical moves to `HISTORY.md`, append-only and explicitly not authoritative for current
-state.** The reason is not length: **a document that is only ever appended to cannot stay true**, and
-the backend-queue-item-3 disagreement already cost a session. Governed by `CLAUDE.md` §*Every figure
-written into a document carries a date or a step reference*, whose unswept instances this step closes.
+⭐ **The size was not the defect, and the boundary is not chronological.** Phase 0 found **live status
+in eight places inside one file**, two opposite orderings with no marked seam, and a section headed
+*"Next action — read this first"* sitting at **line 8305 of 9,577** whose own subheading was stale by
+nine steps. **The boundary is what a sentence CLAIMS, not when it was written:** a section is live if
+a future session must act on it — an open verdict, an unmet obligation, a named trigger, or a
+specification a step adopts — and historical if it records what a past session did. All 56 `##`
+sections were verdicted against that rule and approved individually before anything moved.
+
+⚠️ **Three things it deliberately did NOT do**, each with a row of its own rather than a note:
+**U2b** carries the drift guards; **U4** carries the dated-figure sweep; and the **four buried
+obligations it surfaced** became F5b, W1c, R1c and 8c.
+
+📌 **`git log --follow docs/HISTORY.md` reaches all 97 pre-split commits** — the rename was committed
+on its own, with no content change, because git computes rename detection from a delete/add pair and
+a rename-plus-edit is not one. **The accepted cost: `--follow` on `PROGRESS.md` starts at U2a.**
+Exactly one of the two files can inherit the history.
+
+**ᵘ²ᵇ U2b — the split's drift guards. 🔴 Next after R4's close-out, and NOT optional.** Three tests
+plus a CI change: **(1)** a step id has a `##` section in **exactly one** of the two files;
+**(2)** every `PROGRESS.md`/`HISTORY.md` reference names a file that exists; **(3)** `HISTORY.md`'s
+*not authoritative* header is present; **(4)** **exactly one** table matches `| Step | … | Status |`.
+
+⚠️ **(5) is the one that makes the others worth having: neither CI workflow triggers on `docs/*.md`.**
+`frontend.yml` watches `frontend/**` and `docs/api/openapi.json`; `backend.yml` watches `backend/**`.
+**A docs-only edit — precisely the change these guards exist for — would not run them.** Without the
+path change the first four are decoration.
+
+⭐ **R4's close-out is guard (1)'s positive control, executed for real rather than against a fixture** —
+R4 is the first step to cross the PROGRESS → HISTORY boundary after the guard exists.
+
+**ᵘ⁴ U4 — the dated-figure sweep. ⚪ Deferred by the owner 2026-08-06. RE-PRICE IT; DO NOT INHERIT ITS
+JUSTIFICATION.** Per-step route and test counts inside `HISTORY.md` are correct in their step's
+context and wrong lifted out; U1 date-stamped the headline ones and left the rest.
+
+⚠️ **`CLAUDE.md` and this footnote both used to assign this to U2, and U2's own checklist never
+contained it** — §*An approved proposal is a checklist* failing one level up. Both now point here.
+
+⭐ **The split changed the sweep's PRICE, not merely its timing.** `HISTORY.md`'s header states the
+file is not authoritative for current state, so **every figure inside it is already framed by its
+container** — which is most of what the sweep was for. And the sweep **edits** historical entries,
+which is why it could not share a session with a split whose safety property was that it changed no
+content.
+
+**ᶠ⁵ᵇ F5b — `ORDER BY … COLLATE "el-GR-x-icu"` on `DOCUMENT_NUMBER`.** ⚪ **Deferred out of F5 as its
+sub-part B.4; given a row by U2a, 2026-08-06.** Conditional on **whether a real Prosvasis Go document
+number carries Greek letters — the owner's check, still outstanding.** The two collations agree on
+Latin document numbers, which is the whole basis of the deferral. ⚠️ **A Spring Data `Sort` cannot
+express `COLLATE`**, so applying it means leaving the `Pageable`-driven path for that one property;
+the note saying where is at `SalesInvoiceServiceImpl.SORTABLE`.
+
+⚠️ **It had NO row until U2a, and the primer asserted that it did** — see ʷ below. A second record
+describing a row that does not exist is worse than silence, because it ends the search.
+
+**ʷ¹ᶜ W1c — W1's two consumer clean-ups.** ⚪ **Marked *Queued out of W1* on 2026-08-04 and tracked
+nowhere; given a row by U2a.** `CustomerView.systemRecord():Optional<CustomerSystemKey>` reads as if
+it returns the key while the wire carries a boolean from `isSystemRecord()` — `AccountView.systemKeyIfAny()`
+is this codebase's own idiom for the fix. And the settings screen still computes `configured` from
+`value !== ''` rather than the now-documented `unset`.
+
+**ʳ¹ᶜ R1c — Fees / *Έξοδα και κρατήσεις*.** ⚪ **Cut from R1 as decision A — *"unscheduled, not
+forgotten"*, with no row to be unforgotten in; given one by U2a.** ⚠️ Likely a **generalisation of
+`ChargeType` rather than a sibling**: *Delivery* and *COD fee* already exist as `ChargeType` rows, and
+a second table would be two records of one thing. **The question that decides it:** does Go's
+*Έξοδα και κρατήσεις* list contain those same two rows? If yes, `ChargeType` is what changes.
+
+**⁸ᶜ 8c — `NewPurchaseInvoiceLine` is a discriminated union modelled as a flat record.** ⚪ **Recorded
+by 8a as design item H.2; given a row by U2a.** Five components of which **at most three can ever be
+present**, selected by `type`. **No `required` list can express that** — OpenAPI needs `oneOf` with a
+discriminator, and the generated TypeScript would then be two types rather than one with five optional
+fields. `@ConditionallyMandatory` keeps the contract incomplete rather than self-contradictory, which
+is correct *for now*. ⚠️ **Named trigger: before a screen binds this record — which is F6.**
 
 **ᵘ³ U3 — eleven design decisions written into the repository** (2026-08-03). **Documentation and
 governance only: no production code, no schema, no migration, no test changed.** Eleven decisions had
@@ -801,7 +872,7 @@ a cross-cutting obligation (ᵇˢ).
 ⚠️ **Nothing ⚪ was promoted or reordered beyond the four decided placements**, and the
 D1/D3-versus-F5 question is in *Open decisions* stated as a trade rather than resolved. Full
 reasoning, the four prompt-versus-repository discrepancies it reported, and the two things the
-repository already said that sharpened D4 and D5 are in `PROGRESS.md` under *U3*.
+repository already said that sharpened D4 and D5 are in `HISTORY.md` under *U3*.
 
 **Measured, per the method below** — window `fadcddd` (R1a's close-out, 2026-08-03 20:44) to this
 session's commit. **127 events, 0.242 h active against 0.263 h wall clock, 90k out, 13.0M in.
@@ -870,7 +941,7 @@ be user-creatable because more will be needed.
   creates his own through R2's screens, choosing each AADE type himself rather than having one
   inferred.
 
-Reasoning in full in `PROGRESS.md` under *Why the model changed*; the governing statement is
+Reasoning in full in `HISTORY.md` under *Why the model changed*; the governing statement is
 `CLAUDE.md` §*The document model*, item 5.
 
 **ʳᵇ R1b — document reference data, behavioural. ✅ DONE 2026-08-04.** ⚠️ **The approved checklist
@@ -1100,7 +1171,7 @@ unbroken requirement, **gaps do not matter.** Simple per-type counters. **None o
 and no conflict with "numbers are recorded, never generated"** — that rule is about documents an
 external party issues, and `CLAUDE.md` now carries the carve-out explicitly.
 
-⭐ **Step 7 filed this question already, and it names D4's two open decisions.** `PROGRESS.md`,
+⭐ **Step 7 filed this question already, and it names D4's two open decisions.** `HISTORY.md`,
 journal engine: *"**No entry number.** The id is the handle. A human-facing sequential number is a
 real thing an accountant asks for and carries a format decision (per-year reset? prefix per source?)
 nobody has been asked."* **Those two are D4's to answer.**
@@ -1135,7 +1206,7 @@ document in one must carry **the correction date**, not the original document's 
 confirm this against the code — it ran none.** ⚠️ **Confirming what reversals do today is D5's first
 task.**
 
-⚠️ **Two statements elsewhere in `PROGRESS.md` are built on this feature's absence and change meaning
+⚠️ **Two statements elsewhere in `HISTORY.md` are built on this feature's absence and change meaning
 the day it exists.** Step 3: *"There is no delete, only `deactivate`. **With no period locking** there
 is no point at which an account is safely finished with."* Step 7: `entry_date` *"has a floor of
 2000-01-01 and **no upper bound**, because a forward-dated accrual is legitimate and **there is no
@@ -1187,7 +1258,7 @@ official one.** One layer, not two.
 | Fact | Evidence |
 |---|---|
 | ⚠️ **There is NO alias field on an account** | `Account` has `code`, `name`, `account_type`, `account_kind`, `sub_ledger_type`, `system_key`, `group_id`, `display_order`, `active`, `expected_to_clear`, `elp_code` — **and nothing else**. `AccountView` carries the same set. **Not built, per the owner's instruction** |
-| **The chart is Novocore's own 65 accounts across 13 groups**, built from scratch at step 3 | `V4__chart_of_accounts.sql`; recorded under *Step 3* in `PROGRESS.md` |
+| **The chart is Novocore's own 65 accounts across 13 groups**, built from scratch at step 3 | `V4__chart_of_accounts.sql`; recorded under *Step 3* in `HISTORY.md` |
 | **`code` is deliberately blank** and **`elp_code` is null on every row** | Step 3's decision — both were to come from the accountant. `AccountSystemKey` exists precisely because neither is usable as a handle |
 
 ⚠️ **An observation this raises, flagged for the owner and NOT acted on:** the chart today carries
@@ -1506,7 +1577,7 @@ way to represent the ordinary case where they differ — which is also the case 
 exists to find.
 
 **This is recorded as an open question and nothing is decided from it.** It is stated here, and
-against F5 in `PROGRESS.md`, so that whoever reaches step 22 knows the question predates them and
+against F5 in `HISTORY.md`, so that whoever reaches step 22 knows the question predates them and
 whoever extends a document screen knows not to answer it by accident.
 
 **ᵐᵍ 24 — the migration is the shared deadline for six ⚪ rows.** D5, D4, D1, D3, M0 and R3 all have

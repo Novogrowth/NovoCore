@@ -245,7 +245,7 @@ FROM (VALUES
     -- timing gap in either direction and must return to zero once both sides have arrived.
     ('Current Liabilities',      1, 'Goods Received / Invoice Received clearing', 'LIABILITY', 'CONTROL', 'SUPPLIER', 'GOODS_RECEIVED_INVOICE_RECEIVED_CLEARING', true),
     -- A single VAT account is almost certainly insufficient. Left as one pending the VAT
-    -- posting design (PROGRESS.md Q14), which is a real gap rather than a clarification.
+    -- posting design (HISTORY.md Q14), which is a real gap rather than a clarification.
     ('Current Liabilities',      2, 'VAT payable',                     'LIABILITY', 'STANDARD',      NULL,            NULL, false),
     ('Current Liabilities',      3, 'Income tax payable',              'LIABILITY', 'STANDARD',      NULL,            NULL, false),
     ('Current Liabilities',      4, 'Social security payable',         'LIABILITY', 'STANDARD',      NULL,            NULL, false),
@@ -294,7 +294,7 @@ FROM (VALUES
     -- that gross margin reflects the loss honestly, but a separate account so sale-driven COGS
     -- stays uncontaminated. One account rather than three — which of the three a given
     -- write-off was belongs on the transaction as a reason, not in the chart of accounts.
-    -- That reason field is a step 6 obligation, recorded in PROGRESS.md.
+    -- That reason field is a step 6 obligation, recorded in HISTORY.md.
     --
     -- Distinct from the "Damaged Goods" inventory Location (brief §6). The Location says stock
     -- is unsellable but still an asset; this account is where it goes when it is written off
