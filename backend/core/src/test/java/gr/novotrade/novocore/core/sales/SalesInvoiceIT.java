@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import gr.novotrade.novocore.core.AbstractCoreIntegrationTest;
+import gr.novotrade.novocore.core.testsupport.PaymentMethodFixture;
 import gr.novotrade.novocore.core.testsupport.SalesDocumentFixture;
 import gr.novotrade.novocore.core.api.account.AccountSystemKey;
 import gr.novotrade.novocore.core.api.account.BalanceSide;
@@ -47,7 +48,6 @@ import gr.novotrade.novocore.core.api.sales.SalesInvoiceSort;
 import gr.novotrade.novocore.core.api.settings.SettingKeys;
 import gr.novotrade.novocore.core.api.settings.SettingsService;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceView;
-import gr.novotrade.novocore.core.api.sales.SettlementMethod;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.PageRequest;
 import gr.novotrade.novocore.core.api.shared.PageResponse;
@@ -95,6 +95,9 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
     private static final AtomicInteger NUMBERS = new AtomicInteger();
 
     @Autowired
+    private PaymentMethodFixture paymentMethods;
+
+    @Autowired
     private SalesInvoiceService salesInvoices;
 
     @Autowired
@@ -137,7 +140,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
     private SalesDocumentSeriesService salesSeries;
 
     @Autowired
-    private PaymentMethodService paymentMethods;
+    private PaymentMethodService paymentMethodService;
 
     /**
      * The series every sale in this class is recorded in — R1b made one mandatory.
@@ -211,7 +214,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "20.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), paymentMethods.onAccount(),
                     number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(2L), UnitCost.ofEur("50.000000")))));
@@ -248,7 +251,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "20.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT, number(), JULY,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(), number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(3L), UnitCost.ofEur("50.000000")))));
 
@@ -278,7 +281,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             ProductView repair = service("SIIT-03", "80.00");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), paymentMethods.onAccount(),
                     number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             repair.id(), Quantity.of(1L), UnitCost.ofEur("80.000000")))));
@@ -302,7 +305,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
                     .findFirst().orElseThrow().id();
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT, number(), JULY,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(), number(), JULY,
                     List.of(
                             NewSalesInvoiceLine.product(
                                     beans.id(), Quantity.of(1L), UnitCost.ofEur("50.000000")),
@@ -332,7 +335,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(reduced.id(), 5L, "40.000000");
 
             salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.SKROUTZ), SettlementMethod.ON_ACCOUNT, number(), VAT_DAY,
+                    buyer.id(), series(SalesChannel.SKROUTZ), paymentMethods.onAccount(), number(), VAT_DAY,
                     List.of(
                             NewSalesInvoiceLine.product(
                                     standard.id(), Quantity.of(1L), UnitCost.ofEur("100.000000")),
@@ -367,7 +370,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
                     customer("Override").id(), vatClasses.requireByCode("1131").id());
 
             SalesInvoiceView fromCustomer = salesInvoices.record(NewSalesInvoice.of(
-                    overridden.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
+                    overridden.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(),
                     number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("100.000000")))));
@@ -376,7 +379,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             assertThat(fromCustomer.vatTotal()).isEqualTo(Money.ofEur("13.00"));
 
             SalesInvoiceView fromLine = salesInvoices.record(NewSalesInvoice.of(
-                    overridden.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
+                    overridden.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(),
                     number(), JULY,
                     List.of(NewSalesInvoiceLine
                             .product(beans.id(), Quantity.of(1L), UnitCost.ofEur("100.000000"))
@@ -409,7 +412,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "8.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    retail.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.CASH,
+                    retail.id(), series(SalesChannel.STORE_AND_PHONE), paymentMethods.cash(),
                     number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("20.000000")))));
@@ -432,7 +435,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "8.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    retail.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.CARD_POS,
+                    retail.id(), series(SalesChannel.STORE_AND_PHONE), paymentMethods.cardPos(),
                     number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("20.000000")))));
@@ -450,7 +453,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "8.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.BANK_DEPOSIT,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.bankDeposit(),
                     number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("20.000000")))));
@@ -470,7 +473,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
 
             assertThatExceptionOfType(InvalidSalesInvoiceException.class)
                     .isThrownBy(() -> salesInvoices.record(NewSalesInvoice.of(
-                            retail.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.CASH,
+                            retail.id(), series(SalesChannel.STORE_AND_PHONE), paymentMethods.cash(),
                             number(), JULY,
                             List.of(NewSalesInvoiceLine.product(
                                     machine.id(), Quantity.of(1L), UnitCost.ofEur("600.000000"))))))
@@ -491,7 +494,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             List<Long> ids = new ArrayList<>();
             for (int i = 0; i < 12; i++) {
                 ids.add(salesInvoices.record(NewSalesInvoice.of(
-                        buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
+                        buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(),
                         number(), JULY,
                         List.of(NewSalesInvoiceLine.product(
                                 beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000")))))
@@ -666,7 +669,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 100L, "4.000000");
 
             NewSalesInvoice request = NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(),
                     number(), JULY,
                     List.of(
                             NewSalesInvoiceLine.product(
@@ -713,7 +716,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
 
             long entriesBefore = journal.entriesBetween(JULY, JULY).size();
             NewSalesInvoice request = NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(),
                     documentNumber, JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000"))));
@@ -750,7 +753,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "4.000000");
 
             NewSalesInvoice request = NewSalesInvoice.of(
-                            buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
+                            buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(),
                             number(), JULY,
                             List.of(NewSalesInvoiceLine.product(
                                     beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000"))))
@@ -791,13 +794,13 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             // before they have filled in the rest of the form.
             String taken = number();
             salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT, taken, JULY,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(), taken, JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000")))));
 
             assertThatExceptionOfType(InvalidSalesInvoiceException.class)
                     .isThrownBy(() -> salesInvoices.preview(NewSalesInvoice.of(
-                            buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
+                            buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(),
                             taken, JULY,
                             List.of(NewSalesInvoiceLine.product(
                                     beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000"))))))
@@ -806,7 +809,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             // A cash sale over the statutory limit is refused before it is priced into existence.
             assertThatExceptionOfType(InvalidSalesInvoiceException.class)
                     .isThrownBy(() -> salesInvoices.preview(NewSalesInvoice.of(
-                            buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.CASH,
+                            buyer.id(), series(SalesChannel.STORE_AND_PHONE), paymentMethods.cash(),
                             number(), JULY,
                             List.of(NewSalesInvoiceLine.product(
                                     beans.id(), Quantity.of(1L), UnitCost.ofEur("5000.000000"))))));
@@ -825,7 +828,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "4.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                            buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
+                            buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(),
                             number(), JULY,
                             List.of(NewSalesInvoiceLine.product(
                                     beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000"))))
@@ -850,7 +853,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "4.000000");
 
             NewSalesInvoice request = NewSalesInvoice.of(
-                            buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
+                            buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(),
                             number(), JULY,
                             List.of(NewSalesInvoiceLine.product(
                                     beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000"))))
@@ -883,7 +886,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "4.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT, number(), JULY,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(), number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000")))));
 
@@ -907,7 +910,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
                     MARCH, StockLocation.INVENTORY, List.of("SIIT-SN-A", "SIIT-SN-B")));
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), paymentMethods.onAccount(),
                     number(), JULY,
                     List.of(NewSalesInvoiceLine.serializedProduct(
                             machine.id(), UnitCost.ofEur("2400.000000"), List.of("SIIT-SN-B")))));
@@ -941,7 +944,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
                     MARCH, StockLocation.INVENTORY, List.of("SIIT-SN-C")));
 
             salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), paymentMethods.onAccount(),
                     number(), JULY,
                     List.of(NewSalesInvoiceLine.serializedProduct(
                             machine.id(), UnitCost.ofEur("2400.000000"), List.of("SIIT-SN-C")))));
@@ -951,7 +954,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             // arrive to back it with. So this refuses instead of recording a shortfall.
             assertThatExceptionOfType(InvalidStockConsumptionException.class)
                     .isThrownBy(() -> salesInvoices.record(NewSalesInvoice.of(
-                            buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.ON_ACCOUNT,
+                            buyer.id(), series(SalesChannel.STORE_AND_PHONE), paymentMethods.onAccount(),
                             number(), JULY,
                             List.of(NewSalesInvoiceLine.serializedProduct(machine.id(),
                                     UnitCost.ofEur("2400.000000"), List.of("SIIT-SN-C"))))))
@@ -960,7 +963,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             // And a serial nobody ever received is a lookup failure, which is a different answer.
             assertThatExceptionOfType(SerializedUnitNotFoundException.class)
                     .isThrownBy(() -> salesInvoices.record(NewSalesInvoice.of(
-                            buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.ON_ACCOUNT,
+                            buyer.id(), series(SalesChannel.STORE_AND_PHONE), paymentMethods.onAccount(),
                             number(), JULY,
                             List.of(NewSalesInvoiceLine.serializedProduct(machine.id(),
                                     UnitCost.ofEur("2400.000000"), List.of("SIIT-SN-NOPE"))))));
@@ -985,7 +988,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
                     NewBundleComponent.one(grinder.id()), NewBundleComponent.one(beans.id())));
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT, number(), JULY,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(), number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             bundle.id(), Quantity.of(1L), UnitCost.ofEur("135.000000")))));
 
@@ -1018,7 +1021,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
                     NewBundleComponent.one(grinder.id()), NewBundleComponent.one(beans.id())));
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT, number(), JULY,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(), number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             bundle.id(), Quantity.of(1L), UnitCost.ofEur("135.000000")))));
             List<Money> before = invoice.lines().getFirst().components().stream()
@@ -1051,7 +1054,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             String documentNumber = number();
 
             NewSalesInvoice request = NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(),
                     documentNumber, JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000"))));
@@ -1072,7 +1075,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
 
             assertThatExceptionOfType(InvalidSalesInvoiceException.class)
                     .isThrownBy(() -> salesInvoices.record(NewSalesInvoice.of(
-                            buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
+                            buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(),
                             number(), JULY,
                             List.of(NewSalesInvoiceLine.product(
                                     beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000"))))))
@@ -1092,7 +1095,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "20.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT, number(), JULY,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(), number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(2L), UnitCost.ofEur("50.000000")))));
             assertThat(inventory.sellableStockOf(beans.id())).isEqualTo(Quantity.of(8L));
@@ -1115,7 +1118,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "20.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT, number(), JULY,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(), number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("50.000000")))));
             salesInvoices.reverse(invoice.id(), JULY, null);
@@ -1142,9 +1145,18 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             return new SalesDocumentFixture(salesDocumentTypes, salesSeries, "SIIT" + suffix);
         }
 
+        /** The same as {@link #saleIn}, with the payment method named — R4's A.10 needs to pin it. */
+        private SalesInvoiceView saleWith(long seriesId, ProductView product, long paymentMethodId) {
+            return salesInvoices.record(NewSalesInvoice.of(
+                    customer("PM " + paymentMethodId + " " + seriesId).id(), seriesId,
+                    paymentMethodId, number(), JULY,
+                    List.of(NewSalesInvoiceLine.product(
+                            product.id(), Quantity.of(2L), UnitCost.ofEur("50.000000")))));
+        }
+
         private SalesInvoiceView saleIn(long seriesId, ProductView product) {
             return salesInvoices.record(NewSalesInvoice.of(
-                    customer("Series " + seriesId).id(), seriesId, SettlementMethod.ON_ACCOUNT,
+                    customer("Series " + seriesId).id(), seriesId, paymentMethods.onAccount(),
                     number(), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             product.id(), Quantity.of(2L), UnitCost.ofEur("50.000000")))));
@@ -1293,16 +1305,19 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             ProductView beans = goods("SIIT-R4-01", "50.00");
             stock(beans.id(), 20L, "20.000000");
             long seriesId = own("-PM").stockMoving(SalesChannel.ECOMMERCE);
+            // ⚠️ Created rather than seeded: R4 ships the table empty, so a test that records a
+            // sale authors its own method exactly as the owner will.
+            long methodId = paymentMethods.onAccount();
 
             // It works before the deactivation, so the refusal below is about the deactivation and
             // not about the fixture — the same shape as the inactive-series test above.
-            SalesInvoiceView before = saleIn(seriesId, beans);
+            SalesInvoiceView before = saleWith(seriesId, beans, methodId);
             assertThat(before.id()).isPositive();
 
-            paymentMethods.deactivate(SettlementMethod.ON_ACCOUNT);
+            paymentMethodService.deactivate(methodId);
             try {
                 assertThatExceptionOfType(InvalidSalesInvoiceException.class)
-                        .isThrownBy(() -> saleIn(seriesId, beans))
+                        .isThrownBy(() -> saleWith(seriesId, beans, methodId))
                         .withMessageContaining("is inactive")
                         .withMessageContaining("not for new documents");
 
@@ -1310,17 +1325,17 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
                 // entry screen learns before the operator submits.
                 assertThatExceptionOfType(InvalidSalesInvoiceException.class)
                         .isThrownBy(() -> salesInvoices.preview(NewSalesInvoice.of(
-                                customer("PM preview").id(), seriesId, SettlementMethod.ON_ACCOUNT,
+                                customer("PM preview").id(), seriesId, methodId,
                                 number(), JULY,
                                 List.of(NewSalesInvoiceLine.product(
                                         beans.id(), Quantity.of(1L), UnitCost.ofEur("50.000000"))))));
 
                 // Holding is not refused: the invoice recorded a moment ago still reads, and still
                 // names the method that has since been retired.
-                assertThat(salesInvoices.require(before.id()).settlementMethod())
-                        .isEqualTo(SettlementMethod.ON_ACCOUNT);
+                assertThat(salesInvoices.require(before.id()).paymentMethodId())
+                        .isEqualTo(methodId);
             } finally {
-                paymentMethods.reactivate(SettlementMethod.ON_ACCOUNT);
+                paymentMethodService.reactivate(methodId);
             }
         }
 
@@ -1336,7 +1351,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             assertThatExceptionOfType(InvalidSalesInvoiceException.class)
                     .isThrownBy(() -> salesInvoices.preview(NewSalesInvoice.of(
                             customer("Preview refusal").id(), selfSupply,
-                            SettlementMethod.ON_ACCOUNT, number(), JULY,
+                            paymentMethods.onAccount(), number(), JULY,
                             List.of(NewSalesInvoiceLine.product(
                                     beans.id(), Quantity.of(1L), UnitCost.ofEur("50.000000"))))))
                     .withMessageContaining("no sales channel");
@@ -1435,7 +1450,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             String documentNumber = number();
 
             SalesInvoiceView first = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(),
                     documentNumber, JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000")))));
@@ -1477,13 +1492,13 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             String documentNumber = number();
 
             SalesInvoiceView inWeb = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(),
                     documentNumber, JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000")))));
 
             SalesInvoiceView inStore = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), paymentMethods.onAccount(),
                     documentNumber, JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000")))));
@@ -1530,7 +1545,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
             documentNumber = "SEARCHABLE-" + unique;
 
             salesInvoices.record(NewSalesInvoice.of(buyer.id(), webSeries,
-                    SettlementMethod.ON_ACCOUNT, documentNumber, JULY,
+                    paymentMethods.onAccount(), documentNumber, JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000")))));
         }
@@ -1591,7 +1606,7 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
         void aSeriesLessInvoiceIsNotDropped() {
             String orphanNumber = "ORPHAN-" + NUMBERS.incrementAndGet();
             long orphanId = salesInvoices.record(NewSalesInvoice.of(buyer.id(), webSeries,
-                    SettlementMethod.ON_ACCOUNT, orphanNumber, JULY,
+                    paymentMethods.onAccount(), orphanNumber, JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("10.000000"))))).id();
 

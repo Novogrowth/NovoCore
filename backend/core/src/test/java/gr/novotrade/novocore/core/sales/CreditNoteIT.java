@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import gr.novotrade.novocore.core.AbstractCoreIntegrationTest;
+import gr.novotrade.novocore.core.testsupport.PaymentMethodFixture;
 import gr.novotrade.novocore.core.testsupport.SalesDocumentFixture;
 import gr.novotrade.novocore.core.api.account.AccountSystemKey;
 import gr.novotrade.novocore.core.api.account.BalanceSide;
@@ -36,7 +37,6 @@ import gr.novotrade.novocore.core.api.sales.NewSalesInvoiceLine;
 import gr.novotrade.novocore.core.api.sales.SalesChannel;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceService;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceView;
-import gr.novotrade.novocore.core.api.sales.SettlementMethod;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.api.shared.Quantity;
 import gr.novotrade.novocore.core.api.shared.SubLedgerRef;
@@ -68,6 +68,9 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
     private static final LocalDate AUGUST = LocalDate.of(2026, 8, 12);
 
     private static final AtomicInteger NUMBERS = new AtomicInteger();
+
+    @Autowired
+    private PaymentMethodFixture paymentMethods;
 
     @Autowired
     private CreditNoteService creditNotes;
@@ -147,7 +150,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
     private SalesInvoiceView sale(CustomerView buyer, ProductView product, long quantity,
             String unitPrice, SalesChannel channel) {
         return salesInvoices.record(NewSalesInvoice.of(buyer.id(), series(channel),
-                SettlementMethod.ON_ACCOUNT, number("CNIT-SI"), JULY,
+                paymentMethods.onAccount(), number("CNIT-SI"), JULY,
                 List.of(NewSalesInvoiceLine.product(
                         product.id(), Quantity.of(quantity), UnitCost.ofEur(unitPrice)))));
     }
@@ -385,7 +388,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "8.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.CASH,
+                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), paymentMethods.cash(),
                     number("CNIT-SI"), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("20.000000")))));
@@ -423,7 +426,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
             stock(beans.id(), 10L, "8.000000");
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(),
                     number("CNIT-SI"), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("20.000000")))));
@@ -546,7 +549,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
                     MARCH, StockLocation.INVENTORY, List.of("CNIT-SN-1")));
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), paymentMethods.onAccount(),
                     number("CNIT-SI"), JULY,
                     List.of(NewSalesInvoiceLine.serializedProduct(
                             machine.id(), UnitCost.ofEur("2400.000000"), List.of("CNIT-SN-1")))));
@@ -574,7 +577,7 @@ class CreditNoteIT extends AbstractCoreIntegrationTest {
                     vatClasses.requireByCode("1410").id(), Money.ofEur("80.00")));
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.ON_ACCOUNT,
+                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), paymentMethods.onAccount(),
                     number("CNIT-SI"), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             repair.id(), Quantity.of(1L), UnitCost.ofEur("80.000000")))));

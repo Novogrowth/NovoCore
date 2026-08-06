@@ -50,9 +50,9 @@ import gr.novotrade.novocore.core.api.sales.NewCreditNoteLine;
 import gr.novotrade.novocore.core.api.sales.NewSalesInvoice;
 import gr.novotrade.novocore.core.api.sales.NewSalesInvoiceLine;
 import gr.novotrade.novocore.core.api.sales.SalesChannel;
+import gr.novotrade.novocore.core.testsupport.PaymentMethodFixture;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceService;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceView;
-import gr.novotrade.novocore.core.api.sales.SettlementMethod;
 import gr.novotrade.novocore.core.api.settings.SettingsService;
 import gr.novotrade.novocore.core.api.settlement.NewAllocation;
 import gr.novotrade.novocore.core.api.settlement.NewSettlement;
@@ -142,6 +142,7 @@ class WholeScenarioIT extends AbstractCoreIntegrationTest {
     /** Everything the year produced, so the invariant tests can name what they are checking. */
     private static Scenario world;
 
+    @Autowired private PaymentMethodFixture paymentMethods;
     @Autowired private ChartOfAccountsService chart;
     @Autowired private JournalService journal;
     @Autowired private ProductService products;
@@ -315,7 +316,7 @@ class WholeScenarioIT extends AbstractCoreIntegrationTest {
         // ADR 0010's whole point: the part of the freight belonging to stock already gone cannot
         // ride on a unit cost, because those units are not there to carry it.
         long onAccountSaleId = salesInvoices.record(NewSalesInvoice.of(
-                wholesalerId, series(SalesChannel.ECOMMERCE), SettlementMethod.ON_ACCOUNT,
+                wholesalerId, series(SalesChannel.ECOMMERCE), paymentMethods.onAccount(),
                 "GO-2026-0001", MAY,
                 List.of(
                         // Product default 13%, customer override 13%, and an explicit 24% on the
@@ -341,20 +342,20 @@ class WholeScenarioIT extends AbstractCoreIntegrationTest {
 
         // --- A cash sale, and the bundle -----------------------------------------------------
         long cashSaleId = salesInvoices.record(NewSalesInvoice.of(
-                walkInId, series(SalesChannel.STORE_AND_PHONE), SettlementMethod.CASH,
+                walkInId, series(SalesChannel.STORE_AND_PHONE), paymentMethods.cash(),
                 "GO-2026-0002", JUNE,
                 List.of(NewSalesInvoiceLine.product(
                         beansId, Quantity.of(5L), UnitCost.ofEur("18.000000"))))).id();
 
         long bundleSaleId = salesInvoices.record(NewSalesInvoice.of(
-                walkInId, series(SalesChannel.STORE_AND_PHONE), SettlementMethod.CARD_POS,
+                walkInId, series(SalesChannel.STORE_AND_PHONE), paymentMethods.cardPos(),
                 "GO-2026-0003", JUNE,
                 List.of(NewSalesInvoiceLine.product(
                         bundleId, Quantity.of(1L), UnitCost.ofEur("150.000000"))))).id();
 
         // --- Overselling: Q17's negative stock, recorded and flagged rather than blocked ----
         long oversoldSaleId = salesInvoices.record(NewSalesInvoice.of(
-                walkInId, series(SalesChannel.SKROUTZ), SettlementMethod.SKROUTZ,
+                walkInId, series(SalesChannel.SKROUTZ), paymentMethods.partnerClearing("SKRZ", PaymentMethodFixture.ARTICLE_ON_CREDIT, AccountSystemKey.PARTNER_CLEARING_SKROUTZ),
                 "GO-2026-0004", JULY,
                 List.of(NewSalesInvoiceLine.product(
                         filtersId, Quantity.of(500L), UnitCost.ofEur("6.000000"))))).id();

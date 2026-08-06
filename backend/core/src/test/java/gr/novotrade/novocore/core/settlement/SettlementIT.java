@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import gr.novotrade.novocore.core.AbstractCoreIntegrationTest;
+import gr.novotrade.novocore.core.testsupport.PaymentMethodFixture;
 import gr.novotrade.novocore.core.testsupport.SalesDocumentFixture;
 import gr.novotrade.novocore.core.api.account.AccountSystemKey;
 import gr.novotrade.novocore.core.api.account.AccountView;
@@ -34,7 +35,6 @@ import gr.novotrade.novocore.core.api.sales.NewSalesInvoiceLine;
 import gr.novotrade.novocore.core.api.sales.SalesChannel;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceService;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceView;
-import gr.novotrade.novocore.core.api.sales.SettlementMethod;
 import gr.novotrade.novocore.core.api.settlement.AllocationView;
 import gr.novotrade.novocore.core.api.settlement.CustomerCreditView;
 import gr.novotrade.novocore.core.api.settlement.InvalidSettlementException;
@@ -75,6 +75,9 @@ class SettlementIT extends AbstractCoreIntegrationTest {
     private static final LocalDate AUGUST = LocalDate.of(2026, 8, 12);
 
     private static final AtomicInteger NUMBERS = new AtomicInteger();
+
+    @Autowired
+    private PaymentMethodFixture paymentMethods;
 
     @Autowired
     private SettlementService settlements;
@@ -155,7 +158,7 @@ class SettlementIT extends AbstractCoreIntegrationTest {
         inventory.receive(NewInventoryLot.pooled(product.id(), Quantity.of(quantity + 5),
                 UnitCost.ofEur("40.000000"), MARCH, StockLocation.INVENTORY));
         return salesInvoices.record(NewSalesInvoice.of(buyer.id(), series(SalesChannel.ECOMMERCE),
-                SettlementMethod.ON_ACCOUNT, number("SETIT-SI"), JULY,
+                paymentMethods.onAccount(), number("SETIT-SI"), JULY,
                 List.of(NewSalesInvoiceLine.product(
                         product.id(), Quantity.of(quantity), UnitCost.ofEur("100.000000")))));
     }
@@ -272,7 +275,7 @@ class SettlementIT extends AbstractCoreIntegrationTest {
                     UnitCost.ofEur("40.000000"), MARCH, StockLocation.INVENTORY));
 
             SalesInvoiceView invoice = salesInvoices.record(NewSalesInvoice.of(
-                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), SettlementMethod.CASH,
+                    buyer.id(), series(SalesChannel.STORE_AND_PHONE), paymentMethods.cash(),
                     number("SETIT-SI"), JULY,
                     List.of(NewSalesInvoiceLine.product(
                             beans.id(), Quantity.of(1L), UnitCost.ofEur("100.000000")))));

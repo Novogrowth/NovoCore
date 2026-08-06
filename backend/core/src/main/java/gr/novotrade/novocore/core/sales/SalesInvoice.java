@@ -51,10 +51,10 @@ class SalesInvoice extends AuditableEntity {
     @Column(name = "channel", nullable = false, length = 30)
     private SalesChannel channel;
 
-    /** Decides which account the invoice debits, and therefore whether it is an open item at all. */
-    @Enumerated(EnumType.STRING)
     /**
-     * ⚠️ <strong>An id since R4, where it was a {@code SettlementMethod} enum constant.</strong>
+     * Decides which account the invoice debits, and therefore whether it is an open item at all.
+     *
+     * <p>⚠️ <strong>An id since R4, where it was a {@code SettlementMethod} enum constant.</strong>
      * Nullable in the schema and required by the service, for the reason {@code V33} gives for
      * {@code series_id}: backfilling pre-R4 invoices would invent a payment method nobody authored.
      */
