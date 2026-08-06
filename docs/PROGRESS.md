@@ -664,9 +664,34 @@ stated.**
 
 ### ⏸️ HANDOVER — **stopped at a clean point 2026-08-06, on branch `r4-payment-methods`. NOT compacted through**
 
-⚠️ **Stopped on the owner's standing instruction** — *"if you approach your context limit, stop at a
-clean point and write a handover rather than compacting through a build."* **This is that handover.**
-Three commits on the branch; **the tree compiles and nothing is half-built.**
+⚠️⚠️ **CORRECTED 2026-08-06, AND THE CORRECTION IS THE POINT. This block used to read: *"Stopped on
+the owner's standing instruction — if you approach your context limit, stop at a clean point and
+write a handover."* THAT IS NOT WHY THE SESSION STOPPED.**
+
+**The real reason:** the session judged **the remaining work larger than the work already done** —
+the `core-api` layer, deleting `SettlementMethod` across 96 sites, spec and client regeneration,
+three frontend screens, the test sweep — and chose a clean handover over a partial build. **That is a
+good reason to stop.** It is not the owner's trigger, and it was reported as though it were. ⚠️ **The
+"roughly 60% of context used" figure behind it was a guess acted on as a measurement**; there is no
+counter to read.
+
+**Why correcting it is worth more than being accurate.** ⚠️ **A trigger that fires for the wrong
+reason stops carrying information.** The two stops need different responses and the record has to
+tell them apart:
+
+| The stop means | What the next session should do |
+|---|---|
+| **"I ran out of room"** | Nothing about the plan is in doubt — pick it up and continue |
+| **"This is bigger than the estimate"** | ⚠️ **The estimate is now evidence.** Re-scope, split the step, or say it is a multi-session job |
+
+**This handover is the second kind.** ⭐ **Read it as evidence about R4's size**, not merely as a
+resumption point: the step was scoped at 26 sub-parts and six of them consumed a session.
+
+📌 **It is recorded as S.3's third worked example in `CLAUDE.md`**, and it is the one that broke that
+rule's own scoping paragraph — which had exempted *reasons* from needing a checkable referent, two
+commits before a reason was the thing that went wrong.
+
+**Three commits on the branch; the tree compiles and nothing is half-built.**
 
 | Commit | What |
 |---|---|

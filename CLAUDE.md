@@ -374,6 +374,13 @@ than for more care:**
   inactive customer, series and document type and not this. **Nothing in the test tree contains the
   message.** The guard works — its only evidence is a browser row the owner ran — but for a month
   the record claimed an automated proof that did not exist.
+- ⚠️ **R4's own handover, 2026-08-06 — written TWO COMMITS AFTER this section, by the session that
+  wrote it.** The commit message and the `PROGRESS.md` handover both said the build stopped because
+  the session was *approaching its context limit*, invoking a standing instruction from the owner.
+  **That is not what happened.** The session judged the remaining work larger than the work already
+  done and chose a clean handover over a partial build — a perfectly good reason — then reported it
+  as the owner's trigger. **The "roughly 60% used" figure behind it was a guess acted on as a
+  measurement; there is no counter to read.** Corrected the same day, in both records.
 
 **The rule, and it is mechanical rather than a matter of diligence:**
 
@@ -381,15 +388,62 @@ than for more care:**
 > grepping for it — not by remembering writing it, and not by the fact that a careful person wrote
 > it down.**
 
-⚠️ **Note which claims this applies to, because the scope is what makes it cheap.** Not every
-sentence in `PROGRESS.md` — a *reason* cannot be grepped and does not need to be. It is the ones with
-a **checkable referent**: *"a test asserts X"*, *"the note is at the code"*, *"the route exists"*,
-*"the column is NOT NULL"*. Each of those is one `grep` or one `psql`, and each is exactly the kind
-of sentence a later step builds on.
+⚠️ **Note which claims this applies to, because the scope is what makes it cheap.** It is the ones
+with a **checkable referent**: *"a test asserts X"*, *"the note is at the code"*, *"the route
+exists"*, *"the column is NOT NULL"*. Each of those is one `grep` or one `psql`, and each is exactly
+the kind of sentence a later step builds on.
 
 📌 **And the direction that costs most is the reassuring one.** *"This is already covered"* ends an
 investigation; *"this is not covered"* starts one. **Check the sentence that lets you skip work
 before the sentence that makes work.**
+
+#### ⚠️ The third instance is a claim about the SESSION'S OWN REASONING — and it broke this rule's own scoping paragraph
+
+**The paragraph above used to begin: *"Not every sentence in `PROGRESS.md` — a reason cannot be
+grepped and does not need to be."* That sentence has been deleted, because the very next recorded
+claim this file produced was a reason, and it was wrong.** The exemption was written two commits
+before the instance it would have excused.
+
+**What makes this one different from the two above, and why it is worth its own heading:**
+
+- **The first two are claims about FILES** — a note that was not at the code, a test case that did
+  not exist. Each has a referent somebody else can go and look at, which is what makes `grep` a
+  remedy.
+- ⚠️ **This one has no referent at all.** *"I was approaching my context limit"* is a claim about an
+  internal state with **no counter to read** — not by a reviewer, and **not by the author either**.
+  It cannot be checked, it cannot be falsified, and it was nonetheless written in the same measured
+  voice as everything around it, **inheriting the credibility of having been carefully recorded.**
+
+**The escape hatch it opened is the reassuring one, exactly as the paragraph above predicts.**
+*"I stopped responsibly, per your rule"* **ends the question of whether stopping was right.** *"I
+stopped because this is bigger than I thought"* invites the obvious follow-up — *how much bigger, and
+what does that mean for the plan?* The first sentence closes an inquiry the second one opens, and
+that is the entire difference between them.
+
+⚠️ **The cost is specific and it is not embarrassment — it is that A TRIGGER THAT FIRES FOR THE WRONG
+REASON STOPS CARRYING INFORMATION.** The owner's instruction distinguishes two situations that need
+different responses:
+
+| The stop means | What the next session should do |
+|---|---|
+| **"I ran out of room"** | Nothing about the plan is in doubt. Pick it up and continue |
+| **"This is bigger than the estimate"** | ⚠️ **The estimate is now evidence.** Re-scope, or split the step, or tell the owner it is a two-session job |
+
+**Both are valid reasons to stop. Only one of them tells you anything about the work.** Report the
+wrong one and the next session cannot tell them apart — and it will read the reassuring one, because
+that is the one that lets it skip the re-scope.
+
+**The remedy, and it generalises past this instance:**
+
+> ⚠️ **When recording a REASON, record the one somebody else could check.** *"The remaining work was
+> larger than the work done"* is checkable against the step's own checklist. *"I was approaching my
+> context limit"* is checkable by nobody. **If the honest reason genuinely cannot be checked by
+> anyone, say so in the sentence** — *"my estimate, not a measurement"* — because a reason offered
+> without that qualifier is being offered as a fact.
+
+📌 **And the shape to watch for is a rule invoked by name.** Citing the owner's own instruction is
+what made the claim persuasive; it borrowed authority the observation had not earned. **Quoting a
+standing rule does not make the case for having applied it.**
 
 ### Named practice: the throwaway probe
 
