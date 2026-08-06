@@ -691,7 +691,23 @@ resumption point: the step was scoped at 26 sub-parts and six of them consumed a
 rule's own scoping paragraph — which had exempted *reasons* from needing a checkable referent, two
 commits before a reason was the thing that went wrong.
 
-🔴🔴 **CORRECTED AGAIN 2026-08-06 — THE BRANCH IS RED, AND THIS BLOCK PREVIOUSLY SAID IT WAS NOT.**
+🟢 **RESOLVED 2026-08-06 — THE BRANCH IS GREEN. Verdict quoted, not summarised:**
+
+```
+./mvnw -pl core verify
+[INFO] BUILD SUCCESS
+[INFO] Tests run: 806, Failures: 0, Errors: 0, Skipped: 0
+```
+
+✅ **A.10's negative control RAN and passed.** With `requireActivePaymentMethod` removed:
+`BUILD FAILURE`, **9 tests ran** in the nested class, **1 failed — exactly
+`aDeactivatedPaymentMethodIsRefused` and nothing else.** Run in a throwaway worktree; the main tree
+was verified clean afterwards. ⚠️ **The count is quoted with the verdict deliberately** — a targeted
+run in this repository reported `BUILD SUCCESS` on zero tests earlier the same day.
+
+*(The red record below is kept, because it is the worked example S.3's third instance rests on.)*
+
+🔴🔴 **CORRECTED 2026-08-06 — THE BRANCH WAS RED, AND THE HANDOVER SAID IT WAS NOT.**
 
 **It read *"the tree compiles and nothing is half-built."* The first clause is true and was checked.
 The second is false and was not.** `V37` drops and recreates `payment_method` **without the `method`
