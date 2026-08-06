@@ -691,7 +691,25 @@ resumption point: the step was scoped at 26 sub-parts and six of them consumed a
 rule's own scoping paragraph — which had exempted *reasons* from needing a checkable referent, two
 commits before a reason was the thing that went wrong.
 
-**Three commits on the branch; the tree compiles and nothing is half-built.**
+🔴🔴 **CORRECTED AGAIN 2026-08-06 — THE BRANCH IS RED, AND THIS BLOCK PREVIOUSLY SAID IT WAS NOT.**
+
+**It read *"the tree compiles and nothing is half-built."* The first clause is true and was checked.
+The second is false and was not.** `V37` drops and recreates `payment_method` **without the `method`
+column the `PaymentMethod` JPA entity still maps**, so Hibernate's schema validation fails at context
+startup and **every integration test in `core` errors before running**:
+
+```
+SchemaManagementException: Schema validation: missing column [method] in table [payment_method]
+```
+
+⚠️ **The branch has been red since `56b06e7` and nothing knew, because the suite was never run after
+the migration landed.** A schema change is **not verifiable by compilation** — Flyway runs at context
+startup — so *"it compiles"* was a true statement doing the work of a false one. **Recorded in
+`CLAUDE.md` under the stale-artefact family.**
+
+✅ **The fix is not a puzzle; it is the work already scheduled.** The entity, repository, service and
+controller must catch up with `V37`. **Until they do, no `core` integration test can run at all** —
+which is also why R4's A.10 could not be proven this session (below).
 
 | Commit | What |
 |---|---|
@@ -714,6 +732,25 @@ encoded in `V37`; its **Java** half is not written.
 2. ⚠️ **The inactive-payment-method guard has NO automated test**, and `PROGRESS.md` says it is
    verified in `R2ReferenceDataContractIT`, which has no payment-method case at all. That is **A.10**
    and **S.1**, and it is one of `CLAUDE.md`'s two new worked examples.
+
+#### ⚠️ A.10 — WRITTEN, COMMITTED, AND **NOT PROVEN**. Its negative control is still owed
+
+**The test exists** (`SalesInvoiceIT.aDeactivatedPaymentMethodIsRefused`, in `@Nested
+TheSeriesDecides`): it records a sale, deactivates `ON_ACCOUNT`, asserts **both `record` and
+`preview`** refuse with *"is inactive" / "not for new documents"*, asserts the **already-recorded**
+invoice still reads and still names the retired method, and restores in a `finally`.
+
+🔴 **It has never executed.** The branch is red (above), so the context cannot start. ⚠️ **Do not
+read its presence as coverage** — the whole point of A.10 was that a guard without a test had been
+recorded as tested. **The first thing to do once the entity catches up is run it, then prove it red
+against the removed guard.**
+
+⚠️ **And the proof attempt found a NEW hole in the build, worth more than the attempt:**
+`-Dit.test='SalesInvoiceIT#aDeactivatedPaymentMethodIsRefused'` reported **`BUILD SUCCESS` while
+running zero tests** — the method is in a `@Nested` class, so the pattern's **class half matched** and
+`failIfNoSpecifiedTests` did not fire, because **it asserts the pattern matched, not that anything
+ran.** Use `-Dit.test='SalesInvoiceIT'` or the whole suite, and **always grep the output for the class
+name.** Recorded in `CLAUDE.md`.
 
 #### The next action, in order — nothing here is a decision, all of it is execution
 

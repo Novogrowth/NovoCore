@@ -37,6 +37,7 @@ import gr.novotrade.novocore.core.api.product.UnitOfMeasureService;
 import gr.novotrade.novocore.core.api.sales.InvalidSalesInvoiceException;
 import gr.novotrade.novocore.core.api.sales.NewSalesInvoice;
 import gr.novotrade.novocore.core.api.sales.NewSalesInvoiceLine;
+import gr.novotrade.novocore.core.api.sales.PaymentMethodService;
 import gr.novotrade.novocore.core.api.sales.SalesChannel;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceLineView;
 import gr.novotrade.novocore.core.api.sales.SalesInvoicePreview;
@@ -134,6 +135,9 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
 
     @Autowired
     private SalesDocumentSeriesService salesSeries;
+
+    @Autowired
+    private PaymentMethodService paymentMethods;
 
     /**
      * The series every sale in this class is recorded in — R1b made one mandatory.
@@ -1262,6 +1266,62 @@ class SalesInvoiceIT extends AbstractCoreIntegrationTest {
                     .isThrownBy(() -> saleIn(seriesId, beans))
                     .withMessageContaining("which is inactive");
             salesDocumentTypes.reactivate(typeId);
+        }
+
+        /**
+         * ⚠️ <strong>R4 A.10 — the guard this asserts shipped in R2b with NO TEST AT ALL, and a
+         * document said otherwise.</strong>
+         *
+         * <p>{@code PROGRESS.md} recorded the payment-method {@code active} guard as
+         * <em>"verified in {@code R2ReferenceDataContractIT} over real HTTP"</em>. That class has no
+         * payment-method case; its {@code "not for new documents"} assertion is the <em>document
+         * type</em> refusal. {@code PaymentMethodIT} round-trips deactivate and never records an
+         * invoice, and nothing in the test tree contained the message. Its only evidence was a
+         * browser row the owner ran on 2026-08-06 — real evidence, and not a test.
+         *
+         * <p>This is {@code CLAUDE.md}'s <em>a claim recorded at close-out is a CLAIM</em>, and the
+         * test exists so the R4 sweep that is about to rewrite this file <strong>has something that
+         * can break</strong>.
+         *
+         * <p>⚠️ <strong>Setting is refused; holding is not</strong> — the sale recorded before the
+         * deactivation is asserted to survive it, because a deactivation that broke existing
+         * documents would be destructive and nobody would use it.
+         */
+        @Test
+        @DisplayName("a deactivated payment method is refused on a NEW invoice, and does not disturb an old one")
+        void aDeactivatedPaymentMethodIsRefused() {
+            ProductView beans = goods("SIIT-R4-01", "50.00");
+            stock(beans.id(), 20L, "20.000000");
+            long seriesId = own("-PM").stockMoving(SalesChannel.ECOMMERCE);
+
+            // It works before the deactivation, so the refusal below is about the deactivation and
+            // not about the fixture — the same shape as the inactive-series test above.
+            SalesInvoiceView before = saleIn(seriesId, beans);
+            assertThat(before.id()).isPositive();
+
+            paymentMethods.deactivate(SettlementMethod.ON_ACCOUNT);
+            try {
+                assertThatExceptionOfType(InvalidSalesInvoiceException.class)
+                        .isThrownBy(() -> saleIn(seriesId, beans))
+                        .withMessageContaining("is inactive")
+                        .withMessageContaining("not for new documents");
+
+                // A preview refuses it too: the guard is in compute(), which both paths share, so an
+                // entry screen learns before the operator submits.
+                assertThatExceptionOfType(InvalidSalesInvoiceException.class)
+                        .isThrownBy(() -> salesInvoices.preview(NewSalesInvoice.of(
+                                customer("PM preview").id(), seriesId, SettlementMethod.ON_ACCOUNT,
+                                number(), JULY,
+                                List.of(NewSalesInvoiceLine.product(
+                                        beans.id(), Quantity.of(1L), UnitCost.ofEur("50.000000"))))));
+
+                // Holding is not refused: the invoice recorded a moment ago still reads, and still
+                // names the method that has since been retired.
+                assertThat(salesInvoices.require(before.id()).settlementMethod())
+                        .isEqualTo(SettlementMethod.ON_ACCOUNT);
+            } finally {
+                paymentMethods.reactivate(SettlementMethod.ON_ACCOUNT);
+            }
         }
 
         @Test

@@ -573,6 +573,49 @@ so the two-step does not quietly reopen the hole the pin closed.
 `./mvnw -pl <module> -am verify`. No selector, so nothing to mis-match, and no stale artefact — it is
 the invocation that cannot report success while measuring nothing.
 
+##### ⚠️ THE PIN HAS A HOLE: `Class#method` against a @Nested test matches the CLASS and runs NOTHING
+
+**Measured 2026-08-06 in R4, and it is the sixth member of this family.** A negative control was run
+as `-Dit.test='SalesInvoiceIT#aDeactivatedPaymentMethodIsRefused'`. It reported **`BUILD SUCCESS`**,
+failsafe's `integration-test` goal executed, **and `SalesInvoiceIT` appears nowhere in the output** —
+`grep -c SalesInvoiceIT` returned **0**.
+
+**The mechanism, and it is why `failIfNoSpecifiedTests` did not save it:** the method lives in a
+`@Nested` class (`SalesInvoiceIT.TheSeriesDecides`). The pattern's **class half matched**, so failsafe
+does not consider the selector unmatched — but the **method half matched nothing at the top level**,
+so **zero tests ran**. ⚠️ **The pin asserts that the PATTERN matched, not that any test RAN**, and
+those come apart exactly here.
+
+**This repository is full of `@Nested` test classes, so the trap is the normal case rather than an
+exotic one.** `SalesInvoiceIT` alone has `Refusals`, `TheSeriesDecides`, `Posting`, `Paging`,
+`Serialized`, `Searching`, `DatabaseInvariants`.
+
+**What to do instead:**
+
+- **Select the whole class** — `-Dit.test='SalesInvoiceIT'` — which includes its nested classes.
+- Or, better and already prescribed above, **run the module's whole suite for anything you intend to
+  believe.**
+- 📌 **And always confirm the test NAME appears in the output.** `BUILD SUCCESS` plus a `Tests run`
+  line for some *other* class is the exact shape of this failure. One `grep` for the class name
+  distinguishes "it passed" from "it never ran", and nothing else in the output does.
+
+##### ⚠️ "The tree compiles" is not "nothing is half-built" — a migration without its entity
+
+**Same session, 2026-08-06.** `V37` was committed on its own: it drops and recreates `payment_method`
+without the `method` column the JPA entity still maps. **Hibernate's schema validation fails at
+context startup, so EVERY integration test in `core` errors before running.** The branch was red from
+that commit onward and nobody knew, because **the suite was never run after the migration landed.**
+
+⚠️ **The handover written at that commit said *"the tree compiles and nothing is half-built."*** The
+first clause is true and was checked. The second is false and was not — **a schema change without the
+code that matches it is the definition of half-built.** The true claim was used to carry the untrue
+one.
+
+**The rule: a commit that changes the schema is not verifiable by compilation.** Flyway runs at
+context startup and Hibernate validates against it, so the cheapest honest check is *any* integration
+test in the module — and until one has been run, **say the migration is unverified rather than saying
+the tree is fine.**
+
 **2. A piped build hides its own failure. Do not pipe one, or set `-o pipefail`.**
 
 **The mechanism, because the instruction on its own is forgettable and the mechanism is not:** a
