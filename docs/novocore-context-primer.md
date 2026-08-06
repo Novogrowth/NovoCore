@@ -146,8 +146,34 @@ the summary.
     mean a list column instead.
   - ⭐ **The live-leg lesson is now in `CLAUDE.md`: a live-leg block is DERIVED from the screens a
     step ships, never composed freehand.** R2's had ten rows against twelve items.
-- ⚠️ **The next step is F5.** W1 landed on 2026-08-04, so the decided sequence has advanced by one:
-  **F5 → D1 + D3 + D4 + D5 → F6 onward.** ⚠️ **R2 is DONE — 2026-08-04.** Six settings screens over R1a's six
+- ⚠️ **F5 is CODE COMPLETE as of 2026-08-06 and the LIVE LEG is what remains.** It sits on branch
+  `f5-sales-invoice-credit-note`, pushed, **not merged to `main`** — and the reason is no longer that
+  anything is unwritten but that no screen has been opened in a browser. All 30 sub-parts have
+  verdicts and none is open. Five screens, `search=` on both document routes (**V36**), the
+  repository's **first three `meta.sortKey`s**, and `DataIntegrityViolationException` mapped to 422.
+  Frontend **402 tests across 41 files**. ⚠️ **The record forms are TRANSITIONAL by owner decision** —
+  a sales document is a *mirror* and is never typed in real operation, so they are test harnesses and
+  must not be polished.
+  - ⚠️ **Two things were deliberately NOT built and have their own roadmap rows: N1** (a reversed
+    document's number is released — direction settled, the fix must keep the concurrency guarantee)
+    and **B.4** (an `el-GR-x-icu` collation on `DOCUMENT_NUMBER`, conditional on whether a real
+    Prosvasis Go number carries Greek letters).
+- ⚠️ **R2b's live leg RAN on 2026-08-05, and it produced two NEW rows rather than fixes.**
+  Eleven of thirteen passed; **L.13 closed §5's open question** — the truncation the owner saw was the
+  select trigger, already fixed, and the AADE list is clean. The two that did not:
+  - **R2c** — the sort code is not a visible column on the document type lists (**display only**, the
+    ordering is correct), and it is **absent from the sales and purchase SERIES edit forms** while
+    document types allow editing it. ⚠️ **Not cosmetic**: R2b exempted the field from the in-use
+    freeze *because reordering is normal*, so a value settable once is unusable for its purpose.
+    **No slot decided.**
+  - **R4** — ⭐ **a REQUIREMENT CORRECTION, not a defect.** Payment methods were built as a seed-only
+    statutory list and are actually a **business list referencing an AADE codification** — R1a's
+    two-layer correction repeating one entity over. The list starts **empty**, creating a row selects
+    the AADE article **and the ledger account it settles to** (two POS terminals can share code 7 and
+    land in different banks), and all fields stay editable until the method is used. ⚠️ **This changes
+    the sales invoice request contract**: `SettlementMethod` is a Java enum on `NewSalesInvoice` and
+    must become an FK. **Runs after F5's close-out and before F6; F5 must not pre-empt it.**
+- *(Superseded:)* ⚠️ **R2 is DONE — 2026-08-04.** Six settings screens over R1a's six
   tables, and **it grew a backend sub-part mid-step**: seven new routes (230 → **237** operations)
   making a series' `abbreviation`, `documentTypeId` and `getsMark`, and a delivery method's
   `abbreviation`, **editable while the row is unused and frozen once it is used**. None of them had a

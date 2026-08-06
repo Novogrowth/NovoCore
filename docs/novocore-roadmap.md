@@ -106,7 +106,7 @@ frontend work that must land before any adapter is built.
 |  R2b | R2 live-leg fixes + sort code + payment methods ʳ²ᵇ | — |    1.3 |  309k | 🟢 Done         |
 |      | **▼ THE DECIDED SEQUENCE — the row order below IS the decision** ˢᵉᑫ | | | | |
 |   W1 | Serialised-record contract fidelity ʷ¹  |     — |    1.5 |  356k | 🟢 Done         |
-|   F5 | Sales Invoice + Credit Note ʷ           |     — |        |       | 🟡 **Current**  |
+|   F5 | Sales Invoice + Credit Note ʷ           |     — |        |       | 🟡 **Code complete, live leg owed** |
 |   R4 | Payment methods become a business list ʳ⁴ |   — |        |       | ⚪ After F5, before F6 ʳ⁴ |
 |   N1 | Release a reversed document's number ⁿ¹ |     — |        |       | ⚪ Direction settled, unbuilt |
 |   D1 | Supplier/customer codes + alias ᵈ¹      |     — |        |       | ⚪ After F5, with D3 ˢᵉᑫ |

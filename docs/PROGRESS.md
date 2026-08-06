@@ -43,6 +43,7 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | R2 | **Document reference data (screens)** — six settings screens over R1a's six tables | **Done, committed** — the AADE codification (read + three verbs, **no create, ever**), sales/purchase document types, sales/purchase series, delivery methods. ⚠️ **Grew a backend sub-part mid-step**: 7 new routes making a series' abbreviation, document type and ΜΑΡΚ flag **editable while unused and frozen once used**, because none of them had a write route on any installation. **All 41 sub-parts have verdicts**; 4 premises corrected. See below |
 | R2b | **What R2's live leg found**, plus two premises its brief had wrong | **Done, committed** — ⚠️ **the stale-list defect was OLDER than R2 and sat in all 13 create forms**, fixed globally with a structural guard; ⚠️ **no server-side check existed** that a series' document type is usable, so the screen was the only guard; `sort_code` on four tables (**V34**, integer, NOT NULL); **payment methods (V35)**, which had no screen because of a scoping error. **237 → 247 operations.** All 30 sub-parts have verdicts. ✅ **§5's conditional (5.4) closed on 2026-08-05** when the owner ran R2b's live leg — the truncation was the select trigger, already fixed. ⚠️ **The leg produced two new rows, neither built: R2c** (sort code invisible as a column, and **absent from the series edit form**) and **R4** (payment methods are a **business** list, not a statutory one — a requirement correction that **changes the sales invoice request contract**) |
 | W1 | **Serialised-record contract fidelity** — the wire shape equals the documented shape | **Done, committed** — the generator describes what **Jackson** writes, not what a record's components say. **+58 properties across 27 response schemas**; no operations, no schemas, no migration. ⚠️ **Request records deliberately excluded** — they are deserialised through the canonical constructor and never serialised, so a derived property there describes a write that never happens. `OpenItemRef.isCustomerSide()` deleted (zero references anywhere). **Two premises corrected**, one of them `CLAUDE.md`'s own statement of the Jackson mechanism. All 16 sub-parts have verdicts |
+| F5 | **Sales Invoice + Credit Note screens** — the first step to reach the **recording** path | **CODE COMPLETE 2026-08-06, on branch `f5-sales-invoice-credit-note`. NOT merged to `main`: the live leg has not been run.** All 30 sub-parts have verdicts, none open. Five sales/credit-note screens, `search=` on both document routes (**V36**, 4 GIN trigram indexes), the repository's **first three `meta.sortKey`s**, and `DataIntegrityViolationException` mapped to 422 so an index-enforced rule stops arriving as Boot's legacy 500. ⚠️ **Two things are DELIBERATELY not built and have their own roadmap rows** — **N1** (a reversed document's number) and B.4's collation. ⚠️ **The record forms are TRANSITIONAL by decision** — a mirror is never typed in real operation |
 | 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress. F0–F4, S1 and S2 done.** ⚠️ **W1 landed 2026-08-04, so next is F5, then the D-block (D1+D3+D4+D5), then F6 onward** — the owner's sequencing decision of **2026-08-04**, recorded as the roadmap's row order. *(This cell previously read "Next is Q1, then R1, then F5", correct when written on 2026-08-02 and overtaken since: Q1, R1a, R1b, R2 and R2b have all landed.)* Foundations `94e17cd`, Products `56e3726` + guards `28c4119` + brand pass, then the render-loop fix `3458ee6`, F0 (the seed pass), F1 Suppliers `b406b27`, F2 Customers `496c7be`, F3 Users & Roles `aea0e56`, then **S1** (search), **S2** (sorting) and **F4** (Settings). **307 frontend tests, 31 files, green.** Per-step detail in `docs/novocore-roadmap.md`; decisions and what each step left behind in *Step 16 — the frontend* below |
 
 **Tests, measured 2026-08-04 (after W1): 1,480 passing, 0 failing, 1 skipped, `mvn clean verify`
@@ -127,7 +128,7 @@ directly rather than trusting the line count: **0 removed, 37 added, 174 total.*
 
 ---
 
-## ▶ F5 — Sales Invoice + Credit Note screens. **APPROVED 2026-08-05, IN PROGRESS**
+## ▶ F5 — Sales Invoice + Credit Note screens. **CODE COMPLETE 2026-08-06; LIVE LEG OWED**
 
 **Written here at the moment of approval, per `CLAUDE.md` §*An approved proposal is a checklist, not
 a paragraph*.** Every row below gets a verdict at close-out: **done** (and how it was verified),
@@ -363,12 +364,15 @@ therefore established before it is implemented, in either direction.
 |---|---|---|
 | **F.1** | `F5WriteContractIT` — the **literal JSON the screens build**, sent to a real server over real HTTP, on the `F4WriteContractIT` pattern. A screen test over `msw` proves wiring, never contract | |
 
-### 🅡 RECONCILIATION as of 2026-08-05 — **F5 is INCOMPLETE. Committed to a branch, not to `main`**
+### 🅡 RECONCILIATION as of 2026-08-06 — **every sub-part has a verdict; the LIVE LEG is what remains**
 
-**Branch `f5-sales-invoice-credit-note`, pushed to `origin`; head `fef8497` as of 2026-08-05.**
-Backend **1,488 tests, 0 failures, 1 skipped, `mvn clean verify` exit 0**; frontend **379 across 40
-files**, typecheck clean, lint at its 3-warning pre-R2 baseline, knip clean. Spec unchanged at
-**247 operations / 231 schemas**.
+**Branch `f5-sales-invoice-credit-note`, pushed to `origin`.** Frontend **402 tests across 41 files**
+as of 2026-08-06, typecheck / lint / knip clean; backend figures in the close-out paragraph at the
+top of this file. **Spec unchanged at 247 operations / 231 schemas** — F5 adds screens, tests and one
+comment, and **no operation and no schema**.
+
+*(The paragraph below is this section's earlier state, kept because its figures were correct when
+written: as of 2026-08-05, head `fef8497`, backend 1,488 tests and frontend 379 across 40 files.)*
 
 ⚠️ **Numbering note, because the approval conversation and this checklist use the same letters
 differently in one place.** The owner's message referred to *"B.3/B.4"* for the sort-key and
@@ -397,10 +401,10 @@ has no earlier number. There is no gap and no renumbering.
 | **C.4–C.6** | ✅ **Done** — record form, mandatory series picker, no channel/document-type field, preview-before-submit, conditional acceptance control. ⚠️ **TRANSITIONAL per decision 1** |
 | **C.7** | ✅ **Done** — `<Refusal>` on every mutation |
 | **C.8** | ✅ **Done** — reversal action with its refusals |
-| **C.9** | ⚠️ **PARTLY DONE.** `sales.test.tsx` — **11 tests** over the list and detail, and ⭐ **they found a real date defect in the screen they were written against** (`toISOString` on a calendar date; fixed in `lib/calendar-date.ts`). 🔴 **The RECORD FORM still has no test** |
-| **D.1–D.5** | 🔴 **STILL OPEN** — and now **scoped down** per decision 2 |
+| **C.9** | ✅ **DONE 2026-08-06.** `sales.test.tsx` is now **19 tests**: 11 over the list and detail (which ⭐ **found a real date defect in the screen they were written against** — `toISOString` on a calendar date, fixed in `lib/calendar-date.ts`) and **8 over the record form**, centred on the preview-then-accept sequence the handover singled out. Handlers record their writes; the two captured bodies are asserted **equal**, which is the only thing on this side that can notice if preview and record stop being built by one function. **Proven against three injected defects**, each firing alone |
+| **D.1–D.5** | ✅ **DONE 2026-08-06, at the scope decision 2 set.** List and detail at full product quality; the record form **thin**, with the *"test harness for a workflow with no production caller"* reason at the top of the file. **15 tests.** ⭐ The list's own assertion is that **no `sort=` reaches the server** — the contrast with C.2, which is the point of shipping both |
 | **E.1–E.5** | ⛔ **Out of scope**, unchanged |
-| **F.1** | 🔴 **STILL OPEN** — `F5WriteContractIT` not written |
+| **F.1** | ✅ **DONE 2026-08-06** — `F5WriteContractIT`, **6 tests**, real Boot server over real HTTP against real PostgreSQL. Scoped to what `R1bWriteContractIT` does **not** already drive: the credit-note body (never sent by anything before F5), the preview → refusal → accept sequence, `documentNumber`'s named refusal on both routes, and the list parameters — including that `search=` genuinely **narrows**, which a mock structurally cannot answer |
 
 ⭐ **Two things the guardrails caught in F5's own new code, both worth keeping:**
 
@@ -411,44 +415,32 @@ has no earlier number. There is no gap and no renumbering.
 - The ESLint money rule caught `Number(id)` — correct to disable with a reason, and it forced the
   single-currency decision to be stated at the code instead of `'EUR'` scattered through the form.
 
-### 🅗 HANDOVER — **a fresh session starts here**
+### 🅗 HANDOVER — **F5's code is COMPLETE. What is left is the browser**
 
-⚠️ **F5 is unfinished and is on branch `f5-sales-invoice-credit-note`, not `main`.** Both commits are
-pushed. Nothing is broken: every suite is green at the branch head. **Do not merge to `main` until
-the four open items below are closed**, because the three sales screens are unexercised.
+✅ **All 30 sub-parts have verdicts and none is open.** F5 is on branch
+`f5-sales-invoice-credit-note`, pushed. ⚠️ **It is still not merged to `main`, and the reason has
+changed**: it is no longer that anything is unwritten, but that **the live leg below has not been
+run**. Every screen is now exercised by tests and by a contract IT; none has been opened in a
+browser.
 
-**Concrete next actions, in the order they are worth doing:**
+**Concrete next actions:**
 
-1. **C.9 — PARTLY DONE. `sales.test.tsx` covers the list and the detail (11 tests); the RECORD FORM
-   still has none.** ⚠️ Test the form's **preview-then-accept** path in particular: a preview
-   answering `roundingNeedsAcceptance: true` must make the acceptance fields appear and must keep the
-   Record button disabled until a name is typed. Copy `products.test.tsx`'s shape, keep the standing
-   *"rendering sends no write"* assertion, and ⚠️ **make the `msw` handlers record their writes** — a
-   static fixture shows pre-edit data after a save.
-   📌 **`trackRequests` drops the query string** (`new URL(...).pathname`), so anything asserting a
-   query parameter must capture the URL in the handler, as `sales.test.tsx` does.
-   ⭐ **Writing those 11 tests found a real defect in the screen they were written against** — the
-   default range opened on 31 December because `toISOString()` converts local midnight to UTC. Fixed
-   in `lib/calendar-date.ts`; **the record form has not had that kind of scrutiny yet.**
-2. **D, thin** — list and detail at full product quality; the record form **minimal**, per owner
-   decision 2. Write the *"test harness for a workflow with no production caller"* reason at the code,
-   as `sales-invoice-record.tsx` now does for its own form.
-3. **F.1 — `F5WriteContractIT`.** The literal JSON the screens build, sent to a real server over real
-   HTTP, on `F4WriteContractIT`'s pattern. ⚠️ A screen test proves wiring, never contract.
-4. **Close-out** — the six actions, including the app-image rebuild before the live leg and the
-   `Actual` hours/tokens columns, **measured, never estimated**.
+1. **Run the live leg (🅛 below).** ⚠️ **L.0 is a precondition the session performs, not the owner**:
+   rebuild the app image *unconditionally* (`CLAUDE.md` — it is one command and no judgement call),
+   **and reactivate sales document type 1**, or neither of the owner's two series can record anything
+   (P.15).
+2. **⚠️ R2b's live leg RAN on 2026-08-05 and is closed** — do not re-run it. Its two open outcomes
+   became roadmap rows **R2c** and **R4**, both recorded and **neither built**. See their sections
+   above.
+3. **Then merge to `main`**, once the leg is clean.
 
-**Two things already prepared for whoever continues:**
+📌 **Three questions are with the owner and block nothing:** whether a real Prosvasis Go document
+number carries Greek letters (decides B.4), the accountant's answer on island-rate precedence
+(decides whether F5's line form is reopened — B.6), and where **R2c** sits in the sequence, which
+nobody has decided.
 
-- **The live-leg block below is derived and ready**, including L.0's precondition. ⚠️ **L.15's
-  expected result is now known**: N1 is unbuilt, so re-recording a reversed number is refused with a
-  readable 422 rather than succeeding. Update that row when N1 lands.
-- ⚠️ **A stray git worktree exists at `…/Temp/claude/f5-probe`** (clean, detached at `1239b6f`), kept
-  for prove-against-the-defect runs. **Remove it with `git worktree remove` at close-out.**
-
-📌 **Two questions are with the owner and block nothing:** whether a real Prosvasis Go document number
-carries Greek letters (decides B.4), and the accountant's answer on island-rate precedence (decides
-whether F5's line form is reopened — see B.6).
+⚠️ **L.15's expected result is known and the row says so**: N1 is unbuilt, so re-recording a reversed
+number is refused with a readable 422 rather than succeeding. **Update that row when N1 lands.**
 
 ### 🅛 The live leg — **DERIVED from the screens and routes F5 ships**
 
