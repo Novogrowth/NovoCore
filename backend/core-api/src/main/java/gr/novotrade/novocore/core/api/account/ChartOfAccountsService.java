@@ -81,6 +81,27 @@ public interface ChartOfAccountsService {
     List<AccountView> activeSettlementTargets();
 
     /**
+     * The accounts a <strong>payment method</strong> may reconcile to — a WIDER set than
+     * {@link #activeSettlementTargets()}, and deliberately a separate question (R4).
+     *
+     * <p>It is {@code activeSettlementTargets()} <em>plus the Accounts receivable control account</em>,
+     * because a method such as Επί πιστώσει reconciles to AR: the invoice stays an open item until a
+     * Receipt allocates against it, and R4 makes that account <strong>named rather than implied by a
+     * null</strong>.
+     *
+     * <p>⚠️ <strong>Widening {@code AccountKind.isSettlementTarget()} instead was considered and
+     * rejected, and it would have been a real defect.</strong> That predicate guards
+     * {@code NewSettlement.accountId} — the money side of a Receipt, Payment or Bank Transfer — so
+     * adding AR to it would let <em>a Receipt settle into Accounts receivable</em>, allocating a
+     * receivable against itself. One predicate cannot answer two different questions.
+     *
+     * <p>⚠️ Filtering at the screen instead was also rejected: that is
+     * {@code CLAUDE.md}'s <em>the screen was the only guard</em>, and an adapter would face no rule
+     * at all. {@code PaymentMethodService} refuses anything outside this set, on create and on change.
+     */
+    List<AccountView> activePaymentMethodTargets();
+
+    /**
      * Active accounts whose residual balance is a real discrepancy rather than a normal standing
      * balance.
      *

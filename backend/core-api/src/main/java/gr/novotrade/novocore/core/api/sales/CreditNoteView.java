@@ -24,7 +24,9 @@ public record CreditNoteView(
         long customerId,
         @Mandatory String customerName,
         @Mandatory SalesChannel channel,
-        SettlementMethod settlementMethod,
+        long paymentMethodId,
+        @Mandatory String paymentMethodDescription,
+        boolean settlesImmediately,
         @Mandatory String documentNumber,
         @Mandatory LocalDate creditNoteDate,
         String description,
@@ -69,7 +71,7 @@ public record CreditNoteView(
      * AR-versus-open-items discrepancy that change removed.
      */
     public boolean bornSettled() {
-        return settlementMethod.settlesImmediately();
+        return settlesImmediately;
     }
 
     public boolean isReversed() {

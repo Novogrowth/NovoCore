@@ -31,8 +31,12 @@ import java.util.Optional;
  * than by someone remembering to tick a box. One fact, one place, and no way for the two to
  * disagree. <strong>F5 therefore has no channel field</strong> — there is nothing for it to bind.
  *
- * @param settlementMethod brief §6's settlement automation. Decides which account the invoice debits
- *     and therefore whether it is an open item at all — see {@link SettlementMethod}.
+ * @param paymentMethodId ⚠️ <strong>An FK since R4, where it used to be a {@code SettlementMethod}
+ *     enum constant.</strong> Payment methods are the business's own rows now, and a user-created row
+ *     cannot be a member of an enum — which is the single sentence that forced this contract change.
+ *     It still decides which account the invoice debits and therefore whether the invoice is an open
+ *     item at all; what changed is that the account is <em>read off the row</em> rather than resolved
+ *     from an {@code AccountSystemKey} baked into a constant.
  * @param documentNumber the number the issuing system printed on the document. <strong>Mandatory</strong>
  *     — it is what a customer quotes, what AADE holds, and what makes a duplicate entry detectable.
  *     Never generated here: Novocore records numbers, it does not allocate them (until step 40).
@@ -60,7 +64,7 @@ import java.util.Optional;
 public record NewSalesInvoice(
         long customerId,
         @Mandatory Long seriesId,
-        @Mandatory SettlementMethod settlementMethod,
+        @Mandatory Long paymentMethodId,
         @Mandatory String documentNumber,
         @Mandatory LocalDate invoiceDate,
         String description,
@@ -74,7 +78,7 @@ public record NewSalesInvoice(
         // client's mistake and not a programming error: it answers 400 naming the field, through
         // InvalidInputException, instead of "Malformed request body".
         Required.field(seriesId, "seriesId");
-        Objects.requireNonNull(settlementMethod, "settlementMethod");
+        Required.field(paymentMethodId, "paymentMethodId");
         Objects.requireNonNull(invoiceDate, "invoiceDate");
         Objects.requireNonNull(lines, "lines");
         lines = List.copyOf(lines);
@@ -117,26 +121,26 @@ public record NewSalesInvoice(
     }
 
     public static NewSalesInvoice of(long customerId, long seriesId,
-            SettlementMethod settlementMethod, String documentNumber, LocalDate invoiceDate,
+            long paymentMethodId, String documentNumber, LocalDate invoiceDate,
             List<NewSalesInvoiceLine> lines) {
-        return new NewSalesInvoice(customerId, seriesId, settlementMethod, documentNumber,
+        return new NewSalesInvoice(customerId, seriesId, paymentMethodId, documentNumber,
                 invoiceDate, null, null, null, null, lines);
     }
 
     /** The same request, compared against what the issuing system says the gross came to. */
     public NewSalesInvoice statedAs(Money externalGrossTotal) {
-        return new NewSalesInvoice(customerId, seriesId, settlementMethod, documentNumber, invoiceDate,
+        return new NewSalesInvoice(customerId, seriesId, paymentMethodId, documentNumber, invoiceDate,
                 description, externalGrossTotal, roundingAcceptedBy, roundingNote, lines);
     }
 
     /** The same request, with a larger-than-threshold rounding difference explicitly accepted. */
     public NewSalesInvoice acceptingRoundingDifference(String acceptedBy, String note) {
-        return new NewSalesInvoice(customerId, seriesId, settlementMethod, documentNumber, invoiceDate,
+        return new NewSalesInvoice(customerId, seriesId, paymentMethodId, documentNumber, invoiceDate,
                 description, statedTotal, acceptedBy, note, lines);
     }
 
     public NewSalesInvoice describedAs(String invoiceDescription) {
-        return new NewSalesInvoice(customerId, seriesId, settlementMethod, documentNumber, invoiceDate,
+        return new NewSalesInvoice(customerId, seriesId, paymentMethodId, documentNumber, invoiceDate,
                 invoiceDescription, statedTotal, roundingAcceptedBy, roundingNote, lines);
     }
 

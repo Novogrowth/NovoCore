@@ -25,6 +25,8 @@ import gr.novotrade.novocore.core.api.sales.CreditNoteService;
 import gr.novotrade.novocore.core.api.sales.CreditNoteView;
 import gr.novotrade.novocore.core.api.sales.InvalidCreditNoteException;
 import gr.novotrade.novocore.core.api.sales.NewCreditNote;
+import gr.novotrade.novocore.core.api.sales.PaymentMethodService;
+import gr.novotrade.novocore.core.api.sales.PaymentMethodView;
 import gr.novotrade.novocore.core.api.sales.NewCreditNoteLine;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceNotFoundException;
 import gr.novotrade.novocore.core.api.settings.SettingKeys;
@@ -98,13 +100,15 @@ class CreditNoteServiceImpl implements CreditNoteService {
     private final InventoryService inventory;
     private final JournalService journal;
     private final SettingsService settings;
+    private final PaymentMethodService paymentMethods;
     private final AuditLogService auditLog;
 
     CreditNoteServiceImpl(CreditNoteRepository creditNotes, SalesInvoiceRepository invoices,
             SalesInvoiceLineRepository invoiceLines, CustomerService customers,
             ProductService products, ChartOfAccountsService chartOfAccounts,
             VatClassService vatClasses, InventoryService inventory, JournalService journal,
-            SettingsService settings, AuditLogService auditLog) {
+            SettingsService settings, PaymentMethodService paymentMethods,
+            AuditLogService auditLog) {
         this.creditNotes = creditNotes;
         this.invoices = invoices;
         this.invoiceLines = invoiceLines;
@@ -115,6 +119,7 @@ class CreditNoteServiceImpl implements CreditNoteService {
         this.inventory = inventory;
         this.journal = journal;
         this.settings = settings;
+        this.paymentMethods = paymentMethods;
         this.auditLog = auditLog;
     }
 
@@ -507,8 +512,11 @@ class CreditNoteServiceImpl implements CreditNoteService {
         AccountView returns =
                 chartOfAccounts.requireAccount(invoice.getChannel().returnsAccount());
         AccountView outputVat = chartOfAccounts.requireAccount(AccountSystemKey.OUTPUT_VAT);
-        Optional<AccountSystemKey> settlementAccount =
-                invoice.getSettlementMethod().settlementAccount();
+        // ⚠️ Since R4 a credit note reads the account off the METHOD ROW the invoice named. It
+        // still HOLDS rather than SETS — the method comes from the invoice being refunded, never
+        // from a caller — which is why no active guard applies here.
+        PaymentMethodView paymentMethod = invoice.getPaymentMethodId() == null
+                ? null : paymentMethods.require(invoice.getPaymentMethodId());
 
         List<NewJournalLine> lines = new ArrayList<>();
         Money netTotal = Money.zero(currency);
@@ -543,10 +551,10 @@ class CreditNoteServiceImpl implements CreditNoteService {
                             .describedAs("Rounding against document total"));
         }
 
-        if (settlementAccount.isPresent()) {
+        if (paymentMethod != null && paymentMethod.settlesImmediately()) {
             lines.add(NewJournalLine
-                    .credit(chartOfAccounts.requireAccount(settlementAccount.get()).id(), payable)
-                    .describedAs(invoice.getSettlementMethod() + " refund — " + customer.name()));
+                    .credit(paymentMethod.accountId(), payable)
+                    .describedAs(paymentMethod.description() + " refund — " + customer.name()));
         } else {
             lines.add(NewJournalLine
                     .credit(chartOfAccounts.requireAccount(
@@ -636,6 +644,9 @@ class CreditNoteServiceImpl implements CreditNoteService {
     private CreditNoteView toView(CreditNote note) {
         SalesInvoice invoice = invoices.findById(note.getSalesInvoiceId()).orElseThrow();
         CustomerView customer = customers.require(note.getCustomerId());
+        // Held from the invoice, never set here — a pre-R4 invoice may genuinely have none.
+        PaymentMethodView paymentMethod = invoice.getPaymentMethodId() == null
+                ? null : paymentMethods.require(invoice.getPaymentMethodId());
         List<CreditNoteLineView> lineViews = note.getLines().stream().map(this::toView).toList();
 
         Currency currency = note.getRoundingAmount().currency();
@@ -653,7 +664,9 @@ class CreditNoteServiceImpl implements CreditNoteService {
                 customer.id(),
                 customer.name(),
                 invoice.getChannel(),
-                invoice.getSettlementMethod(),
+                paymentMethod == null ? 0L : paymentMethod.id(),
+                paymentMethod == null ? "(not recorded)" : paymentMethod.description(),
+                paymentMethod != null && paymentMethod.settlesImmediately(),
                 note.getDocumentNumber(),
                 note.getCreditNoteDate(),
                 note.getDescription(),

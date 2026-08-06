@@ -1,17 +1,17 @@
 package gr.novotrade.novocore.core.api.sales;
 
 /**
- * ⚠️ Raised when a {@link SettlementMethod} value has no {@code payment_method} row.
+ * No payment method has that id.
  *
- * <p>That is a <strong>drift bug</strong> rather than a caller's mistake — the seed is supposed to
- * carry exactly one row per enum value, and {@code PaymentMethodIT} asserts it in both directions.
- * It is a NotFoundException rather than an IllegalStateException because a caller naming a method
- * that genuinely has no row should get a 404 saying so, not a 500 describing internal state.
+ * <p>⚠️ <strong>Its meaning changed in R4, and the change is worth noticing.</strong> It used to be
+ * raised when a {@code SettlementMethod} enum value had no seeded row — a <em>drift bug</em> rather
+ * than a caller's mistake. Payment methods are now user-created rows with surrogate ids, so there is
+ * no seed to drift from, and this is an ordinary "the id names nothing": exactly the case
+ * {@code CLAUDE.md} requires a {@code ...NotFoundException} for, answering 404 rather than a bare 400.
  */
 public class PaymentMethodNotFoundException extends RuntimeException {
 
-    public PaymentMethodNotFoundException(SettlementMethod method) {
-        super("Payment method " + method + " has no row. The seed must carry one row per "
-                + "SettlementMethod value; this is a defect rather than a bad request.");
+    public PaymentMethodNotFoundException(long id) {
+        super("No payment method with id " + id + ".");
     }
 }

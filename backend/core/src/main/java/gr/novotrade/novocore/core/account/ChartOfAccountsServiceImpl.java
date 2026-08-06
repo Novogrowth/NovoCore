@@ -142,6 +142,17 @@ class ChartOfAccountsServiceImpl implements ChartOfAccountsService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<AccountView> activePaymentMethodTargets() {
+        // Settlement targets PLUS Accounts receivable — see the interface for why this is a second
+        // question rather than a widened isSettlementTarget().
+        AccountView receivable = requireAccount(AccountSystemKey.ACCOUNTS_RECEIVABLE);
+        return activeAccounts().stream()
+                .filter(account -> account.isSettlementTarget() || account.id() == receivable.id())
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<AccountView> activeAccountsExpectedToClear() {
         return toViews(accounts.findActiveExpectedToClearInChartOrder());
     }

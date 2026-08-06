@@ -1,7 +1,6 @@
 package gr.novotrade.novocore.core.sales;
 
 import gr.novotrade.novocore.core.api.sales.SalesChannel;
-import gr.novotrade.novocore.core.api.sales.SettlementMethod;
 import gr.novotrade.novocore.core.api.sales.TransmissionStatus;
 import gr.novotrade.novocore.core.api.shared.Money;
 import gr.novotrade.novocore.core.support.AuditableEntity;
@@ -54,8 +53,13 @@ class SalesInvoice extends AuditableEntity {
 
     /** Decides which account the invoice debits, and therefore whether it is an open item at all. */
     @Enumerated(EnumType.STRING)
-    @Column(name = "settlement_method", nullable = false, length = 30)
-    private SettlementMethod settlementMethod;
+    /**
+     * ⚠️ <strong>An id since R4, where it was a {@code SettlementMethod} enum constant.</strong>
+     * Nullable in the schema and required by the service, for the reason {@code V33} gives for
+     * {@code series_id}: backfilling pre-R4 invoices would invent a payment method nobody authored.
+     */
+    @Column(name = "payment_method_id")
+    private Long paymentMethodId;
 
     /** The number the issuing system printed. Unique among invoices that still stand. */
     @Column(name = "document_number", nullable = false, length = 60)
@@ -158,14 +162,14 @@ class SalesInvoice extends AuditableEntity {
     }
 
     SalesInvoice(long customerId, SalesChannel channel, Long seriesId,
-            SettlementMethod settlementMethod,
+            Long paymentMethodId,
             String documentNumber, LocalDate invoiceDate, String description, Money statedTotal,
             Money roundingAmount, boolean roundingNeededReview, String roundingAcceptedBy,
             Instant roundingAcceptedAt, String roundingNote, Long reversalOfId) {
         this.customerId = customerId;
         this.channel = channel;
         this.seriesId = seriesId;
-        this.settlementMethod = settlementMethod;
+        this.paymentMethodId = paymentMethodId;
         this.documentNumber = documentNumber;
         this.invoiceDate = invoiceDate;
         this.description = description;
@@ -203,8 +207,8 @@ class SalesInvoice extends AuditableEntity {
         return channel;
     }
 
-    SettlementMethod getSettlementMethod() {
-        return settlementMethod;
+    Long getPaymentMethodId() {
+        return paymentMethodId;
     }
 
     String getDocumentNumber() {

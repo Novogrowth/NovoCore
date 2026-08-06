@@ -2,70 +2,61 @@ package gr.novotrade.novocore.core.api.sales;
 
 import gr.novotrade.novocore.core.api.shared.Mandatory;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
- * A way a customer pays — the presentation half of a {@link SettlementMethod}.
+ * A way a customer pays — <strong>the business's own row</strong>, referencing an AADE article.
  *
- * <h2>⚠️ This exists because of a scoping error, and the distinction is worth keeping</h2>
+ * <h2>⚠️ R4 replaced a seed-only statutory list with a business list, and that is the whole record</h2>
  *
- * <p>The owner's original nine-table specification asked for
- * {@code Τρόποι πληρωμής [ID, abbreviation, description, active/inactive, myDATA code]}. When it was
- * established that {@link SettlementMethod} is a Java enum, that was carried into R2's scope as
- * "it lives on an enum, so there is nothing to edit" — and payment methods got no screen at all,
- * while delivery methods, a near-identical row in the same specification, got a full CRUD one.
+ * <p>V35 built one row per {@code SettlementMethod} enum value with no create path, on the reasoning
+ * that adding a method needs code. <strong>The rows are the owner's to author</strong>: the list ships
+ * empty, he creates every row, and each names both an AADE article and the account it reconciles to.
+ * <em>Two POS terminals can share AADE code 7 and land in different bank accounts, and the article
+ * cannot tell you which.</em>
  *
- * <p><strong>The enum decision was right for the wrong scope.</strong> Adding a payment method
- * genuinely needs code — each value carries an {@code AccountSystemKey}, {@code settlesImmediately}
- * and {@code subjectToCashLimit}, and no form can supply those — so <strong>no create</strong> is
- * correct and stays. It never justified no screen.
- *
- * <h2>⚠️ THE myDATA CODE IS READ FROM THE ENUM AND IS NOT STORED</h2>
- *
- * <p>The brief for this table said to carry the code as a column. It does not, because the premise
- * was wrong: <strong>the codes have been on the enum since it was written.</strong> "None of these
- * fields exists on an enum" was true of abbreviation, description and active, and false of the code.
- *
- * <p>Storing it would create a second record of one thing — exactly what {@code PaymentMethodIT}'s
- * drift test exists to prevent — and would then need a drift test of its own. So it is resolved from
- * the enum when this view is built. <strong>There is nothing to disagree.</strong>
- *
- * @param method the {@link SettlementMethod} constant. The identity: there is no surrogate id,
- *     because a second identifier would be a second thing to keep in step.
- * @param mydataPaymentCode ⚠️ <strong>Read from the enum, never stored.</strong> Empty for
- *     {@code ACS_COD}, {@code PAYPAL} and {@code STRIPE}, whose codes are genuinely open and are not
- *     invented here.
- * @param settlesImmediately behaviour, read from the enum. Shown so an operator can see why a method
- *     cannot simply be added, and never editable here.
- * @param subjectToCashLimit behaviour, read from the enum. Same.
- * @param sortCode ⚠️ Ordering only, exactly as on the document reference tables — eight options in
- *     enum-declaration order is not a sensible list for somebody picking while recording a sale.
- *     Freely editable; see {@code V34} for the full argument.
+ * @param aadePaymentMethodId ⚠️ <strong>Mandatory.</strong> A payment method with no statutory article
+ *     is not a real kind of thing, it is an incompletely specified row — unlike a <em>document type</em>
+ *     with no AADE code, which is a real thing the business issues. The R1a analogy was examined and
+ *     rejected; see {@code V37}.
+ * @param accountId ⚠️ <strong>Mandatory</strong>, and it may be Accounts receivable. Επί πιστώσει
+ *     <em>names</em> AR explicitly rather than carrying a null the posting code interprets by
+ *     convention, so <strong>no null means anything</strong> and the posting rule reads the account the
+ *     method names in every case.
+ * @param settlesImmediately ⚠️ <strong>DERIVED from the account's KIND, never stored.</strong>
+ *     {@code BANK_CASH} or {@code PARTNER_CLEARING} means the money is already somewhere and the
+ *     invoice is born settled; the Accounts receivable control account means it is not, and the invoice
+ *     is an open item until a Receipt allocates against it. It is a component here rather than an
+ *     accessor only so that it reaches the wire — the fact is computed, not held.
+ * @param subjectToCashLimit ⚠️ <strong>DERIVED from the article being annex 8.12 code 3
+ *     (Μετρητά), never stored.</strong> The €500 rule is Greek law as NovoCore applies it, not an
+ *     attribute AADE published, so it is not a column on the codification. ⚠️ <strong>It is the
+ *     RETAIL threshold only</strong> — the B2B rule is €500 net plus VAT and needs a retail/B2B
+ *     distinction the model does not have. Roadmap row <strong>C2</strong>; not R4's.
+ * @param inUse whether a sales invoice names this method. ⚠️ The predicate that freezes every field —
+ *     correctable while nothing has been recorded against it, refused afterwards. A flag rather than a
+ *     sentence on purpose: the screen renders the reason, because the backend localises nothing
+ *     (Q47(b)). ⚠️ A <strong>reversed</strong> invoice counts; recorded is not standing.
+ * @param sortCode ⚠️ Ordering only, freely editable, on no document. See {@code V34}.
  */
 public record PaymentMethodView(
-        @Mandatory SettlementMethod method,
+        long id,
         @Mandatory String abbreviation,
         @Mandatory String description,
-        Integer mydataPaymentCode,
+        long aadePaymentMethodId,
+        int aadePaymentMethodCode,
+        @Mandatory String aadePaymentMethodDescription,
+        long accountId,
+        @Mandatory String accountName,
         boolean settlesImmediately,
         boolean subjectToCashLimit,
         int sortCode,
+        boolean inUse,
         boolean active) {
 
     public PaymentMethodView {
-        Objects.requireNonNull(method, "method");
         Objects.requireNonNull(abbreviation, "abbreviation");
         Objects.requireNonNull(description, "description");
-    }
-
-    /**
-     * Empty where AADE's code for this method is still open.
-     *
-     * <p>Safe on a serialised record for the reason {@code CLAUDE.md} records after R1a: an
-     * {@code Optional}-returning {@code …IfAny()} cannot throw, unlike the derived accessor that
-     * answered {@code 500} for a whole codification.
-     */
-    public Optional<Integer> mydataPaymentCodeIfAny() {
-        return Optional.ofNullable(mydataPaymentCode);
+        Objects.requireNonNull(aadePaymentMethodDescription, "aadePaymentMethodDescription");
+        Objects.requireNonNull(accountName, "accountName");
     }
 }

@@ -30,7 +30,9 @@ public record SalesInvoiceView(
         long customerId,
         @Mandatory String customerName,
         @Mandatory SalesChannel channel,
-        @Mandatory SettlementMethod settlementMethod,
+        long paymentMethodId,
+        @Mandatory String paymentMethodDescription,
+        boolean settlesImmediately,
         @Mandatory String documentNumber,
         @Mandatory LocalDate invoiceDate,
         String description,
@@ -57,7 +59,7 @@ public record SalesInvoiceView(
     public SalesInvoiceView {
         Objects.requireNonNull(customerName, "customerName");
         Objects.requireNonNull(channel, "channel");
-        Objects.requireNonNull(settlementMethod, "settlementMethod");
+        Objects.requireNonNull(paymentMethodDescription, "paymentMethodDescription");
         Objects.requireNonNull(documentNumber, "documentNumber");
         Objects.requireNonNull(invoiceDate, "invoiceDate");
         Objects.requireNonNull(netTotal, "netTotal");
@@ -102,11 +104,17 @@ public record SalesInvoiceView(
     /**
      * True when the invoice was born fully settled and never becomes an open item.
      *
-     * <p>Cash and the partner clearing methods; see {@link SettlementMethod}. Nothing may be allocated
-     * against such an invoice, because its open amount is zero from the moment it is recorded.
+     * <p>Nothing may be allocated against such an invoice, because its open amount is zero from the
+     * moment it is recorded.
+     *
+     * <p>⚠️ <strong>Since R4 this reads a component rather than asking an enum.</strong> Whether a
+     * method settles immediately is derived from the KIND of the account it reconciles to — bank,
+     * cash or partner clearing yes, the Accounts receivable control account no — and the service
+     * computes it when it builds this view. Still one fact and still derived; the enum that used to
+     * answer it no longer exists.
      */
     public boolean bornSettled() {
-        return settlementMethod.settlesImmediately();
+        return settlesImmediately;
     }
 
     public Optional<Money> statedTotalIfAny() {

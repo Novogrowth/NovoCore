@@ -42,7 +42,6 @@ import gr.novotrade.novocore.core.api.sales.SalesInvoiceSort;
 import gr.novotrade.novocore.core.api.sales.SalesInvoiceView;
 import gr.novotrade.novocore.core.api.sales.PaymentMethodService;
 import gr.novotrade.novocore.core.api.sales.PaymentMethodView;
-import gr.novotrade.novocore.core.api.sales.SettlementMethod;
 import gr.novotrade.novocore.core.api.settings.SettingKeys;
 import gr.novotrade.novocore.core.api.settings.SettingsService;
 import gr.novotrade.novocore.core.api.shared.Money;
@@ -204,11 +203,11 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
         Rounding rounding = compareAgainstDocument(request, computedGross, currency);
         Money receivable = computedGross.plus(rounding.amount());
 
-        requireActiveSettlementMethod(request.settlementMethod());
-        requireWithinCashLimit(request.settlementMethod(), receivable);
+        PaymentMethodView paymentMethod = requireActivePaymentMethod(request.paymentMethodId());
+        requireWithinCashLimit(paymentMethod, receivable);
 
-        return new Computation(customer, series, priced, computedGross, rounding, receivable,
-                currency);
+        return new Computation(customer, series, paymentMethod, priced, computedGross, rounding,
+                receivable, currency);
     }
 
     /**
@@ -218,7 +217,7 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
      *
      * <p>{@code payment_method.active} would be decoration without a rule that reads it, and there
      * is exactly one place a caller <em>chooses</em> a settlement method:
-     * {@code NewSalesInvoice.settlementMethod}, which arrives here. A credit note takes its method
+     * {@code NewSalesInvoice.paymentMethodId}, which arrives here. A credit note takes its method
      * from the invoice it refunds rather than from a caller — that is <em>holding</em>, not
      * <em>setting</em>, so it is deliberately not guarded.
      *
@@ -233,14 +232,15 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
      * were not so, deactivation would be destructive and the owner could never retire the methods he
      * does not use — which is the whole capability {@code active} exists for.
      */
-    private void requireActiveSettlementMethod(SettlementMethod method) {
-        PaymentMethodView paymentMethod = paymentMethods.require(method);
+    private PaymentMethodView requireActivePaymentMethod(long paymentMethodId) {
+        PaymentMethodView paymentMethod = paymentMethods.require(paymentMethodId);
         if (!paymentMethod.active()) {
             throw new InvalidSalesInvoiceException(
                     "Payment method '" + paymentMethod.description() + "' is inactive, so it is "
                             + "not for new documents. Invoices already settled by it are "
                             + "unaffected. Choose another method, or reactivate it in Settings.");
         }
+        return paymentMethod;
     }
 
     /**
@@ -374,11 +374,12 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
                             + "to agree with the document the customer holds.");
         }
 
-        long entryId = post(request, customer, priced, rounding, receivable, currency).id();
+        long entryId = post(request, computation.paymentMethod(), customer, priced, rounding,
+                receivable, currency).id();
 
         SalesInvoice invoice = new SalesInvoice(customer.id(), computation.series().channel(),
                 request.seriesId(),
-                request.settlementMethod(), request.documentNumber(), request.invoiceDate(),
+                request.paymentMethodId(), request.documentNumber(), request.invoiceDate(),
                 request.description(), request.statedTotal(), rounding.amount(),
                 rounding.neededReview(), rounding.acceptedBy(), rounding.acceptedAt(),
                 request.roundingNote(), null);
@@ -418,7 +419,7 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
                 "number", saved.getDocumentNumber(),
                 "series", computation.series().series().abbreviation(),
                 "channel", saved.getChannel().name(),
-                "settlementMethod", saved.getSettlementMethod().name(),
+                "paymentMethod", computation.paymentMethod().description(),
                 "invoiceDate", saved.getInvoiceDate().toString(),
                 "gross", receivable.toString(),
                 "rounding", rounding.amount().toString(),
@@ -483,7 +484,7 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
         // series while its original had one would read as a document from before series existed.
         SalesInvoice reversal = new SalesInvoice(original.getCustomerId(), original.getChannel(),
                 original.getSeriesId(),
-                original.getSettlementMethod(), original.getDocumentNumber(), reversalDate,
+                original.getPaymentMethodId(), original.getDocumentNumber(), reversalDate,
                 reason == null || reason.isBlank() ? null : reason.trim(), null,
                 Money.zero(original.getRoundingAmount().currency()), false, null, null, null,
                 invoiceId);
@@ -797,7 +798,7 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
      * deliberately: the confirmation nobody can give is the legality of the transaction. Penalties
      * under N. 5301/2026 reach double the cash amount.
      */
-    private void requireWithinCashLimit(SettlementMethod method, Money amount) {
+    private void requireWithinCashLimit(PaymentMethodView method, Money amount) {
         if (!method.subjectToCashLimit()) {
             return;
         }
@@ -819,7 +820,8 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
      * Debit the settlement account or Accounts receivable with what the customer owes, credit revenue
      * per account, credit Output VAT per class, and put any rounding difference where it belongs.
      */
-    private JournalEntryView post(NewSalesInvoice request, CustomerView customer,
+    private JournalEntryView post(NewSalesInvoice request, PaymentMethodView paymentMethod,
+            CustomerView customer,
             List<PricedLine> priced, Rounding rounding, Money receivable, Currency currency) {
         AccountView outputVat = chartOfAccounts.requireAccount(AccountSystemKey.OUTPUT_VAT);
 
@@ -828,16 +830,19 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
         // The debit side. A method that settles immediately debits its own account and the invoice is
         // born fully settled; the rest debit AR and the invoice is an open item until a Receipt
         // allocates against it (brief §6).
-        Optional<AccountSystemKey> settlementAccount =
-                request.settlementMethod().settlementAccount();
-        if (settlementAccount.isPresent()) {
-            lines.add(NewJournalLine.debit(
-                            chartOfAccounts.requireAccount(settlementAccount.get()).id(), receivable)
-                    .describedAs(request.settlementMethod() + " — " + customer.name()));
+        // ⚠️ SINCE R4 THE ACCOUNT IS READ OFF THE METHOD IN EVERY CASE. It used to be resolved from
+        // an AccountSystemKey baked into an enum constant, with a null meaning "debit Accounts
+        // receivable" BY CONVENTION. Now Επί πιστώσει NAMES Accounts receivable, so no null means
+        // anything and there is nothing to interpret.
+        //
+        // The one remaining branch is not about which account — it is about whether the line must
+        // carry a sub-ledger reference, which a CONTROL account requires and a bank, cash or
+        // partner-clearing account forbids.
+        if (paymentMethod.settlesImmediately()) {
+            lines.add(NewJournalLine.debit(paymentMethod.accountId(), receivable)
+                    .describedAs(paymentMethod.description() + " — " + customer.name()));
         } else {
-            lines.add(NewJournalLine
-                    .debit(chartOfAccounts.requireAccount(AccountSystemKey.ACCOUNTS_RECEIVABLE).id(),
-                            receivable)
+            lines.add(NewJournalLine.debit(paymentMethod.accountId(), receivable)
                     .forSubLedger(SubLedgerRef.customer(customer.id())));
         }
 
@@ -983,6 +988,11 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
 
     private SalesInvoiceView toView(SalesInvoice invoice) {
         CustomerView customer = customers.require(invoice.getCustomerId());
+        // ⚠️ Nullable in the schema and required by the service (V37, on V33's precedent for
+        // series_id), so a pre-R4 row can genuinely have none. Rendered as such rather than
+        // fabricating a method nobody chose.
+        PaymentMethodView paymentMethod = invoice.getPaymentMethodId() == null
+                ? null : paymentMethods.require(invoice.getPaymentMethodId());
         List<SalesInvoiceLineView> lineViews =
                 invoice.getLines().stream().map(this::toView).toList();
 
@@ -999,7 +1009,9 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
                 customer.id(),
                 customer.name(),
                 invoice.getChannel(),
-                invoice.getSettlementMethod(),
+                paymentMethod == null ? 0L : paymentMethod.id(),
+                paymentMethod == null ? "(not recorded)" : paymentMethod.description(),
+                paymentMethod != null && paymentMethod.settlesImmediately(),
                 invoice.getDocumentNumber(),
                 invoice.getInvoiceDate(),
                 invoice.getDescription(),
@@ -1147,6 +1159,9 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
     private record Computation(
             CustomerView customer,
             SeriesContext series,
+            /** Resolved once in compute(), so posting and the audit entry cannot disagree with the
+             * guard that admitted it. */
+            PaymentMethodView paymentMethod,
             List<PricedLine> priced,
             Money computedGross,
             Rounding rounding,

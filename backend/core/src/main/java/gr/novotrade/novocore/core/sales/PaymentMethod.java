@@ -1,33 +1,41 @@
 package gr.novotrade.novocore.core.sales;
 
-import gr.novotrade.novocore.core.api.sales.SettlementMethod;
 import gr.novotrade.novocore.core.support.AuditableEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 /**
- * The presentation half of a {@link SettlementMethod} — one row per enum value.
+ * A payment method the business authored.
  *
- * <p>⚠️ <strong>The enum constant IS the primary key.</strong> No surrogate id: the enum name is the
- * identity, and a second identifier would be a second thing to keep in step.
+ * <p>⚠️ <strong>R4 replaced a seed-only row keyed by an enum constant with a user-created row.</strong>
+ * V35's argument for having no surrogate id was sound and its premise is gone: the enum constant was
+ * the identity because the rows were a fixed set, and a user-created row is a member of no enum.
  *
- * <p>⚠️ <strong>Behaviour stays on the enum</strong> — the settlement account, whether it settles
- * immediately, whether it counts against the cash limit, and the myDATA payment code. None of those
- * is stored here, so none of them can drift from the enum. Only the three fields the enum has no
- * room for live in this table, plus the sort code. See {@code V35}.
+ * <p>⚠️ <strong>Both references are mandatory and neither is a convenience.</strong> The AADE article
+ * supplies the myDATA code — which is therefore <em>not</em> stored here, so nothing can disagree —
+ * and the account is where the money lands. <em>Two POS terminals can share AADE code 7 and settle
+ * into different bank accounts.</em>
+ *
+ * <p>⚠️ <strong>There is no {@code settles_immediately} column.</strong> A method settles immediately
+ * when the account it names is a bank, cash or partner-clearing account, and does not when it names
+ * the Accounts receivable control account. One fact, derived where it is needed.
+ *
+ * <p>⚠️ <strong>Ids rather than {@code @ManyToOne}</strong>, deliberately: this entity is
+ * core-internal and its service resolves both references through the owning services, so a lazy
+ * association here would buy nothing and could blow up outside the transaction — the trap
+ * {@code CLAUDE.md} names beside proxy self-invocation.
  */
 @Entity
 @Table(name = "payment_method")
 class PaymentMethod extends AuditableEntity {
 
     @Id
-    @Enumerated(EnumType.STRING)
-    @Column(name = "method", nullable = false, length = 40)
-    private SettlementMethod method;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(name = "abbreviation", nullable = false, length = 20)
     private String abbreviation;
@@ -35,7 +43,13 @@ class PaymentMethod extends AuditableEntity {
     @Column(name = "description", nullable = false, length = 120)
     private String description;
 
-    /** ⚠️ Ordering only, freely editable. See {@code V34} for the argument. */
+    @Column(name = "aade_payment_method_id", nullable = false)
+    private Long aadePaymentMethodId;
+
+    @Column(name = "account_id", nullable = false)
+    private Long accountId;
+
+    /** Ordering only, freely editable, and NOT subject to the in-use freeze. See {@code V34}. */
     @Column(name = "sort_code", nullable = false)
     private int sortCode;
 
@@ -46,8 +60,17 @@ class PaymentMethod extends AuditableEntity {
     protected PaymentMethod() {
     }
 
-    SettlementMethod getMethod() {
-        return method;
+    PaymentMethod(String abbreviation, String description, long aadePaymentMethodId, long accountId,
+            int sortCode) {
+        this.abbreviation = abbreviation;
+        this.description = description;
+        this.aadePaymentMethodId = aadePaymentMethodId;
+        this.accountId = accountId;
+        this.sortCode = sortCode;
+    }
+
+    Long getId() {
+        return id;
     }
 
     String getAbbreviation() {
@@ -58,6 +81,14 @@ class PaymentMethod extends AuditableEntity {
         return description;
     }
 
+    Long getAadePaymentMethodId() {
+        return aadePaymentMethodId;
+    }
+
+    Long getAccountId() {
+        return accountId;
+    }
+
     int getSortCode() {
         return sortCode;
     }
@@ -66,8 +97,20 @@ class PaymentMethod extends AuditableEntity {
         return active;
     }
 
+    void changeAbbreviation(String newAbbreviation) {
+        this.abbreviation = newAbbreviation;
+    }
+
     void describe(String newDescription) {
         this.description = newDescription;
+    }
+
+    void changeArticle(long newArticleId) {
+        this.aadePaymentMethodId = newArticleId;
+    }
+
+    void changeAccount(long newAccountId) {
+        this.accountId = newAccountId;
     }
 
     void changeSortCode(int newSortCode) {
