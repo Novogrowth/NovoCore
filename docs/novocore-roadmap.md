@@ -22,6 +22,15 @@ figure that cannot be measured is left blank with a reason, never filled with a 
 `Out` is tokens generated; `In` is input + cache-creation + cache-read — **read the warning under
 *How the actual figures were derived* before drawing any conclusion from that column.**
 
+**Current state, measured 2026-08-06 (after F5):** **1,494 backend tests** (0 failures, 0 errors,
+1 skipped — the deliberate `LiveSeedTest` skip; ⚠️ **`BUILD SUCCESS` read from Maven's own output,
+not a wrapper's exit code**), **402 frontend tests across 41 files**, **247 API operations and 231
+schemas** — ⚠️ **F5 changed neither count**: it ships five screens, a migration of four GIN trigram
+indexes (**V36**) and one new integration test, and **no operation and no schema**. Its live leg ran
+on 2026-08-06 and passed 22 of 23 rows, the 23rd never applicable.
+
+*(The paragraph below is W1's, kept with its own figures — correct in its step's context.)*
+
 **Current state, measured 2026-08-04 (after W1):** **1,480 backend tests** (0 failures, 0 errors,
 1 skipped, `mvn clean verify` exit 0), **368 frontend tests across 39 files**, **247 API operations
 and 231 schemas, 175 of which declare `required`** — ⚠️ **W1 changed no operation and no schema
@@ -106,8 +115,9 @@ frontend work that must land before any adapter is built.
 |  R2b | R2 live-leg fixes + sort code + payment methods ʳ²ᵇ | — |    1.3 |  309k | 🟢 Done         |
 |      | **▼ THE DECIDED SEQUENCE — the row order below IS the decision** ˢᵉᑫ | | | | |
 |   W1 | Serialised-record contract fidelity ʷ¹  |     — |    1.5 |  356k | 🟢 Done         |
-|   F5 | Sales Invoice + Credit Note ʷ           |     — |        |       | 🟡 **Code complete, live leg owed** |
-|   R4 | Payment methods become a business list ʳ⁴ |   — |        |       | ⚪ After F5, before F6 ʳ⁴ |
+|   F5 | Sales Invoice + Credit Note ʷ           |     — |    3.7 |  766k | 🟢 Done         |
+|  R2c | Sort code: invisible column, unsettable on series ʳ²ᶜ | — |  |       | 🟡 **Current** ʳ²ᶜ |
+|   R4 | Payment methods become a business list ʳ⁴ |   — |        |       | ⚪ After R2c, before F6 ʳ⁴ |
 |   N1 | Release a reversed document's number ⁿ¹ |     — |        |       | ⚪ Direction settled, unbuilt |
 |   D1 | Supplier/customer codes + alias ᵈ¹      |     — |        |       | ⚪ After F5, with D3 ˢᵉᑫ |
 |   D3 | Customer/supplier addresses ᵈ³          |     — |        |       | ⚪ After F5, with D1 ˢᵉᑫ |
@@ -120,7 +130,6 @@ frontend work that must land before any adapter is built.
 |  F10 | Design pass, brand look + version badge ᵇᵃᵈᵍᵉ | — |      |       | 🔴 Not started  |
 |  F11 | Whole-system UI regression              |     — |        |       | 🔴 Not started  |
 |      | **▼ OUTSIDE THE SEQUENCE — each has its own gate, none is "next"** ˢᵉᑫ | | | | |
-|  R2c | Sort code: invisible column, unsettable on series ʳ²ᶜ | — |    |       | ⚪ No slot decided ʳ²ᶜ |
 |   D2 | Product categories, 3 levels ᵗ          |     — |        |       | ⚪ Before the Woo load (19) |
 |   R3 | Self-supply posting paths ˢ             |     — |        |       | ⚪ Not schedulable — accountant |
 |   U2 | Split `PROGRESS.md` / `HISTORY.md` ᵘ²   |     — |        |       | ⚪ Whenever a session has slack |
@@ -141,6 +150,8 @@ separately instead, where a reader scanning a column of dashes will actually mee
 **The owner's decided sequence, in his own terms:**
 
     W1  →  F5  →  D1 + D3 + D4 + D5  →  F6 onward
+    …and amended 2026-08-06, after R2b's and F5's live legs:
+    W1  →  F5  →  R2c  →  R4  →  D1 + D3 + D4 + D5  →  F6 onward
     D2  before step 19 (the Woo one-time load)
     R3  when the accountant answers — not schedulable
     U2  whenever a session has slack
@@ -1218,7 +1229,16 @@ editing it, **which is why L.9 passed** — the passing path and the broken path
 assigns it.** And it is on **series**, the picker an employee uses when recording a document, ordered
 by exactly this column.
 
-**No slot is decided**, which is why the row sits outside the sequence rather than inside it.
+✅ **A SLOT IS DECIDED — the owner, 2026-08-06: R2c is next, after F5 lands on its own.** The row was
+therefore **moved into the sequence** and its status promoted ⚪ → 🟡, per `CLAUDE.md` §*a sequencing
+decision changes the roadmap's ORDER, not a paragraph beside it*. ⚠️ **The promotion is the decision
+being applied, not a side effect of moving the row** — that file warns about exactly the latter, so
+it is worth saying which this is. *(This footnote previously ended "No slot is decided, which is why
+the row sits outside the sequence"; that was true when written on 2026-08-06 and was overtaken the
+same day.)*
+
+📌 **R4 now follows R2c**, and its own gate is unchanged and still the binding one: **before F6**,
+because it changes the sales invoice request contract.
 
 **ⁿ¹ N1 — a reversed document's number becomes available again.** ⚠️ **The DIRECTION is settled (owner,
 2026-08-05); the BUILD is deliberately not F5's.** F5 found three enforcements of document-number
@@ -1466,6 +1486,14 @@ of active time against ≈22.6 h of session wall-clock**. Step 15's two sessions
 > hundreds of thousands of tokens, is how a 1.1 h step reaches 73M. Those tokens are genuinely
 > consumed and genuinely billed, at a tenth of the input rate, but **`Out` is the better measure of
 > work produced.**
+
+⚠️ **F5's 3.7 h / 766k covers THREE sessions and is SHORT, deliberately recorded rather than
+withheld.** The windows are 2026-08-05 (the bulk of the build) and two on 2026-08-06 (the owner's
+live-leg report, and the session that finished C.9, D, F.1 and this close-out). **The close-out
+itself is not yet in the transcript when the figure is computed**, so the true total is a little
+higher — that is the standing caveat in this file, not a defect in this row. ⭐ **It is the largest
+`Out` figure in the table**, which is consistent with the step: two document domains, five screens, a
+migration and a contract IT.
 
 **Nothing before 2026-07-27 is measured.** The initial commit is 2026-07-24 and predates any Claude Code
 session. No figure is offered rather than a guessed one. **One frontend window is unmeasured and blank

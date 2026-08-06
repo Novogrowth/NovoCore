@@ -146,10 +146,17 @@ the summary.
     mean a list column instead.
   - ⭐ **The live-leg lesson is now in `CLAUDE.md`: a live-leg block is DERIVED from the screens a
     step ships, never composed freehand.** R2's had ten rows against twelve items.
-- ⚠️ **F5 is CODE COMPLETE as of 2026-08-06 and the LIVE LEG is what remains.** It sits on branch
-  `f5-sales-invoice-credit-note`, pushed, **not merged to `main`** — and the reason is no longer that
-  anything is unwritten but that no screen has been opened in a browser. All 30 sub-parts have
-  verdicts and none is open. Five screens, `search=` on both document routes (**V36**), the
+- ✅ **F5 is DONE — 2026-08-06, live leg run, merged to `main`.** All 30 sub-parts have verdicts and
+  none is open; the live leg **passed 22 of 23 rows, with the 23rd never applicable** (L.23 fires only
+  if the deferred B.4 returns to scope, and it is recorded as unrun rather than as passed).
+  ⭐ **L.15's pass IS a refusal**: reversing an invoice and re-recording its number answers a readable
+  **422**, not the `500` Phase 0 measured — **the expected result while N1 is unbuilt**, and the row
+  changes when N1 lands. ⭐ **Two rows carried from R2's own leg closed here at their first reachable
+  moment** (the frozen series field and its `lockedReason` rendering), as did **R2b's carried payment
+  method guard** — all three needed a recorded invoice, which needed F5.
+  - ⚠️ **The next step is R2c or R4, and R4 is the one with a deadline attached** — it changes the
+    sales invoice request contract, so F6 should be built against the corrected model. R2c has no
+    slot. Five screens, `search=` on both document routes (**V36**), the
   repository's **first three `meta.sortKey`s**, and `DataIntegrityViolationException` mapped to 422.
   Frontend **402 tests across 41 files**. ⚠️ **The record forms are TRANSITIONAL by owner decision** —
   a sales document is a *mirror* and is never typed in real operation, so they are test harnesses and
