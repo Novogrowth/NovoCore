@@ -132,7 +132,9 @@ const webSeries: SalesDocumentSeriesView = {
 const customer: CustomerView = {
   id: 7,
   name: 'Καφεκοπτεία Σινιόρ',
-  vatStatus: 'NORMAL',
+  // ⚠️ `DOMESTIC`, and it was `NORMAL` until `tsc` refused it — there is no such constant. Nothing
+  // in a vitest run would have said so: the mock would have served the invented value happily.
+  vatStatus: 'DOMESTIC',
   active: true,
   mergeable: true,
   systemRecord: false,
