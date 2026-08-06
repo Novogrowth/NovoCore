@@ -2,6 +2,7 @@ package gr.novotrade.novocore.core.api.sales;
 
 import gr.novotrade.novocore.core.api.shared.Mandatory;
 import gr.novotrade.novocore.core.api.shared.Money;
+import gr.novotrade.novocore.core.api.shared.Required;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
@@ -22,7 +23,7 @@ import java.util.Optional;
  */
 public record NewCreditNote(
         long salesInvoiceId,
-        String documentNumber,
+        @Mandatory String documentNumber,
         @Mandatory LocalDate creditNoteDate,
         String description,
         Money statedTotal,
@@ -45,13 +46,10 @@ public record NewCreditNote(
                             + ". Q26 makes a credit note a correction to a specific sale, and the "
                             + "invoice is what supplies the channel, the customer and the rate.");
         }
-        if (documentNumber == null || documentNumber.isBlank()) {
-            throw new IllegalArgumentException(
-                    "A credit note needs the number the issuing system printed on it, for the reason "
-                            + "a sales invoice does: it is what the customer quotes and what AADE "
-                            + "holds.");
-        }
-        documentNumber = documentNumber.trim();
+        // Required.text, for the reasons written out at NewSalesInvoice.documentNumber (F5 A.2):
+        // the component is mandatory in fact, was invisible to the generated contract, and answered
+        // in a different shape from every Required-guarded field beside it.
+        documentNumber = Required.text(documentNumber, "documentNumber").trim();
 
         if (lines.isEmpty()) {
             throw new IllegalArgumentException("A credit note with no lines credits nothing.");

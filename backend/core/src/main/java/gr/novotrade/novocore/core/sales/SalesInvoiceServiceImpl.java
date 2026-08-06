@@ -57,7 +57,11 @@ import gr.novotrade.novocore.core.api.tax.VatClassService;
 import gr.novotrade.novocore.core.api.tax.VatClassSource;
 import gr.novotrade.novocore.core.api.tax.VatClassView;
 import gr.novotrade.novocore.core.api.tax.VatExemptionReasonService;
+import gr.novotrade.novocore.core.customer.CustomerSearch;
+import gr.novotrade.novocore.core.document.SalesDocumentSeriesSearch;
 import gr.novotrade.novocore.core.support.SpringPaging;
+import gr.novotrade.novocore.core.support.TextSearch;
+import org.springframework.data.jpa.domain.Specification;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -261,6 +265,23 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
                             + "already numbered in it remain explicable.");
         }
 
+        // ⚠️ THE DRAFT HALF OF THIS REFUSAL IS UNREACHABLE BY CONSTRUCTION, and is written anyway —
+        // the same standing as the affectsStock == null branch below, and recorded here so a future
+        // reader does not spend a session trying to produce it (F5 A.4, measured 2026-08-05).
+        //
+        // A series can never come to point at a draft type. R2b guards BOTH places a type is set:
+        // SalesDocumentSeriesServiceImpl refuses `create` and refuses the document-type change, in
+        // each case naming the undecided stock behaviour. And a decided type cannot be pushed back
+        // to draft — PUT /api/sales-document-types/{id}/stock-behaviour requires both flags and
+        // answers 400 to a null one. So `documentType.isDraft()` is false at this point on every
+        // reachable path, and the milder wording below is a backstop rather than a message anybody
+        // will read.
+        //
+        // ⚠️ It stays for the reason the branch below stays: if either of R2b's guards is ever
+        // relaxed, this fails loudly with the right explanation instead of recording a document
+        // whose stock behaviour nobody decided. What must NOT happen is somebody "simplifying" the
+        // two messages into one on the grounds that only the retired case is observed — a draft's
+        // stock question being unanswered and a type being retired are genuinely different failures.
         SalesDocumentTypeView documentType = salesDocumentTypes.require(series.documentTypeId());
         if (!documentType.active()) {
             throw new InvalidSalesInvoiceException(
@@ -517,6 +538,35 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
      * value to that enum does not silently start ordering by a property that happens to share its
      * name — or fail at runtime because none does. The mapping is a decision; the enum is the
      * vocabulary.
+     *
+     * <h2>⚠️ This map is where a Greek-aware text ordering CANNOT be expressed (F5 B.4, 2026-08-05)</h2>
+     *
+     * <p>Every entry here becomes a property name on a Spring Data {@code Sort}, built by
+     * {@code SpringPaging.pageableFor} and handed to {@code findAll}. <strong>A {@code Sort} cannot
+     * carry a {@code COLLATE} clause.</strong> It names a property; the collation comes from the
+     * column, and under this deployment's {@code --locale=C} that means <strong>byte order</strong> —
+     * every Greek document number after every Latin one, and mixed case split.
+     *
+     * <p><strong>So the day a text sort key has to order Greek correctly, the change is here and it
+     * is a change of MECHANISM, not of expression.</strong> That property leaves the
+     * {@code Pageable}-driven path entirely — an explicit {@code @Query} with
+     * {@code ORDER BY … COLLATE "el-GR-x-icu"} and its own paging — while the others stay on it. This
+     * note exists so that is one ordering path being replaced rather than a rewrite discovered
+     * halfway through.
+     *
+     * <p><strong>Why it is a note and not a build.</strong> The only shipping text key is
+     * {@code DOCUMENT_NUMBER}, and the two orders were measured against the live stack on 2026-08-05:
+     * on <em>Latin</em> document numbers, byte order and {@code el-GR-x-icu} <strong>agree</strong>.
+     * They diverge only where the text carries Greek letters or mixed case. ⚠️ <strong>The deferral is
+     * therefore conditional on a fact nobody here owns: whether a real Prosvasis Go document number
+     * carries Greek letters.</strong> If it does, this stops being deferred for
+     * {@code DOCUMENT_NUMBER} immediately. The frontend's half of the same obligation — why
+     * {@code CUSTOMER_NAME} is not offered at all — is recorded at
+     * {@code sales-invoice-columns.tsx}.
+     *
+     * <p>📌 Numeric ordering is off under <em>both</em> orders ({@code -0010} sorts before
+     * {@code -0002}), deliberately and consistently with {@code collation.test.ts}. Collation is not
+     * what would fix that.
      */
     private static final Map<String, String> SORTABLE = Map.of(
             SalesInvoiceSort.INVOICE_DATE.name(), "invoiceDate",
@@ -526,22 +576,50 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
     /** Ordering when the caller names none: the document's own date, as the unpaged list does. */
     private static final String NATURAL_ORDER = "invoiceDate";
 
+    /**
+     * Target-list row 8, as a specification — <strong>document number, plus the counterparty and the
+     * series, which are not on this table</strong> (F5 B.1, 2026-08-05).
+     *
+     * <p>The two related halves go through {@link TextSearch#matchingRelated}, which reaches them by
+     * subquery on the scalar id rather than by a mapped association. The whole argument for that —
+     * and why the dotted path this mechanism advertises cannot serve a document list — is written at
+     * that method. The short version: {@code customerId} and {@code seriesId} are plain
+     * {@code Long}s, and an inner join would drop every invoice whose series is null.
+     *
+     * <p>⚠️ <strong>Customer <em>code</em> is in row 8 and is missing here, deliberately.</strong>
+     * {@code customer.code} is not a column — it is D1's to add, and D1 is scheduled after F5. When
+     * it lands, it is one more property name in the call below.
+     *
+     * <p>A null or blank term makes every part always-true, so the composed predicate is "no filter"
+     * rather than "match nothing" — the semantics {@code TextSearch} already documents.
+     */
+    private static Specification<SalesInvoice> matching(String search) {
+        return TextSearch.<SalesInvoice>matching(search, "documentNumber")
+                .or(CustomerSearch.matchingCustomer(search, "customerId"))
+                .or(SalesDocumentSeriesSearch.matchingSeries(search, "seriesId"));
+    }
+
     @Override
     @Transactional(readOnly = true)
     public PageResponse<SalesInvoiceView> pageBetween(
-            LocalDate from, LocalDate to, PageRequest page) {
+            LocalDate from, LocalDate to, String search, PageRequest page) {
         requireOrderedRange(from, to);
+        Specification<SalesInvoice> withinRange = (root, query, builder) ->
+                builder.between(root.get("invoiceDate"), from, to);
         return SpringPaging.responseFrom(
-                invoices.findByInvoiceDateBetween(from, to,
+                invoices.findAll(withinRange.and(matching(search)),
                         SpringPaging.pageableFor(page, SORTABLE, NATURAL_ORDER)),
                 this::toView);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<SalesInvoiceView> pageOfCustomer(long customerId, PageRequest page) {
+    public PageResponse<SalesInvoiceView> pageOfCustomer(
+            long customerId, String search, PageRequest page) {
+        Specification<SalesInvoice> ofCustomer = (root, query, builder) ->
+                builder.equal(root.get("customerId"), customerId);
         return SpringPaging.responseFrom(
-                invoices.findByCustomerId(customerId,
+                invoices.findAll(ofCustomer.and(matching(search)),
                         SpringPaging.pageableFor(page, SORTABLE, NATURAL_ORDER)),
                 this::toView);
     }

@@ -33,6 +33,9 @@ import java.util.Optional;
  *
  * @param settlementMethod brief §6's settlement automation. Decides which account the invoice debits
  *     and therefore whether it is an open item at all — see {@link SettlementMethod}.
+ * @param documentNumber the number the issuing system printed on the document. <strong>Mandatory</strong>
+ *     — it is what a customer quotes, what AADE holds, and what makes a duplicate entry detectable.
+ *     Never generated here: Novocore records numbers, it does not allocate them (until step 40).
  * @param seriesId the numbering series this document belongs to. <strong>Mandatory since R1b</strong>,
  *     and it carries two things rather than one:
  *     <ul>
@@ -58,7 +61,7 @@ public record NewSalesInvoice(
         long customerId,
         @Mandatory Long seriesId,
         @Mandatory SettlementMethod settlementMethod,
-        String documentNumber,
+        @Mandatory String documentNumber,
         @Mandatory LocalDate invoiceDate,
         String description,
         Money statedTotal,
@@ -88,13 +91,24 @@ public record NewSalesInvoice(
                             + "is the shared retail customer (Q10), which is a real answer rather "
                             + "than a missing one.");
         }
-        if (documentNumber == null || documentNumber.isBlank()) {
-            throw new IllegalArgumentException(
-                    "A sales invoice needs the number the issuing system printed on it. It is what a "
-                            + "customer quotes, what AADE holds, and what makes a duplicate entry "
-                            + "detectable.");
-        }
-        documentNumber = documentNumber.trim();
+        // ⚠️ Required.text rather than an inline throw, and the change is not cosmetic (F5 A.2,
+        // 2026-08-05). This component is mandatory in fact and used to be invisible as such:
+        // reflection cannot see inside a constructor body, so @Mandatory was absent, `required` did
+        // not list it, and the generated TypeScript said `documentNumber?: string` — the exact class
+        // of contract lie that broke product creation through NewProduct.serialTracked. It is 8a's
+        // own stated blind spot: "a component made mandatory by an inline `if (x == null) throw` is
+        // not [visible]".
+        //
+        // It also fixes the answer. The inline throw arrived as 400 "Malformed request body: A sales
+        // invoice needs the number…" — the wrong label for a body that parsed perfectly — while
+        // seriesId beside it already answered "\"seriesId\" is required and was not supplied.".
+        // Two adjacent mandatory fields answered in two shapes, decided by nothing but which guard
+        // the author reached for.
+        //
+        // The sentence below is kept as the javadoc rather than discarded: it says WHY the number is
+        // needed, which "required and was not supplied" does not, and it is worth a reader's time
+        // even though it is no longer a runtime message.
+        documentNumber = Required.text(documentNumber, "documentNumber").trim();
 
         if (lines.isEmpty()) {
             throw new IllegalArgumentException(

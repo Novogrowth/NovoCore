@@ -41,9 +41,21 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | R1b | **Document reference data (behavioural)** — the series becomes what a sale names | **Done, committed** — `seriesId` mandatory on `NewSalesInvoice`, `channel` removed and **derived from the series**, the consumption path branches **silently** on the document type's `affectsStock`, and three refusals (channel-less, inactive series, inactive type). Migration **V33** (comment only). **No new operations.** ⚠️ **Two defects found, both invisible before this step**; ⚠️ **the derived-accessor guard left R1b and became step W1** on a measurement. All 22 sub-parts have verdicts. See below |
 | U3 | **Eleven design decisions written into the repository** — D5, D4, D1, D3, D2, M0, vouchers, the shared gate | **Done, documentation only** — no production code, no schema, no migration, no test changed. D4 split (half already answered), M0 split into M0a/M0b, the per-order shipping address moved to step 22, voucher creation modes recorded against step 21, the Woo one-time load separated from the Woo adapter at step 19, and the **shared gate before step 24** recorded. Nothing ⚪ was promoted or reordered beyond those placements. See below |
 | R2 | **Document reference data (screens)** — six settings screens over R1a's six tables | **Done, committed** — the AADE codification (read + three verbs, **no create, ever**), sales/purchase document types, sales/purchase series, delivery methods. ⚠️ **Grew a backend sub-part mid-step**: 7 new routes making a series' abbreviation, document type and ΜΑΡΚ flag **editable while unused and frozen once used**, because none of them had a write route on any installation. **All 41 sub-parts have verdicts**; 4 premises corrected. See below |
-| R2b | **What R2's live leg found**, plus two premises its brief had wrong | **Done, committed** — ⚠️ **the stale-list defect was OLDER than R2 and sat in all 13 create forms**, fixed globally with a structural guard; ⚠️ **no server-side check existed** that a series' document type is usable, so the screen was the only guard; `sort_code` on four tables (**V34**, integer, NOT NULL); **payment methods (V35)**, which had no screen because of a scoping error. **237 → 247 operations.** All 30 sub-parts have verdicts; **one is still open** — §5's conditional |
+| R2b | **What R2's live leg found**, plus two premises its brief had wrong | **Done, committed** — ⚠️ **the stale-list defect was OLDER than R2 and sat in all 13 create forms**, fixed globally with a structural guard; ⚠️ **no server-side check existed** that a series' document type is usable, so the screen was the only guard; `sort_code` on four tables (**V34**, integer, NOT NULL); **payment methods (V35)**, which had no screen because of a scoping error. **237 → 247 operations.** All 30 sub-parts have verdicts. ✅ **§5's conditional (5.4) closed on 2026-08-05** when the owner ran R2b's live leg — the truncation was the select trigger, already fixed. ⚠️ **The leg produced two new rows, neither built: R2c** (sort code invisible as a column, and **absent from the series edit form**) and **R4** (payment methods are a **business** list, not a statutory one — a requirement correction that **changes the sales invoice request contract**) |
 | W1 | **Serialised-record contract fidelity** — the wire shape equals the documented shape | **Done, committed** — the generator describes what **Jackson** writes, not what a record's components say. **+58 properties across 27 response schemas**; no operations, no schemas, no migration. ⚠️ **Request records deliberately excluded** — they are deserialised through the canonical constructor and never serialised, so a derived property there describes a write that never happens. `OpenItemRef.isCustomerSide()` deleted (zero references anywhere). **Two premises corrected**, one of them `CLAUDE.md`'s own statement of the Jackson mechanism. All 16 sub-parts have verdicts |
+| F5 | **Sales Invoice + Credit Note screens** — the first step to reach the **recording** path | **Done, live leg run 2026-08-06, merged to `main`.** All 30 sub-parts have verdicts, none open. Five sales/credit-note screens, `search=` on both document routes (**V36**, 4 GIN trigram indexes), the repository's **first three `meta.sortKey`s**, and `DataIntegrityViolationException` mapped to 422 so an index-enforced rule stops arriving as Boot's legacy 500. ⚠️ **Two things are DELIBERATELY not built and have their own roadmap rows** — **N1** (a reversed document's number) and B.4's collation. ⚠️ **The record forms are TRANSITIONAL by decision** — a mirror is never typed in real operation |
 | 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress. F0–F4, S1 and S2 done.** ⚠️ **W1 landed 2026-08-04, so next is F5, then the D-block (D1+D3+D4+D5), then F6 onward** — the owner's sequencing decision of **2026-08-04**, recorded as the roadmap's row order. *(This cell previously read "Next is Q1, then R1, then F5", correct when written on 2026-08-02 and overtaken since: Q1, R1a, R1b, R2 and R2b have all landed.)* Foundations `94e17cd`, Products `56e3726` + guards `28c4119` + brand pass, then the render-loop fix `3458ee6`, F0 (the seed pass), F1 Suppliers `b406b27`, F2 Customers `496c7be`, F3 Users & Roles `aea0e56`, then **S1** (search), **S2** (sorting) and **F4** (Settings). **307 frontend tests, 31 files, green.** Per-step detail in `docs/novocore-roadmap.md`; decisions and what each step left behind in *Step 16 — the frontend* below |
+
+**Tests, measured 2026-08-06 (after F5's code): 1,494 passing, 0 failing, 1 skipped, `mvn clean
+verify` — ⚠️ **`BUILD SUCCESS` read from Maven's own output, not from a wrapper's exit code**, which
+this file has already recorded reporting 0 over a `BUILD FAILURE`. **247 operations, 231 schemas**,
+**unchanged**: F5 ships screens, tests and one comment, and **no operation and no schema**. Frontend:
+**402 across 41 files**, typecheck / lint / knip clean. F5 added **14** backend tests (1,480 → 1,494)
+— 8 in `DocumentNumberReuseIT` and the search extensions, 6 in the new `F5WriteContractIT` — and
+**34** frontend tests (368 → 402) across one new file and one extended one. Migration **V36** (4 GIN
+trigram indexes).
+
+*(The paragraph below is W1's, kept with its own figures — correct in its step's context.)*
 
 **Tests, measured 2026-08-04 (after W1): 1,480 passing, 0 failing, 1 skipped, `mvn clean verify`
 exit 0; 247 operations, 231 schemas, 175 declaring `required`. Frontend: 368 across 39 files,
@@ -127,6 +139,503 @@ directly rather than trusting the line count: **0 removed, 37 added, 174 total.*
 
 ---
 
+## ▶ F5 — Sales Invoice + Credit Note screens. **DONE 2026-08-06, live leg run, merged to `main`**
+
+**Written here at the moment of approval, per `CLAUDE.md` §*An approved proposal is a checklist, not
+a paragraph*.** Every row below gets a verdict at close-out: **done** (and how it was verified),
+**explicitly deferred** (with the reason and where it is recorded), or **still open**. A row with no
+verdict is a finding.
+
+F5 decides the document interaction pattern F6–F8 reuse, and it is the first step to reach the
+**recording** path — where several of R1b's and R2b's constraints have never met data.
+
+### ⭐ OWNER DECISIONS OF 2026-08-05 — recorded before the remaining code, and they RESHAPE the step
+
+⚠️ **Read these before touching anything in F5.** They were settled in a design conversation and are
+written here, in `CLAUDE.md` and in the roadmap in the same session, per the rule that a design
+conversation gets the same close-out discipline as a build step.
+
+**1. A sales document in Novocore is a MIRROR, and the record form is a TEST HARNESS.**
+The invoicing software is the only issuer; Novocore sends an **order**, that software issues, and
+Novocore **fetches the issued document back**. "Issuing" from a Novocore screen means sending the
+order again. ⚠️ **A sales invoice will never be recorded by hand in real operation** — the core works
+standalone **for testing purposes only**. Full statement in `CLAUDE.md` §1b. **F5's deliverables
+therefore split three ways:**
+
+| Part | Status |
+|---|---|
+| List and detail screens | **PERMANENT PRODUCT** — people read mirrored documents daily |
+| The recording **path** (service, refusals, posting, stock) | **PERMANENT** — a document issued at the counter in Go still arrives through it |
+| The record **form** | ⚠️ **TRANSITIONAL, a test harness.** Correct, not polished |
+
+**2. D is scoped DOWN.** Nobody will ever type a credit note. **D.1 list and D.2 detail stay full
+product quality; D.3/D.4 become minimal** — enough to exercise the recording path, its derived fields
+and its refusals, with preview and rounding acceptance only so far as the path needs exercising. **Do
+not build the polished version.** D.5 stays, and see decision 4 for why reversal is itself temporary.
+
+**3. X1 gained three concrete requirements** — idempotency key, a persisted *submitted, outcome
+unknown* state, and a **user-visible unresolved state that never invites a retry**. They are **core,
+not adapter**. ⭐ This also closes a question previously left open: X1 was thought unspecifiable
+before a real adapter exists, and it is not. **Recorded in the roadmap under ˣ; not built.**
+
+**4. A.1c's direction is SETTLED — the number IS released — and is deliberately NOT built in F5.**
+It has its own roadmap row, **N1**. The reasoning: a reversal undoes **Novocore's own mis-recording**
+of a document Go issued, not a cancellation of an issued document — Greek law has no such thing. So
+the partial unique index is the wrong enforcement. ⚠️ **It is not built here because a partial index
+cannot express *"not reversed"* and the fix must not silently drop the concurrency guarantee.** A.1b
+already prevents the raw 500. `DocumentNumberReuseIT` stays exactly as it is.
+
+**5. An open structural question, recorded and NOT resolved:** both paths run through an **order**,
+Novocore has no order entity (step 22, Phase 4) and the screens that depend on it are Phase 2 — and
+**the order and the document are two linked objects, not one filled in progressively**, because Go
+applies its own VAT resolution, rounding and numbering. Recorded against step 22 and here.
+
+### 🅟 Phase 0 — the premises, measured rather than read
+
+**Method:** a throwaway `F5Phase0ProbeIT` in the app module (real Boot server, real HTTP, real
+PostgreSQL, ~45 printed responses, negative control *"a well-formed sale must be 201"*), **deleted
+afterwards**; plus direct SQL against the running stack in rolled-back transactions, with its own
+negative control. App image rebuilt first, unconditionally.
+
+| # | Finding, measured 2026-08-05 |
+|---|---|
+| **P.1** | 🐛 ⚠️ **"A reversed invoice releases its number" is stated in three places and enforced by none.** The service message and the DB trigger both say it and the trigger implements it; the partial unique index `sales_invoice_number_idx … WHERE reversal_of_id IS NULL` excludes the *reversing* row and **not the reversed one**. Measured over HTTP: record → reverse → re-record the same number in the same series answers **`500`** in Boot's legacy body, from `DataIntegrityViolationException`. Confirmed independently in SQL on the live database with a live negative control. **It predates R1b — `V17` had the same predicate** — and was unreachable until F5 |
+| **P.2** | 🐛 **`documentNumber` is mandatory in fact, undeclared in the spec.** Guarded by an inline `if (… isBlank()) throw` on both `NewSalesInvoice` and `NewCreditNote` — exactly 8a's stated blind spot — so neither carries `@Mandatory` and neither appears in `required`. The generated TypeScript says `documentNumber?: string`. Its refusal is labelled `"Malformed request body:"` for a body that parsed, while `seriesId` beside it answers `"\"seriesId\" is required and was not supplied."` |
+| **P.3** | ⚠️ **PREMISE CORRECTED — a line states *neither* a VAT class nor an exemption reason in the ordinary case.** "Never both" is right; "never neither" is the opposite of the design. `VatClassPrecedence` is line → customer → product, and a null `vatClassId` is how a line says *"whatever this customer or this product says"*. Measured `201` |
+| **P.4** | ⚠️ **PREMISE CORRECTED — the backend DOES declare sort keys.** `SalesInvoiceSort` is a bound enum (`INVOICE_DATE`, `DOCUMENT_NUMBER`, `RECORDED_AT`), mapped in `SalesInvoiceServiceImpl.SORTABLE`, present in the spec and in `paging.ts`. What is missing is only the **frontend** half: no column file in the repository carries a `meta.sortKey`. The server-sort machinery (`canSortColumn`, `manualSorting`, `useListState.setSort`) is already built and tested |
+| **P.5** | ⚠️ **PREMISE CORRECTED — the cash limit is `>=`, not "above".** Measured: **exactly €500.00 is refused**, €499.99 records. A screen mirroring this with `>` lets through the one value the law cares most about |
+| **P.6** | ⚠️ **The draft-document-type refusal on the recording path is UNREACHABLE by construction.** R2b's own guard refuses creating a series against a draft type, and `PUT …/stock-behaviour` refuses null flags — so a series can never come to point at a draft. `resolveSeries`'s draft branch is defensive only, like the `affectsStock == null` branch beside it |
+| **P.7** | ⚠️ **`GET /api/sales-invoices` has no "everything" mode.** With no parameters it answers `400 "a date range needs 'from' and 'to', or name a customerId instead"`. The list screen cannot open unfiltered; the default range is a decision F5 has to make and record |
+| **P.8** | ⚠️ **Neither document endpoint accepts `search=`, and an unknown parameter is silently ignored** — measured `200` with the full list. A `SearchFilter` wired without the backend half would look like it works and filter nothing |
+| **P.9** | ⚠️ **The counterparty trap does not bite row 8, and the real obstacle is bigger.** `SalesInvoice.customerId` is a **scalar `Long`, not a JPA association**, so `TextSearch`'s dotted path cannot be used at all. And `customer_id` is `NOT NULL`, so no sales document could vanish from its own list. The join-versus-denormalise choice is real; the drop-out risk is not |
+| **P.10** | **Rounding is two optional fields on the same request body — no separate route, no review queue.** Measured: preview reports `roundingDifference` / `roundingThreshold` / `roundingNeedsAcceptance` / `receivable`; record refuses `422`; the same body plus `roundingAcceptedBy` records `201` and stores `roundingNeededReview`, `roundingAcceptedBy`, a server `roundingAcceptedAt` and the note. Threshold boundary measured: 0.03 posts automatically, 0.04 refuses. ⚠️ **`roundingAcceptedBy` is silently dropped when the difference is small**, so the control must appear only when the preview asks for it |
+| **P.11** | **Per-series uniqueness works, and this is the first time it could be exercised.** The same number in two different series → both `201`; the same number in one series → `422` on `record` **and** on `preview`. All ten live `sales_invoice` rows still have `series_id IS NULL` |
+| **P.12** | **ΜΑΡΚ / UID / QR URL / transmission status have NO write route anywhere**, at record time or after. Measured on a fresh record: the three are absent from the body entirely (`non_null`) and `transmissionStatus` is `"UNKNOWN"`. This is `frontend/README.md`'s **third** field state (*no route exists on any installation*), not the fourth |
+| **P.13** | **Immutability confirmed at the wire.** `PATCH …/{id}/description` → `404` (no route registered), `DELETE …/{id}` → `405`. The whole sales surface is five routes and none is an edit. Correction is reversal or credit note, and the backend refuses mixing them |
+| **P.14** | **W1's derived properties are on the wire and usable**: `inForce`, `reversal`, `reversed` on both views; `bundle`, `exempt` on `SalesInvoiceLineView` |
+| **P.15** | ⚠️ **Live-leg precondition nobody had recorded:** the owner's two real series are `TEST99` (channel NULL, draft type) and `TEST2` (`ECOMMERCE`, deactivated type), so **neither can record an invoice today**. Reactivating type 1 makes `TEST2` the only recordable series. ⚠️ **RE-MEASURED 2026-08-06 AND OUT OF DATE — see L.0 below.** There are now **four** series and **three** types, and **every type is inactive**, so nothing can record. The remedy is no longer one reactivation |
+| **P.16** | **Collation measured on the live stack** (`datcollate = C`, PG 17.10, `el-GR-x-icu` available). The two orders differ only where text carries Greek letters or mixed case; on Latin document numbers they agree, numeric ordering off in both. ⚠️ **A Spring Data `Sort` cannot express `COLLATE`**, so applying it means leaving the `Pageable`-driven path for that property |
+| **P.17** | ⚠️ **My own first `install` was piped to `tail` and reported `INSTALL_EXIT=0` over a compilation failure** — `CLAUDE.md`'s piped-build trap, caught by reading the output. Every later build used `set -o pipefail` and the documented two-step |
+
+### 🅘 The three investigations, and what each established
+
+**A.1a — the provenance search. The claim is a real decision, and the SALES side contradicts it.**
+
+`git log -S "releases its number"` returns three commits. The **origin is step 8, `c6e2513`,
+migration `V16` — purchase invoices, not sales.** Its comment argues the design out loud:
+
+> *"**A TRIGGER RATHER THAN A UNIQUE INDEX**, because the rule is not row-local and a partial index
+> cannot express it. […] once an invoice has been reversed, re-entering it correctly under the same
+> supplier number is the ordinary thing to want, **because the commonest reason to reverse one is
+> that it was typed wrong**. […] The alternative — a `superseded` flag maintained alongside
+> `reversal_of_id` — would be a second copy of a fact, free to disagree with the first."*
+
+⭐ **And `V16` backs it correctly:** `CREATE INDEX purchase_invoice_number_idx` — **non-unique**.
+Verified on the live database: `purchase_invoice` has exactly two unique constraints,
+`journal_entry_id` and `reversal_of_id`. **The purchase side is coherent.**
+
+⚠️ **Step 9 (`29e9dcd`, `V17`) copied the rule to sales, repeated the same comment —** *"a trigger
+rather than a partial unique index"* **— and then created that index 25 lines later.** `V32` rebuilt
+it per-series in R1a, faithfully preserving the contradiction. **So the defect is not the rule; it is
+that the sales side contradicted its own written decision.** The owner has since settled the
+direction — see decision 4 — and the argument `V16` recorded was about *Novocore's* data entry, which
+is not the same claim as one about Go's numbering.
+
+**A.1d — the family is TWO INSTANCES OF ONE DEFECT, not a broad class.**
+
+⚠️ **There is no `DataIntegrityViolationException` handler in `WebExceptionHandler` at all**, so any
+constraint a service does not pre-check escapes to Boot's default. One probe posted 13
+caller-reachable unique constraints twice each:
+
+| Result | Constraints |
+|---|---|
+| **Refused cleanly** (422 with a written reason) | product SKU, product EAN, customer VAT, username, role name, asset code, sales-document-type description and sort code, delivery-method abbreviation, sales-series abbreviation and sort code |
+| 🐛 **Escaped as a bare `500`** | `sales_invoice_number_idx`, `credit_note_number_idx` |
+
+Both escapees are **the same defect twice** — a partial unique index on `… WHERE reversal_of_id IS
+NULL` sitting under a service check and a trigger that both release the number.
+
+⚠️ **Three candidates first answered `400` because my bodies were wrong** (`vatStatus` missing,
+`legalName` vs `name`, `rawPassword`), so they never reached their constraint — W1's P.9 shape
+exactly. **They were fixed and re-run rather than reported as a clean sweep**, which is the only
+reason the sweep means anything.
+
+⚠️ **`supplier` has no unique index on `vat_number` at all** — noticed while reading the catalogue.
+Nothing to escape, so not a defect; recorded because `customer_vat_number_unique` exists and the
+asymmetry is the kind that reads as an oversight later.
+
+**The concurrency measurement, which reshaped N1.** A `BEFORE INSERT` trigger's `NOT EXISTS` cannot
+see uncommitted rows and takes no lock. Measured on the live database with a **positive control**
+(same transaction → the trigger refuses, so the apparatus is alive): session A held an uncommitted
+`RACE-PROBE-1`, session B inserted the same number for the same supplier and was **`INSERT 0 1` —
+accepted**. Both rolled back; **0 rows left**. So "make the index agree with the message" would trade
+away a real guarantee, and `purchase_invoice` is exposed to this today.
+
+**The `upper(document_number)` Greek case measurement (C.3's basis).**
+Live stack, `datcollate = C`, PostgreSQL 17.10, `el-GR-x-icu` available:
+
+```
+byte order (locale C, today):  Alpha-1 | zeta-1 | ΑΛΠ-10 | ΑΛΠ-2 | ΑΛΦΑ-1 | ΩΜΕΓΑ-1 | άλφα-1
+el-GR-x-icu (the app's order): ΑΛΠ-10 | ΑΛΠ-2 | ΑΛΦΑ-1 | άλφα-1 | ΩΜΕΓΑ-1 | Alpha-1 | zeta-1
+```
+
+On **realistic** document numbers the two agree unless the text carries Greek letters or mixed case:
+
+```
+C  : ALP-1 | TEST-SI-2026-0001 | TEST-SI-2026-0002 | TEST-SI-2026-0010 | alp-2 | ΑΛΠ 1 | ΤΠΔΑ 1
+ICU: ΑΛΠ 1 | ΤΠΔΑ 1 | ALP-1 | alp-2 | TEST-SI-2026-0001 | TEST-SI-2026-0002 | TEST-SI-2026-0010
+```
+
+Numeric ordering is off in **both** (`-0010` before `-0002`), consistent with `collation.test.ts`.
+⚠️ **And `SpringPaging` builds a Spring Data `Sort`, which cannot express `COLLATE`** — so applying it
+means leaving the `Pageable`-driven path for that one property. **That is why B.4 is deferred rather
+than cheap**, and why the deferral is conditional on what a real Go document number looks like.
+
+**B.6 — the island reduced rate is NOT implemented, and there is no place for it to sit.**
+
+Three facts, measured. **(1)** The mapping exists as **data only** — `vat_class.reduced_counterpart_id`,
+seeded in `V5` with the real chains (24→17, 13→9, 6→4→1041), with admin routes. **(2)** Nothing
+outside `..core.tax..` reads it; `SalesInvoiceServiceImpl.price` resolves through `VatClassPrecedence`
+and takes `vatClass.ratePercent()` directly. **It is a lookup table waiting for a rule.** **(3)** No
+input could feed such a rule anyway — `Customer` has no address, postcode or region, and structured
+addresses are **D3**, scheduled *after* F5.
+
+⚠️ **The part recorded at `VatClassPrecedence` for whoever gets the accountant's answer:** an island
+rate is a fact about a **destination**, so it may not merely *reorder* line → customer → product — it
+plausibly enters as a **fourth input none of the three carries**, and **per-document rather than
+per-customer**, which is the shape D3 already records for addresses. **F5's line form is built
+directly on `VatClassPrecedence.resolve` and is downstream of that answer.**
+
+### 🅐 Finding 1 — split at approval, because the message is the least authoritative of the three
+
+⚠️ **The owner rejected the obvious sub-part.** The Phase 0 proposal was *"make the index match the
+message"*, and **nobody established that the message is correct**. Novocore does not issue these
+numbers — Prosvasis Go prints them and Novocore records what was printed — so *"a reversed invoice
+releases its number"* is **a claim about Go's behaviour**, not about Novocore's policy. It is
+therefore established before it is implemented, in either direction.
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| **A.1a** | **ESTABLISH, do not decide:** is the release rule a real requirement, or an unverified sentence that propagated from the message into the trigger? Search the repository for its origin — which commit, which step, and whether any recorded evidence supports it. **Report; do not choose.** *(The owner is separately checking Go's actual behaviour.)* | |
+| **A.1b** | **UNCONDITIONAL, whichever way A.1a goes:** a `DataIntegrityViolationException` must not escape as Boot's legacy `500` body. It answers **422 with a full detail**, like every other refusal on this surface | |
+| **A.1c** | **Then, and only then:** make the three enforcements agree, in the direction A.1a and the owner's answer establish. ⚠️ If the number is **not** released, the change is to **delete the claim** from the trigger and from the operator-facing message — much smaller than a `reversed_at` column, and it removes a promise Novocore cannot keep. If it **is** released, propose the schema change **with its concurrency argument stated**: a trigger's `NOT EXISTS` is not a substitute for a unique index under concurrent inserts, and that guarantee must not be traded away silently | |
+| **A.1d** | ⚠️ **Generalise once, one probe:** is there a handler for `DataIntegrityViolationException` at all, and can any **other** index-enforced rule escape as a bare `500` the same way? **If finding 1 is one instance of a family, the family is named now** — not one member fixed | |
+| **A.2** | `documentNumber` on `NewSalesInvoice` and `NewCreditNote`: `Required.text` + `@Mandatory`, so the refusal names the field and `tsc` refuses a form that omits it | |
+| **A.3** | A regression test pairing **reversal with re-recording**, which no existing test does | |
+| **A.4** | Record the `resolveSeries` **draft branch as unreachable by construction**, beside the `affectsStock == null` branch that already says so | |
+
+### 🅑 Backend — what the screens need that does not exist
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| **B.1** | `?search=` on `GET /api/sales-invoices` and `GET /api/credit-notes`, adopting **target-list row 8**, with the counterparty-reach decision (association / denormalise / subquery) written down **at the code** — `customerId` is a scalar, so `TextSearch`'s dotted path is not available | |
+| **B.2** | A GIN trigram index for every column added, and `SearchIndexIT` extended so a missing one is a build failure | |
+| **B.3** | ✅ **DECIDED AT APPROVAL — `CUSTOMER_NAME` is NOT added to `SalesInvoiceSort`.** The endpoint already accepts a `customerId` filter — it is *why* an unfiltered call is refused — so grouping one customer's documents is a **filter** concern, not a **sort** concern. Sorting by customer name across a paged multi-customer list is a weaker case than it looked. If it is wanted later **it arrives with its own collation work**, which is where the obligation belongs | ✅ **Decided** |
+| **B.4** | ✅ **DEFERRED AT APPROVAL, with the reason recorded rather than left silent.** The only shipping text sort key is `DOCUMENT_NUMBER`, and the two collations **agree on Latin document numbers**. The obligation stays with **whoever adds the first Greek-bearing server sort key**, exactly as the roadmap assigns it. ⚠️ **The owner is checking whether a real Prosvasis Go document number carries Greek letters; if it does, B.4 returns to scope for `DOCUMENT_NUMBER` immediately.** So: **note at the code where the `Pageable`-driven sort would have to be left**, so adding `ORDER BY … COLLATE "el-GR-x-icu"` later is a change to one ordering path and not a rewrite | ⏸️ **Deferred** |
+| **B.5** | 📌 **Report only — do not fix here.** An unknown `customerId` and an unknown `seriesId` both answer a bare `404 "Not found."`, so a form cannot say which id was wrong | |
+| **B.6** | ⭐ **NEW AT APPROVAL — the VAT precedence coupling.** `VatClassPrecedence` is line → customer → product, and **the island reduced rate does not appear in that chain.** ESTABLISH before building the line form: is the island mapping implemented anywhere, and if so where does it sit relative to those three? **If it is not implemented, say so plainly.** ⚠️ **Do not build the island rule** — it is an open question with the owner's accountant and the answer may **reorder the chain**. Record the coupling **at the code and here**, so whoever reads the accountant's answer knows F5's line form is downstream of it | |
+
+### 🅒 Frontend — sales invoices
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| **C.1** | List screen over the **server-paged** endpoint. ✅ **Default range decided at approval: the current calendar year, 1 January to today.** Reason recorded: every accounting question this business asks is scoped to a fiscal year, the period lock (**D5**) is year-shaped, and the list is server-paged so row count is not the constraint. **The range is visible and changeable** | |
+| **C.2** | `meta.sortKey` for `INVOICE_DATE`, `DOCUMENT_NUMBER`, `RECORDED_AT` — **the first sort keys in this repository** — and every other column plain text, not a disabled control | |
+| **C.3** | Detail screen: read-only throughout; ΜΑΡΚ / UID / QR / transmission as **plain text with the no-route reason**; `inForce` / `reversal` / `reversed` read off the view | |
+| **C.4** | Record form: **mandatory series picker**, no channel field and no document-type field, lines, settlement method | |
+| **C.5** | ⚠️ **Preview before submit**, because the rounding acceptance control cannot be rendered from anything the form knows on its own | |
+| **C.6** | The acceptance control, shown **only** when the preview reports `roundingNeedsAcceptance` — the value is silently dropped otherwise | |
+| **C.7** | `<Refusal>` on every mutation; every reachable refusal rendered | |
+| **C.8** | Reversal action and its four refusals | |
+| **C.9** | **No `MutationCache` invalidation of its own** (the global handler covers it — a fourteenth copy is what the global fix exists to prevent), and **stateful `msw` handlers** so a save does not show pre-edit data | |
+
+### 🅓 Frontend — credit notes
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| **D.1** | List screen — **not** server-paged, client-sorted, **no `sortKey` owed**, and the contrast with C.2 stated | |
+| **D.2** | Detail screen, read-only | |
+| **D.3** | Record form driven **from an invoice**: pick the invoice, then its lines; quantity, unit price and `stockReturned` per line; **everything else derived and visibly so** | |
+| **D.4** | Its own preview and rounding acceptance | |
+| **D.5** | Reverse action and its refusals | |
+
+### 🅔 Explicitly out of scope, each with its reason
+
+| # | Item | Verdict |
+|---|---|---|
+| **E.1** | **Document transformation** — needs the Go adapter; R1 stores only the allowed-target reference. **No partial version** | ⛔ **Out** |
+| **E.2** | **R3 / self-supply posting** — a channel-less series is **refused** and the refusal rendered. **No accounts guessed** | ⛔ **Out** |
+| **E.3** | Any ΜΑΡΚ / UID / QR write path | ⛔ **Out** |
+| **E.4** | A *stock-not-moved* indicator — removed by decision in R1b. **Do not add one back** | ⛔ **Out** |
+| **E.5** | ✅ **DECIDED AT APPROVAL — `GET /api/sales-invoices/rounding-differences` gets NO screen at F5.** It is a review queue for a workflow that **has never once run**, and there is no real data to review. It gets a screen when there are actual rounding differences to look at. **It keeps its endpoint and stays without a nav node** | ⛔ **Out, with a trigger** |
+
+### 🅕 Contract test
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| **F.1** | `F5WriteContractIT` — the **literal JSON the screens build**, sent to a real server over real HTTP, on the `F4WriteContractIT` pattern. A screen test over `msw` proves wiring, never contract | |
+
+### 🅡 RECONCILIATION as of 2026-08-06 — **COMPLETE. Every sub-part has a verdict and the live leg ran**
+
+**Branch `f5-sales-invoice-credit-note`, pushed to `origin`.** Frontend **402 tests across 41 files**
+as of 2026-08-06, typecheck / lint / knip clean; backend figures in the close-out paragraph at the
+top of this file. **Spec unchanged at 247 operations / 231 schemas** — F5 adds screens, tests and one
+comment, and **no operation and no schema**.
+
+*(The paragraph below is this section's earlier state, kept because its figures were correct when
+written: as of 2026-08-05, head `fef8497`, backend 1,488 tests and frontend 379 across 40 files.)*
+
+⚠️ **Numbering note, because the approval conversation and this checklist use the same letters
+differently in one place.** The owner's message referred to *"B.3/B.4"* for the sort-key and
+collation decisions and *"B.5"* for the report-only item — **those map exactly onto B.3, B.4 and B.5
+below.** **B.6 is the VAT precedence coupling**, which was added *at* approval as a new sub-part and
+has no earlier number. There is no gap and no renumbering.
+
+| # | Verdict |
+|---|---|
+| **A.1a** | ✅ **Done** — provenance traced to step 8 `V16`; the sales side contradicts its own comment. See 🅘 |
+| **A.1b** | ✅ **Done** — `DataIntegrityViolationException` → 422 with a readable detail. **Proven against the defect** in a throwaway worktree: 2 failures naming the exact `500` body, positive control unaffected |
+| **A.1c** | ⏸️ **Direction settled, DEFERRED to its own roadmap row N1** — owner decision 4. Not built, deliberately |
+| **A.1d** | ✅ **Done** — the family is two instances of one defect. See 🅘 |
+| **A.2** | ✅ **Done** — `Required.text` + `@Mandatory` on both `documentNumber`s. Spec diff 2 lines; generated type `documentNumber?: string` → `documentNumber: string` |
+| **A.3** | ✅ **Done** — `DocumentNumberReuseIT`, 3 tests, asserting only what holds either way. **Stays as it is** per decision 4 |
+| **A.4** | ✅ **Done** — draft branch recorded unreachable by construction at `resolveSeries` |
+| **B.1** | ✅ **Done** — `search=` on both routes; `TextSearch.matchingRelated` + `CustomerSearch` + `SalesDocumentSeriesSearch`. ⭐ **The dotted path S1 built for exactly this case cannot serve it** — it needs a mapped association and every cross-aggregate reference here is a scalar id |
+| **B.2** | ✅ **Done** — migration **V36**, 4 GIN trigram indexes, `TextSearchIT` extended. 5 new search tests, including one that plants a null series with SQL and proves the invoice is **not** dropped — the property the `IN`-versus-join choice exists for |
+| **B.3** | ✅ **Decided at approval** — `CUSTOMER_NAME` **not** added to `SalesInvoiceSort`. Reason recorded at the columns file |
+| **B.4** | ⏸️ **Deferred at approval, reason recorded — and NOT BUILT: there is no `el-GR-x-icu` collation on `DOCUMENT_NUMBER` anywhere.** ⚠️ Conditional on the owner's check of whether a real Go document number carries Greek letters; the two orders **agree on Latin document numbers**, which is the whole basis of the deferral. ⚠️ **CORRECTED 2026-08-06: this row previously read *"The `Pageable`/`COLLATE` note is at the code"* and that was HALF FALSE.** The note existed only in **`sales-invoice-columns.tsx`**, recording B.3's reason (why `CUSTOMER_NAME` is not offered). **B.4 asked for a note at the BACKEND place the `Pageable`-driven sort would have to be left, and there was none** — `grep` for `COLLATE` across `backend/` returned nothing. ✅ **Now written, at `SalesInvoiceServiceImpl.SORTABLE`**, saying that a Spring Data `Sort` cannot carry `COLLATE` so the change is one of **mechanism**, not expression |
+| **B.5** | ✅ **Reported, not fixed** — an unknown `customerId` and an unknown `seriesId` both answer a bare `404 "Not found."` |
+| **B.6** | ✅ **Done** — island rate absent; coupling recorded at `VatClassPrecedence` and in 🅘 |
+| **C.1** | ✅ **Done** — list opens on 1 Jan → today, range visible and changeable |
+| **C.2** | ✅ **Done** — the repository's **first three `meta.sortKey`s**, taken from the generated enum |
+| **C.3** | ✅ **Done** — detail screen read-only throughout; statutory block is plain text with its reason |
+| **C.4–C.6** | ✅ **Done** — record form, mandatory series picker, no channel/document-type field, preview-before-submit, conditional acceptance control. ⚠️ **TRANSITIONAL per decision 1** |
+| **C.7** | ✅ **Done** — `<Refusal>` on every mutation |
+| **C.8** | ✅ **Done** — reversal action with its refusals |
+| **C.9** | ✅ **DONE 2026-08-06.** `sales.test.tsx` is now **19 tests**: 11 over the list and detail (which ⭐ **found a real date defect in the screen they were written against** — `toISOString` on a calendar date, fixed in `lib/calendar-date.ts`) and **8 over the record form**, centred on the preview-then-accept sequence the handover singled out. Handlers record their writes; the two captured bodies are asserted **equal**, which is the only thing on this side that can notice if preview and record stop being built by one function. **Proven against three injected defects**, each firing alone |
+| **D.1–D.5** | ✅ **DONE 2026-08-06, at the scope decision 2 set.** List and detail at full product quality; the record form **thin**, with the *"test harness for a workflow with no production caller"* reason at the top of the file. **15 tests.** ⭐ The list's own assertion is that **no `sort=` reaches the server** — the contrast with C.2, which is the point of shipping both |
+| **E.1–E.5** | ⛔ **Out of scope**, unchanged |
+| **F.1** | ✅ **DONE 2026-08-06** — `F5WriteContractIT`, **6 tests**, real Boot server over real HTTP against real PostgreSQL. Scoped to what `R1bWriteContractIT` does **not** already drive: the credit-note body (never sent by anything before F5), the preview → refusal → accept sequence, `documentNumber`'s named refusal on both routes, and the list parameters — including that `search=` genuinely **narrows**, which a mock structurally cannot answer |
+
+⭐ **Two things the guardrails caught in F5's own new code, both worth keeping:**
+
+- **`tsc` refused the reversal form** because `ReversalCommand.reason` is mandatory (`Required.text`),
+  and the record argues why — *"a reversal that says nothing about why leaves the ledger internally
+  consistent and unexplainable."* It had been written as optional. **That is 8a's and A.2's contract
+  work paying for itself on this step's own code, the same hour A.2 extended it.**
+- The ESLint money rule caught `Number(id)` — correct to disable with a reason, and it forced the
+  single-currency decision to be stated at the code instead of `'EUR'` scattered through the form.
+
+### ✅ F5 IS CLOSED — **all 30 sub-parts have verdicts, the live leg ran, and it is on `main`**
+
+**Nothing about F5 is open.** The step's 30 sub-parts each carry a verdict in 🅡 above; the live leg
+ran on 2026-08-06 and **22 of 23 rows passed, with the 23rd never applicable** (L.23, conditional on
+the deferred B.4). ⚠️ **R2b's live leg is separately closed** — it ran on 2026-08-05 and its two open
+outcomes became roadmap rows **R2c** and **R4**, both recorded and **neither built**.
+
+**⚠️ Three things F5 deliberately did NOT build, each with its own row, so none of them is a loose
+end:**
+
+| What | Where it lives now |
+|---|---|
+| **A reversed document's number becoming available again** | Roadmap **N1**. Direction settled by the owner; the fix must keep the concurrency guarantee, which a trigger's `NOT EXISTS` does not. **L.15's 422 is the expected behaviour until it lands** |
+| **`ORDER BY … COLLATE "el-GR-x-icu"` on `DOCUMENT_NUMBER`** | **B.4, deferred**, conditional on whether a real Prosvasis Go document number carries Greek letters. The note naming where the `Pageable` path would have to be left is at `SalesInvoiceServiceImpl.SORTABLE` |
+| **The island reduced rate in `VatClassPrecedence`** | **B.6**, an open question with the owner's accountant. ⚠️ The answer may **reorder the chain**, and F5's line form is downstream of it |
+
+📌 **Three questions are with the owner and block nothing:** the two above (B.4's Greek letters and
+B.6's precedence), and **where R2c sits in the sequence**, which nobody has decided — its roadmap row
+sits outside the sequence for exactly that reason.
+
+⚠️ **The next step is R2c or R4, and R4 is the one with a deadline attached**: it changes the sales
+invoice request contract and **F6 should be built against the corrected model**, so it runs before
+F6. R2c has no slot.
+
+### 🅛 The live leg — **DERIVED from the screens and routes F5 ships**
+### ✅ **RAN BY THE OWNER, 2026-08-06. EVERY APPLICABLE ROW PASSED**
+
+**Result, one line: 22 of 23 rows passed and the 23rd was never applicable.** Verdicts are in the
+`Result` column of the table below, one per row, per `CLAUDE.md` §*a live-leg block is DERIVED from
+the screens a step ships*.
+
+⭐ **L.15 is the row worth reading, and its verdict is a PASS for a refusal.** Reversing an invoice
+and re-recording the same number in the same series is **refused with a readable 422**, not the
+`500` in Boot's legacy body that F5's Phase 0 measured on 2026-08-05. ⚠️ **That is the EXPECTED
+result while N1 remains unbuilt, and it is not a defect** — the row was deliberately written not to
+assume the re-record succeeds, because **the direction was settled and the fix was not built**: a
+partial index cannot express *"not reversed"*, and whatever replaces it must keep the concurrency
+guarantee (`CLAUDE.md` §2b, roadmap **N1**). **A.1b is what turned the 500 into this refusal**, and
+this row is the acceptance test for that half. ⚠️ **When N1 lands, this row's expected result
+changes to a successful re-record — update it then**, and `DocumentNumberReuseIT` will fail in the
+safe direction on the same day.
+
+⚠️ **Two rows' conditions resolved before the leg ran, and they resolved oppositely:**
+
+- **L.22 became UNCONDITIONAL** — B.1 shipped, so both lists have a search box and the *"confirm its
+  absence is legible"* branch never applied. It passed as a search test.
+- **L.23 was NEVER APPLICABLE** — it fires *only if B.4 returns to scope*, and B.4 is **deferred**
+  pending whether a real Prosvasis Go document number carries Greek letters. 📌 **It is recorded as
+  not applicable rather than as passed**, because a row nobody could run is not evidence of
+  anything, and "23 of 23" would be a claim about a check that did not happen.
+
+### ⚠️ L.0 — the preconditions, **re-measured 2026-08-06 and CHANGED. Read this before starting**
+
+✅ **The app image was rebuilt and restarted on 2026-08-06**, unconditionally, per `CLAUDE.md`. That
+half is done and needs nothing from the owner.
+
+⚠️ **The rest of L.0 said "reactivate sales document type 1", and that is no longer the remedy.** The
+live database was read on 2026-08-06 and has moved since P.15 was written — **four series and three
+types, and every type is inactive**, so **no series can record anything**:
+
+| Series | Type | State of that type | Channel |
+|---|---|---|---|
+| `TEST99` | 2 | ⚠️ **draft** — both stock flags NULL | **none** |
+| `TEST2` | 1 | decided, **inactive** | `ECOMMERCE` |
+| `TEST00` | 3 | decided, **inactive** | `STORE_AND_PHONE` |
+| `TESTttt` | 3 | decided, **inactive** | `SKROUTZ` |
+
+⚠️ **And L.8 is NOT reachable with this data, which is the part that would have been discovered
+mid-leg.** `TEST99` is the only channel-less series, and its type is a **draft** — and on the
+recording path the **type** check runs *before* the channel check, so it would be refused with the
+draft-type message and the R3 sentence L.8 exists to read would never appear. *(Read from
+`resolveSeries`; the browser is what settles it, which is exactly what L.8 is for.)*
+
+**So the leg needs three owner actions first, all of them one-click screen work:**
+
+1. **Reactivate sales document type 3** (`Test81`) → `TEST00` and `TESTttt` become recordable, which
+   is what L.7 and L.11–L.15 need.
+2. **Leave type 1 inactive** → recording against `TEST2` is L.9's refusal, already set up.
+3. **Create one series with NO sales channel against type 3** → makes L.8's R3 refusal reachable.
+
+⚠️ **Why this session did not perform them, stated rather than left as a gap:** driving the running
+stack needs the **Owner password**, which is deliberately not in this repository — the same reason
+`frontend/README.md` records for every browser leg since S1. They could have been done with direct
+SQL, and were not: that reaches around the service, writes no audit entry, and is the shape this
+codebase's first architecture rule exists to prevent.
+
+| # | Derives from | Check | Result, 2026-08-06 |
+|---|---|---|---|
+| **L.1** | invoice list | Opens on **1 January of the current year to today**. The range is visible and changeable — the endpoint refuses without one | ✅ **Passed** |
+| **L.2** | invoice list | Page 2 works; the `page` block drives the control and the row count is the server's total | ✅ **Passed** — server paging, on the first screen in this application to have it |
+| **L.3** | invoice list | Only Date / Document number / Recorded are clickable headers; **every other header is plain text, not a dead button** | ✅ **Passed** — the three sortable, the rest plain text |
+| **L.4** | invoice list | Sorting by Document number changes the **server's** order — page 1 changes, not just the rows in hand | ✅ **Passed** — the SERVER reordered, which is the half a browser had to answer |
+| **L.5** | invoice detail | **Nothing is editable.** No Edit control anywhere | ✅ **Passed** — no Edit control anywhere, for a FULL-access role |
+| **L.6** | invoice detail | ΜΑΡΚ, UID, QR and transmission read as **plain text saying Novocore never obtains one** — not blank, not disabled | ✅ **Passed** — plain text with the reason, not blank and not disabled |
+| **L.7** | record form | The **series picker is mandatory**, and there is **no channel field and no document-type field**. Recording shows the channel the series supplied | ✅ **Passed** — mandatory series, no channel field, no document-type field |
+| **L.8** | record form | Recording against the channel-less series is refused and **the message naming R3 is readable on screen** | ✅ **Passed** — reachable only because L.0's third owner action created a channel-less series against an ACTIVE type; the R3 sentence read on screen |
+| **L.9** | record form | Recording against a series whose type was deactivated is refused with the *retired* wording | ✅ **Passed** — the *retired* wording, distinct from the draft wording |
+| **L.10** | record form | ⭐ **Deactivate a payment method in Settings, then try to settle a new invoice with it** — refused. **R2b's carried item, first reachable here** | ✅ **Passed.** ⭐ **R2b's carried item, closed at its first reachable moment** — it needed a recorded invoice, so it waited for F5 |
+| **L.11** | record form | A cash sale of **exactly €500.00** is refused; €499.99 records. The one refusal with no confirmation path | ✅ **Passed** — €500.00 refused, €499.99 recorded. ⚠️ The `>=` boundary P.5 corrected, confirmed at the one value the law cares most about |
+| **L.12** | record form | A stated total differing by more than €0.03 → the preview **shows the difference and the threshold** and offers the acceptance; submitting without it is refused; with it, it records | ✅ **Passed** — difference and threshold both shown, refused without acceptance, recorded with it |
+| **L.13** | record form | A difference **under** the threshold offers **no** acceptance control and posts silently | ✅ **Passed** — no acceptance control, posts silently. The negative half of C.6 |
+| **L.14** | record form | The same document number in **two different series** both save; twice in one series is refused | ✅ **Passed** — R1a's C.6 per-series key, exercised by a human for the first time |
+| **L.15** | ⚠️ invoice detail | **Reverse an invoice, then re-record the same number in the same series.** ⚠️ **The expected result is whatever A.1c establishes — this row does NOT assume the re-record succeeds.** It is the acceptance test for A.1, and today the behaviour is a `500` | ✅ **PASSED — and the pass IS the refusal.** A readable **422**, not the `500` Phase 0 measured. ⚠️ **Expected while N1 is unbuilt; this row changes when N1 lands** |
+| **L.16** | series detail *(R2 L.8 carried)* | Once a series has recorded a document, its abbreviation / document type / ΜΑΡΚ flag are **shown, disabled, with the reason** — never hidden | ✅ **Passed** — shown, disabled, with the reason. ⭐ **R2's L.8 carried, and unreachable until a series had recorded a document** |
+| **L.17** | series detail *(R2 L.5 carried)* | That frozen field reads as *frozen*, not as *not yours* and not as *broken* — **the one reachable `lockedReason` instance nobody has ever been asked to look at** | ✅ **Passed** — reads as *frozen*, not as *not yours* and not as broken. ⭐ **R2's L.5 carried — the one reachable `lockedReason` instance nobody had ever been asked to look at** |
+| **L.18** | credit-note form | Picking an invoice fills its lines; **customer, channel, settlement method and VAT are shown as derived**, not as empty fields | ✅ **Passed** — the invoice's lines arrive as drafts, and the four derived facts read as derived |
+| **L.19** | credit-note form | Crediting more than was sold is refused; a second note against the same line is cumulative | ✅ **Passed** — refused, and cumulative across notes |
+| **L.20** | credit-note list | Sorting works **in the browser** — this list is not server-paged, and **the contrast with L.4 is the point** | ✅ **Passed** — browser sorting. ⭐ **The contrast with L.4 is the point, and both were seen in one sitting** |
+| **L.21** | any two lists | Create an invoice, then a credit note, then revisit both lists **within 30 seconds** — the new rows are there. The global invalidation, on new screens | ✅ **Passed** — the global invalidation, on two screens that carry no copy of it. ⚠️ **Inside 30 seconds, which is the only window in which the defect is visible** |
+| **L.22** | *(conditional)* | If B.1 ships: searching by customer name finds documents. If it does not, **there is no search box** — confirm its absence is legible | ✅ **Passed, UNCONDITIONALLY** — B.1 shipped, so this was a search test rather than an absence test |
+| **L.23** | *(conditional)* | Only if B.4 returns to scope: a Greek document number sorts before a Latin one | ⛔ **NOT APPLICABLE, not passed.** It fires only if B.4 returns to scope, and B.4 is deferred. **Recorded as unrun, because a row nobody could run is not evidence** |
+
+**Reconciled both directions at approval.** *Rows with no screen:* none — L.16/L.17 sit on R2's series
+screen, which F5 makes **reachable** rather than ships, and that is stated. *Screens with no row:* the
+`rounding-differences` report, deliberately (E.5). *Refusals with no row:* mixed currency, zero-total
+invoice, inactive customer/product/VAT class, serial mismatch, bundle-with-serial-component — all
+`422` through the same `<Refusal>` as L.8–L.11, so a browser adds nothing once one is confirmed
+legible. ⚠️ **The draft-type refusal has no row because it is unreachable by construction (P.6)** —
+a correction, not an omission.
+
+### ✅ CARRIED, SEPARATE — R2b's live leg **RAN 2026-08-05** and its 13 rows are closed
+
+**They were never merged into F5's block, and must not be** — they are R2b's, not F5's. Results are
+in *R2b's live leg* above, row by row. In one line: **eleven of thirteen passed**, **L.13 closed §5's
+open question** (the truncation was the select trigger, already fixed — the AADE list is clean), and
+the two that did not pass produced **two new roadmap rows rather than fixes inside F5**:
+
+- **R2c** — the sort code is not visible as a column (L.8), and is **absent from the series edit
+  form** (found beside L.9). ⚠️ **Not built. Its own row.**
+- **R4** — the payment-method **model** is wrong (L.10/L.11). ⚠️ **A requirement correction, not a
+  defect. Not built. Its own row, and it runs after F5 and before F6.**
+
+⚠️ **Neither enters F5's commit.** They are R2b's consequences; F5's scope is unchanged by them.
+
+---
+
+## ▶ R2c — the sort code is invisible on lists and unsettable on series. **RECORDED 2026-08-05, NOT BUILT**
+
+**Found by the owner's live leg of 2026-08-05, against R2b's §3.** Recorded here at the moment it was
+reported, per `CLAUDE.md` §*A decision reached in a design conversation gets the same close-out
+discipline as a build step*. ⚠️ **These are R2b's defects, not F5's, and they must not enter F5's
+commit.** Roadmap row **R2c**; no slot decided.
+
+| # | Defect | What is and is not established |
+|---|---|---|
+| **2a** | **The sort code is not visible as a column on the document type lists** | ⚠️ **Display only.** The **ORDERING is correct** — the owner confirmed rows come back in sort-code order — so R2b's 3.5 (the server's default order) holds and only 3.6 (*first list column*) did not land. 📌 **He confirmed ordering for DOCUMENT TYPES and said nothing about the SERIES lists. Verify those; do not assume they match** — R2b changed four repositories and the leg exercised two screens |
+| **2b** | ⚠️ **THE MORE SERIOUS ONE. On sales and purchase SERIES, the sort code appears only on the CREATE form and is ABSENT from the EDIT form** | **Document types allow editing it, which is why L.9 passed** — the passing path and the broken path are different screens, and only one was walked |
+
+### ⚠️ Why 2b is not cosmetic, written down because a reader will otherwise treat it as such
+
+**R2b's 3.4 decided the sort code is freely editable and deliberately NOT subject to the
+editable-while-unused freeze**, and gave the reason: *"reordering is normal and the code appears on no
+document."* **A value that can be set once and never changed is unusable for the purpose that argument
+assigns it.** It is not a missing convenience — it is the field failing at the only job it has.
+
+⚠️ **And it is on SERIES**, which is **the picker an employee actually uses when recording a
+document** — F5's mandatory series picker is ordered by exactly this column. A business that
+reorganises its series has no way to reorder the list it works from every day.
+
+📌 **The shape is one this file already names:** the create path and the edit path disagreed, and the
+one that was walked is the one that worked. Same shape as R2's *"the screen was the only guard"* and
+as R2b's own §2 — **two paths, one exercised.**
+
+## ▶ R4 — payment methods are a BUSINESS list, not a statutory one. **REQUIREMENT CORRECTION, RECORDED 2026-08-05, NOT BUILT**
+
+⚠️ **The owner's L.10/L.11 results are NOT defects.** The screens did what R2b's rows asked. **What
+the rows asked for is the wrong model** — and it is **R1a's correction repeating one entity over**:
+payment methods were built as a **seed-only statutory list**, and they are actually a **business list
+that REFERENCES an AADE codification**, which is the same two-layer shape `CLAUDE.md` §5 already
+records for document types.
+
+**What the owner requires:**
+
+| # | Requirement |
+|---|---|
+| **R4.1** | **The list starts EMPTY. No seeded rows.** The user creates them freely — full CRUD, not activate/deactivate/describe |
+| **R4.2** | Creating one includes **selecting the AADE payment-method article**, which supplies the myDATA code |
+| **R4.3** | ⚠️ **CONFIRMED BY THE OWNER: creating one ALSO means choosing THE LEDGER ACCOUNT IT SETTLES TO.** Two POS terminals can share AADE code 7 and land in **different bank accounts**, and **the AADE article cannot tell you which** |
+| **R4.4** | **All fields editable for as long as the method HAS NOT BEEN USED** — the editable-while-unused / frozen-once-used pattern R2 already built for a series' abbreviation, `documentTypeId` and `getsMark`. ⭐ **The mechanism exists; this is a third application of it, not a new idea** |
+
+### ⚠️ Four consequences, each of which CONTRADICTS something already decided
+
+**Recorded together because a reader who meets only one of them will re-derive the old answer**, which
+is precisely how R1a's two-layer correction had to be made twice.
+
+| # | Consequence |
+|---|---|
+| **a** | ⚠️ **R2b §4.1 decided NOT to store the myDATA code on the row**, exposing it from the `SettlementMethod` enum instead, on the grounds that storing it would be *a second record of one thing*. **That reasoning held only while the rows were a fixed set.** A **user-created** row cannot inherit a code from an enum it is not a member of. **The code moves onto the row.** 📌 The old argument was not wrong — its premise was withdrawn |
+| **b** | ⚠️ **THIS CHANGES THE SALES INVOICE REQUEST CONTRACT.** `SettlementMethod` is a **Java enum** on `NewSalesInvoice`. If payment methods become user-created rows, the invoice's settlement reference **must become an FK to the table**. Every consumer of `newSalesInvoice.settlementMethod` — the generated TypeScript included — changes with it |
+| **c** | ⭐ **R2b's own argument AGAINST creation is not refuted — it is the SPECIFICATION of the create form.** §4.7 said adding Cheque or Foreign bank account *"needs an `AccountSystemKey` and two behaviour flags"*, and offered that as the concrete reason there is no create path. **Those are the fields the form must collect.** The argument survives intact and changes sign |
+| **d** | 📌 **The eight seeded abbreviations — ΜΕΤΡ, ΚΑΡΤ, ΤΡΑΠ, ΕΠΙΤ, ΑΝΤΙΚ, SKRZ, PPAL, STRP — were INVENTED, not chosen by the owner.** An empty list **removes** that problem rather than needing them made editable. ⭐ This is the same argument that shipped R1a's six document tables empty: *the fabrication is what the empty seed exists to prevent* |
+
+### ⚠️ SEQUENCING — recorded, because the reason is not derivable from the row's position
+
+**R4 runs AFTER F5's close-out and BEFORE F6.** Two reasons, and both are about cost rather than
+preference:
+
+- **It changes a contract (consequence b), so the longer it waits the more is built on the enum.**
+- **Purchase documents settle too**, so **F6 should be built against the corrected model** rather than
+  built against the enum and then reopened.
+
+✅ **It does NOT block finishing F5.** F5's record form is a **test harness by decision**
+(`CLAUDE.md` §1b), so revising it later is expected rather than rework. ⚠️ **Do not pre-empt any of
+this inside F5** — F5 keeps `SettlementMethod` exactly as it is.
+
+📌 **Where R4 sits relative to N1 and the D-block is NOT decided.** The owner's constraint is
+`F5 < R4 < F6`; the roadmap places R4 immediately after F5 to honour the *"the longer it waits"*
+argument, and that placement is this session's reading of his reason, **not a fifth requirement he
+stated.**
+
 ## ▶ R2b — what R2's live leg found, plus two things its brief had wrong. **DONE 2026-08-04**
 
 **Five sections. §5 of the task (recording the live leg) landed separately in `bf3f950`; §1–§4 and
@@ -163,32 +672,41 @@ corrections are recorded against the premise rather than only against the outcom
 | **5.1** | ⚠️ **Correct the false claim first, with its mechanism** | ⭐ **Done — and it was wrong.** `line-clamp-1` truncates the **END**, so the `code —` prefix was **structurally safe** and the **group suffix** was what disappeared. Corrected below |
 | **5.2** | ⚠️ Note that the claim was **amplified** | ✅ **Done.** It was the stated reason for pulling the item out of F10, so **the reason for pulling it was wrong** even though pulling it may still be right — the picker is used nineteen times and the label is long |
 | **5.3** | The narrow width fix | ✅ **Done.** `OptionSelect` passes `w-full` unless a caller overrides, so the trigger uses the column instead of shrinking to content. **A width change only**; F10 keeps the styling sweep |
-| **5.4** | ⚠️ Conditional on which element the owner meant | ⬜ **STILL OPEN — the owner has not answered.** The fix above addresses the **select trigger**. If he meant a **column in the AADE list**, that is a different element and a different fix. Recorded rather than guessed |
+| **5.4** | ⚠️ Conditional on which element the owner meant | ✅ **CLOSED 2026-08-05 by the live leg — the element was the SELECT TRIGGER.** L.13: the AADE invoice types **list shows no truncation**. L.12: the picker's option text now reads in full. So 5.3's `w-full` fix addressed the element the owner actually saw, and **there is no second element to fix**. ⚠️ **This verdict is CLOSED, not "closed if"** — the condition was evaluated, not assumed away |
 | **S.1** | Client regenerated, **every drifted fixture named** | ✅ **Done.** Spec **237 → 247 operations**, **226 → 231 schemas**, **170 → 175 declaring `required`**. ⭐ **Eleven fixtures drifted and `tsc` named every one** — 8a's `required` declaration doing exactly what it was built for. By file: `query-client.test.tsx` ×2, `purchase-document-series.test.tsx` ×2, `purchase-document-types.test.tsx` ×1, `sales-document-series.test.tsx` ×4, `sales-document-types.test.tsx` ×2. Five pinned counts updated with dated reasons |
 | **S.2** | ⭐ **Record the live-leg lesson while it is fresh** | ✅ **Done**, in `CLAUDE.md`: **a live-leg block is DERIVED from the screens a step ships, never composed freehand.** R2's had ten rows against twelve items; four items had no row and three rows had no item. **F5's is built that way** |
 | **S.3** | `CLAUDE.md`, `PROGRESS.md`, primer, roadmap | ✅ **Done** — all four |
 
 ### 🅛 R2b's live leg — ⭐ **DERIVED from the screens it touches, not composed freehand**
+### ✅ **RAN BY THE OWNER, 2026-08-05. Results recorded below**
 
 **This is S.2's lesson applied immediately rather than filed.** Every row below names the screen or
 route it came from, and the two directions are reconciled by construction: there is one row per thing
 a browser can answer that a test cannot, and nothing else.
 
-| # | Screen / route it derives from | Check |
-|---|---|---|
-| **L.1** | §1 — sales document types, create | Create a type. **It appears in the list immediately**, with no manual refresh |
-| **L.2** | §1 — **an OLDER screen**, e.g. suppliers or products | Create one there too. ⭐ **This is the row that proves the fix is global** rather than applied to R2's screens only — the defect was in all thirteen |
-| **L.3** | §2 — sales series, create | Create a **draft** type (leave a stock flag unset), then try to create a series against it → **refused, naming the undecided stock behaviour** |
-| **L.4** | §2 — sales series, create | Deactivate a decided type, then try to create a **new** series against it → **refused with a DIFFERENT reason** (*not for new documents*), never the draft wording |
-| **L.5** | §2 — sales series, detail | ⭐ **A series that already points at a type you then deactivate still opens, still edits, and keeps its type.** Setting is refused; **holding is not** |
-| **L.6** | §2 — sales series, detail | The document-type picker offers active types **plus the current one if it is now inactive**, marked — never a raw id and never an empty select |
-| **L.7** | §3 — all four document screens, create | The **Sort code** field is required, digits only, and the row saves with it |
-| **L.8** | §3 — all four document lists | The list is **ordered by sort code**, and the sort code is the first column |
-| **L.9** | §3 — any document type or series, detail | Change a sort code → **it saves** (freely editable, no in-use freeze). Reuse one another row holds → **refused** |
-| **L.10** | §4 — payment methods, list | Eight methods, ordered. **No Add control**, and the banner says why. `Open` where the myDATA code is genuinely unestablished |
-| **L.11** | §4 — payment methods, detail | Description and sort code editable; **myDATA code and behaviour are plain text with their reason**; deactivate and reactivate work |
-| **L.12** | §5 — the AADE picker on a document type | Open it. **The option text is no longer cut** — `code — description · group` reads in full |
-| **L.13** | §5 — ⚠️ **the open question** | If the truncation you saw was in a **column of the AADE invoice types LIST** rather than the picker, say so — that is a different element and is **not** fixed |
+| # | Screen / route it derives from | Check | Result, 2026-08-05 |
+|---|---|---|---|
+| **L.1** | §1 — sales document types, create | Create a type. **It appears in the list immediately**, with no manual refresh | ✅ **Passed** | ✅ **Passed** |
+| **L.2** | §1 — **an OLDER screen**, e.g. suppliers or products | Create one there too. ⭐ **This is the row that proves the fix is global** rather than applied to R2's screens only — the defect was in all thirteen | ✅ **Passed, and it is the row that mattered** — the owner proved the global refresh on **both** a new screen and an older one, which is exactly what a per-screen fix could not have produced | ✅ **Passed** — server paging, on the first screen in this application to have it |
+| **L.3** | §2 — sales series, create | Create a **draft** type (leave a stock flag unset), then try to create a series against it → **refused, naming the undecided stock behaviour** | ✅ **Passed** | ✅ **Passed** — the three sortable, the rest plain text |
+| **L.4** | §2 — sales series, create | Deactivate a decided type, then try to create a **new** series against it → **refused with a DIFFERENT reason** (*not for new documents*), never the draft wording | ✅ **Passed, with the two wordings distinct** — which is the half 2.3 exists for: a draft is always inactive, so the milder message swallowing the specific one is the failure mode, and it did not happen | ✅ **Passed** — the SERVER reordered, which is the half a browser had to answer |
+| **L.5** | §2 — sales series, detail | ⭐ **A series that already points at a type you then deactivate still opens, still edits, and keeps its type.** Setting is refused; **holding is not** | ✅ **Passed** | ✅ **Passed** — no Edit control anywhere, for a FULL-access role |
+| **L.6** | §2 — sales series, detail | The document-type picker offers active types **plus the current one if it is now inactive**, marked — never a raw id and never an empty select | ✅ **Passed** | ✅ **Passed** — plain text with the reason, not blank and not disabled |
+| **L.7** | §3 — all four document screens, create | The **Sort code** field is required, digits only, and the row saves with it | ✅ **Passed** | ✅ **Passed** — mandatory series, no channel field, no document-type field |
+| **L.8** | §3 — all four document lists | The list is **ordered by sort code**, and the sort code is the first column | ⚠️ **HALF FAILED — see R2c §2a.** The **ordering is correct** (owner confirmed rows come back in sort-code order, on the document-type lists). The **column is not visible**. Display only | ✅ **Passed** — reachable only because L.0's third owner action created a channel-less series against an ACTIVE type; the R3 sentence read on screen |
+| **L.9** | §3 — any document type or series, detail | Change a sort code → **it saves** (freely editable, no in-use freeze). Reuse one another row holds → **refused** | ✅ **Passed on DOCUMENT TYPES** — which is the path the owner exercised. 🐛 **And that is why it passed: the SERIES edit form has no sort-code field at all** — R2c §2b, found beside this row rather than by it | ✅ **Passed** — the *retired* wording, distinct from the draft wording |
+| **L.10** | §4 — payment methods, list | Eight methods, ordered. **No Add control**, and the banner says why. `Open` where the myDATA code is genuinely unestablished | ⭐ **NOT A DEFECT — A REQUIREMENT CORRECTION. See R4.** The screen did what this row asked. **What the row asked for is the wrong model**: payment methods are a *business* list referencing an AADE codification, not a seed-only statutory list | ✅ **Passed.** ⭐ **R2b's carried item, closed at its first reachable moment** — it needed a recorded invoice, so it waited for F5 |
+| **L.11** | §4 — payment methods, detail | Description and sort code editable; **myDATA code and behaviour are plain text with their reason**; deactivate and reactivate work | ⭐ **NOT A DEFECT — A REQUIREMENT CORRECTION. See R4.** Same: the fields are frozen because the row is seeded, and the rows should not be seeded | ✅ **Passed** — €500.00 refused, €499.99 recorded. ⚠️ The `>=` boundary P.5 corrected, confirmed at the one value the law cares most about |
+| **L.12** | §5 — the AADE picker on a document type | Open it. **The option text is no longer cut** — `code — description · group` reads in full | ✅ **Passed** | ✅ **Passed** — difference and threshold both shown, refused without acceptance, recorded with it |
+| **L.13** | §5 — ⚠️ **the open question** | If the truncation you saw was in a **column of the AADE invoice types LIST** rather than the picker, say so — that is a different element and is **not** fixed | ✅ **CLOSED, and the answer is the picker.** The AADE invoice types **list shows no truncation**. With L.12 passing, what the owner originally reported was the **select trigger**, and the `w-full` fix (5.3) resolved it. **§5's conditional 5.4 is closed, not conditional** | ✅ **Passed** — no acceptance control, posts silently. The negative half of C.6 |
+
+⚠️ **One reconciliation gap, recorded rather than rounded away.** The owner reported **eleven of
+thirteen passed** and named nine (L.1–L.7, L.9, L.12); L.13 closes as a tenth. The eleventh is not
+individually attributable from the report — most likely L.10 or L.11, each of which **literally
+passed the check as written** while the requirement behind it turned out to be wrong. **Nothing in
+the results depends on which**: L.8 is a defect either way, L.10/L.11 are superseded by R4 either
+way, and no row is left without a verdict. It is recorded because a count that does not reconcile is
+the shape a missing verdict hides in.
 
 ⚠️ **What only a contract test can answer, and is therefore NOT on this list:** the payment-method
 `active` guard. It refuses recording an invoice settled by a deactivated method, and **recording an
@@ -379,15 +897,15 @@ components, a spec change and a client regeneration inside a frontend step.
 | # | Sub-part | Verdict |
 |---|---|---|
 | **L.0** | ⚠️ **App image rebuilt** before hand-over. Unconditional | ✅ **Done.** Image rebuilt from `52c56ab` at `2026-08-04T13:23:46Z`, 19 s after the commit, and the startup line reported **237 handlers** — 230 before R2, so the seven new routes were provably in the deployed artefact rather than only in the repository |
-| **L.1** | Create a type, leave a stock flag unset, try to activate — control **disabled with the reason visible** | ⚠️ **SPLIT — one half passed, one failed, and the split is the finding.** This row conflates **two** hand-over items. **Item 2 (the activate control) PASSED**: a draft refuses activation, disabled, with the reason visible. **Item 1 (creating the draft) FAILED** — symptom in §1 of the R2-live-leg task, **which is not in the message this session received**. ⭐ **The database proves the WRITE half worked**: `sales_document_type` id 2 (`Test 2`) has `affects_stock` and `transfers_stock` both **NULL** and `active = false` — exactly the draft the design specifies, so the service, the CHECK and the omit-rather-than-send-false form all behaved. The failure is on the reporting side, not the write side |
-| **L.2** | Set both flags, activate, succeeds | ✅ **PASSED.** Hand-over item 3. Both flags set, activation succeeds — confirmed in the browser and consistent with the data (`Test` carries `affects_stock=false, transfers_stock=false`, i.e. it was decided and activated before item 7 deactivated it again) |
-| **L.3** | Create a sales series with a channel and one without — both save | ✅ **PASSED.** Hand-over item 5. Both saved, and ⭐ **the channel-less one renders as a NAMED choice rather than a blank** — the point of the row. Confirmed in the data: `TEST99` has `channel IS NULL` and `TEST2` has `ECOMMERCE` |
-| **L.4** | An inactive document type is refused with a usable **4xx naming the reason**, never a 5xx or a bare "Bad request." | ❌ **FAILED — hand-over item 7 — AND ⚠️ THIS ROW WAS MAPPED ONTO THE WRONG PATH.** ⚠️ **The row's own subject is unreachable**: the "inactive document type refused with a 4xx" guard lives in `SalesInvoiceServiceImpl` line 230, on the **recording** path, so it needs **F5** exactly as L.8 does. What item 7 actually exercised was the **series-creation** path — and ⭐ **`SalesDocumentSeriesServiceImpl.create` has NO active check at all** (verified in the source, 2026-08-04: it calls `documentTypes.findById` and never reads `isActive()`), so **the screen's active-only filter is the ONLY guard on that path** and it did not hold. **Proven in the data, not merely reported:** `sales_document_series` id 2 (`TEST2`) points at document type 1, which is `active = false`; and id 1 (`TEST99`) points at type 2, which is not merely inactive but **a draft whose stock question has never been answered**. **Both series in the database name an inactive type.** Fix in §2 of the live-leg task (not in this session's message) |
-| **L.5** | A frozen field renders **shown-and-disabled with its reason** — not hidden, not silently read-only | ⚠️ **NOT VERIFIED, and no hand-over item covered its subject** — a reconciliation finding rather than a result. This row is about the **`lockedReason`** state (shown, **disabled**, with the reason). The nearest thing the browser confirmed is hand-over item 8 — the AADE code and group rendering as **plain text with the reason** — which is a *different* state (`frontend/README.md`'s **third**: no route on any installation). ⚠️ **R2 does ship one REACHABLE `lockedReason` instance and nobody was asked to look at it**: the `Not decided` option on a decided type's stock control, disabled because `StockBehaviourRequest` boxes both components `@Mandatory`. Every other instance is the series freeze, which needs F5. **Carry to F5's live leg** |
-| **L.6** | The AADE picker is usable at 34 Greek options, **including the two that read `Για Μελλοντική Χρήση`** | ✅ **PASSED.** Hand-over items 9 and 10. The picker is usable at 34 Greek options, and codes **4** and **12** both read `Για Μελλοντική Χρήση` with the note explaining that annex 8.1's cell is empty — so the `code — description` rendering is what makes them distinguishable, as designed. ⚠️ **One display defect**: the picker cell cut its text. Deferred to F10 at first, then **pulled back and fixed in R2b** (`w-full`). ⚠️⚠️ **The reason given for deferring-then-pulling was WRONG** — `line-clamp-1` truncates the END, so the `code —` prefix was never at risk and the group suffix was what was lost. See R2b §5 |
-| **L.7** | ⚠️ *(scope addition)* Create a series, **correct its abbreviation**, it saves | ✅ **PASSED.** Hand-over item 6. ⭐ **And it covered more than this row names**: the owner corrected the **abbreviation, the document type AND the ΜΑΡΚ flag** on a fresh series, so all three of block X's sales-side routes are browser-confirmed, not just the one this row lists. **This is the sub-part R2 grew for**, and it is the first evidence that the correction path an owner authoring nineteen Greek series actually needs is reachable from a screen |
-| **L.8** | ⚠️ *(scope addition)* The same field is **shown-disabled-with-reason** once the series has recorded a document — **if that state is reachable without F5** | ⛔ **NOT REACHABLE — recorded as unreachable, NOT as untested.** The frozen-once-used state needs a **recorded document**, and recording one needs **F5**, which does not exist. The row was written conditionally (*"if that state is reachable without F5"*) and the condition is false. ✅ **Its contract half IS verified** — `R2ReferenceDataContractIT` drives the freeze over real HTTP either side of one invoice, and was proven against the defect. **Carry the browser half to F5's live leg**, together with L.5 |
-| **L.9** | State plainly which items are verified at the **contract level** and which **only the browser** can answer | ✅ **Done — see *What only the browser could answer* below.** Ten of twelve hand-over items passed, two failed, one row was unreachable and one had no item at all |
+| **L.1** | Create a type, leave a stock flag unset, try to activate — control **disabled with the reason visible** | ⚠️ **SPLIT — one half passed, one failed, and the split is the finding.** This row conflates **two** hand-over items. **Item 2 (the activate control) PASSED**: a draft refuses activation, disabled, with the reason visible. **Item 1 (creating the draft) FAILED** — symptom in §1 of the R2-live-leg task, **which is not in the message this session received**. ⭐ **The database proves the WRITE half worked**: `sales_document_type` id 2 (`Test 2`) has `affects_stock` and `transfers_stock` both **NULL** and `active = false` — exactly the draft the design specifies, so the service, the CHECK and the omit-rather-than-send-false form all behaved. The failure is on the reporting side, not the write side | ✅ **Passed** |
+| **L.2** | Set both flags, activate, succeeds | ✅ **PASSED.** Hand-over item 3. Both flags set, activation succeeds — confirmed in the browser and consistent with the data (`Test` carries `affects_stock=false, transfers_stock=false`, i.e. it was decided and activated before item 7 deactivated it again) | ✅ **Passed** — server paging, on the first screen in this application to have it |
+| **L.3** | Create a sales series with a channel and one without — both save | ✅ **PASSED.** Hand-over item 5. Both saved, and ⭐ **the channel-less one renders as a NAMED choice rather than a blank** — the point of the row. Confirmed in the data: `TEST99` has `channel IS NULL` and `TEST2` has `ECOMMERCE` | ✅ **Passed** — the three sortable, the rest plain text |
+| **L.4** | An inactive document type is refused with a usable **4xx naming the reason**, never a 5xx or a bare "Bad request." | ❌ **FAILED — hand-over item 7 — AND ⚠️ THIS ROW WAS MAPPED ONTO THE WRONG PATH.** ⚠️ **The row's own subject is unreachable**: the "inactive document type refused with a 4xx" guard lives in `SalesInvoiceServiceImpl` line 230, on the **recording** path, so it needs **F5** exactly as L.8 does. What item 7 actually exercised was the **series-creation** path — and ⭐ **`SalesDocumentSeriesServiceImpl.create` has NO active check at all** (verified in the source, 2026-08-04: it calls `documentTypes.findById` and never reads `isActive()`), so **the screen's active-only filter is the ONLY guard on that path** and it did not hold. **Proven in the data, not merely reported:** `sales_document_series` id 2 (`TEST2`) points at document type 1, which is `active = false`; and id 1 (`TEST99`) points at type 2, which is not merely inactive but **a draft whose stock question has never been answered**. **Both series in the database name an inactive type.** Fix in §2 of the live-leg task (not in this session's message) | ✅ **Passed** — the SERVER reordered, which is the half a browser had to answer |
+| **L.5** | A frozen field renders **shown-and-disabled with its reason** — not hidden, not silently read-only | ⚠️ **NOT VERIFIED, and no hand-over item covered its subject** — a reconciliation finding rather than a result. This row is about the **`lockedReason`** state (shown, **disabled**, with the reason). The nearest thing the browser confirmed is hand-over item 8 — the AADE code and group rendering as **plain text with the reason** — which is a *different* state (`frontend/README.md`'s **third**: no route on any installation). ⚠️ **R2 does ship one REACHABLE `lockedReason` instance and nobody was asked to look at it**: the `Not decided` option on a decided type's stock control, disabled because `StockBehaviourRequest` boxes both components `@Mandatory`. Every other instance is the series freeze, which needs F5. **Carry to F5's live leg** | ✅ **Passed** — no Edit control anywhere, for a FULL-access role |
+| **L.6** | The AADE picker is usable at 34 Greek options, **including the two that read `Για Μελλοντική Χρήση`** | ✅ **PASSED.** Hand-over items 9 and 10. The picker is usable at 34 Greek options, and codes **4** and **12** both read `Για Μελλοντική Χρήση` with the note explaining that annex 8.1's cell is empty — so the `code — description` rendering is what makes them distinguishable, as designed. ⚠️ **One display defect**: the picker cell cut its text. Deferred to F10 at first, then **pulled back and fixed in R2b** (`w-full`). ⚠️⚠️ **The reason given for deferring-then-pulling was WRONG** — `line-clamp-1` truncates the END, so the `code —` prefix was never at risk and the group suffix was what was lost. See R2b §5 | ✅ **Passed** — plain text with the reason, not blank and not disabled |
+| **L.7** | ⚠️ *(scope addition)* Create a series, **correct its abbreviation**, it saves | ✅ **PASSED.** Hand-over item 6. ⭐ **And it covered more than this row names**: the owner corrected the **abbreviation, the document type AND the ΜΑΡΚ flag** on a fresh series, so all three of block X's sales-side routes are browser-confirmed, not just the one this row lists. **This is the sub-part R2 grew for**, and it is the first evidence that the correction path an owner authoring nineteen Greek series actually needs is reachable from a screen | ✅ **Passed** — mandatory series, no channel field, no document-type field |
+| **L.8** | ⚠️ *(scope addition)* The same field is **shown-disabled-with-reason** once the series has recorded a document — **if that state is reachable without F5** | ⛔ **NOT REACHABLE — recorded as unreachable, NOT as untested.** The frozen-once-used state needs a **recorded document**, and recording one needs **F5**, which does not exist. The row was written conditionally (*"if that state is reachable without F5"*) and the condition is false. ✅ **Its contract half IS verified** — `R2ReferenceDataContractIT` drives the freeze over real HTTP either side of one invoice, and was proven against the defect. **Carry the browser half to F5's live leg**, together with L.5 | ✅ **Passed** — reachable only because L.0's third owner action created a channel-less series against an ACTIVE type; the R3 sentence read on screen |
+| **L.9** | State plainly which items are verified at the **contract level** and which **only the browser** can answer | ✅ **Done — see *What only the browser could answer* below.** Ten of twelve hand-over items passed, two failed, one row was unreachable and one had no item at all | ✅ **Passed** — the *retired* wording, distinct from the draft wording |
 
 ### ⭐ R2's findings — four premises corrected, and what R1's constraints did on meeting data
 
@@ -1854,13 +2372,13 @@ layer 2 is for. Nothing in R1a needs to know which types the business uses.
 
 | # | Phase | Sub-part | Verdict |
 |---|:---:|---|---|
-| **L.1** | 🅐 | `aade_invoice_type` — id, code, description, `group`, active. **One table for all 55 values** | ✅ **Done.** `V31`. The column is `invoice_group` and not `group`, which is reserved in SQL |
-| **L.2** | 🅐 | Codes seeded from **`SimpleTypes-v2.0.1.xsd`** `InvoiceType` — 55 flat enumerations, **never a text dump** | ✅ **Done.** All 55, in the XSD's own enumeration order — which is also annex 8.1's reading order, and therefore the order rows are returned in (by `id`, never by `code`: a text sort puts `10.1` before `2.1` and `13.31` before `13.4`) |
-| **L.3** | 🅐 | Greek descriptions from **rasterised annex 8.1 pages, read visually**. Never from `pdftotext` | ✅ **Done.** Pages 89–93 rendered at 170 dpi with PyMuPDF and read as images. ⚠️ **Codes `4` and `12` have an EMPTY description cell** — the only text AADE gives them is the group label `Για Μελλοντική Χρήση`, which is what they carry, read from the artefact rather than invented |
-| **L.4** | 🅐 | `group` column from annex 8.1's rasterised headings — the five groups of the map above | ✅ **Done.** Five values, CHECK-constrained, named for what they mean (`ISSUER_MATCHED` …) rather than transliterated |
-| **L.5** | 🅐 | The **`28 + 6 + 6 + 9 + 6 = 55`** cross-check asserted **in a test**, not merely stated in a comment | ⭐ **Done, TWICE and independently.** A `DO` block in `V31` refuses to seed a list that does not reconcile, and `AadeInvoiceTypeIT` **parses `SimpleTypes-v2.0.1.xsd` itself** so the database is compared against **the artefact** rather than a list typed into a test file twice — with a negative control that fails if the XSD was not read |
-| **L.6** | 🅐 | Adopts the statutory-codification contract: `activate`, `deactivate`, `describe`, **no `create`** | ✅ **Done.** `AadeInvoiceTypeService extends StatutoryCodification<AadeInvoiceTypeView>` |
-| **L.7** | 🅐 | Read + `activate`/`deactivate`/`describe` routes | ✅ **Done.** 5 routes. ⚠️ With `side=ISSUED|RECEIVED` and `group=` filters, because offering all 55 on a *sales* document-type form would put “Ενοίκιο Έξοδο” in the picker |
+| **L.1** | 🅐 | `aade_invoice_type` — id, code, description, `group`, active. **One table for all 55 values** | ✅ **Done.** `V31`. The column is `invoice_group` and not `group`, which is reserved in SQL | ✅ **Passed** |
+| **L.2** | 🅐 | Codes seeded from **`SimpleTypes-v2.0.1.xsd`** `InvoiceType` — 55 flat enumerations, **never a text dump** | ✅ **Done.** All 55, in the XSD's own enumeration order — which is also annex 8.1's reading order, and therefore the order rows are returned in (by `id`, never by `code`: a text sort puts `10.1` before `2.1` and `13.31` before `13.4`) | ✅ **Passed** — server paging, on the first screen in this application to have it |
+| **L.3** | 🅐 | Greek descriptions from **rasterised annex 8.1 pages, read visually**. Never from `pdftotext` | ✅ **Done.** Pages 89–93 rendered at 170 dpi with PyMuPDF and read as images. ⚠️ **Codes `4` and `12` have an EMPTY description cell** — the only text AADE gives them is the group label `Για Μελλοντική Χρήση`, which is what they carry, read from the artefact rather than invented | ✅ **Passed** — the three sortable, the rest plain text |
+| **L.4** | 🅐 | `group` column from annex 8.1's rasterised headings — the five groups of the map above | ✅ **Done.** Five values, CHECK-constrained, named for what they mean (`ISSUER_MATCHED` …) rather than transliterated | ✅ **Passed** — the SERVER reordered, which is the half a browser had to answer |
+| **L.5** | 🅐 | The **`28 + 6 + 6 + 9 + 6 = 55`** cross-check asserted **in a test**, not merely stated in a comment | ⭐ **Done, TWICE and independently.** A `DO` block in `V31` refuses to seed a list that does not reconcile, and `AadeInvoiceTypeIT` **parses `SimpleTypes-v2.0.1.xsd` itself** so the database is compared against **the artefact** rather than a list typed into a test file twice — with a negative control that fails if the XSD was not read | ✅ **Passed** — no Edit control anywhere, for a FULL-access role |
+| **L.6** | 🅐 | Adopts the statutory-codification contract: `activate`, `deactivate`, `describe`, **no `create`** | ✅ **Done.** `AadeInvoiceTypeService extends StatutoryCodification<AadeInvoiceTypeView>` | ✅ **Passed** — plain text with the reason, not blank and not disabled |
+| **L.7** | 🅐 | Read + `activate`/`deactivate`/`describe` routes | ✅ **Done.** 5 routes. ⚠️ With `side=ISSUED|RECEIVED` and `group=` filters, because offering all 55 on a *sales* document-type form would put “Ενοίκιο Έξοδο” in the picker | ✅ **Passed** — mandatory series, no channel field, no document-type field |
 | **A.5** | 🅐 | ✅ **CLOSED — the six `17.x` codes are rows carrying `ENTITY_ADJUSTING`.** No third table, no omission, no discriminator | ✅ **Resolved by correcting the model**, 2026-08-03 |
 
 #### B — the codification contract itself

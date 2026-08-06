@@ -174,6 +174,20 @@ class TextSearchIT extends AbstractCoreIntegrationTest {
         // interchangeable — `vat_class.description` against `unit_of_measure.name`.
         assertIndexed("vat_class", "code", "description");
         assertIndexed("unit_of_measure", "code", "name");
+
+        // The two sales document lists, adopted by F5 as row 8 of the target list (V36).
+        //
+        // ⚠️ These are the first entries here whose service searches a column that is NOT on the
+        // table being listed. A sales invoice is searched by its customer's name and VAT number and
+        // by its series' abbreviation and description, through a subquery on the scalar id — see
+        // TextSearch.matchingRelated. The related columns are asserted under their OWN tables, below
+        // and above, because that is where the indexes are and where a reader will look for them.
+        assertIndexed("sales_invoice", "document_number");
+        assertIndexed("credit_note", "document_number");
+        assertIndexed("sales_document_series", "abbreviation", "description");
+        // customer.name and customer.vat_number are asserted above, for the Customers screen. Both
+        // document lists reach them through the subquery and rely on those same indexes; there is
+        // deliberately no second copy.
     }
 
     /**

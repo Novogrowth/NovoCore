@@ -96,6 +96,7 @@ class SalesController {
             LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate to,
+            @RequestParam(required = false) String search,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size,
             @RequestParam(required = false) SalesInvoiceSort sort,
@@ -103,10 +104,10 @@ class SalesController {
 
         PageRequest pageRequest = Paging.of(page, size, sort, direction);
         if (customerId != null) {
-            return ListResponse.of(salesInvoices.pageOfCustomer(customerId, pageRequest));
+            return ListResponse.of(salesInvoices.pageOfCustomer(customerId, search, pageRequest));
         }
         return ListResponse.of(salesInvoices.pageBetween(
-                requireRange(from), requireRange(to), pageRequest));
+                requireRange(from), requireRange(to), search, pageRequest));
     }
 
     @GetMapping(path = "/api/sales-invoices/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -187,19 +188,20 @@ class SalesController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate to) {
+            LocalDate to,
+            @RequestParam(required = false) String search) {
 
         if (customerId != null && salesInvoiceId != null) {
             throw new InvalidInputException(
                     "customerId and salesInvoiceId are alternative lookups; name one.");
         }
         if (salesInvoiceId != null) {
-            return ListResponse.of(creditNotes.againstInvoice(salesInvoiceId));
+            return ListResponse.of(creditNotes.againstInvoice(salesInvoiceId, search));
         }
         if (customerId != null) {
-            return ListResponse.of(creditNotes.ofCustomer(customerId));
+            return ListResponse.of(creditNotes.ofCustomer(customerId, search));
         }
-        return ListResponse.of(creditNotes.between(requireRange(from), requireRange(to)));
+        return ListResponse.of(creditNotes.between(requireRange(from), requireRange(to), search));
     }
 
     @GetMapping(path = "/api/credit-notes/{id}", produces = MediaType.APPLICATION_JSON_VALUE)

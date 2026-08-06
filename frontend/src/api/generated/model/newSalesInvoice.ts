@@ -15,7 +15,7 @@ export interface NewSalesInvoice {
   customerId: number;
   seriesId: number;
   settlementMethod: SettlementMethod;
-  documentNumber?: string;
+  documentNumber: string;
   invoiceDate: string;
   description?: string;
   statedTotal?: Money;

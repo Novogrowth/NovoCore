@@ -201,14 +201,20 @@ public interface SalesInvoiceService {
      * successive pages cannot repeat a row or skip one — which an ordering on invoice date alone
      * genuinely can, since PostgreSQL may return tied rows in a different order per query.
      *
+     * @param search a substring matched against the document number, the customer's name and VAT
+     *     number, and the series' abbreviation and description — target-list row 8 (F5). ⚠️ Null or
+     *     blank means <strong>no filter</strong>, never "match nothing"; a caller with no search box
+     *     passes null. 📌 Row 8 also names the customer's <em>code</em>, which is not a column yet —
+     *     D1 adds it, and it arrives here without this signature changing.
      * @throws IllegalArgumentException if the request names a sort this list does not offer, which
      *     is an internal failure: the routes bind the parameter to {@link SalesInvoiceSort} and
      *     refuse an unknown value before reaching here
      */
-    PageResponse<SalesInvoiceView> pageBetween(LocalDate from, LocalDate to, PageRequest page);
+    PageResponse<SalesInvoiceView> pageBetween(
+            LocalDate from, LocalDate to, String search, PageRequest page);
 
-    /** One page of the sales to one customer. Same ordering guarantee as {@link #pageBetween}. */
-    PageResponse<SalesInvoiceView> pageOfCustomer(long customerId, PageRequest page);
+    /** One page of the sales to one customer. Same ordering and {@code search} as {@link #pageBetween}. */
+    PageResponse<SalesInvoiceView> pageOfCustomer(long customerId, String search, PageRequest page);
 
     /** The invoice one journal entry belongs to — the queried direction of the stored link. */
     Optional<SalesInvoiceView> findByJournalEntry(long journalEntryId);

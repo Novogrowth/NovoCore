@@ -4,13 +4,15 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
 /**
  * Core-internal. Reached only through
  * {@link gr.novotrade.novocore.core.api.sales.CreditNoteService}.
  */
-interface CreditNoteRepository extends JpaRepository<CreditNote, Long> {
+interface CreditNoteRepository
+        extends JpaRepository<CreditNote, Long>, JpaSpecificationExecutor<CreditNote> {
 
     List<CreditNote> findBySalesInvoiceIdOrderByIdAsc(long salesInvoiceId);
 

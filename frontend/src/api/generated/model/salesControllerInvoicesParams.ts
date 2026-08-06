@@ -14,6 +14,7 @@ export type SalesControllerInvoicesParams = {
 customerId?: number;
 from?: string;
 to?: string;
+search?: string;
 page?: number;
 size?: number;
 sort?: SalesInvoiceSort;
