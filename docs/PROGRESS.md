@@ -41,7 +41,7 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | R1b | **Document reference data (behavioural)** — the series becomes what a sale names | **Done, committed** — `seriesId` mandatory on `NewSalesInvoice`, `channel` removed and **derived from the series**, the consumption path branches **silently** on the document type's `affectsStock`, and three refusals (channel-less, inactive series, inactive type). Migration **V33** (comment only). **No new operations.** ⚠️ **Two defects found, both invisible before this step**; ⚠️ **the derived-accessor guard left R1b and became step W1** on a measurement. All 22 sub-parts have verdicts. See below |
 | U3 | **Eleven design decisions written into the repository** — D5, D4, D1, D3, D2, M0, vouchers, the shared gate | **Done, documentation only** — no production code, no schema, no migration, no test changed. D4 split (half already answered), M0 split into M0a/M0b, the per-order shipping address moved to step 22, voucher creation modes recorded against step 21, the Woo one-time load separated from the Woo adapter at step 19, and the **shared gate before step 24** recorded. Nothing ⚪ was promoted or reordered beyond those placements. See below |
 | R2 | **Document reference data (screens)** — six settings screens over R1a's six tables | **Done, committed** — the AADE codification (read + three verbs, **no create, ever**), sales/purchase document types, sales/purchase series, delivery methods. ⚠️ **Grew a backend sub-part mid-step**: 7 new routes making a series' abbreviation, document type and ΜΑΡΚ flag **editable while unused and frozen once used**, because none of them had a write route on any installation. **All 41 sub-parts have verdicts**; 4 premises corrected. See below |
-| R2b | **What R2's live leg found**, plus two premises its brief had wrong | **Done, committed** — ⚠️ **the stale-list defect was OLDER than R2 and sat in all 13 create forms**, fixed globally with a structural guard; ⚠️ **no server-side check existed** that a series' document type is usable, so the screen was the only guard; `sort_code` on four tables (**V34**, integer, NOT NULL); **payment methods (V35)**, which had no screen because of a scoping error. **237 → 247 operations.** All 30 sub-parts have verdicts; **one is still open** — §5's conditional |
+| R2b | **What R2's live leg found**, plus two premises its brief had wrong | **Done, committed** — ⚠️ **the stale-list defect was OLDER than R2 and sat in all 13 create forms**, fixed globally with a structural guard; ⚠️ **no server-side check existed** that a series' document type is usable, so the screen was the only guard; `sort_code` on four tables (**V34**, integer, NOT NULL); **payment methods (V35)**, which had no screen because of a scoping error. **237 → 247 operations.** All 30 sub-parts have verdicts. ✅ **§5's conditional (5.4) closed on 2026-08-05** when the owner ran R2b's live leg — the truncation was the select trigger, already fixed. ⚠️ **The leg produced two new rows, neither built: R2c** (sort code invisible as a column, and **absent from the series edit form**) and **R4** (payment methods are a **business** list, not a statutory one — a requirement correction that **changes the sales invoice request contract**) |
 | W1 | **Serialised-record contract fidelity** — the wire shape equals the documented shape | **Done, committed** — the generator describes what **Jackson** writes, not what a record's components say. **+58 properties across 27 response schemas**; no operations, no schemas, no migration. ⚠️ **Request records deliberately excluded** — they are deserialised through the canonical constructor and never serialised, so a derived property there describes a write that never happens. `OpenItemRef.isCustomerSide()` deleted (zero references anywhere). **Two premises corrected**, one of them `CLAUDE.md`'s own statement of the Jackson mechanism. All 16 sub-parts have verdicts |
 | 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress. F0–F4, S1 and S2 done.** ⚠️ **W1 landed 2026-08-04, so next is F5, then the D-block (D1+D3+D4+D5), then F6 onward** — the owner's sequencing decision of **2026-08-04**, recorded as the roadmap's row order. *(This cell previously read "Next is Q1, then R1, then F5", correct when written on 2026-08-02 and overtaken since: Q1, R1a, R1b, R2 and R2b have all landed.)* Foundations `94e17cd`, Products `56e3726` + guards `28c4119` + brand pass, then the render-loop fix `3458ee6`, F0 (the seed pass), F1 Suppliers `b406b27`, F2 Customers `496c7be`, F3 Users & Roles `aea0e56`, then **S1** (search), **S2** (sorting) and **F4** (Settings). **307 frontend tests, 31 files, green.** Per-step detail in `docs/novocore-roadmap.md`; decisions and what each step left behind in *Step 16 — the frontend* below |
 
@@ -490,14 +490,95 @@ invoice, inactive customer/product/VAT class, serial mismatch, bundle-with-seria
 legible. ⚠️ **The draft-type refusal has no row because it is unreachable by construction (P.6)** —
 a correction, not an omission.
 
-### ⚠️ CARRIED, SEPARATE — R2b's live leg was never run, and its 13 rows are still owed
+### ✅ CARRIED, SEPARATE — R2b's live leg **RAN 2026-08-05** and its 13 rows are closed
 
-**These must NOT be merged into F5's block.** They are reproduced beside it so both can be run in one
-sitting, and they are R2b's to close, not F5's. The rows are in *R2b's live leg* above; the open one
-is **L.13** — whether the AADE truncation the owner saw was the select trigger (fixed) or a **column
-in the AADE invoice types list** (not fixed).
+**They were never merged into F5's block, and must not be** — they are R2b's, not F5's. Results are
+in *R2b's live leg* above, row by row. In one line: **eleven of thirteen passed**, **L.13 closed §5's
+open question** (the truncation was the select trigger, already fixed — the AADE list is clean), and
+the two that did not pass produced **two new roadmap rows rather than fixes inside F5**:
+
+- **R2c** — the sort code is not visible as a column (L.8), and is **absent from the series edit
+  form** (found beside L.9). ⚠️ **Not built. Its own row.**
+- **R4** — the payment-method **model** is wrong (L.10/L.11). ⚠️ **A requirement correction, not a
+  defect. Not built. Its own row, and it runs after F5 and before F6.**
+
+⚠️ **Neither enters F5's commit.** They are R2b's consequences; F5's scope is unchanged by them.
 
 ---
+
+## ▶ R2c — the sort code is invisible on lists and unsettable on series. **RECORDED 2026-08-05, NOT BUILT**
+
+**Found by the owner's live leg of 2026-08-05, against R2b's §3.** Recorded here at the moment it was
+reported, per `CLAUDE.md` §*A decision reached in a design conversation gets the same close-out
+discipline as a build step*. ⚠️ **These are R2b's defects, not F5's, and they must not enter F5's
+commit.** Roadmap row **R2c**; no slot decided.
+
+| # | Defect | What is and is not established |
+|---|---|---|
+| **2a** | **The sort code is not visible as a column on the document type lists** | ⚠️ **Display only.** The **ORDERING is correct** — the owner confirmed rows come back in sort-code order — so R2b's 3.5 (the server's default order) holds and only 3.6 (*first list column*) did not land. 📌 **He confirmed ordering for DOCUMENT TYPES and said nothing about the SERIES lists. Verify those; do not assume they match** — R2b changed four repositories and the leg exercised two screens |
+| **2b** | ⚠️ **THE MORE SERIOUS ONE. On sales and purchase SERIES, the sort code appears only on the CREATE form and is ABSENT from the EDIT form** | **Document types allow editing it, which is why L.9 passed** — the passing path and the broken path are different screens, and only one was walked |
+
+### ⚠️ Why 2b is not cosmetic, written down because a reader will otherwise treat it as such
+
+**R2b's 3.4 decided the sort code is freely editable and deliberately NOT subject to the
+editable-while-unused freeze**, and gave the reason: *"reordering is normal and the code appears on no
+document."* **A value that can be set once and never changed is unusable for the purpose that argument
+assigns it.** It is not a missing convenience — it is the field failing at the only job it has.
+
+⚠️ **And it is on SERIES**, which is **the picker an employee actually uses when recording a
+document** — F5's mandatory series picker is ordered by exactly this column. A business that
+reorganises its series has no way to reorder the list it works from every day.
+
+📌 **The shape is one this file already names:** the create path and the edit path disagreed, and the
+one that was walked is the one that worked. Same shape as R2's *"the screen was the only guard"* and
+as R2b's own §2 — **two paths, one exercised.**
+
+## ▶ R4 — payment methods are a BUSINESS list, not a statutory one. **REQUIREMENT CORRECTION, RECORDED 2026-08-05, NOT BUILT**
+
+⚠️ **The owner's L.10/L.11 results are NOT defects.** The screens did what R2b's rows asked. **What
+the rows asked for is the wrong model** — and it is **R1a's correction repeating one entity over**:
+payment methods were built as a **seed-only statutory list**, and they are actually a **business list
+that REFERENCES an AADE codification**, which is the same two-layer shape `CLAUDE.md` §5 already
+records for document types.
+
+**What the owner requires:**
+
+| # | Requirement |
+|---|---|
+| **R4.1** | **The list starts EMPTY. No seeded rows.** The user creates them freely — full CRUD, not activate/deactivate/describe |
+| **R4.2** | Creating one includes **selecting the AADE payment-method article**, which supplies the myDATA code |
+| **R4.3** | ⚠️ **CONFIRMED BY THE OWNER: creating one ALSO means choosing THE LEDGER ACCOUNT IT SETTLES TO.** Two POS terminals can share AADE code 7 and land in **different bank accounts**, and **the AADE article cannot tell you which** |
+| **R4.4** | **All fields editable for as long as the method HAS NOT BEEN USED** — the editable-while-unused / frozen-once-used pattern R2 already built for a series' abbreviation, `documentTypeId` and `getsMark`. ⭐ **The mechanism exists; this is a third application of it, not a new idea** |
+
+### ⚠️ Four consequences, each of which CONTRADICTS something already decided
+
+**Recorded together because a reader who meets only one of them will re-derive the old answer**, which
+is precisely how R1a's two-layer correction had to be made twice.
+
+| # | Consequence |
+|---|---|
+| **a** | ⚠️ **R2b §4.1 decided NOT to store the myDATA code on the row**, exposing it from the `SettlementMethod` enum instead, on the grounds that storing it would be *a second record of one thing*. **That reasoning held only while the rows were a fixed set.** A **user-created** row cannot inherit a code from an enum it is not a member of. **The code moves onto the row.** 📌 The old argument was not wrong — its premise was withdrawn |
+| **b** | ⚠️ **THIS CHANGES THE SALES INVOICE REQUEST CONTRACT.** `SettlementMethod` is a **Java enum** on `NewSalesInvoice`. If payment methods become user-created rows, the invoice's settlement reference **must become an FK to the table**. Every consumer of `newSalesInvoice.settlementMethod` — the generated TypeScript included — changes with it |
+| **c** | ⭐ **R2b's own argument AGAINST creation is not refuted — it is the SPECIFICATION of the create form.** §4.7 said adding Cheque or Foreign bank account *"needs an `AccountSystemKey` and two behaviour flags"*, and offered that as the concrete reason there is no create path. **Those are the fields the form must collect.** The argument survives intact and changes sign |
+| **d** | 📌 **The eight seeded abbreviations — ΜΕΤΡ, ΚΑΡΤ, ΤΡΑΠ, ΕΠΙΤ, ΑΝΤΙΚ, SKRZ, PPAL, STRP — were INVENTED, not chosen by the owner.** An empty list **removes** that problem rather than needing them made editable. ⭐ This is the same argument that shipped R1a's six document tables empty: *the fabrication is what the empty seed exists to prevent* |
+
+### ⚠️ SEQUENCING — recorded, because the reason is not derivable from the row's position
+
+**R4 runs AFTER F5's close-out and BEFORE F6.** Two reasons, and both are about cost rather than
+preference:
+
+- **It changes a contract (consequence b), so the longer it waits the more is built on the enum.**
+- **Purchase documents settle too**, so **F6 should be built against the corrected model** rather than
+  built against the enum and then reopened.
+
+✅ **It does NOT block finishing F5.** F5's record form is a **test harness by decision**
+(`CLAUDE.md` §1b), so revising it later is expected rather than rework. ⚠️ **Do not pre-empt any of
+this inside F5** — F5 keeps `SettlementMethod` exactly as it is.
+
+📌 **Where R4 sits relative to N1 and the D-block is NOT decided.** The owner's constraint is
+`F5 < R4 < F6`; the roadmap places R4 immediately after F5 to honour the *"the longer it waits"*
+argument, and that placement is this session's reading of his reason, **not a fifth requirement he
+stated.**
 
 ## ▶ R2b — what R2's live leg found, plus two things its brief had wrong. **DONE 2026-08-04**
 
@@ -535,32 +616,41 @@ corrections are recorded against the premise rather than only against the outcom
 | **5.1** | ⚠️ **Correct the false claim first, with its mechanism** | ⭐ **Done — and it was wrong.** `line-clamp-1` truncates the **END**, so the `code —` prefix was **structurally safe** and the **group suffix** was what disappeared. Corrected below |
 | **5.2** | ⚠️ Note that the claim was **amplified** | ✅ **Done.** It was the stated reason for pulling the item out of F10, so **the reason for pulling it was wrong** even though pulling it may still be right — the picker is used nineteen times and the label is long |
 | **5.3** | The narrow width fix | ✅ **Done.** `OptionSelect` passes `w-full` unless a caller overrides, so the trigger uses the column instead of shrinking to content. **A width change only**; F10 keeps the styling sweep |
-| **5.4** | ⚠️ Conditional on which element the owner meant | ⬜ **STILL OPEN — the owner has not answered.** The fix above addresses the **select trigger**. If he meant a **column in the AADE list**, that is a different element and a different fix. Recorded rather than guessed |
+| **5.4** | ⚠️ Conditional on which element the owner meant | ✅ **CLOSED 2026-08-05 by the live leg — the element was the SELECT TRIGGER.** L.13: the AADE invoice types **list shows no truncation**. L.12: the picker's option text now reads in full. So 5.3's `w-full` fix addressed the element the owner actually saw, and **there is no second element to fix**. ⚠️ **This verdict is CLOSED, not "closed if"** — the condition was evaluated, not assumed away |
 | **S.1** | Client regenerated, **every drifted fixture named** | ✅ **Done.** Spec **237 → 247 operations**, **226 → 231 schemas**, **170 → 175 declaring `required`**. ⭐ **Eleven fixtures drifted and `tsc` named every one** — 8a's `required` declaration doing exactly what it was built for. By file: `query-client.test.tsx` ×2, `purchase-document-series.test.tsx` ×2, `purchase-document-types.test.tsx` ×1, `sales-document-series.test.tsx` ×4, `sales-document-types.test.tsx` ×2. Five pinned counts updated with dated reasons |
 | **S.2** | ⭐ **Record the live-leg lesson while it is fresh** | ✅ **Done**, in `CLAUDE.md`: **a live-leg block is DERIVED from the screens a step ships, never composed freehand.** R2's had ten rows against twelve items; four items had no row and three rows had no item. **F5's is built that way** |
 | **S.3** | `CLAUDE.md`, `PROGRESS.md`, primer, roadmap | ✅ **Done** — all four |
 
 ### 🅛 R2b's live leg — ⭐ **DERIVED from the screens it touches, not composed freehand**
+### ✅ **RAN BY THE OWNER, 2026-08-05. Results recorded below**
 
 **This is S.2's lesson applied immediately rather than filed.** Every row below names the screen or
 route it came from, and the two directions are reconciled by construction: there is one row per thing
 a browser can answer that a test cannot, and nothing else.
 
-| # | Screen / route it derives from | Check |
-|---|---|---|
-| **L.1** | §1 — sales document types, create | Create a type. **It appears in the list immediately**, with no manual refresh |
-| **L.2** | §1 — **an OLDER screen**, e.g. suppliers or products | Create one there too. ⭐ **This is the row that proves the fix is global** rather than applied to R2's screens only — the defect was in all thirteen |
-| **L.3** | §2 — sales series, create | Create a **draft** type (leave a stock flag unset), then try to create a series against it → **refused, naming the undecided stock behaviour** |
-| **L.4** | §2 — sales series, create | Deactivate a decided type, then try to create a **new** series against it → **refused with a DIFFERENT reason** (*not for new documents*), never the draft wording |
-| **L.5** | §2 — sales series, detail | ⭐ **A series that already points at a type you then deactivate still opens, still edits, and keeps its type.** Setting is refused; **holding is not** |
-| **L.6** | §2 — sales series, detail | The document-type picker offers active types **plus the current one if it is now inactive**, marked — never a raw id and never an empty select |
-| **L.7** | §3 — all four document screens, create | The **Sort code** field is required, digits only, and the row saves with it |
-| **L.8** | §3 — all four document lists | The list is **ordered by sort code**, and the sort code is the first column |
-| **L.9** | §3 — any document type or series, detail | Change a sort code → **it saves** (freely editable, no in-use freeze). Reuse one another row holds → **refused** |
-| **L.10** | §4 — payment methods, list | Eight methods, ordered. **No Add control**, and the banner says why. `Open` where the myDATA code is genuinely unestablished |
-| **L.11** | §4 — payment methods, detail | Description and sort code editable; **myDATA code and behaviour are plain text with their reason**; deactivate and reactivate work |
-| **L.12** | §5 — the AADE picker on a document type | Open it. **The option text is no longer cut** — `code — description · group` reads in full |
-| **L.13** | §5 — ⚠️ **the open question** | If the truncation you saw was in a **column of the AADE invoice types LIST** rather than the picker, say so — that is a different element and is **not** fixed |
+| # | Screen / route it derives from | Check | Result, 2026-08-05 |
+|---|---|---|---|
+| **L.1** | §1 — sales document types, create | Create a type. **It appears in the list immediately**, with no manual refresh | ✅ **Passed** |
+| **L.2** | §1 — **an OLDER screen**, e.g. suppliers or products | Create one there too. ⭐ **This is the row that proves the fix is global** rather than applied to R2's screens only — the defect was in all thirteen | ✅ **Passed, and it is the row that mattered** — the owner proved the global refresh on **both** a new screen and an older one, which is exactly what a per-screen fix could not have produced |
+| **L.3** | §2 — sales series, create | Create a **draft** type (leave a stock flag unset), then try to create a series against it → **refused, naming the undecided stock behaviour** | ✅ **Passed** |
+| **L.4** | §2 — sales series, create | Deactivate a decided type, then try to create a **new** series against it → **refused with a DIFFERENT reason** (*not for new documents*), never the draft wording | ✅ **Passed, with the two wordings distinct** — which is the half 2.3 exists for: a draft is always inactive, so the milder message swallowing the specific one is the failure mode, and it did not happen |
+| **L.5** | §2 — sales series, detail | ⭐ **A series that already points at a type you then deactivate still opens, still edits, and keeps its type.** Setting is refused; **holding is not** | ✅ **Passed** |
+| **L.6** | §2 — sales series, detail | The document-type picker offers active types **plus the current one if it is now inactive**, marked — never a raw id and never an empty select | ✅ **Passed** |
+| **L.7** | §3 — all four document screens, create | The **Sort code** field is required, digits only, and the row saves with it | ✅ **Passed** |
+| **L.8** | §3 — all four document lists | The list is **ordered by sort code**, and the sort code is the first column | ⚠️ **HALF FAILED — see R2c §2a.** The **ordering is correct** (owner confirmed rows come back in sort-code order, on the document-type lists). The **column is not visible**. Display only |
+| **L.9** | §3 — any document type or series, detail | Change a sort code → **it saves** (freely editable, no in-use freeze). Reuse one another row holds → **refused** | ✅ **Passed on DOCUMENT TYPES** — which is the path the owner exercised. 🐛 **And that is why it passed: the SERIES edit form has no sort-code field at all** — R2c §2b, found beside this row rather than by it |
+| **L.10** | §4 — payment methods, list | Eight methods, ordered. **No Add control**, and the banner says why. `Open` where the myDATA code is genuinely unestablished | ⭐ **NOT A DEFECT — A REQUIREMENT CORRECTION. See R4.** The screen did what this row asked. **What the row asked for is the wrong model**: payment methods are a *business* list referencing an AADE codification, not a seed-only statutory list |
+| **L.11** | §4 — payment methods, detail | Description and sort code editable; **myDATA code and behaviour are plain text with their reason**; deactivate and reactivate work | ⭐ **NOT A DEFECT — A REQUIREMENT CORRECTION. See R4.** Same: the fields are frozen because the row is seeded, and the rows should not be seeded |
+| **L.12** | §5 — the AADE picker on a document type | Open it. **The option text is no longer cut** — `code — description · group` reads in full | ✅ **Passed** |
+| **L.13** | §5 — ⚠️ **the open question** | If the truncation you saw was in a **column of the AADE invoice types LIST** rather than the picker, say so — that is a different element and is **not** fixed | ✅ **CLOSED, and the answer is the picker.** The AADE invoice types **list shows no truncation**. With L.12 passing, what the owner originally reported was the **select trigger**, and the `w-full` fix (5.3) resolved it. **§5's conditional 5.4 is closed, not conditional** |
+
+⚠️ **One reconciliation gap, recorded rather than rounded away.** The owner reported **eleven of
+thirteen passed** and named nine (L.1–L.7, L.9, L.12); L.13 closes as a tenth. The eleventh is not
+individually attributable from the report — most likely L.10 or L.11, each of which **literally
+passed the check as written** while the requirement behind it turned out to be wrong. **Nothing in
+the results depends on which**: L.8 is a defect either way, L.10/L.11 are superseded by R4 either
+way, and no row is left without a verdict. It is recorded because a count that does not reconcile is
+the shape a missing verdict hides in.
 
 ⚠️ **What only a contract test can answer, and is therefore NOT on this list:** the payment-method
 `active` guard. It refuses recording an invoice settled by a deactivated method, and **recording an

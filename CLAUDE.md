@@ -697,6 +697,23 @@ statement about **one** thing (the codification) generalised into a false one ab
 business's document list). **When a rule says a list is not ours to author, check that the list it
 names is the same list the code is about.**
 
+⚠️ **AND IT HAPPENED A SECOND TIME, ONE ENTITY OVER — payment methods. Found by the owner,
+2026-08-05; the correction is roadmap row R4 and is NOT YET BUILT.** R2b's `payment_method` was built
+as a **seed-only statutory list**, one row per `SettlementMethod` enum constant, no create path, on
+exactly the reasoning above. **It is a BUSINESS list that references an AADE codification** — the
+same two layers, the same split, the same argument. The owner's requirement: **the list starts empty**,
+the user creates rows freely, creating one **selects the AADE payment-method article** (which supplies
+the myDATA code) **and chooses the ledger account it settles to** — *two POS terminals can share AADE
+code 7 and land in different bank accounts, and the AADE article cannot tell you which* — with all
+fields editable until the method has been used.
+
+⭐ **That this is the SECOND instance is the part worth carrying.** The lesson above was written as a
+lesson about two tables, and it recurred at the next entity that had a code list near it. **The tell
+is a Java enum standing in for a list the business owns**: `SettlementMethod` supplies the codes today,
+and a user-created row cannot inherit a code from an enum it is not a member of — which is why R4
+**changes the sales invoice request contract** from an enum to an FK. **Before modelling any list as
+seed-only, ask whether the business authors its rows or merely chooses among somebody else's.**
+
 **6. Known limitation, and it must stay visible.** Until a dispatch document exists (18b), **stock
 figures are incomplete for every non-stock-moving sales document**, which is a routine share of real
 sales. The document is recorded, the ledger posts, and stock is left untouched.

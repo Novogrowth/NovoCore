@@ -107,6 +107,7 @@ frontend work that must land before any adapter is built.
 |      | **▼ THE DECIDED SEQUENCE — the row order below IS the decision** ˢᵉᑫ | | | | |
 |   W1 | Serialised-record contract fidelity ʷ¹  |     — |    1.5 |  356k | 🟢 Done         |
 |   F5 | Sales Invoice + Credit Note ʷ           |     — |        |       | 🟡 **Current**  |
+|   R4 | Payment methods become a business list ʳ⁴ |   — |        |       | ⚪ After F5, before F6 ʳ⁴ |
 |   N1 | Release a reversed document's number ⁿ¹ |     — |        |       | ⚪ Direction settled, unbuilt |
 |   D1 | Supplier/customer codes + alias ᵈ¹      |     — |        |       | ⚪ After F5, with D3 ˢᵉᑫ |
 |   D3 | Customer/supplier addresses ᵈ³          |     — |        |       | ⚪ After F5, with D1 ˢᵉᑫ |
@@ -119,6 +120,7 @@ frontend work that must land before any adapter is built.
 |  F10 | Design pass, brand look + version badge ᵇᵃᵈᵍᵉ | — |      |       | 🔴 Not started  |
 |  F11 | Whole-system UI regression              |     — |        |       | 🔴 Not started  |
 |      | **▼ OUTSIDE THE SEQUENCE — each has its own gate, none is "next"** ˢᵉᑫ | | | | |
+|  R2c | Sort code: invisible column, unsettable on series ʳ²ᶜ | — |    |       | ⚪ No slot decided ʳ²ᶜ |
 |   D2 | Product categories, 3 levels ᵗ          |     — |        |       | ⚪ Before the Woo load (19) |
 |   R3 | Self-supply posting paths ˢ             |     — |        |       | ⚪ Not schedulable — accountant |
 |   U2 | Split `PROGRESS.md` / `HISTORY.md` ᵘ²   |     — |        |       | ⚪ Whenever a session has slack |
@@ -1168,6 +1170,55 @@ employee correcting a mistake must transform a document into the correct series 
 one action, with series, products and customer auto-filled, **never re-keyed**; same flow for a returned
 or cancelled order. **That behaviour needs the Go adapter**; R1 stores only which series a series may
 transform into.
+
+**ʳ⁴ R4 — payment methods are a BUSINESS list that references an AADE codification, not a statutory
+list.** ⚠️ **This is a REQUIREMENT CORRECTION, not a defect** — the screens R2b built do exactly what
+R2b's rows asked; the rows asked for the wrong model. Found by the owner's live leg of **2026-08-05**
+(L.10, L.11), and it is **R1a's two-layer correction repeating one entity over**: what `CLAUDE.md` §5
+says about `aade_invoice_type` versus `sales_document_type` is the same sentence about
+`payment_method`.
+
+**What the owner requires:** the list **starts empty** with no seeded rows and the user creates them
+freely; creating one **selects the AADE payment-method article**, which supplies the myDATA code;
+⚠️ creating one **also chooses the ledger account it settles to** — *two POS terminals can share AADE
+code 7 and land in different bank accounts, and the AADE article cannot tell you which*; and **all
+fields stay editable until the method has been used**, on the freeze pattern R2 already built for a
+series' abbreviation, document type and ΜΑΡΚ flag.
+
+⚠️ **Three things it contradicts, recorded at the row because meeting only one of them re-derives the
+old answer:** R2b §4.1 decided *not* to store the myDATA code, exposing it from the `SettlementMethod`
+enum — **a user-created row cannot inherit a code from an enum it is not in**, so the code moves onto
+the row; `SettlementMethod` is a **Java enum on `NewSalesInvoice`**, so **this changes the sales
+invoice request contract** to an FK; and R2b §4.7's argument *against* creation — *"it needs an
+`AccountSystemKey` and two behaviour flags"* — **is not refuted, it is the specification of the create
+form.** 📌 The eight seeded abbreviations (ΜΕΤΡ, ΚΑΡΤ, ΤΡΑΠ, ΕΠΙΤ, ΑΝΤΙΚ, SKRZ, PPAL, STRP) were
+**invented, not chosen by the owner** — an empty list removes that rather than making them editable.
+
+**Why the row sits here: `F5 < R4 < F6`, and both halves are cost.** It changes a contract, so the
+longer it waits the more is built on the enum; and **purchase documents settle too**, so F6 should be
+built against the corrected model rather than reopened. ✅ **It does not block finishing F5** — F5's
+record form is a **test harness by decision** (`CLAUDE.md` §1b), so revising it later is expected.
+⚠️ **F5 must not pre-empt any of it.** 📌 Its position relative to **N1 and the D-block was not
+specified by the owner**; immediately-after-F5 is this file's reading of the *"the longer it waits"*
+argument, not a fifth requirement.
+
+**ʳ²ᶜ R2c — the sort code is invisible on the lists and unsettable on a series.** Two defects from the
+owner's live leg of **2026-08-05**, against R2b's §3. **They are R2b's, not F5's.**
+
+**2a — display only.** The sort code **is not a visible column** on the document type lists, while the
+**ordering is correct** (owner-confirmed). So R2b's 3.5 held and only 3.6 — *first list column* — did
+not land. 📌 **He confirmed ordering for DOCUMENT TYPES and said nothing about the SERIES lists;
+verify those rather than assuming they match.**
+
+⚠️ **2b is the more serious one, and it is not cosmetic.** On **sales and purchase SERIES** the sort
+code appears **only on the create form** and is **absent from the edit form**. Document types allow
+editing it, **which is why L.9 passed** — the passing path and the broken path are different screens.
+**R2b's 3.4 deliberately exempted this field from the in-use freeze** on the stated grounds that
+*"reordering is normal"* — so **a value settable only once is unusable for the purpose that argument
+assigns it.** And it is on **series**, the picker an employee uses when recording a document, ordered
+by exactly this column.
+
+**No slot is decided**, which is why the row sits outside the sequence rather than inside it.
 
 **ⁿ¹ N1 — a reversed document's number becomes available again.** ⚠️ **The DIRECTION is settled (owner,
 2026-08-05); the BUILD is deliberately not F5's.** F5 found three enforcements of document-number
