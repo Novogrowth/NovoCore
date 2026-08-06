@@ -538,6 +538,35 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
      * value to that enum does not silently start ordering by a property that happens to share its
      * name — or fail at runtime because none does. The mapping is a decision; the enum is the
      * vocabulary.
+     *
+     * <h2>⚠️ This map is where a Greek-aware text ordering CANNOT be expressed (F5 B.4, 2026-08-05)</h2>
+     *
+     * <p>Every entry here becomes a property name on a Spring Data {@code Sort}, built by
+     * {@code SpringPaging.pageableFor} and handed to {@code findAll}. <strong>A {@code Sort} cannot
+     * carry a {@code COLLATE} clause.</strong> It names a property; the collation comes from the
+     * column, and under this deployment's {@code --locale=C} that means <strong>byte order</strong> —
+     * every Greek document number after every Latin one, and mixed case split.
+     *
+     * <p><strong>So the day a text sort key has to order Greek correctly, the change is here and it
+     * is a change of MECHANISM, not of expression.</strong> That property leaves the
+     * {@code Pageable}-driven path entirely — an explicit {@code @Query} with
+     * {@code ORDER BY … COLLATE "el-GR-x-icu"} and its own paging — while the others stay on it. This
+     * note exists so that is one ordering path being replaced rather than a rewrite discovered
+     * halfway through.
+     *
+     * <p><strong>Why it is a note and not a build.</strong> The only shipping text key is
+     * {@code DOCUMENT_NUMBER}, and the two orders were measured against the live stack on 2026-08-05:
+     * on <em>Latin</em> document numbers, byte order and {@code el-GR-x-icu} <strong>agree</strong>.
+     * They diverge only where the text carries Greek letters or mixed case. ⚠️ <strong>The deferral is
+     * therefore conditional on a fact nobody here owns: whether a real Prosvasis Go document number
+     * carries Greek letters.</strong> If it does, this stops being deferred for
+     * {@code DOCUMENT_NUMBER} immediately. The frontend's half of the same obligation — why
+     * {@code CUSTOMER_NAME} is not offered at all — is recorded at
+     * {@code sales-invoice-columns.tsx}.
+     *
+     * <p>📌 Numeric ordering is off under <em>both</em> orders ({@code -0010} sorts before
+     * {@code -0002}), deliberately and consistently with {@code collation.test.ts}. Collation is not
+     * what would fix that.
      */
     private static final Map<String, String> SORTABLE = Map.of(
             SalesInvoiceSort.INVOICE_DATE.name(), "invoiceDate",
