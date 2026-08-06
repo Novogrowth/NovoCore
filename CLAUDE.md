@@ -1329,6 +1329,45 @@ goal** still reads a stale summary and still reports the old failure. That needs
 goal on its own, which nothing here does. **For that case only, `clean` first** — it is discipline,
 not configuration, and it is a much smaller surface than what the pin removed.
 
+#### ⭐ THE TECHNIQUE THAT ACTUALLY CATCHES THESE: compare the output against the previous run
+
+**This family is named five times above and every entry describes the trap. None describes how any
+of them was caught, and that is the more useful half — because in every single case the output on
+screen was internally consistent and looked exactly like a real result.**
+
+**The technique, stated so it can be used rather than admired:**
+
+> **Before believing a build or test result, compare it against the previous run's. Not more
+> carefully — comparatively.** A stale, absent or misattributed answer is usually *identical* to the
+> one before it, and identity is the signal. Reading a single result more carefully cannot produce
+> it, because there is nothing wrong with the result on its own terms.
+
+⚠️ **What made it necessary, U2a, 2026-08-06.** A backgrounded `cd backend && ./mvnw clean verify`
+ran with the shell's cwd already at `frontend`. **`cd` failed, Maven never started, and the log file
+from three minutes earlier was still on disk.** The tool reported exit 1 — which was `cd`'s, not
+Maven's. Reading that log gave `BUILD FAILURE`, a plausible reactor summary, and a real error about
+a locked jar. **Every line of it was true, and none of it was about the run just requested.**
+
+**The only tell was that the module timings were byte-identical to the previous run** — `0.300 s`,
+`1.222 s`. Nothing else distinguished them, and no amount of careful reading would have.
+
+**Three cheap forms of the same move, in order of how often they apply:**
+
+- **Timings and counts, against the run before.** Identical wall-clock figures across two runs of a
+  multi-minute build are not a coincidence; they are the same log.
+- ⭐ **The freshness of the artefact you are reading, not just its contents.** `ls -l` the log against
+  `date`. One line, and it is decisive where reading is not.
+- **A discriminating negative.** When measuring a filter, a matcher or a query, include a case that
+  must NOT match. U2a's CI path filter was measured before the change (**no match**) and after
+  (**match**), with `docs/novocore-roadmap.md` in the same run to prove the filter had not simply
+  become *match everything*. A before/after with a negative is a measurement; an after-only check is
+  an assertion wearing a measurement's clothes.
+
+📌 **Why this belongs beside the traps rather than in a README.** The five entries above are all
+*"the thing that answered was not the thing under test"*, and each was written after being caught —
+by comparison, every time. **Naming the trap five times has not stopped it recurring. Naming the
+technique gives the next session something to do rather than something to avoid.**
+
 ### ⚠️ A record that goes on the wire is asked for every BEAN GETTER — and the contract must say so
 
 **Found in R1a, 2026-08-03, and the 500 it produced was luck. Generalised and CORRECTED by W1,

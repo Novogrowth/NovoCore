@@ -6,6 +6,15 @@ name: frontend
 # The frontend's equivalents of the ArchUnit suite are here rather than in a checklist — the
 # navigation tree's grants are checked against the OpenAPI spec, every enum is checked for a label
 # in both languages, and the generated API client is checked for drift against the committed spec.
+#
+# ⚠️ docs/PROGRESS.md and docs/HISTORY.md are in the path filters DELIBERATELY, and removing them
+# would silently disarm four guards rather than break anything visibly. U2b added
+# `src/docs/project-records.test.ts`, which enforces the PROGRESS/HISTORY split: no step section in
+# both files, every reference naming a file that exists, HISTORY's "not authoritative" header, and
+# exactly one status table. Those guards exist for DOCS-ONLY EDITS — which is precisely the change
+# that matched none of the filters below until 2026-08-06, so none of them would ever have run on
+# the change they guard. `project-records.test.ts` asserts these two entries are present, so
+# deleting one is a red build rather than a quiet loss of cover.
 
 on:
   push:
@@ -13,11 +22,15 @@ on:
     paths:
       - 'frontend/**'
       - 'docs/api/openapi.json'
+      - 'docs/PROGRESS.md'
+      - 'docs/HISTORY.md'
       - '.github/workflows/frontend.yml'
   pull_request:
     paths:
       - 'frontend/**'
       - 'docs/api/openapi.json'
+      - 'docs/PROGRESS.md'
+      - 'docs/HISTORY.md'
       - '.github/workflows/frontend.yml'
   workflow_dispatch:
 

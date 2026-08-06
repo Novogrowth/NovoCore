@@ -522,7 +522,7 @@ to be resolved** — it was outside U2a's scope. **When they disagree, `PROGRESS
   first step that might want one.** Owner's call.
 - **`U` is a step-ID prefix**: *a session that changes documentation and governance and produces no
   production code.* **U1** is the roadmap unification and documentation reconciliation of 2026-08-02;
-  **U2a** (🟢 done 2026-08-06) is the `PROGRESS.md` → `PROGRESS.md` + `HISTORY.md` split, **U2b** its drift guards, **U4** the deferred dated-figure sweep; **U3** is the
+  **U2a** (🟢 done 2026-08-06) is the `PROGRESS.md` → `PROGRESS.md` + `HISTORY.md` split, **U2b** (🟢 done 2026-08-06) its drift guards — seven tests plus the CI path change that makes them run on a docs-only edit — and **U4** the deferred dated-figure sweep; **U3** is the
   eleven design decisions of 2026-08-03, above. Future doc/governance sessions take U4, U5 … rather
   than entering the F/Q/R sequence.
 - ⚠️ **The deferred customer VAT class override (F2a) is a sub-item of step 18, not a leftover screen

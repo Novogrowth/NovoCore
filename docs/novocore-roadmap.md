@@ -135,7 +135,7 @@ frontend work that must land before any adapter is built.
 |   D2 | Product categories, 3 levels ᵗ          |     — |        |       | ⚪ Before the Woo load (19) |
 |   R3 | Self-supply posting paths ˢ             |     — |        |       | ⚪ Not schedulable — accountant |
 |  U2a | Split `PROGRESS.md` / `HISTORY.md` ᵘ²   |     — |        |       | 🟢 Done |
-|  U2b | The split's drift guards ᵘ²ᵇ            |     — |        |       | 🔴 **Next after R4** — not optional |
+|  U2b | The split's drift guards ᵘ²ᵇ            |     — |        |       | 🟢 Done |
 |   U4 | The dated-figure sweep ᵘ⁴               |     — |        |       | ⚪ Deferred, **re-price before scheduling** |
 |  F5b | `el-GR-x-icu` on `DOCUMENT_NUMBER` ᶠ⁵ᵇ  |     — |        |       | ⚪ Conditional on an owner check |
 |  W1c | W1's two consumer clean-ups ʷ¹ᶜ         |     — |        |       | ⚪ Queued |
@@ -800,18 +800,49 @@ on its own, with no content change, because git computes rename detection from a
 a rename-plus-edit is not one. **The accepted cost: `--follow` on `PROGRESS.md` starts at U2a.**
 Exactly one of the two files can inherit the history.
 
-**ᵘ²ᵇ U2b — the split's drift guards. 🔴 Next after R4's close-out, and NOT optional.** Three tests
-plus a CI change: **(1)** a step id has a `##` section in **exactly one** of the two files;
-**(2)** every `PROGRESS.md`/`HISTORY.md` reference names a file that exists; **(3)** `HISTORY.md`'s
-*not authoritative* header is present; **(4)** **exactly one** table matches `| Step | … | Status |`.
+**ᵘ²ᵇ U2b — the split's drift guards. 🟢 DONE 2026-08-06.** `frontend/src/docs/project-records.test.ts`,
+**7 tests**, plus the CI path change. **Every one was proven against the defect it exists for.**
 
-⚠️ **(5) is the one that makes the others worth having: neither CI workflow triggers on `docs/*.md`.**
-`frontend.yml` watches `frontend/**` and `docs/api/openapi.json`; `backend.yml` watches `backend/**`.
-**A docs-only edit — precisely the change these guards exist for — would not run them.** Without the
-path change the first four are decoration.
+| # | Guard | Negative control, and what it reported |
+|---|---|---|
+| 1 | No section appears in **both** files | Duplicated `## Step 3 — done` into `PROGRESS.md` → **1 test failed**, naming `'Step 3 — done'` |
+| 2 | Every `HISTORY.md` section is indexed, and every index row has a section | Added an unindexed `##` → **1 test failed**, `expected 50 to be 49` |
+| 3 | The **current** step's section is in `PROGRESS.md`, not `HISTORY.md` | Renamed R4's heading → **1 test failed**, `expected [] to have a length of 1` |
+| 4 | **Exactly one** status table, and it is in `PROGRESS.md` | Appended a second `\| Step \| What \| Status \|` → **1 test failed**, `expected 2 to be 1` |
+| 5 | `HISTORY.md` says it is **not authoritative for current state** | Deleted the header line → **1 test failed** |
+| 6 | Every `PROGRESS.md`/`HISTORY.md` citation names a file that exists | Renamed `HISTORY.md` away → **1 test failed**, listing **95** dangling citations with their files |
+| 7 | The frontend workflow runs on a docs-only change | See ⚠️ below — measured before and after, not asserted |
 
-⭐ **R4's close-out is guard (1)'s positive control, executed for real rather than against a fixture** —
-R4 is the first step to cross the PROGRESS → HISTORY boundary after the guard exists.
+⚠️ **(7) is the one that makes the other six worth having: neither CI workflow triggered on
+`docs/*.md`.** `frontend.yml` watched `frontend/**` and `docs/api/openapi.json`; `backend.yml`
+watches `backend/**`. **A docs-only edit — precisely the change these guards exist for — ran none of
+them.**
+
+⭐ **Proven by measuring the filter, not by asserting it.** The workflow's own `paths` globs were
+evaluated with `minimatch` against `docs/PROGRESS.md` **before** the change (**no match, both
+blocks**) and **after** (**match, both blocks**), with `docs/novocore-roadmap.md` in the same run as
+a discriminating negative — so the filter provably did not just become *match everything*.
+
+⭐ **R4's close-out is guard (3)'s positive control, executed for real rather than against a fixture** —
+R4 is the first step to cross the `PROGRESS` → `HISTORY` boundary after the guard exists.
+
+⚠️ **M1 — a test for live-status LANGUAGE inside `HISTORY.md` — was considered and REJECTED**, and
+the reason is recorded in the test file so nobody adds it. A pattern over `🟡`, `**Current**` or
+*"is next"* fires on history legitimately **recording** those words: R4's entry says
+`🟡 CURRENT from 2026-08-06`, which is a correct historical statement. **A check that cries wolf is
+one somebody deletes** — so the *container* carries the warning (guard 5) and the contents are left
+alone.
+
+⚠️ **And the same shape bit guard 6's first draft, which is why it is scoped to two filenames.** The
+draft matched every `docs/*.md` citation and reported five failures on its first run — **all five
+correct prose**, recording that `novocore-frontend-roadmap.md` and `PROJECT_STATE_SUMMARY.md` were
+deliberately deleted in U1. A sentence saying *"X was deleted"* names a file that must not exist.
+**Narrowed rather than allowlisted**, because an allowlist starting with two permanently-correct
+entries is the thing that decays.
+
+📌 **The limit of guard 6, stated at the guard:** it checks that a citation names a file that
+**exists**, never that the content behind it does. The standing worked example is
+`frontend/src/auth/permissions.ts:95`, which cites a note that is in neither file.
 
 **ᵘ⁴ U4 — the dated-figure sweep. ⚪ Deferred by the owner 2026-08-06. RE-PRICE IT; DO NOT INHERIT ITS
 JUSTIFICATION.** Per-step route and test counts inside `HISTORY.md` are correct in their step's
