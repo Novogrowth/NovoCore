@@ -662,6 +662,60 @@ this inside F5** — F5 keeps `SettlementMethod` exactly as it is.
 argument, and that placement is this session's reading of his reason, **not a fifth requirement he
 stated.**
 
+### 📋 THE APPROVED BUILD CHECKLIST — **written at the moment of approval, 2026-08-06, before any code**
+
+**Per `CLAUDE.md` §*An approved proposal is a checklist, not a paragraph*.** Every row gets a verdict
+at close-out: **done** (and how it was verified), **explicitly deferred** (with the reason and where
+it is recorded), or **still open**. ⚠️ **A sub-part with no verdict is a finding.**
+
+#### ⭐ The three decisions the owner answered at approval — recorded before the rows that depend on them
+
+| # | Decision | The reasoning, recorded because it is not derivable from the code |
+|---|---|---|
+| **A.6** | ⭐ **`settlesImmediately` is DERIVED. It is `account_id` being present, and is not a field** | **An account on the method means the money is already there; that is what immediate settlement *is*.** `SettlementMethod`'s own javadoc already said so — *"a method settles immediately **because** there is an account the money is already in"* — so two fields would be **one fact said twice**, and two fields that can contradict each other |
+| **C.4** | ⭐ **ONE description, in Greek. The 16 `SettlementMethod.*` i18n entries go and NOTHING replaces them** | ⚠️ **Recorded as a GENERAL RULE, not a payment-method decision:** **nothing else the business authors is bilingual** — customer names, product names, series abbreviations and descriptions are all a single Greek string. **The i18n layer is for Novocore's own vocabulary** — labels, statuses, refusal messages — **not for the business's own data.** Written where a future reader meets it *before* asking the same question about `SalesChannel` or write-off reasons |
+| **A.3** | ⭐ **RESET the trading data. Do not backfill** | **Backfilling would invent payment methods nobody authored**, which is the thing R4 exists to prevent — the same argument that shipped R1a's six tables empty |
+
+#### ⚠️ A.6 KILLS A.5, and the checklist may not hold both
+
+**A.5 originally proposed `account_id` be `@ConditionallyMandatory` — required iff the method settles
+immediately.** Once *"settles immediately"* **means** *"has an account"*, **that condition tests the
+field against itself and can never fail.** A guard that cannot fire is worse than no guard: it reads
+as enforcement and is decoration.
+
+⚠️ **`@ConditionallyMandatory` is therefore CONSIDERED AND REJECTED, and this line exists so nobody
+adds it back.** `account_id` is simply **optional**, and **its presence carries the meaning**.
+
+#### The rows
+
+| # | Sub-part | Verdict |
+|---|---|---|
+| **A.1** | `V37`: `payment_method` gains a surrogate `id`, an **optional** AADE payment-article reference and an **optional** `account_id` FK → `account`; `method` stops being the primary key. ⚠️ **Ships EMPTY** — the eight seeded rows go | |
+| **A.2** | ⚠️ **Drop `sales_invoice_settlement_method_known`** and convert `sales_invoice.settlement_method` → `payment_method_id` FK. **The migration says at the constraint why a CHECK listing eight literal names cannot survive a user-created row** | |
+| **A.3** | ⚠️ **Trading-data RESET, not a backfill.** ⚠️ **Two owner conditions:** it must be **re-runnable**, and after it R4's own live-leg preconditions must be **re-establishable** — a recordable series against an active document type, or **L.9 and L.10 cannot run**. 📌 **L.0 states what the owner must click** | |
+| **A.4** | The **AADE payment-method codification** as a statutory layer, on the `aade_invoice_type` model: seed-only, the `StatutoryCodification` contract, **no create, ever** | |
+| **A.5** | ⚠️ **REWRITTEN AT APPROVAL — `account_id` is simply OPTIONAL and its presence carries the meaning.** `@ConditionallyMandatory` considered and **rejected**: see the box above, because with A.6 the condition tests the field against itself and can never fire | |
+| **A.6** | ⭐ **`settlesImmediately()` derives from `account_id != null`.** No column, no form field, no flag. The reasoning is written **at the code**, not only here | |
+| **A.7** | `PaymentMethodService` gains `create`; abbreviation, description, AADE article, account and sort code all editable **while unused** | |
+| **A.8** | The freeze: `inUse` on `PaymentMethodView` plus a `requireNothingRecorded`-shaped **server** guard answering 422 and naming the field. Copies the series semantics exactly — ⚠️ **a reversed invoice counts** ("recorded" is not "standing"), and the flag is a `boolean` because **the screen renders the reason** (Q47(b)) | |
+| **A.9** | ⚠️ Extend **`DocumentReferenceGraphIT`** to pin `payment_method`'s referencing set, with the **failure message as the handover note** | |
+| **A.10** | ⚠️ **The missing test** — recording an invoice settled by a **deactivated** method is refused with its reason. ⚠️ **Proven RED against the removed guard first**, and the run's own verdict read from Maven | |
+| **B.1** | `NewSalesInvoice.settlementMethod` → `paymentMethodId` (`@Mandatory`); `SalesInvoiceView` / `CreditNoteView` carry the id and the description; ⚠️ **`bornSettled` comes off the row, not off an enum** | |
+| **B.2** | `SettlementMethod` **deleted**, and `SettlementMethodMydataCodeTest` with it — its subject moves to the codification | |
+| **B.3** | Spec and generated client regenerated; **every drifted fixture named**, as R2b's S.1 did | |
+| **C.1** | Payment-methods screen: create form (abbreviation, description, AADE article picker, account picker, sort code); ⚠️ **the no-Add convention line and its absence test DELETED**; the freeze rendered as `lockedReason` | |
+| **C.2** | ⚠️ The account picker reads **`GET /api/accounts/settlement-targets`** — **it already exists**; do not build a second one | |
+| **C.3** | ⭐ **THE OWNER'S CALL, MADE: the invoice record form offers ACTIVE payment methods ONLY.** **On a form creating a NEW document there is no "current one" to preserve**, which is the whole thing R2b's active-plus-current-labelled pattern exists for — and **offering an option solely to refuse it afterwards is worse than not offering it.** ⚠️ **F5's contrary decision is SUPERSEDED, and it is said AT THE SITE OF F5's COMMENT** so a reader does not find two live arguments. ⚠️ **The server guard stays regardless — the picker is not the guard** | |
+| **C.4** | ⭐ **One Greek description; the 16 i18n entries go.** The **general rule** written where a future reader meets it first | |
+| **D.1** | ➕ **R2c 2b** — the sort code is settable on the sales **and** purchase series **EDIT** forms | |
+| **D.2** | ➕ **R2c 2a's behaviour half** — verify the **series** lists are ordered by sort code. Confirmed only for document types; R2b changed four repositories and the leg walked two screens | |
+| **G.1** | ⚠️ **`subjectToCashLimit` had DISAPPEARED from the checklist** — A.4 named three things read off the enum and only two were handled. It drives the statutory €500 refusal the owner's live leg exercised at exactly that value. **Establish where it goes.** Expectation to be **corrected if wrong**: it derives from the AADE article, not from a user-settable field — *a statutory limit nobody should be able to untick*. ⚠️ **Confirm which article denotes cash before building on it; do not assume a code number** | |
+| **G.2** | ⚠️ **The AADE article reference MUST BE NULLABLE**, and the checklist did not say so. **Three of the eight have no myDATA code** (`ACS_COD`, `PAYPAL`, `STRIPE`) — **R1a's finding again**, where six of nineteen document types carry no AADE code. A user-created method may legitimately have no statutory article: the reference is optional, the create form may leave it empty, and **the consequence for transmission is recorded against step 29 rather than resolved here** | |
+| **G.3** | ⭐ **R4 is establishing a PATTERN, not just fixing payment methods.** Record against **`SalesChannel`'s existing open decision** that R4's shape is the template for promoting an enum-that-carries-accounts into a table: **surrogate id, optional statutory codification reference, direct FK to `account`, freeze-once-used.** ⚠️ **Report only — do not touch `SalesChannel`** | |
+| **S.1** | `CLAUDE.md` §5's payment-method paragraph, `PROGRESS.md`, the primer and the roadmap — R4 closed, and ⚠️ **the A.3 evidence claim corrected** (`PROGRESS.md` says the inactive-method guard is verified in `R2ReferenceDataContractIT`; it is not) | |
+| **S.2** | 📌 `SalesChannel` recorded as the same shape against its open decision. **Report, do not fix** | |
+| **S.3** | ⭐ **A new named anti-pattern in `CLAUDE.md`: a claim recorded at close-out is a CLAIM.** A claim about a file or a test is proved by **grepping it**, not by remembering writing it. **Two worked examples, both from the last two steps** — F5's B.4 note and R4's Phase 0 finding about `R2ReferenceDataContractIT` | |
+
 ### 🟡 2026-08-06 — R4 IS CURRENT, and two things arrived with the promotion
 
 **The owner deferred R2c out of the sequence and commissioned R4's Phase 0 in the same instruction.**

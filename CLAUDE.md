@@ -346,6 +346,51 @@ is a static fixture will now show *pre-edit* data after a save, because the app 
 used to trust `setQueryData`. That is the mock being unfaithful, not the app being wrong — the
 remedy is to make the handler record its writes, as `products.test.tsx` now does.
 
+### ⚠️ Named anti-pattern: a claim recorded at close-out is a CLAIM, not a fact
+
+**Added 2026-08-06, after the second instance in two steps.** This file already says that reading one
+file does not tell you what the system does. This is the same sentence one layer further out, and it
+is the more embarrassing one: **reading THIS PROJECT'S OWN RECORD does not tell you what this project
+contains.**
+
+**A close-out sentence is written by somebody who has just done the work, believes it, and is
+usually right.** That is precisely why it is dangerous — it reads as a verified fact, it was
+*intended* as one, and there is no tell in the prose to distinguish *"I wrote this test"* from *"I
+meant to write this test"*. The next session quotes it, and now two documents agree about something
+nothing checked.
+
+**The two worked examples are both from the last two steps, which is the argument for a rule rather
+than for more care:**
+
+- ⚠️ **F5's B.4** recorded *"the `Pageable`/`COLLATE` note is at the code."* **Half false.** The note
+  existed in **`sales-invoice-columns.tsx`** — a *frontend* file, recording B.3's reason — and B.4
+  had asked for a note at the **backend** place the `Pageable`-driven sort would have to be left.
+  **`grep COLLATE backend/` returned nothing.** Corrected 2026-08-06; the note is now at
+  `SalesInvoiceServiceImpl.SORTABLE`.
+- ⚠️ **R2b recorded that the payment-method `active` guard is *"verified in
+  `R2ReferenceDataContractIT` over real HTTP"*.** **It is not.** That class has no payment-method
+  case at all — its `"not for new documents"` assertion is the *document type* refusal.
+  `PaymentMethodIT` round-trips deactivate and never records an invoice; `SalesInvoiceIT` covers
+  inactive customer, series and document type and not this. **Nothing in the test tree contains the
+  message.** The guard works — its only evidence is a browser row the owner ran — but for a month
+  the record claimed an automated proof that did not exist.
+
+**The rule, and it is mechanical rather than a matter of diligence:**
+
+> **A recorded claim that names a file, a test, a route, a column or a constraint is proved by
+> grepping for it — not by remembering writing it, and not by the fact that a careful person wrote
+> it down.**
+
+⚠️ **Note which claims this applies to, because the scope is what makes it cheap.** Not every
+sentence in `PROGRESS.md` — a *reason* cannot be grepped and does not need to be. It is the ones with
+a **checkable referent**: *"a test asserts X"*, *"the note is at the code"*, *"the route exists"*,
+*"the column is NOT NULL"*. Each of those is one `grep` or one `psql`, and each is exactly the kind
+of sentence a later step builds on.
+
+📌 **And the direction that costs most is the reassuring one.** *"This is already covered"* ends an
+investigation; *"this is not covered"* starts one. **Check the sentence that lets you skip work
+before the sentence that makes work.**
+
 ### Named practice: the throwaway probe
 
 **When the question is behavioural — *what does the system actually answer?* — boot the real
