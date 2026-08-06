@@ -34,6 +34,7 @@ import {
   DeliveryMethodsList,
 } from '@/pages/delivery-methods/delivery-methods'
 import {
+  PaymentMethodCreate,
   PaymentMethodDetail,
   PaymentMethodsList,
 } from '@/pages/payment-methods/payment-methods'
@@ -152,7 +153,8 @@ const CHILD_ROUTES: { path: string; owner: string; element: () => ReactElement }
   { path: '/settings/aade-invoice-types/:id', owner: 'settings.aadeInvoiceTypes', element: AadeInvoiceTypeDetail },
   // ⚠️ NO `/new`, for the same reason as the AADE codification: adding a payment method needs an
   // AccountSystemKey and two behaviour flags, so it is a code change rather than a form.
-  { path: '/settings/payment-methods/:method', owner: 'settings.paymentMethods', element: PaymentMethodDetail },
+  { path: '/settings/payment-methods/new', owner: 'settings.paymentMethods', element: PaymentMethodCreate },
+  { path: '/settings/payment-methods/:id', owner: 'settings.paymentMethods', element: PaymentMethodDetail },
   // ⚠️ NO `/sales/invoices/:id/edit`, and the absence is the design rather than a gap. A posted
   // document is immutable (ADR 0006) and the backend has no route to change one — measured, not
   // assumed: PATCH answers 404 and DELETE answers 405. Correction is reversal or a credit note.

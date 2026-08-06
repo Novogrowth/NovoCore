@@ -201,7 +201,7 @@ export function SalesInvoiceRecord() {
     return {
       customerId: identifier(customerId),
       seriesId: identifier(seriesId),
-      paymentMethodId: Number(paymentMethodId),
+      paymentMethodId: identifier(paymentMethodId),
       documentNumber,
       invoiceDate,
       ...(description ? { description } : {}),

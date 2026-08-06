@@ -691,7 +691,34 @@ resumption point: the step was scoped at 26 sub-parts and six of them consumed a
 rule's own scoping paragraph — which had exempted *reasons* from needing a checkable referent, two
 commits before a reason was the thing that went wrong.
 
-🟢 **2026-08-06, FINAL — THE BACKEND IS GREEN ACROSS EVERY MODULE. Verdicts quoted:**
+🟢🟢 **2026-08-06 — BACKEND AND FRONTEND BOTH GREEN. C.1 IS DONE. Verdicts quoted:**
+
+```
+./mvnw clean verify        BUILD SUCCESS
+  core-api 66 · core 806 · app 296 (1 skipped) · architecture 33 · 284 surefire
+npx tsc -b --force         exit 0
+npm test -- --run          41 files, 407 passed, 0 failed
+npm run lint               exit 0 (3 warnings, the pre-existing baseline)
+npm run knip               exit 0
+npm run build              exit 0
+```
+
+**C.1 shipped:** the list has an **Add** control (FULL only), the create form collects abbreviation,
+description, a **mandatory** AADE article, a **mandatory** account from
+`/api/accounts/payment-method-targets`, and an **optional** sort code that is **omitted when blank**
+rather than sent as `0`. The detail screen freezes every field but the sort code once `inUse`, as
+`lockedReason` — shown, disabled, with the reason composed on the client because the backend
+localises nothing.
+
+⚠️ **Three tests were DELETED rather than adapted**, with what replaced each stated in the file's own
+javadoc: the no-create absence test (replaced by its opposite), the seed-only banner test (nothing
+replaces it — a list with an Add button needs no explanation for a button it has), and the
+*"draws an absent myDATA code as OPEN"* test (**nothing replaces it**: the article is mandatory, so a
+method with no code cannot exist). **Frontend 402 → 407.**
+
+*(The backend-only record below is kept for its verdict at the time.)*
+
+🟢 **2026-08-06, EARLIER — THE BACKEND IS GREEN ACROSS EVERY MODULE. Verdicts quoted:**
 
 ```
 ./mvnw clean verify                 (every module, from clean)
@@ -701,7 +728,7 @@ commits before a reason was the thing that went wrong.
   architecture ... 33 tests     284 tests in the earlier surefire pass
 ```
 
-🔴 **THE FRONTEND IS NOT GREEN: 5 failures of 402, all in `payment-methods.test.tsx`**, and they are
+✅ *(RESOLVED — see above.)* 🔴 **THE FRONTEND IS NOT GREEN: 5 failures of 402, all in `payment-methods.test.tsx`**, and they are
 **C.1's file** — the screen still tests the seed-only model (`Open` for an absent myDATA code,
 *"description and sort code, and nothing else"*, the no-Add convention's affordance assertions).
 **C.1 was excluded from the session; those five are exactly its work and nothing else fails.**
