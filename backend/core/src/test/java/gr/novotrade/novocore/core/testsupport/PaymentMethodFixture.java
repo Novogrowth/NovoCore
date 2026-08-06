@@ -90,6 +90,11 @@ public class PaymentMethodFixture {
         return create(abbreviationPrefix, articleCode, account);
     }
 
+    private int nextSortCode() {
+        return paymentMethods.all().stream()
+                .mapToInt(PaymentMethodView::sortCode).max().orElse(0) + 10;
+    }
+
     private long create(String abbreviationPrefix, int articleCode, AccountSystemKey account) {
         AadePaymentMethodView article = articles.all().stream()
                 .filter(candidate -> candidate.code() == articleCode)
@@ -103,8 +108,12 @@ public class PaymentMethodFixture {
                 abbreviationPrefix + " " + n + " (test)",
                 article.id(),
                 chartOfAccounts.requireAccount(account).id(),
-                // Unique per row; the column is unique and ordering is not what these tests are about.
-                1000 + n));
+                // ⚠️ max + 10, NOT a counter. Test classes share one database, so two fixtures
+                // each counting from their own base collide — which is exactly what happened on
+                // the first full-suite run: four SalesInvoiceIT tests failed on a sort code
+                // PaymentMethodIT had already taken. Ordering is not what these tests are about;
+                // uniqueness is, because the column is unique.
+                nextSortCode()));
         return created.id();
     }
 }
