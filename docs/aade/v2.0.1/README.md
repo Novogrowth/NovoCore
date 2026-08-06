@@ -108,7 +108,7 @@ rather than glob and trust. The same caution applies to the PDFs: one of them sp
 | **8.9** | Κωδικός Τύπου Χαρακτηρισμού Εσόδων | **Income classification type** — the `E3_*` codes | 📌 Fees, unscheduled |
 | **8.10** | Κωδικός Κατηγορίας Χαρακτηρισμού Εξόδων | **Expense classification category** — `category2_1`…`category2_14`, `category2_95` | 📌 Fees, unscheduled |
 | **8.11** | Κωδικός Τύπου Χαρακτηρισμού Εξόδων | **Expense classification type** — the `E3_*` and `VAT_*` codes | 📌 Fees, unscheduled |
-| **8.12** | Τρόποι Πληρωμής | **Payment methods**, codes 1–8 | ⭐ **R1 D** |
+| **8.12** | Τρόποι Πληρωμής | **Payment methods**, codes 1–8 | ⭐ **R1 D**, and ⚠️ **THE ONE ANNEX WHOSE CODES THE XSD DOES NOT CARRY — read note 5 before seeding it.** Read from a rasterised page 2026-08-06 (R4 G.1): **1** Επαγ. Λογαριασμός Πληρωμών Ημεδαπής · **2** … Αλλοδαπής · **3 Μετρητά** · **4** Επιταγή · **5** Επί Πιστώσει · **6** Web Banking · **7** POS / e-POS · **8** Άμεσες Πληρωμές IRIS |
 | **8.13** | Είδος Ποσότητας | **Quantity / unit-of-measure codes** — ⚠️ **SEVEN**, `1..7` per `QuantityType` | ⭐ **R1a.** Four of NovoCore's eight units mapped; **four left NULL and open** — two have no AADE code at all, two are a real judgement. See note 4 below |
 | 8.14 | Σκοπός Διακίνησης | Transport purposes | 18b — explicitly out of R1 |
 | 8.15 | Επισήμανση | Line marking | — |
@@ -128,6 +128,40 @@ while looking entirely plausible. `SimpleTypes-v2.0.1.xsd` carries the same code
 enumeration with no layout at all, and is the safe side of the pair. **A seed must take its code list
 from the XSD and its Greek description from a human reading of the annex page**, never from a text
 dump of the annex alone.
+
+#### ⚠️ 5. …AND FOR ANNEX 8.12 THE SAFE SIDE OF THAT PAIR DOES NOT EXIST. Found 2026-08-06 (R4 G.1)
+
+**The rule above has a hole, and it is exactly one annex wide.** `paymentMethods-v2.0.1.xsd` defines
+no code list at all; the type is in `InvoicesDoc-v2.0.1.xsd`, and it is
+
+```xml
+<xs:element name="type">          <!-- Τύπος Πληρωμής -->
+  <xs:simpleType><xs:restriction base="xs:int">
+    <xs:minInclusive value="1"/><xs:maxInclusive value="8"/>
+  </xs:restriction></xs:simpleType>
+</xs:element>
+```
+
+**A RANGE, not an enumeration.** It says how many codes there are and nothing whatever about what any
+of them means. So *"take the code list from the XSD"* is **unavailable here**: there is no flat
+enumeration to take, and the codes and descriptions can only come from **the same artefact — annex
+8.12** — which is the single-source condition the rule exists to forbid.
+
+⚠️ **This matters because the rule is written in a way that reads as universal**, and a session that
+follows it will look for an enumeration, not find one, and be tempted either to give up or to fall
+back on `pdftotext`. **Neither is right. The answer is to rasterise the page and read it**, which is
+what the rule's second half already prescribes for descriptions — here it has to carry the codes too.
+
+**Done on 2026-08-06**: PDF page **105** (document page 104) rendered at 200 dpi via PyMuPDF and read
+by eye. The eight pairs are in the annex table above. ⭐ **They match `SettlementMethod`'s javadoc
+exactly**, which recorded the same eight from an independent rasterised read in R1a — **two readings
+of the artefact agreeing, which is the closest thing to two sources available for this annex.**
+
+📌 **Tooling note, because the obvious commands are absent on this machine:** there is no
+`pdftoppm`, no ImageMagick, and the Read tool's PDF rendering depends on poppler and therefore fails.
+**PyMuPDF (`import fitz`) is installed and works** — `doc[104].get_pixmap(dpi=200).save(...)`, then
+read the PNG. Locating the page by text search is fine; it is only the *pairing* that a text dump may
+not supply.
 
 ### Four things this folder settled that documents in the repository had recorded as open
 
