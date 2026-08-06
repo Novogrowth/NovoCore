@@ -46,6 +46,17 @@ kickoff; they differ slightly from the brief's roadmap in that permissions were 
 | F5 | **Sales Invoice + Credit Note screens** — the first step to reach the **recording** path | **CODE COMPLETE 2026-08-06, on branch `f5-sales-invoice-credit-note`. NOT merged to `main`: the live leg has not been run.** All 30 sub-parts have verdicts, none open. Five sales/credit-note screens, `search=` on both document routes (**V36**, 4 GIN trigram indexes), the repository's **first three `meta.sortKey`s**, and `DataIntegrityViolationException` mapped to 422 so an index-enforced rule stops arriving as Boot's legacy 500. ⚠️ **Two things are DELIBERATELY not built and have their own roadmap rows** — **N1** (a reversed document's number) and B.4's collation. ⚠️ **The record forms are TRANSITIONAL by decision** — a mirror is never typed in real operation |
 | 16 | **The frontend itself** — `/frontend/`, Vite + React + TS + Tailwind + shadcn/ui | **In progress. F0–F4, S1 and S2 done.** ⚠️ **W1 landed 2026-08-04, so next is F5, then the D-block (D1+D3+D4+D5), then F6 onward** — the owner's sequencing decision of **2026-08-04**, recorded as the roadmap's row order. *(This cell previously read "Next is Q1, then R1, then F5", correct when written on 2026-08-02 and overtaken since: Q1, R1a, R1b, R2 and R2b have all landed.)* Foundations `94e17cd`, Products `56e3726` + guards `28c4119` + brand pass, then the render-loop fix `3458ee6`, F0 (the seed pass), F1 Suppliers `b406b27`, F2 Customers `496c7be`, F3 Users & Roles `aea0e56`, then **S1** (search), **S2** (sorting) and **F4** (Settings). **307 frontend tests, 31 files, green.** Per-step detail in `docs/novocore-roadmap.md`; decisions and what each step left behind in *Step 16 — the frontend* below |
 
+**Tests, measured 2026-08-06 (after F5's code): 1,494 passing, 0 failing, 1 skipped, `mvn clean
+verify` — ⚠️ **`BUILD SUCCESS` read from Maven's own output, not from a wrapper's exit code**, which
+this file has already recorded reporting 0 over a `BUILD FAILURE`. **247 operations, 231 schemas**,
+**unchanged**: F5 ships screens, tests and one comment, and **no operation and no schema**. Frontend:
+**402 across 41 files**, typecheck / lint / knip clean. F5 added **14** backend tests (1,480 → 1,494)
+— 8 in `DocumentNumberReuseIT` and the search extensions, 6 in the new `F5WriteContractIT` — and
+**34** frontend tests (368 → 402) across one new file and one extended one. Migration **V36** (4 GIN
+trigram indexes).
+
+*(The paragraph below is W1's, kept with its own figures — correct in its step's context.)*
+
 **Tests, measured 2026-08-04 (after W1): 1,480 passing, 0 failing, 1 skipped, `mvn clean verify`
 exit 0; 247 operations, 231 schemas, 175 declaring `required`. Frontend: 368 across 39 files,
 typecheck/lint/knip/build/check:offline green.** W1 added **3** backend tests (1,477 → 1,480, all
@@ -202,7 +213,7 @@ negative control. App image rebuilt first, unconditionally.
 | **P.12** | **ΜΑΡΚ / UID / QR URL / transmission status have NO write route anywhere**, at record time or after. Measured on a fresh record: the three are absent from the body entirely (`non_null`) and `transmissionStatus` is `"UNKNOWN"`. This is `frontend/README.md`'s **third** field state (*no route exists on any installation*), not the fourth |
 | **P.13** | **Immutability confirmed at the wire.** `PATCH …/{id}/description` → `404` (no route registered), `DELETE …/{id}` → `405`. The whole sales surface is five routes and none is an edit. Correction is reversal or credit note, and the backend refuses mixing them |
 | **P.14** | **W1's derived properties are on the wire and usable**: `inForce`, `reversal`, `reversed` on both views; `bundle`, `exempt` on `SalesInvoiceLineView` |
-| **P.15** | ⚠️ **Live-leg precondition nobody had recorded:** the owner's two real series are `TEST99` (channel NULL, draft type) and `TEST2` (`ECOMMERCE`, deactivated type), so **neither can record an invoice today**. Reactivating type 1 makes `TEST2` the only recordable series |
+| **P.15** | ⚠️ **Live-leg precondition nobody had recorded:** the owner's two real series are `TEST99` (channel NULL, draft type) and `TEST2` (`ECOMMERCE`, deactivated type), so **neither can record an invoice today**. Reactivating type 1 makes `TEST2` the only recordable series. ⚠️ **RE-MEASURED 2026-08-06 AND OUT OF DATE — see L.0 below.** There are now **four** series and **three** types, and **every type is inactive**, so nothing can record. The remedy is no longer one reactivation |
 | **P.16** | **Collation measured on the live stack** (`datcollate = C`, PG 17.10, `el-GR-x-icu` available). The two orders differ only where text carries Greek letters or mixed case; on Latin document numbers they agree, numeric ordering off in both. ⚠️ **A Spring Data `Sort` cannot express `COLLATE`**, so applying it means leaving the `Pageable`-driven path for that property |
 | **P.17** | ⚠️ **My own first `install` was piped to `tail` and reported `INSTALL_EXIT=0` over a compilation failure** — `CLAUDE.md`'s piped-build trap, caught by reading the output. Every later build used `set -o pipefail` and the documented two-step |
 
@@ -444,9 +455,40 @@ number is refused with a readable 422 rather than succeeding. **Update that row 
 
 ### 🅛 The live leg — **DERIVED from the screens and routes F5 ships**
 
-⚠️ **L.0 is a precondition this session performs, not something the owner does:** rebuild the app
-image, **and reactivate sales document type 1** — otherwise neither of the owner's two series can
-record anything (P.15).
+### ⚠️ L.0 — the preconditions, **re-measured 2026-08-06 and CHANGED. Read this before starting**
+
+✅ **The app image was rebuilt and restarted on 2026-08-06**, unconditionally, per `CLAUDE.md`. That
+half is done and needs nothing from the owner.
+
+⚠️ **The rest of L.0 said "reactivate sales document type 1", and that is no longer the remedy.** The
+live database was read on 2026-08-06 and has moved since P.15 was written — **four series and three
+types, and every type is inactive**, so **no series can record anything**:
+
+| Series | Type | State of that type | Channel |
+|---|---|---|---|
+| `TEST99` | 2 | ⚠️ **draft** — both stock flags NULL | **none** |
+| `TEST2` | 1 | decided, **inactive** | `ECOMMERCE` |
+| `TEST00` | 3 | decided, **inactive** | `STORE_AND_PHONE` |
+| `TESTttt` | 3 | decided, **inactive** | `SKROUTZ` |
+
+⚠️ **And L.8 is NOT reachable with this data, which is the part that would have been discovered
+mid-leg.** `TEST99` is the only channel-less series, and its type is a **draft** — and on the
+recording path the **type** check runs *before* the channel check, so it would be refused with the
+draft-type message and the R3 sentence L.8 exists to read would never appear. *(Read from
+`resolveSeries`; the browser is what settles it, which is exactly what L.8 is for.)*
+
+**So the leg needs three owner actions first, all of them one-click screen work:**
+
+1. **Reactivate sales document type 3** (`Test81`) → `TEST00` and `TESTttt` become recordable, which
+   is what L.7 and L.11–L.15 need.
+2. **Leave type 1 inactive** → recording against `TEST2` is L.9's refusal, already set up.
+3. **Create one series with NO sales channel against type 3** → makes L.8's R3 refusal reachable.
+
+⚠️ **Why this session did not perform them, stated rather than left as a gap:** driving the running
+stack needs the **Owner password**, which is deliberately not in this repository — the same reason
+`frontend/README.md` records for every browser leg since S1. They could have been done with direct
+SQL, and were not: that reaches around the service, writes no audit entry, and is the shape this
+codebase's first architecture rule exists to prevent.
 
 | # | Derives from | Check |
 |---|---|---|
