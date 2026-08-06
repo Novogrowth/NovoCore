@@ -100,7 +100,15 @@ dimension means restating history.
 **Product categories** remain three levels deep with a product in several at once — a self-referencing
 table plus a join table, **not two flat columns and not an enum**. Nothing exists, not even the schema.
 
-## Current build status (as of this primer — 2026-08-03, after R1a and U3)
+## Current build status (as of this primer — 2026-08-06, after F5; **R4 is current**)
+
+### ⚠️ THE THREE DECISIONS OF 2026-08-06 — read these before the chronology below
+
+| # | Decision | Consequence |
+|---|---|---|
+| **1** | ⚠️ **R2c is DEFERRED and SPLIT.** It is not core work and the owner does not want it interrupting the core | Demoted 🟡 → ⚪ and **moved out of the roadmap's sequence block** — the demotion **is** the decision, not a side effect. **2a** (the invisible sort-code column, cosmetic) → **F10**'s display-defects list; **2b** (sort code absent from the series **edit** form) → **R4**, with the unverified series-ordering check. ⚠️ **Neither half is scheduled as R2c** |
+| **2** | 🟡 **R4 is CURRENT** — payment methods become a business list referencing an AADE codification | Promoted ⚪ → 🟡 because the owner **commissioned its Phase 0**, not because R2c vacated the slot. **Its gate is unchanged and always was the binding one: before F6**, since it changes the sales invoice request contract |
+| **3** | ⭐ **THE CHART OF ACCOUNTS IS DECIDED.** Novocore uses **the official Greek chart directly**, with an **alias on each account for display**, and there is **NO separate business chart mapped onto it** | **One layer.** The only thing a business chart buys is many-to-one granularity, **better served by the product model** (categories and lines that name products). And **one layer is the reversible choice** — adding a layer later is additive, collapsing two is a merge that loses history. ⚠️ **No alias field exists on an account today** (measured against `Account`/`AccountView`) and it was **not built**; the absence is recorded against roadmap row **C1**. ✅ It **removes a prerequisite R4 might have had** — R4's account picker offers accounts from the one chart that exists |
 
 **Detailed, always-current status lives in `docs/PROGRESS.md`.** Read that first; this section is
 the summary.
@@ -154,9 +162,10 @@ the summary.
   changes when N1 lands. ⭐ **Two rows carried from R2's own leg closed here at their first reachable
   moment** (the frozen series field and its `lockedReason` rendering), as did **R2b's carried payment
   method guard** — all three needed a recorded invoice, which needed F5.
-  - ⚠️ **The next step is R2c or R4, and R4 is the one with a deadline attached** — it changes the
-    sales invoice request contract, so F6 should be built against the corrected model. R2c has no
-    slot. Five screens, `search=` on both document routes (**V36**), the
+  - ✅ **The next step is R4, settled 2026-08-06** — R2c was deferred out of the sequence and split,
+    and R4's Phase 0 was commissioned. R4 is the one with a deadline attached: it changes the sales
+    invoice request contract, so F6 must be built against the corrected model. Five screens,
+    `search=` on both document routes (**V36**), the
   repository's **first three `meta.sortKey`s**, and `DataIntegrityViolationException` mapped to 422.
   Frontend **402 tests across 41 files**. ⚠️ **The record forms are TRANSITIONAL by owner decision** —
   a sales document is a *mirror* and is never typed in real operation, so they are test harnesses and
@@ -170,9 +179,10 @@ the summary.
   select trigger, already fixed, and the AADE list is clean. The two that did not:
   - **R2c** — the sort code is not a visible column on the document type lists (**display only**, the
     ordering is correct), and it is **absent from the sales and purchase SERIES edit forms** while
-    document types allow editing it. ⚠️ **Not cosmetic**: R2b exempted the field from the in-use
+    document types allow editing it. ⚠️ **2b is not cosmetic**: R2b exempted the field from the in-use
     freeze *because reordering is normal*, so a value settable once is unusable for its purpose.
-    **No slot decided.**
+    ⚠️ **DEFERRED AND SPLIT 2026-08-06 — see decision 1 at the top of this section.** 2a → F10,
+    2b → R4. *(This bullet previously ended "No slot decided", true when written and overtaken.)*
   - **R4** — ⭐ **a REQUIREMENT CORRECTION, not a defect.** Payment methods were built as a seed-only
     statutory list and are actually a **business list referencing an AADE codification** — R1a's
     two-layer correction repeating one entity over. The list starts **empty**, creating a row selects
@@ -180,6 +190,13 @@ the summary.
     land in different banks), and all fields stay editable until the method is used. ⚠️ **This changes
     the sales invoice request contract**: `SettlementMethod` is a Java enum on `NewSalesInvoice` and
     must become an FK. **Runs after F5's close-out and before F6; F5 must not pre-empt it.**
+    🟡 **CURRENT from 2026-08-06.** ➕ **R2c's 2b is attached to it** — the sort code on the series
+    edit form — because R4 rebuilds payment methods around *which fields are editable and until
+    when*, which is the same question R2b's freeze exemption answered for the sort code; the code is
+    open and the reasoning is loaded. ➖ **The chart-of-accounts decision removed a prerequisite it
+    might have had** (decision 3 above): its account picker offers accounts from the one chart that
+    exists. ⚠️ **R4 must not add the account alias** — that is a chart field, not a payment-method
+    one.
 - *(Superseded:)* ⚠️ **R2 is DONE — 2026-08-04.** Six settings screens over R1a's six
   tables, and **it grew a backend sub-part mid-step**: seven new routes (230 → **237** operations)
   making a series' `abbreviation`, `documentTypeId` and `getsMark`, and a delivery method's
@@ -351,9 +368,9 @@ the summary.
     the one inconsistency that leaves is recorded in F6's roadmap footnote.
 - ⚠️ **THE SEQUENCE WAS DECIDED BY THE OWNER ON 2026-08-04, and the roadmap's ROW ORDER is where it
   lives** — not a paragraph beside a list still in the old order, which is now a `CLAUDE.md` rule of
-  its own. The sequence: **W1 → F5 → D1 + D3 + D4 + D5 → F6 onward**; **D2** before step 19 (the Woo
-  one-time load); **R3** when the accountant answers, not schedulable; **U2** whenever a session has
-  slack. D1+D3 are paired because they are **the same two entities and the same two screens**
+  its own. The sequence, **as amended twice on 2026-08-06**: **W1 → F5 → R4 → D1 + D3 + D4 + D5 → F6
+  onward**; **D2** before step 19 (the Woo one-time load); **R3** when the accountant answers, not
+  schedulable; **U2** whenever a session has slack; **R2c** deferred out of the sequence and split. D1+D3 are paired because they are **the same two entities and the same two screens**
   (Customers, Suppliers) — apart, those screens get reopened twice; D4+D5 are paired because both are
   **ledger integrity and the accountant's concerns**. ⚠️ **The cost of putting the D-block after F5 is
   recorded rather than argued away**: F5–F9 get built before the counterparty fields they will want,
@@ -777,7 +794,21 @@ consequence: **the same term can return fewer rows for a restricted role**, whic
 ## Domain model summary
 
 **Chart of accounts — built and committed (step 3).** The full account list, decisions and
-per-step obligations are in `docs/PROGRESS.md`. Resolved shape:
+per-step obligations are in `docs/PROGRESS.md`.
+
+⚠️ **DECIDED 2026-08-06, and it governs what the chart BECOMES: Novocore uses the OFFICIAL GREEK
+CHART OF ACCOUNTS DIRECTLY, with an ALIAS on each account for display. There is NO separate business
+chart mapped onto the official one.** The owner's reasoning: the only thing a business chart genuinely
+buys is **many-to-one granularity**, and that need is **better served by the product model** — product
+categories and lines that name products — than by multiplying the chart; and **one layer is the more
+reversible choice**, since adding a second layer later is *additive* while collapsing two into one is
+a *merge that loses history*. ⚠️ **No alias field exists on an account today** — `Account` and
+`AccountView` carry `code`, `name`, `type`, `kind`, `subLedgerType`, `systemKey`, `group`,
+`displayOrder`, `active`, `expectedToClear`, `elpCode` and nothing else (measured 2026-08-06) — and it
+was **deliberately not built**; the absence is recorded against roadmap row **C1**. 📌 **It also moves
+M0a's target**: Manager's accounts now map onto the official chart rather than onto a chart of our own
+design. **Everything below describes the chart AS BUILT and remains an accurate record of what is in
+the database.** Resolved shape:
 
 - **Two levels only:** an `AccountGroup` entity (name + `displayOrder`) with accounts under it. Not a self-referencing Account tree. Groups are an entity rather than flat text because ordering is **manual/drag-and-drop**, which needs somewhere to store a group's position. Alphabetical ordering applies only to sub-ledgers (customers, suppliers); inventory sorts by SKU.
 - **Normal balance side is derived from account type, never stored** — there is no `normal_balance_side` column and a test asserts its absence. **Seven types**, because both contra types are genuinely needed: `CONTRA_ASSET` (accumulated depreciation is Asset-classified with a *credit* normal balance; without it fixed assets report at roughly double carrying value) and `CONTRA_INCOME` (sales returns are Income-classified with a *debit* normal balance; typed as `EXPENSE` they would sit below the revenue line and overstate gross revenue).

@@ -116,8 +116,7 @@ frontend work that must land before any adapter is built.
 |      | **▼ THE DECIDED SEQUENCE — the row order below IS the decision** ˢᵉᑫ | | | | |
 |   W1 | Serialised-record contract fidelity ʷ¹  |     — |    1.5 |  356k | 🟢 Done         |
 |   F5 | Sales Invoice + Credit Note ʷ           |     — |    3.7 |  766k | 🟢 Done         |
-|  R2c | Sort code: invisible column, unsettable on series ʳ²ᶜ | — |  |       | 🟡 **Current** ʳ²ᶜ |
-|   R4 | Payment methods become a business list ʳ⁴ |   — |        |       | ⚪ After R2c, before F6 ʳ⁴ |
+|   R4 | Payment methods become a business list ʳ⁴ |   — |        |       | 🟡 **Current** ʳ⁴ |
 |   N1 | Release a reversed document's number ⁿ¹ |     — |        |       | ⚪ Direction settled, unbuilt |
 |   D1 | Supplier/customer codes + alias ᵈ¹      |     — |        |       | ⚪ After F5, with D3 ˢᵉᑫ |
 |   D3 | Customer/supplier addresses ᵈ³          |     — |        |       | ⚪ After F5, with D1 ˢᵉᑫ |
@@ -130,6 +129,8 @@ frontend work that must land before any adapter is built.
 |  F10 | Design pass, brand look + version badge ᵇᵃᵈᵍᵉ | — |      |       | 🔴 Not started  |
 |  F11 | Whole-system UI regression              |     — |        |       | 🔴 Not started  |
 |      | **▼ OUTSIDE THE SEQUENCE — each has its own gate, none is "next"** ˢᵉᑫ | | | | |
+|  R2c | Sort code: invisible column, unsettable on series ʳ²ᶜ | — |  |       | ⚪ **DEFERRED and SPLIT** — 2a → F10, 2b → R4 ʳ²ᶜ |
+|   C1 | Official Greek chart adopted directly, + display alias ᶜ¹ | — |    |  | ⚪ Decided 2026-08-06, **not scoped** ᶜ¹ |
 |   D2 | Product categories, 3 levels ᵗ          |     — |        |       | ⚪ Before the Woo load (19) |
 |   R3 | Self-supply posting paths ˢ             |     — |        |       | ⚪ Not schedulable — accountant |
 |   U2 | Split `PROGRESS.md` / `HISTORY.md` ᵘ²   |     — |        |       | ⚪ Whenever a session has slack |
@@ -150,11 +151,15 @@ separately instead, where a reader scanning a column of dashes will actually mee
 **The owner's decided sequence, in his own terms:**
 
     W1  →  F5  →  D1 + D3 + D4 + D5  →  F6 onward
-    …and amended 2026-08-06, after R2b's and F5's live legs:
+    …amended earlier on 2026-08-06, after R2b's and F5's live legs:
     W1  →  F5  →  R2c  →  R4  →  D1 + D3 + D4 + D5  →  F6 onward
-    D2  before step 19 (the Woo one-time load)
-    R3  when the accountant answers — not schedulable
-    U2  whenever a session has slack
+    …and amended AGAIN the same day, when the owner deferred R2c:
+    W1  →  F5  →  R4  →  D1 + D3 + D4 + D5  →  F6 onward
+    D2   before step 19 (the Woo one-time load)
+    R3   when the accountant answers — not schedulable
+    U2   whenever a session has slack
+    R2c  deferred out of the sequence entirely, and split — see ʳ²ᶜ
+    C1   recorded, not scoped — see ᶜ¹
 
 **The rows were moved to match**, per `CLAUDE.md` §*A sequencing decision changes the roadmap's ORDER,
 not a paragraph beside it* — a rule written the same day and for this. **The order is the statement;
@@ -190,6 +195,22 @@ and the mismatches are stated instead:
 ⚠️ **`Placement TBD` was corrected rather than left**, and that is a different act from promoting a
 glyph. It was a **claim that had become false**: four rows went on saying *nobody has decided where
 this goes* after somebody had. The ⚪ is a claim about scheduling and is still true.
+
+#### ⚠️ 2026-08-06 — R2c DEMOTED, R4 PROMOTED. Both are the decision being applied, not row movement
+
+**Two glyph changes on one day, in opposite directions, and this paragraph exists because that file's
+warning cuts both ways.** `CLAUDE.md` §*a sequencing decision changes the roadmap's ORDER* forbids a
+status changing **as a side effect** of a row moving. Neither of these is that:
+
+| Row | Change | Why it is a decision |
+|---|---|---|
+| **R2c** | 🟡 **Current** → ⚪, and **out of the sequence block entirely** | ⚠️ **The owner deferred it: it is not core work and must not interrupt the core.** The demotion IS the decision. Earlier the same day the *promotion* was likewise the decision, and that footnote says so — this is the symmetric act, recorded to the same standard, so a reader does not read it as R4 displacing R2c |
+| **R4** | ⚪ *After R2c, before F6* → 🟡 **Current** | **The owner commissioned R4's Phase 0 in the same instruction.** A step whose Phase 0 has been asked for is being worked on; the glyph follows that, not the vacated position. Its binding gate is unchanged and still **before F6** |
+
+⚠️ **R2c did not merely move — it was SPLIT, and neither half is scheduled as R2c.** 2a (the invisible
+column, cosmetic) is now an entry in F10's display-defects list; 2b (sort code absent from the series
+**edit** form) is attached to **R4**. The row survives only as the single place naming both defects and
+their destinations — see ʳ²ᶜ. **It is not a schedulable item any more and must not be picked up as one.**
 
 **Q1, 8a, R1a, R1b, R2 and R2b are all 🟢 Done (R1b, R2 and R2b on 2026-08-04).** The running
 order is above, in the table, and **`PROGRESS.md`'s *What is next, in one place* follows it rather
@@ -1128,6 +1149,11 @@ from scratch, not copied from Manager** — 65 accounts across 13 groups, design
 is not an import**: does every account in Manager map to a Novocore account, and **which do not?**
 That is a spreadsheet and a session, and **it tests the most load-bearing part of the model.**
 
+⚠️ **Its TARGET changed on 2026-08-06 and the row did not.** The owner decided the **official Greek
+chart is used directly** with a display alias, and no business chart on top — see ᶜ¹. So M0a maps
+Manager's accounts onto **the official chart**, not onto a chart of our own design. **Neither
+scheduled nor blocked by that decision; only the answer side of the mapping moved.**
+
 **M0b — a real year of transactions.** Real chart plus one real year, imported into the current core
 to find out whether the model fits data nobody has examined yet. ⚠️ **Waits until D1, D3 and D4
 exist**, or it imports into a model already known to be incomplete.
@@ -1137,6 +1163,41 @@ highest-information test available and it gets cheaper the sooner it runs. ⚠�
 kept because it was the owner's initial instinct:** M0 exists to find gaps **while fixing them is
 still free** — run it after eleven screens exist and every finding costs screens too. **And it does
 not need F11**: it is an import, not data entry.
+
+**ᶜ¹ C1 — the official Greek chart is used DIRECTLY, with a display alias. Decided by the owner
+2026-08-06. ⚪ Recorded, NOT scoped, and deliberately not built.**
+
+**The decision, in one sentence: Novocore uses the official Greek chart of accounts as its chart,
+with an ALIAS on each account for display, and there is NO separate business chart mapped onto the
+official one.** One layer, not two.
+
+**The owner's reasoning, recorded because it is the part no reading of the code supplies:**
+
+- **The only thing a second, business-owned chart genuinely buys is many-to-one granularity** —
+  several business lines rolling up to one statutory account. **That need is better served by the
+  product model** — product categories and lines that name products — **than by multiplying the
+  chart.**
+- ⚠️ **One layer is also the more REVERSIBLE choice, and this is the load-bearing half.** Adding a
+  second layer later is **additive**. Collapsing two into one is a **merge**, and a merge loses
+  history. When the two options are not symmetric, take the one that can still be undone.
+
+**What exists today, measured 2026-08-06 rather than remembered:**
+
+| Fact | Evidence |
+|---|---|
+| ⚠️ **There is NO alias field on an account** | `Account` has `code`, `name`, `account_type`, `account_kind`, `sub_ledger_type`, `system_key`, `group_id`, `display_order`, `active`, `expected_to_clear`, `elp_code` — **and nothing else**. `AccountView` carries the same set. **Not built, per the owner's instruction** |
+| **The chart is Novocore's own 65 accounts across 13 groups**, built from scratch at step 3 | `V4__chart_of_accounts.sql`; recorded under *Step 3* in `PROGRESS.md` |
+| **`code` is deliberately blank** and **`elp_code` is null on every row** | Step 3's decision — both were to come from the accountant. `AccountSystemKey` exists precisely because neither is usable as a handle |
+
+⚠️ **An observation this raises, flagged for the owner and NOT acted on:** the chart today carries
+**two** code columns — `code` (blank) and `elp_code` (null) — which is itself the two-layer shape this
+decision rejects, one field down. If the official chart becomes *the* chart, whether those two collapse
+into one is a real question and it is **not answered here**. Recorded rather than decided.
+
+⚠️ **M0a's target changes with this, and that is stated at ᵐ⁰ too.** M0a asks *"does every Manager
+account map to a Novocore account?"* — under this decision the answer side of that mapping is **the
+official Greek chart**, not a chart of our own design. **M0a is not thereby scheduled, blocked or
+cancelled**; only its target moved.
 
 **ᶠ⁶ F6 — Purchase Invoice + Goods Receipt. ⚠️ Two things R1b left it, recorded 2026-08-04 so they
 are not rediscovered.**
@@ -1213,6 +1274,28 @@ record form is a **test harness by decision** (`CLAUDE.md` §1b), so revising it
 specified by the owner**; immediately-after-F5 is this file's reading of the *"the longer it waits"*
 argument, not a fifth requirement.
 
+🟡 **CURRENT as of 2026-08-06.** R2c was deferred out of the sequence and R4's Phase 0 was
+commissioned in the same instruction, so it is now first. **The gate did not change** — before F6 is
+still the binding constraint, and it was binding before the promotion.
+
+**➕ R2c's 2b is attached here, and the reason is not convenience.** The sort code is **absent from
+the sales and purchase SERIES edit form** while document types allow editing it. ⭐ **R4 rebuilds
+payment methods around exactly one question — which fields are editable, and until when** — which is
+the same question R2b's §3.4 answered for the sort code when it exempted the field from the in-use
+freeze. **The code is open and the reasoning is loaded.** At F11 it would cost somebody re-learning
+why the freeze has an exemption. 📌 **The unverified series-ordering check rides with it** — the owner
+confirmed sort-code ordering on the **document type** lists and said nothing about the **series**
+lists.
+
+**➖ A prerequisite R4 might have had is gone, decided 2026-08-06.** R4.3 requires choosing **the
+ledger account a payment method settles to**, which raises *which chart is being picked from*. The
+owner has settled it: **the official Greek chart is used directly, with a display alias per account,
+and there is no separate business chart mapped onto it** — see ᶜ¹. **So R4's account picker offers
+accounts from the one chart that exists**, and nothing in R4 waits on a second layer that will not be
+built. ⚠️ **The alias column does NOT exist today** (measured 2026-08-06 against `Account` and
+`AccountView` — see ᶜ¹) and **R4 must not add it**: an alias is a chart-of-accounts field, not a
+payment-method one.
+
 **ʳ²ᶜ R2c — the sort code is invisible on the lists and unsettable on a series.** Two defects from the
 owner's live leg of **2026-08-05**, against R2b's §3. **They are R2b's, not F5's.**
 
@@ -1229,16 +1312,31 @@ editing it, **which is why L.9 passed** — the passing path and the broken path
 assigns it.** And it is on **series**, the picker an employee uses when recording a document, ordered
 by exactly this column.
 
-✅ **A SLOT IS DECIDED — the owner, 2026-08-06: R2c is next, after F5 lands on its own.** The row was
-therefore **moved into the sequence** and its status promoted ⚪ → 🟡, per `CLAUDE.md` §*a sequencing
-decision changes the roadmap's ORDER, not a paragraph beside it*. ⚠️ **The promotion is the decision
-being applied, not a side effect of moving the row** — that file warns about exactly the latter, so
-it is worth saying which this is. *(This footnote previously ended "No slot is decided, which is why
-the row sits outside the sequence"; that was true when written on 2026-08-06 and was overtaken the
-same day.)*
+### ⚠️ R2c IS DEFERRED AND SPLIT — the owner, 2026-08-06, later the same day
 
-📌 **R4 now follows R2c**, and its own gate is unchanged and still the binding one: **before F6**,
-because it changes the sales invoice request contract.
+**It is not core work and the owner does not want it interrupting the core.** The row was therefore
+**demoted 🟡 → ⚪ and moved out of the sequence block**, per `CLAUDE.md` §*a sequencing decision
+changes the roadmap's ORDER, not a paragraph beside it*. ⚠️ **The demotion IS the decision being
+applied, not a side effect of moving the row** — the same distinction this footnote flagged that
+morning **in the other direction**, and it is worth stating both times or the record only ever
+explains promotions.
+
+**And it was split in the same instruction, so neither half is scheduled as R2c:**
+
+| Half | Where it went | Reason recorded at the destination |
+|---|---|---|
+| **2a** — the sort code is not a visible column on the lists | **F10**, the display-defects-from-live-legs list under ᵇᵃᵈᵍᵉ | ⚠️ **Cosmetic.** The **ordering is correct**; only the column is missing. F10's list exists for exactly this — a defect the owner saw and chose not to stop for |
+| **2b** — the sort code is absent from the **series EDIT form** | **R4** | ⭐ **R4 rebuilds payment methods around WHICH FIELDS ARE EDITABLE AND UNTIL WHEN** — the same question R2b's freeze exemption answered for the sort code. The code is open and the reasoning is loaded. Doing it at F11 would cost somebody re-learning why the freeze has an exemption |
+| 📌 The **unverified half of 2a** — the owner confirmed sort-code ordering for **document types** and said nothing about the **series** lists | **R4, with 2b** | It is a *behaviour* check rather than a display one, and R4's 2b work opens the series screens anyway. Splitting it from 2a is deliberate and is stated rather than left implied |
+
+*(This footnote read "No slot is decided" when first written on 2026-08-06, then "A slot is decided —
+R2c is next", and now this. All three were true when written; the churn is recorded rather than
+overwritten so the sequence of decisions is legible.)*
+
+⚠️ **F11 was nearly used as 2a's home and is the wrong place**, which is worth recording because the
+row title invites it: **F11 is "Whole-system UI regression" and nothing anywhere scopes it** — no
+brief section, no footnote, no checklist. Parking a known specific defect on an unscoped batched step
+is how it stops being tracked.
 
 **ⁿ¹ N1 — a reversed document's number becomes available again.** ⚠️ **The DIRECTION is settled (owner,
 2026-08-05); the BUILD is deliberately not F5's.** F5 found three enforcements of document-number
@@ -1438,6 +1536,14 @@ so if F10 slips past 43 for any reason, this moves rather than waits.
 
 **A running list, so a defect the owner saw but chose not to stop for is neither fixed on the spot nor
 forgotten.** Each entry names the step whose live leg found it.
+
+- 🆕 **The sort code is not a visible column on the document-type or series lists** — **R2b's live leg
+  of 2026-08-05, arriving here 2026-08-06 as R2c's half 2a.** ⚠️ **Display only, and that is
+  established rather than assumed:** the owner confirmed the **ordering is correct**, so R2b's 3.5
+  (the server's default order) landed and only 3.6 (*first list column*) did not. The fix is one
+  column definition per list. 📌 **The behaviour half of the same defect did NOT come here** — the
+  ordering was confirmed for document types and **never checked on the series lists**, and that check
+  went to R4 with 2b, because it is behaviour and R4 opens those screens anyway.
 
 - ✅ ~~The AADE invoice-type picker cell is too small and cuts its text~~ — **PULLED BACK OUT OF F10
   AND FIXED IN R2b, 2026-08-04.** `OptionSelect` now passes `w-full`, so the trigger uses its column

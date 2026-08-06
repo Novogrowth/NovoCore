@@ -1,6 +1,7 @@
 # NovoCore — Build Progress
 
-*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-08-04 (R1b).*
+*Live status. Overwritten each session close-out, not appended to. Last updated: 2026-08-06 — R2c
+deferred and split, R4 promoted to current, and the chart-of-accounts decision recorded (C1).*
 
 *Close-out now also pushes to `origin` automatically (`CLAUDE.md`), so this file no longer tracks
 unpushed commits.*
@@ -564,12 +565,35 @@ the two that did not pass produced **two new roadmap rows rather than fixes insi
 
 ---
 
-## ▶ R2c — the sort code is invisible on lists and unsettable on series. **RECORDED 2026-08-05, NOT BUILT**
+## ▶ R2c — ⚠️ **DEFERRED AND SPLIT by the owner, 2026-08-06. Neither half is scheduled as R2c**
+
+**The decision, in the owner's terms: R2c is not core work and must not interrupt the core.** The
+roadmap row was **demoted 🟡 → ⚪ and moved out of the sequence block**, and the two defects were
+re-homed. ⚠️ **The demotion IS the decision being applied, not a side effect of moving the row** —
+the same distinction recorded that morning when the row was *promoted*, stated again here because a
+record that only ever explains promotions is a record that reads as if demotions are automatic.
+
+| Half | Where it went | Reason, recorded at the destination |
+|---|---|---|
+| **2a** — the sort code is **not a visible column** on the lists | **F10**, the *display defects deferred from earlier steps' live legs* list | ⚠️ **Cosmetic**, and that is established rather than assumed: the **ordering is correct** (owner-confirmed), so only R2b's 3.6 — *first list column* — did not land. F10's list exists precisely for a defect the owner saw and chose not to stop for |
+| **2b** — the sort code is **absent from the series EDIT form** | **R4** | ⭐ **R4 rebuilds payment methods around which fields are editable and until when** — the same question R2b's §3.4 answered for the sort code when it **exempted** the field from the in-use freeze. The code is open and the reasoning is already loaded. **Doing it at F11 would cost somebody re-learning why the freeze has an exemption** |
+| 📌 The **unverified half of 2a** — ordering was confirmed on **document types** and never checked on the **series** lists | **R4, alongside 2b** | It is a **behaviour** check, not a display one, and R4's 2b work opens the series screens anyway. **The split from 2a is deliberate and is stated rather than left implied** |
+
+⚠️ **F11 was nearly chosen as 2a's home, and it is the wrong place** — worth recording because the row
+title invites it. **F11 is "Whole-system UI regression" and nothing anywhere scopes it**: no brief
+section, no footnote, no checklist, no estimate. Parking a known, specific, already-diagnosed defect
+on an unscoped batched step is how it stops being tracked.
+
+📌 **The row survives as the single place naming both defects and their destinations.** It is **not a
+schedulable item any more** and must not be picked up as one.
+
+*(Everything below is the original 2026-08-05 record, kept because it is the diagnosis both halves
+carry with them.)*
 
 **Found by the owner's live leg of 2026-08-05, against R2b's §3.** Recorded here at the moment it was
 reported, per `CLAUDE.md` §*A decision reached in a design conversation gets the same close-out
 discipline as a build step*. ⚠️ **These are R2b's defects, not F5's, and they must not enter F5's
-commit.** Roadmap row **R2c**; no slot decided.
+commit.**
 
 | # | Defect | What is and is not established |
 |---|---|---|
@@ -591,7 +615,7 @@ reorganises its series has no way to reorder the list it works from every day.
 one that was walked is the one that worked. Same shape as R2's *"the screen was the only guard"* and
 as R2b's own §2 — **two paths, one exercised.**
 
-## ▶ R4 — payment methods are a BUSINESS list, not a statutory one. **REQUIREMENT CORRECTION, RECORDED 2026-08-05, NOT BUILT**
+## ▶ R4 — payment methods are a BUSINESS list, not a statutory one. 🟡 **CURRENT from 2026-08-06 — Phase 0 commissioned, NOT BUILT**
 
 ⚠️ **The owner's L.10/L.11 results are NOT defects.** The screens did what R2b's rows asked. **What
 the rows asked for is the wrong model** — and it is **R1a's correction repeating one entity over**:
@@ -637,6 +661,39 @@ this inside F5** — F5 keeps `SettlementMethod` exactly as it is.
 `F5 < R4 < F6`; the roadmap places R4 immediately after F5 to honour the *"the longer it waits"*
 argument, and that placement is this session's reading of his reason, **not a fifth requirement he
 stated.**
+
+### 🟡 2026-08-06 — R4 IS CURRENT, and two things arrived with the promotion
+
+**The owner deferred R2c out of the sequence and commissioned R4's Phase 0 in the same instruction.**
+⚠️ **The promotion ⚪ → 🟡 is that decision being applied, not a consequence of R2c vacating the
+slot** — position and status are different claims, and a step whose Phase 0 has been asked for is a
+step being worked on. **The gate is unchanged and was always the binding one: before F6.**
+
+**➕ R2c's 2b is now R4's, and the reason is recorded rather than assumed.**
+
+| Item | What |
+|---|---|
+| **R4.5** | **The sort code must be settable on the sales and purchase SERIES EDIT form**, where today it appears only on the create form. ⭐ **It attaches here because R4 rebuilds payment methods around exactly one question — which fields are editable and until when** — which is the same question R2b's §3.4 answered for the sort code when it **exempted** that field from the in-use freeze. **The code is open and the reasoning is loaded.** At F11 it would cost somebody re-learning why the freeze has an exemption |
+| **R4.6** | 📌 **Verify that the SERIES lists are ordered by sort code.** The owner confirmed ordering on the **document type** lists and said nothing about series. R2b changed four repositories and the leg exercised two screens. **It rides with R4.5 because it is behaviour, not display, and 2b opens those screens anyway** |
+
+⚠️ **These two are RECORDED, not approved.** They are R2c's content re-homed by the owner's
+instruction; they still need a verdict line in R4's approved checklist when R4 is scoped.
+
+**➖ A prerequisite R4 might have had is GONE — the chart of accounts is decided (2026-08-06).**
+
+**R4.3 requires choosing the ledger account a payment method settles to**, which raises the question
+*which chart is being picked from*. The owner has settled it: **Novocore uses the official Greek chart
+directly, with a display alias per account, and there is NO separate business chart mapped onto the
+official one** — recorded under *Step 3* below and as roadmap row **C1**.
+
+- ✅ **So R4's account picker offers accounts from the one chart that exists**, and nothing in R4 waits
+  on a second layer that will not be built.
+- ⚠️ **The alias field does NOT exist on an account today** — measured 2026-08-06 against `Account` and
+  `AccountView`, both of which carry `code`, `name`, `type`, `kind`, `subLedgerType`, `systemKey`,
+  `group`, `displayOrder`, `active`, `expectedToClear`, `elpCode` and nothing else. **Not built, per
+  the owner's instruction**, and recorded against C1, the row that will need it.
+- ⚠️ **R4 must not add it.** An alias is a chart-of-accounts field, not a payment-method one, and
+  building it inside R4 would put a chart decision in a payment-method migration.
 
 ## ▶ R2b — what R2's live leg found, plus two things its brief had wrong. **DONE 2026-08-04**
 
@@ -1816,12 +1873,20 @@ F6, purchasing.
 ### ▶▶ What is next, in one place
 
 ⚠️ **THE SEQUENCE IS THE ROADMAP'S ROW ORDER, and this table follows it rather than restating it.**
-Decided by the owner on 2026-08-04:
+Decided by the owner on 2026-08-04, amended twice on 2026-08-06:
 
-    W1  →  F5  →  D1 + D3 + D4 + D5  →  F6 onward
-    D2  before step 19 (the Woo one-time load)
-    R3  when the accountant answers — not schedulable
-    U2  whenever a session has slack
+    W1  →  F5  →  R4  →  D1 + D3 + D4 + D5  →  F6 onward
+    D2   before step 19 (the Woo one-time load)
+    R3   when the accountant answers — not schedulable
+    U2   whenever a session has slack
+    R2c  DEFERRED out of the sequence and SPLIT — 2a → F10, 2b → R4
+    N1   direction settled, unbuilt, no slot
+    C1   the chart of accounts decision — recorded 2026-08-06, not scoped
+
+⚠️ **Two glyphs moved on 2026-08-06, in opposite directions, and BOTH are the decision being applied
+rather than a side effect of a row moving.** **R2c 🟡 → ⚪** because the owner deferred it — it is not
+core work and must not interrupt the core. **R4 ⚪ → 🟡** because the owner commissioned its Phase 0 in
+the same instruction. R4's gate did not change and was always the binding one: **before F6**.
 
 **Per `CLAUDE.md` §*A sequencing decision changes the roadmap's ORDER*, `docs/novocore-roadmap.md` was
 re-ordered to match, with each row's reasoning written at the row.** ⚠️ **Three status glyphs were
@@ -1843,7 +1908,10 @@ different claims and a glyph nobody decided to move must not move.**
 | **R1b — document reference data, behavioural** | ✅ **DONE, 2026-08-04.** All 22 sub-parts have verdicts, none is "still open". ⚠️ **`seriesId`, not `documentTypeId`** — the document type is mandatory *through* the series, because `sales_invoice` has `series_id` and no `document_type_id`. Channel derived from the series; a channel-less series **refused**, not accommodated. **Nothing outstanding** |
 | **W1 — a serialised record's wire shape must equal its documented shape** | ✅ **DONE, 2026-08-04. All 16 sub-parts have verdicts, none is "still open".** Nothing outstanding. *(Originally:)* ⚠️ **32 committed schemas ship 66 undocumented properties** — measured, not estimated. None is a live defect; the contract lies about all 32. ⭐ **Evaluate the generator route first** — one change to `OpenApiSchema` documents all 66. Detail in the roadmap under ʷ¹ |
 | **R2 — document reference data, screens** | 🔴 After R1b. ⚠️ **Full CRUD**, not the read-plus-activate shape F4 built — the owner authors these rows. He creates his 19 document types and their series here, **choosing each AADE type himself**. ⚠️ Needs a **live browser leg**, and therefore an app-image rebuild |
-| **F5 — Sales Invoice + Credit Note** | 🟡 **NEXT. W1 landed on 2026-08-04, so F5 is now current** — after it come D1 + D3 + D4 + D5 as one block, then F6 onward. ⚠️ It decides the create/preview/commit pattern F6–F8 all reuse, so it is worth disproportionate scrutiny — but ⚠️ **see the open decision in the roadmap**: since documents arrive already issued, F5 before step 18 is a data-entry screen for documents created elsewhere, and much of it disappears when the Go adapter lands |
+| **R4 — payment methods become a business list** | 🟡 **CURRENT from 2026-08-06.** A **requirement correction**, not a defect: the list starts **empty**, the user creates rows, each names an **AADE payment-method article** *and* **the ledger account it settles to**, and all fields stay editable until the method is used. ⚠️ **It changes the sales invoice request contract** — `SettlementMethod` is a Java enum on `NewSalesInvoice` and must become an FK — which is why the gate is **before F6**. ➕ **R2c's 2b is attached** (the sort code on the series edit form) with the series-ordering check. ➖ **The chart-of-accounts decision (C1) removed a prerequisite it might have had** |
+| **R2c — sort code** | ⚪ **DEFERRED AND SPLIT, 2026-08-06.** Not core work; the owner does not want it interrupting the core. **2a** (invisible column, cosmetic) → **F10**'s display-defects list. **2b** (absent from the series edit form) → **R4**, with the unverified series-ordering check. ⚠️ **Neither half is scheduled as R2c**, and the row is not a schedulable item any more |
+| **C1 — the chart of accounts** | ⚪ **DECIDED 2026-08-06, recorded, NOT scoped.** The **official Greek chart is used directly**, with an **alias per account for display**, and **no separate business chart mapped onto it**. Reasoning: many-to-one granularity is better served by the product model, and one layer is the reversible choice (adding a layer is additive; collapsing two is a merge that loses history). ⚠️ **No alias field exists on an account today** — measured, not built |
+| **F5 — Sales Invoice + Credit Note** | 🟢 **DONE 2026-08-06.** *(This row read "🟡 NEXT" until then; kept below as written.)* 🟡 **NEXT. W1 landed on 2026-08-04, so F5 is now current** — after it come D1 + D3 + D4 + D5 as one block, then F6 onward. ⚠️ It decides the create/preview/commit pattern F6–F8 all reuse, so it is worth disproportionate scrutiny — but ⚠️ **see the open decision in the roadmap**: since documents arrive already issued, F5 before step 18 is a data-entry screen for documents created elsewhere, and much of it disappears when the Go adapter lands |
 | ~~⚠️ **Backend queue item 8 — promote to first?**~~ | ✅ **DECIDED 2026-08-03, and the answer was neither.** Not promoted within Q1 and not left last: **lifted out of the queue** into its own step, split 8a/8b, placed after Q1 and before R1. The open decision is removed from the roadmap and replaced by the step |
 | **M0a — map Manager's chart onto Novocore's** | 🟢 **UNBLOCKED, can run at any time** (U3, 2026-08-03). It is a **mapping exercise, not an import**: no code, no schema, a spreadsheet and a session. Novocore's chart was built from scratch, so the question is *which Manager accounts have no Novocore home* |
 | **M0b — a real year of transactions** | ⚪ **Gated: after D1/D3/D4, before step 24.** Importing before those exist means importing into columns that do not exist |
@@ -4549,6 +4617,51 @@ Convention going forward is **one commit per build step**, so history stays chec
 ---
 
 ## Step 3 — done
+
+### ⚠️ 2026-08-06 — THE CHART OF ACCOUNTS IS DECIDED, and it supersedes part of what follows
+
+**Recorded here, at the description of the thing it governs, per `CLAUDE.md` §*A decision reached in a
+design conversation gets the same close-out discipline as a build step*.** Roadmap row **C1**;
+⚪ **recorded, not scoped, and deliberately not built.**
+
+> **Novocore uses the OFFICIAL GREEK CHART OF ACCOUNTS DIRECTLY, with an ALIAS on each account for
+> display. There is NO separate business chart of accounts mapped onto the official one.**
+
+**The owner's reasoning, which is the part no reading of the code supplies:**
+
+- **The only thing a second, business-owned chart genuinely buys is many-to-one granularity** —
+  several business lines rolling up to one statutory account. **That need is better served by the
+  product model** — product categories and lines that name products — **than by multiplying the
+  chart.**
+- ⚠️ **One layer is also the more REVERSIBLE choice, and this is the load-bearing half.** Adding a
+  second layer later is **additive**. Collapsing two into one is a **merge**, and a merge loses
+  history. The two options are not symmetric, so take the one that can still be undone.
+
+**What is true today, measured 2026-08-06 rather than remembered:**
+
+| # | Fact | Evidence |
+|---|---|---|
+| **1** | ⚠️ **There is NO alias field on an account** | `Account` carries `code`, `name`, `account_type`, `account_kind`, `sub_ledger_type`, `system_key`, `group_id`, `display_order`, `active`, `expected_to_clear`, `elp_code` — **and nothing else**. `AccountView` carries the same set. ⚠️ **Deliberately NOT built**; its absence is recorded against **C1**, the row that will need it |
+| **2** | **The chart is Novocore's own 65 accounts across 13 groups**, designed from the brief, **not copied from anywhere** | `V4__chart_of_accounts.sql`, and the rest of this section |
+| **3** | **`code` is blank on every row and `elp_code` is null on every row** | Step 3's decision — both were to come from the accountant. `AccountSystemKey` exists *because* neither is usable as a handle |
+
+⚠️ **An observation this raises, flagged and deliberately NOT acted on:** the account carries **two**
+code columns — `code` (blank) and `elp_code` (null) — which is the two-layer shape this decision
+rejects, one field down. **If the official chart becomes *the* chart, whether those two collapse into
+one is a real question**, and it is not answered here. Recorded rather than decided.
+
+⚠️ **Two consequences elsewhere, both recorded and neither built:**
+
+- **M0a's target moved.** *"Does every Manager account map to a Novocore account?"* now maps onto **the
+  official Greek chart** rather than a chart of our own design. **M0a is not thereby scheduled,
+  blocked or cancelled** — only the answer side of the mapping changed.
+- **R4 loses a prerequisite it might have had.** Its account picker offers accounts from the one chart
+  that exists; nothing in it waits on a second layer that will not be built. **R4 must not add the
+  alias column** — that is a chart field, not a payment-method one.
+
+⚠️ **Everything below this box describes the chart AS BUILT at step 3 and is still accurate as a
+record of what is in the database.** The decision above changes what the chart will *become*; it does
+not retroactively describe what shipped.
 
 `AccountGroup` and `Account` entities, seven types, four kinds, `expectedToClear`,
 `displayOrder`, migration `V4__chart_of_accounts.sql` with the full seed (**65 accounts across
