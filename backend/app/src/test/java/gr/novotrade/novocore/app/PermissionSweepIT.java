@@ -211,7 +211,13 @@ class PermissionSweepIT {
                 "/api/sales-document-series", "/api/delivery-methods",
                 // R2b: a payment method is chosen when a sale is recorded, exactly as a delivery
                 // method is — the same section, for the same reason.
-                "/api/payment-methods"));
+                "/api/payment-methods",
+                // ⚠️ R4: annex 8.12's articles sit under SALES with the payment methods that
+                // reference them, NOT under TAX_AND_CHARGES with /api/aade-invoice-types. The two
+                // are the same kind of list and the difference is who reads them: an invoice type
+                // is chosen while administering tax data, an article is chosen while authoring a
+                // payment method, on the very next field of the very same form.
+                "/api/aade-payment-methods"));
         rules.put("settlements", startingWith(Section.SETTLEMENTS,
                 "/api/settlements", "/api/bank-transfers", "/api/allocations", "/api/open-items",
                 "/api/customer-credits"));

@@ -1,6 +1,7 @@
 package gr.novotrade.novocore.core.web;
 
 import gr.novotrade.novocore.core.api.codification.AadeInvoiceTypeNotFoundException;
+import gr.novotrade.novocore.core.api.codification.AadePaymentMethodNotFoundException;
 import gr.novotrade.novocore.core.api.codification.InvalidAadeInvoiceTypeException;
 import gr.novotrade.novocore.core.api.document.DeliveryMethodNotFoundException;
 import gr.novotrade.novocore.core.api.sales.PaymentMethodNotFoundException;
@@ -149,6 +150,7 @@ class WebExceptionHandler {
      */
     @ExceptionHandler({
         AadeInvoiceTypeNotFoundException.class,
+        AadePaymentMethodNotFoundException.class,
         AccountGroupNotFoundException.class,
         AccountNotFoundException.class,
         AssetNotFoundException.class,

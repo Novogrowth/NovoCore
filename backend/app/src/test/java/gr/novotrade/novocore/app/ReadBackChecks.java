@@ -95,7 +95,7 @@ final class ReadBackChecks {
                     assertThat(Json.text(it, "invoiceDate"))
                             .isEqualTo(TradingQuarter.JANUARY_LAST.toString());
                     assertThat(Json.text(it, "channel")).isEqualTo("ECOMMERCE");
-                    assertThat(Json.text(it, "settlementMethod")).isEqualTo("ON_ACCOUNT");
+                    assertThat(Json.text(it, "paymentMethodDescription")).isEqualTo("TEST Επί πιστώσει");
                     // Three product lines plus the delivery charge. The charge line is the one a
                     // reader is most likely to drop, since it names no product.
                     assertThat(lines(it)).hasSize(4);

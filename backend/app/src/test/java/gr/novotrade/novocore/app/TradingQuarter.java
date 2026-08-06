@@ -26,10 +26,10 @@ import gr.novotrade.novocore.core.api.purchasing.NewPurchaseInvoice;
 import gr.novotrade.novocore.core.api.purchasing.NewPurchaseInvoiceLine;
 import gr.novotrade.novocore.core.api.sales.NewCreditNote;
 import gr.novotrade.novocore.core.api.sales.NewCreditNoteLine;
+import gr.novotrade.novocore.core.api.sales.NewPaymentMethod;
 import gr.novotrade.novocore.core.api.sales.NewSalesInvoice;
 import gr.novotrade.novocore.core.api.sales.NewSalesInvoiceLine;
 import gr.novotrade.novocore.core.api.sales.SalesChannel;
-import gr.novotrade.novocore.core.api.sales.SettlementMethod;
 import gr.novotrade.novocore.core.api.settlement.NewAllocation;
 import gr.novotrade.novocore.core.api.settlement.NewSettlement;
 import gr.novotrade.novocore.core.api.shared.Money;
@@ -306,6 +306,15 @@ final class TradingQuarter {
                 new NewSalesDocumentSeries("TEST-ALPW", "TEST Web series",
                         salesType, SalesChannel.ECOMMERCE, false, null, SORT_CODES.incrementAndGet()),
                 "the web series"));
+        // ⚠️ R4 SHIPS payment_method EMPTY, so this narrative authors its own methods exactly as
+        // it authors its document types and series. Each names an AADE article (annex 8.12) and the
+        // account it reconciles to — the two things a method cannot exist without.
+        //
+        // ⚠️ Επί πιστώσει names ACCOUNTS RECEIVABLE EXPLICITLY. Before R4 it carried no account and
+        // the posting code read that absence as "debit AR" by convention; naming it is what makes
+        // the posting rule read the account in every case.
+        seedPaymentMethods();
+
         handles.put("series:skroutz", created("/api/sales-document-series",
                 new NewSalesDocumentSeries("TEST-ALPK", "TEST Skroutz series",
                         salesType, SalesChannel.SKROUTZ, false, null, SORT_CODES.incrementAndGet()),
@@ -454,7 +463,7 @@ final class TradingQuarter {
         long standard = id("vat:1410");
 
         NewSalesInvoice firstSale = NewSalesInvoice.of(
-                id("customer:wholesale"), id("series:web"), SettlementMethod.ON_ACCOUNT,
+                id("customer:wholesale"), id("series:web"), id("payment:credit"),
                 "TEST-SI-2026-0001", JANUARY_LAST,
                 List.of(
                         // Product default 13%, customer override 13%, and an explicit 24%
@@ -558,14 +567,14 @@ final class TradingQuarter {
     void februaryTheBundleAndAMachineSell() {
         handles.put("sale:bundle", created("/api/sales-invoices",
                 NewSalesInvoice.of(id("customer:cafe"), id("series:store"),
-                        SettlementMethod.CARD_POS, "TEST-SI-2026-0002", FEBRUARY_MID,
+                        id("payment:card"), "TEST-SI-2026-0002", FEBRUARY_MID,
                         List.of(NewSalesInvoiceLine.product(
                                 id("product:kit"), Quantity.of(1L), UnitCost.ofEur("150.000000")))),
                 "the bundle sale"));
 
         handles.put("sale:machine", created("/api/sales-invoices",
                 NewSalesInvoice.of(id("customer:cafe"), id("series:store"),
-                        SettlementMethod.BANK_DEPOSIT, "TEST-SI-2026-0003", FEBRUARY_MID,
+                        id("payment:bank"), "TEST-SI-2026-0003", FEBRUARY_MID,
                         List.of(NewSalesInvoiceLine.serializedProduct(id("product:machine"),
                                 UnitCost.ofEur("1450.000000"), List.of("TEST-SN-0001")))),
                 "the machine sale"));
@@ -574,7 +583,7 @@ final class TradingQuarter {
         // the model is which Sales account gets credited (step 3).
         handles.put("sale:skroutz", created("/api/sales-invoices",
                 NewSalesInvoice.of(id("customer:cafe-similar"), id("series:skroutz"),
-                        SettlementMethod.SKROUTZ, "TEST-SI-2026-0004", FEBRUARY_MID,
+                        id("payment:skroutz"), "TEST-SI-2026-0004", FEBRUARY_MID,
                         List.of(NewSalesInvoiceLine.product(
                                 id("product:beans"), Quantity.of(6L), UnitCost.ofEur("18.000000")))),
                 "the Skroutz sale"));
@@ -583,7 +592,7 @@ final class TradingQuarter {
         // reason rather than a zero rate. Q9's whole point — exempt is not zero-rated.
         handles.put("sale:eu", created("/api/sales-invoices",
                 NewSalesInvoice.of(id("customer:eu"), id("series:web"),
-                        SettlementMethod.ON_ACCOUNT, "TEST-SI-2026-0005", FEBRUARY_LAST,
+                        id("payment:credit"), "TEST-SI-2026-0005", FEBRUARY_LAST,
                         List.of(NewSalesInvoiceLine
                                 .product(id("product:beans"), Quantity.of(10L),
                                         UnitCost.ofEur("18.000000"))
@@ -712,7 +721,7 @@ final class TradingQuarter {
         // Overselling: 500 filters against the hundred received.
         handles.put("sale:oversold", created("/api/sales-invoices",
                 NewSalesInvoice.of(id("customer:cafe"), id("series:skroutz"),
-                        SettlementMethod.SKROUTZ, "TEST-SI-2026-0006", MARCH_MID,
+                        id("payment:skroutz"), "TEST-SI-2026-0006", MARCH_MID,
                         List.of(NewSalesInvoiceLine.product(
                                 id("product:filters"), Quantity.of(500L),
                                 UnitCost.ofEur("6.000000")))),
@@ -1112,7 +1121,7 @@ final class TradingQuarter {
         // is a service-only ON_ACCOUNT sale, moving no stock and owing 40.00 plus VAT.
         long onAccountSale = created("/api/sales-invoices",
                 NewSalesInvoice.of(id("customer:cafe"), id("series:store"),
-                        SettlementMethod.ON_ACCOUNT, "TEST-SI-2026-0008", MARCH_LAST,
+                        id("payment:credit"), "TEST-SI-2026-0008", MARCH_LAST,
                         List.of(NewSalesInvoiceLine.product(
                                 id("product:install"), Quantity.of(1L), UnitCost.ofEur("40.000000")))),
                 "an installation invoiced on account");
@@ -1164,7 +1173,7 @@ final class TradingQuarter {
         // mirror with no lot to have been re-costed underneath it (ADR 0011).
         long strandedSale = created("/api/sales-invoices",
                 NewSalesInvoice.of(id("customer:cafe"), id("series:store"),
-                        SettlementMethod.ON_ACCOUNT, "TEST-SI-2026-0007", MARCH_LAST,
+                        id("payment:credit"), "TEST-SI-2026-0007", MARCH_LAST,
                         List.of(NewSalesInvoiceLine.product(
                                 id("product:install"), Quantity.of(1L), UnitCost.ofEur("40.000000")))),
                 "a sale billed to the wrong customer");
@@ -1180,7 +1189,7 @@ final class TradingQuarter {
         // that was never charged." Another case of the system being right and the narrative wrong.
         JsonNode creditable = Json.ok(api.post("/api/sales-invoices", NewSalesInvoice.of(
                         id("customer:cafe"), id("series:store"),
-                        SettlementMethod.ON_ACCOUNT, "TEST-SI-2026-0009", MARCH_LAST,
+                        id("payment:credit"), "TEST-SI-2026-0009", MARCH_LAST,
                         List.of(NewSalesInvoiceLine.product(id("product:install"),
                                 Quantity.of(1L), UnitCost.ofEur("40.000000"))))),
                 "a second installation, invoiced on account");
@@ -1282,6 +1291,46 @@ final class TradingQuarter {
      * fix; the overload staying is deliberate, since raw-JSON requests are what the refusal matrix
      * needs.
      */
+    /**
+     * ⚠️ The four payment methods this narrative settles with, authored through the API.
+     *
+     * <p>The article codes are annex 8.12's and are used only where they are unambiguous —
+     * 3 Μετρητά, 7 POS / e-POS, 5 Επί Πιστώσει, 1 Επαγ. Λογαριασμός Πληρωμών Ημεδαπής.
+     * ⚠️ <strong>Skroutz is given 5 as a TEST convention and not as a statutory decision:</strong>
+     * which article a marketplace, a courier cash-on-delivery, PayPal or Stripe declares is HELD
+     * with the owner and his accountant, and a seeder must not settle it by picking something
+     * plausible.
+     */
+    private void seedPaymentMethods() {
+        Map<Integer, Long> articles = new LinkedHashMap<>();
+        for (JsonNode article : Json.items(
+                api.get("/api/aade-payment-methods"), "the AADE payment-method articles")) {
+            articles.put(article.get("code").asInt(), article.get("id").asLong());
+        }
+        assertThat(articles).as("V37 seeds annex 8.12's eight articles").hasSize(8);
+
+        handles.put("payment:cash", created("/api/payment-methods",
+                new NewPaymentMethod("TEST-CASH", "TEST Μετρητά", articles.get(3),
+                        id("account:CASH"), SORT_CODES.incrementAndGet()),
+                "the cash payment method"));
+        handles.put("payment:card", created("/api/payment-methods",
+                new NewPaymentMethod("TEST-CARD", "TEST Κάρτα (POS)", articles.get(7),
+                        id("account:PARTNER_CLEARING_POS"), SORT_CODES.incrementAndGet()),
+                "the card payment method"));
+        handles.put("payment:credit", created("/api/payment-methods",
+                new NewPaymentMethod("TEST-CRED", "TEST Επί πιστώσει", articles.get(5),
+                        id("account:ACCOUNTS_RECEIVABLE"), SORT_CODES.incrementAndGet()),
+                "the on-account payment method"));
+        handles.put("payment:bank", created("/api/payment-methods",
+                new NewPaymentMethod("TEST-BANK", "TEST Κατάθεση σε λογαριασμό", articles.get(1),
+                        id("account:ACCOUNTS_RECEIVABLE"), SORT_CODES.incrementAndGet()),
+                "the bank-deposit payment method"));
+        handles.put("payment:skroutz", created("/api/payment-methods",
+                new NewPaymentMethod("TEST-SKRZ", "TEST Skroutz", articles.get(5),
+                        id("account:PARTNER_CLEARING_SKROUTZ"), SORT_CODES.incrementAndGet()),
+                "the Skroutz payment method"));
+    }
+
     private long created(String path, Object body, String what) {
         return Json.createdId(api.post(path, body), what);
     }

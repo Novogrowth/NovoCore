@@ -691,6 +691,55 @@ resumption point: the step was scoped at 26 sub-parts and six of them consumed a
 rule's own scoping paragraph — which had exempted *reasons* from needing a checkable referent, two
 commits before a reason was the thing that went wrong.
 
+🟡 **2026-08-06, LATER — ALL MODULES BUILD AND RUN; THREE SPEC-DRIFT TESTS FAIL BY DESIGN.**
+
+```
+./mvnw clean verify          (every module, from clean)
+[ERROR] Tests run: 294, Failures: 3, Errors: 0, Skipped: 0     <- app
+[INFO]  BUILD FAILURE
+```
+
+⚠️ **The three are ALL of them, and all three read the COMMITTED SPEC:**
+`OpenApiSpecIT.theSpecMatchesTheSurface`, and both
+`SerialisedRecordContractIT.theSpecDocumentsExactlyWhatJacksonWrites` and
+`…noRequestSchemaDocumentsADerivedProperty`. **Spec regeneration was excluded from the session that
+made the routes change**, so the spec is stale on purpose and these three are the tests whose whole
+job is to say so. **`core` is fully green (806 tests); `core-api` and `architecture-tests` are green.**
+
+⚠️ **THE OBJECTIVE AND THE EXCLUSION WERE IN CONFLICT AND THE EXCLUSION WON.** *"Green across all
+modules"* is unreachable while `-Dnovocore.openapi.write=true` is off the table: the surface gained
+routes, `OpenApiSpecIT` exists to fail when it does, and it names the fix in its own message. **The
+build is not green and is not claimed to be.**
+
+📌 **The single next action is the regen** — `./mvnw verify -Dnovocore.openapi.write=true`, then the
+client, then a re-run. Nothing else is known to be failing.
+
+### ⚠️ THE SORT-CODE COLLISION IS NOT CLOSED. It is still FOUR allocators, and that is a known hole
+
+**Reported as a strategy question rather than as four fixed failures, because fixing the failures did
+not fix the cause.** Sort codes are `UNIQUE` on `payment_method`, and the allocators are:
+
+| Where | Strategy |
+|---|---|
+| `PaymentMethodFixture` (core) | `max + 10` |
+| `PaymentMethodIT` (core) | `max + 10` — **the same strategy, a second implementation** |
+| `TradingQuarter` (app) | a shared `AtomicInteger` counter |
+| `PaymentMethods` (app) | derived from a discriminator's hash, offset into 200 000+ |
+
+⭐ **The two core-side ones now agree, which is what stopped the four failures.** They agree *by
+having been edited to*, not by construction — **there is still no single allocator**, and the next
+test class to author a payment method will pick whichever it copies.
+
+**Why the app-side two have not collided:** the contract ITs run against their own database and
+`TradingQuarter`'s counter is namespaced within one run. ⚠️ **That is an argument from the current
+arrangement, not a guarantee** — it is the same shape as the *"identical for every existing row"*
+justification `CLAUDE.md` warns about under R1b.
+
+📌 **What it would take to close it:** one allocator all four call, or a non-unique sort code. **Not
+done, and stated as open rather than left to be rediscovered by the next collision.**
+
+*(The green record below was true of `core` alone and is kept for its verdict.)*
+
 🟢 **RESOLVED 2026-08-06 — THE BRANCH IS GREEN. Verdict quoted, not summarised:**
 
 ```

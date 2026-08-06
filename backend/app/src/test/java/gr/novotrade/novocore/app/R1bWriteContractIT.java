@@ -71,6 +71,9 @@ class R1bWriteContractIT {
      * outlives the instance.
      */
     private static long customerId;
+
+    /** ⚠️ R4 ships payment_method EMPTY — this test authors the method it settles with. */
+    private static long paymentMethodId;
     private static long productId;
     private static long movingSeriesId;
     private static long nonMovingSeriesId;
@@ -91,6 +94,8 @@ class R1bWriteContractIT {
                 .mapToLong(customer -> customer.get("id").asLong())
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("no system customer to sell to"));
+
+        paymentMethodId = PaymentMethods.onAccount(owner, "r1b-write");
 
         long unitId = Json.items(owner.get("/api/units-of-measure"), "the units").getFirst()
                 .get("id").asLong();
@@ -140,11 +145,11 @@ class R1bWriteContractIT {
     /** The exact body an F5 form will send — no {@code channel}, a {@code seriesId}. */
     private String saleIn(long seriesId, String documentNumber) {
         return """
-                {"customerId":%d,"seriesId":%d,"settlementMethod":"ON_ACCOUNT",
+                {"customerId":%d,"seriesId":%d,"paymentMethodId":%d,
                  "documentNumber":"%s","invoiceDate":"2026-07-20",
                  "lines":[{"lineType":"PRODUCT","productId":%d,"quantity":"2.000000",
                            "unitPrice":{"amount":"50.000000","currency":"EUR"}}]}
-                """.formatted(customerId, seriesId, documentNumber, productId);
+                """.formatted(customerId, seriesId, paymentMethodId, documentNumber, productId);
     }
 
     private static String number(String suffix) {
@@ -239,10 +244,10 @@ class R1bWriteContractIT {
         // Required.field rather than requireNonNull is what makes this message exist. Only the wire
         // can show which of the two a caller actually gets.
         ResponseEntity<String> response = owner.post("/api/sales-invoices", """
-                {"customerId":%d,"settlementMethod":"ON_ACCOUNT","documentNumber":"%s",
+                {"customerId":%d,"paymentMethodId":%d,"documentNumber":"%s",
                  "invoiceDate":"2026-07-20","lines":[{"lineType":"PRODUCT","productId":%d,
                  "quantity":"1.000000","unitPrice":{"amount":"50.000000","currency":"EUR"}}]}
-                """.formatted(customerId, number("NOSERIES"), productId));
+                """.formatted(customerId, paymentMethodId, number("NOSERIES"), productId));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody())

@@ -79,6 +79,9 @@ class F5WriteContractIT {
      * whose SKU already exists — which the server correctly refuses.
      */
     private static long customerId;
+
+    /** ⚠️ R4 ships payment_method EMPTY — this test authors the method it settles with. */
+    private static long paymentMethodId;
     private static long productId;
     private static long seriesId;
 
@@ -95,6 +98,8 @@ class F5WriteContractIT {
                 .mapToLong(customer -> customer.get("id").asLong())
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("no system customer to sell to"));
+
+        paymentMethodId = PaymentMethods.onAccount(owner, "f5-write");
 
         long unitId = Json.items(owner.get("/api/units-of-measure"), "the units").getFirst()
                 .get("id").asLong();
@@ -124,12 +129,12 @@ class F5WriteContractIT {
     /** Exactly what {@code sales-invoice-record.tsx} builds — plus an optional stated total. */
     private String saleBody(String documentNumber, String quantity, String statedTotal) {
         return """
-                {"customerId":%d,"seriesId":%d,"settlementMethod":"ON_ACCOUNT",
+                {"customerId":%d,"seriesId":%d,"paymentMethodId":%d,
                  "documentNumber":"%s","invoiceDate":"2026-07-20",%s
                  "lines":[{"lineType":"PRODUCT","productId":%d,"quantity":"%s",
                            "unitPrice":{"amount":"10.000000","currency":"EUR"},
                            "serialNumbers":[]}]}
-                """.formatted(customerId, seriesId, documentNumber,
+                """.formatted(customerId, seriesId, paymentMethodId, documentNumber,
                         statedTotal == null
                                 ? ""
                                 : "\"statedTotal\":{\"amount\":\"" + statedTotal
@@ -170,7 +175,7 @@ class F5WriteContractIT {
         // The screen renders these three as DERIVED, with a line saying so. That claim is only true
         // if the server really supplies them from the invoice — nothing in the request did.
         assertThat(Json.text(note, "channel")).isEqualTo("ECOMMERCE");
-        assertThat(Json.text(note, "settlementMethod")).isEqualTo("ON_ACCOUNT");
+        assertThat(note.get("paymentMethodId").asLong()).isEqualTo(paymentMethodId);
         assertThat(note.get("customerId").asLong()).isEqualTo(customerId);
         assertThat(Json.text(note, "salesInvoiceNumber"))
                 .as("the list links each note to the sale it credits, so the number has to be on "
@@ -282,10 +287,10 @@ class F5WriteContractIT {
     @DisplayName("an omitted documentNumber is refused NAMING the field, on both document routes")
     void anOmittedDocumentNumberIsNamed() {
         ResponseEntity<String> sale = owner.post("/api/sales-invoices", """
-                {"customerId":%d,"seriesId":%d,"settlementMethod":"ON_ACCOUNT",
+                {"customerId":%d,"seriesId":%d,"paymentMethodId":%d,
                  "invoiceDate":"2026-07-20","lines":[{"lineType":"PRODUCT","productId":%d,
                  "quantity":"1.000000","unitPrice":{"amount":"10.000000","currency":"EUR"}}]}
-                """.formatted(customerId, seriesId, productId));
+                """.formatted(customerId, seriesId, paymentMethodId, productId));
 
         assertThat(sale.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(sale.getBody())

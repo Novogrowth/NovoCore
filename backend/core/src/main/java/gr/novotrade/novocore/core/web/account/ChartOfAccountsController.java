@@ -111,6 +111,20 @@ class ChartOfAccountsController {
         return ListResponse.of(chartOfAccounts.activeSettlementTargets());
     }
 
+    /**
+     * The accounts a PAYMENT METHOD may reconcile to — settlement targets PLUS Accounts receivable.
+     *
+     * <p>⚠️ A second route rather than a widened {@code /settlement-targets}, because the two answer
+     * different questions: that one is the money side of a Receipt, and letting a Receipt settle
+     * into Accounts receivable would allocate a receivable against itself. See
+     * {@code ChartOfAccountsService.activePaymentMethodTargets()}.
+     */
+    @GetMapping(path = "/api/accounts/payment-method-targets",
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    ListResponse<AccountView> paymentMethodTargets() {
+        return ListResponse.of(chartOfAccounts.activePaymentMethodTargets());
+    }
+
     @GetMapping(path = "/api/accounts/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     AccountView account(@PathVariable long id) {
         return chartOfAccounts.requireAccount(id);

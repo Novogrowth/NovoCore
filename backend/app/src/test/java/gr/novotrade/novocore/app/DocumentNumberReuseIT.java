@@ -79,6 +79,9 @@ class DocumentNumberReuseIT {
     private ApiClient.Session owner;
 
     private static long customerId;
+
+    /** ⚠️ R4 ships payment_method EMPTY — this test authors the method it settles with. */
+    private static long paymentMethodId;
     private static long seriesId;
     private static long otherSeriesId;
 
@@ -94,6 +97,8 @@ class DocumentNumberReuseIT {
                 .mapToLong(customer -> customer.get("id").asLong())
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("no system customer to sell to"));
+
+        paymentMethodId = PaymentMethods.onAccount(owner, "doc-number-reuse");
 
         // ⚠️ A NON-STOCK-MOVING type, deliberately. A stock-moving one creates a consumption whose
         // whole quantity is an unbacked shortfall on an empty database, and reversing THAT is refused
@@ -114,11 +119,11 @@ class DocumentNumberReuseIT {
 
     private String sale(long series, String number) {
         return """
-                {"customerId":%d,"seriesId":%d,"settlementMethod":"ON_ACCOUNT",
+                {"customerId":%d,"seriesId":%d,"paymentMethodId":%d,
                  "documentNumber":"%s","invoiceDate":"2026-07-20",
                  "lines":[{"lineType":"CHARGE","chargeTypeId":1,"quantity":"1.000000",
                            "unitPrice":{"amount":"10.000000","currency":"EUR"}}]}
-                """.formatted(customerId, series, number);
+                """.formatted(customerId, series, paymentMethodId, number);
     }
 
     private String note(long invoiceId, long lineId, String number) {

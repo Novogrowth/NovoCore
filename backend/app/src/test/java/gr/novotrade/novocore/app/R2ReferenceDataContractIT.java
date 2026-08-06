@@ -68,6 +68,9 @@ class R2ReferenceDataContractIT {
 
     /** Static for the reason {@code R1bWriteContractIT} states: JUnit rebuilds the instance. */
     private static long customerId;
+
+    /** ⚠️ R4 ships payment_method EMPTY — this test authors the method it settles with. */
+    private static long paymentMethodId;
     private static long productId;
     private static long typeId;
     private static long otherTypeId;
@@ -85,6 +88,8 @@ class R2ReferenceDataContractIT {
                 .mapToLong(customer -> customer.get("id").asLong())
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("no system customer to sell to"));
+
+        paymentMethodId = PaymentMethods.onAccount(owner, "r2-reference-data");
 
         long unitId = Json.items(owner.get("/api/units-of-measure"), "the units").getFirst()
                 .get("id").asLong();
@@ -391,11 +396,11 @@ class R2ReferenceDataContractIT {
      */
     private void recordAnInvoiceIn(long seriesId) {
         Json.createdId(owner.post("/api/sales-invoices", """
-                {"customerId":%d,"seriesId":%d,"settlementMethod":"ON_ACCOUNT",
+                {"customerId":%d,"seriesId":%d,"paymentMethodId":%d,
                  "documentNumber":"R2-%d-0001","invoiceDate":"2026-03-01",
                  "lines":[{"lineType":"PRODUCT","productId":%d,"quantity":"1.000000",
                            "unitPrice":{"amount":"50.000000","currency":"EUR"}}]}
-                """.formatted(customerId, seriesId, seriesId, productId)),
+                """.formatted(customerId, seriesId, paymentMethodId, seriesId, productId)),
                 "the invoice that uses the series");
     }
 
