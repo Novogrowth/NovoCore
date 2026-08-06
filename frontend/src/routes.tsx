@@ -9,6 +9,9 @@ import { NoAccess, NotFound, ScreenPlaceholder } from '@/pages/placeholder'
 import { ProductCreate } from '@/pages/products/product-create'
 import { ProductDetail } from '@/pages/products/product-detail'
 import { ProductsList } from '@/pages/products/products-list'
+import { CreditNoteDetail } from '@/pages/credit-notes/credit-note-detail'
+import { CreditNoteRecord } from '@/pages/credit-notes/credit-note-record'
+import { CreditNotesList } from '@/pages/credit-notes/credit-notes-list'
 import { CustomerCreate } from '@/pages/customers/customer-create'
 import { CustomerDetail } from '@/pages/customers/customer-detail'
 import { CustomersList } from '@/pages/customers/customers-list'
@@ -101,6 +104,7 @@ const SCREENS: Record<string, () => ReactElement> = {
   '/settings/payment-methods': PaymentMethodsList,
   '/settings/aade-invoice-types': AadeInvoiceTypesList,
   '/sales/invoices': SalesInvoicesList,
+  '/sales/credit-notes': CreditNotesList,
 }
 
 /**
@@ -154,6 +158,11 @@ const CHILD_ROUTES: { path: string; owner: string; element: () => ReactElement }
   // assumed: PATCH answers 404 and DELETE answers 405. Correction is reversal or a credit note.
   { path: '/sales/invoices/new', owner: 'sales.invoices', element: SalesInvoiceRecord },
   { path: '/sales/invoices/:id', owner: 'sales.invoices', element: SalesInvoiceDetail },
+  // ⚠️ NO `/sales/credit-notes/:id/edit`, for the same two reasons: a posted document is immutable,
+  // and this one exists outside Novocore. Correction is reversal — which is itself transitional,
+  // because once the adapter exists the fix for a wrong mirror is a re-fetch (`CLAUDE.md` §1b).
+  { path: '/sales/credit-notes/new', owner: 'sales.creditNotes', element: CreditNoteRecord },
+  { path: '/sales/credit-notes/:id', owner: 'sales.creditNotes', element: CreditNoteDetail },
 ]
 
 function RouteElement({ node, screen }: { node: NavNode; screen?: () => ReactElement }) {
