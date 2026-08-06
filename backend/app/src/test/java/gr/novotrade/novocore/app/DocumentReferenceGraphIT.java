@@ -131,6 +131,37 @@ class DocumentReferenceGraphIT {
     }
 
     @Test
+    @DisplayName("⚠️ R4/A.9 — payment_method IS referenced, so ITS freeze is reachable too")
+    void paymentMethodIsReferenced() {
+        // ⭐ WHY THIS ROW EXISTS AT ALL, and why it could not before R4. Until V37, NOTHING in the
+        // database referenced payment_method: sales_invoice carried the enum NAME in a varchar with
+        // a CHECK, so "has this method been used" was a string comparison and the freeze predicate
+        // was not expressible as a reference. V37 made it a foreign key, which is what made this
+        // pinnable.
+        //
+        // ⚠️ It is the POSITIVE control for the two emptiness assertions in this class, and that
+        // matters more than the assertion itself: "nothing references delivery_method" and "nothing
+        // references purchase_document_series" would pass just as happily against a typo in the SQL,
+        // a wrong catalogue column, or a connection to an empty schema. A non-empty expected set
+        // proves the query can see references at all.
+        assertThat(referencesTo("payment_method"))
+                .as("""
+                        The reference from sales_invoice to payment_method has gone.                         PaymentMethodView.inUse and PaymentMethodServiceImpl.requireNothingRecorded                         both depend on it: without a foreign key the freeze silently stops being                         expressible, which is the state R4 found this table in.""")
+                .containsExactly("sales_invoice.payment_method_id");
+    }
+
+    @Test
+    @DisplayName("⚠️ R4/A.9 — the codification is referenced BY the business list, which is the two-layer shape")
+    void theCodificationIsReferencedByTheBusinessList() {
+        // The whole R4 correction in one assertion: payment methods are a BUSINESS list that
+        // REFERENCES an AADE codification. If this reference disappears, somebody has collapsed the
+        // two layers back into one — which is the mistake R1a had to correct for document types and
+        // R4 had to correct here.
+        assertThat(referencesTo("aade_payment_method"))
+                .containsExactly("payment_method.aade_payment_method_id");
+    }
+
+    @Test
     @DisplayName("the sales series' freeze IS reachable, and this is what makes the other two meaningful")
     void aSalesSeriesIsReferencedByAnInvoice() {
         // ⚠️ The positive control. Without it the two assertions above would pass just as happily

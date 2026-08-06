@@ -28,7 +28,15 @@ import type {
 
 import type {
   ListResponsePaymentMethodView,
+  NewPaymentMethod,
+  PaymentMethodAbbreviationRequest,
+  PaymentMethodAccountRequest,
+  PaymentMethodArticleRequest,
+  PaymentMethodControllerChangeAbbreviation4xx,
+  PaymentMethodControllerChangeAccount4xx,
+  PaymentMethodControllerChangeArticle4xx,
   PaymentMethodControllerChangeSortCode4xx,
+  PaymentMethodControllerCreatePaymentMethod4xx,
   PaymentMethodControllerDeactivate4xx,
   PaymentMethodControllerDescribe4xx,
   PaymentMethodControllerPaymentMethod4xx,
@@ -37,8 +45,7 @@ import type {
   PaymentMethodControllerReactivate4xx,
   PaymentMethodDescriptionRequest,
   PaymentMethodSortCodeRequest,
-  PaymentMethodView,
-  SettlementMethod
+  PaymentMethodView
 } from '../../model';
 
 import { apiMutator } from '../../../http';
@@ -148,14 +155,16 @@ export function usePaymentMethodControllerPaymentMethods<TData = Awaited<ReturnT
 
 
 
-export const paymentMethodControllerPaymentMethod = (
-    method: SettlementMethod,
+export const paymentMethodControllerCreatePaymentMethod = (
+    newPaymentMethod: NewPaymentMethod,
  signal?: AbortSignal
 ) => {
 
 
       return apiMutator<PaymentMethodView>(
-      {url: `/api/payment-methods/${method}`, method: 'GET', signal
+      {url: `/api/payment-methods`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: newPaymentMethod, signal
     },
       );
     }
@@ -163,29 +172,85 @@ export const paymentMethodControllerPaymentMethod = (
 
 
 
-export const getPaymentMethodControllerPaymentMethodQueryKey = (method: SettlementMethod,) => {
+export const getPaymentMethodControllerCreatePaymentMethodMutationOptions = <TError = PaymentMethodControllerCreatePaymentMethod4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerCreatePaymentMethod>>, TError,{data: NewPaymentMethod}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerCreatePaymentMethod>>, TError,{data: NewPaymentMethod}, TContext> => {
+
+const mutationKey = ['paymentMethodControllerCreatePaymentMethod'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paymentMethodControllerCreatePaymentMethod>>, {data: NewPaymentMethod}> = (props) => {
+          const {data} = props ?? {};
+
+          return  paymentMethodControllerCreatePaymentMethod(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PaymentMethodControllerCreatePaymentMethodMutationResult = NonNullable<Awaited<ReturnType<typeof paymentMethodControllerCreatePaymentMethod>>>
+    export type PaymentMethodControllerCreatePaymentMethodMutationBody = NewPaymentMethod
+    export type PaymentMethodControllerCreatePaymentMethodMutationError = PaymentMethodControllerCreatePaymentMethod4xx
+
+    export const usePaymentMethodControllerCreatePaymentMethod = <TError = PaymentMethodControllerCreatePaymentMethod4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerCreatePaymentMethod>>, TError,{data: NewPaymentMethod}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof paymentMethodControllerCreatePaymentMethod>>,
+        TError,
+        {data: NewPaymentMethod},
+        TContext
+      > => {
+      return useMutation(getPaymentMethodControllerCreatePaymentMethodMutationOptions(options), queryClient);
+    }
+    export const paymentMethodControllerPaymentMethod = (
+    id: number,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<PaymentMethodView>(
+      {url: `/api/payment-methods/${id}`, method: 'GET', signal
+    },
+      );
+    }
+
+
+
+
+export const getPaymentMethodControllerPaymentMethodQueryKey = (id: number,) => {
     return [
-    `/api/payment-methods/${method}`
+    `/api/payment-methods/${id}`
     ] as const;
     }
 
 
-export const getPaymentMethodControllerPaymentMethodQueryOptions = <TData = Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>, TError = PaymentMethodControllerPaymentMethod4xx>(method: SettlementMethod, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>, TError, TData>>, }
+export const getPaymentMethodControllerPaymentMethodQueryOptions = <TData = Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>, TError = PaymentMethodControllerPaymentMethod4xx>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getPaymentMethodControllerPaymentMethodQueryKey(method);
+  const queryKey =  queryOptions?.queryKey ?? getPaymentMethodControllerPaymentMethodQueryKey(id);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>> = ({ signal }) => paymentMethodControllerPaymentMethod(method, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>> = ({ signal }) => paymentMethodControllerPaymentMethod(id, signal);
 
 
 
 
 
-   return  { queryKey, queryFn, enabled: method !== null && method !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type PaymentMethodControllerPaymentMethodQueryResult = NonNullable<Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>>
@@ -193,7 +258,7 @@ export type PaymentMethodControllerPaymentMethodQueryError = PaymentMethodContro
 
 
 export function usePaymentMethodControllerPaymentMethod<TData = Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>, TError = PaymentMethodControllerPaymentMethod4xx>(
- method: SettlementMethod, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>, TError, TData>> & Pick<
+ id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>,
           TError,
@@ -203,7 +268,7 @@ export function usePaymentMethodControllerPaymentMethod<TData = Awaited<ReturnTy
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function usePaymentMethodControllerPaymentMethod<TData = Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>, TError = PaymentMethodControllerPaymentMethod4xx>(
- method: SettlementMethod, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>, TError, TData>> & Pick<
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>,
           TError,
@@ -213,16 +278,16 @@ export function usePaymentMethodControllerPaymentMethod<TData = Awaited<ReturnTy
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function usePaymentMethodControllerPaymentMethod<TData = Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>, TError = PaymentMethodControllerPaymentMethod4xx>(
- method: SettlementMethod, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>, TError, TData>>, }
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>, TError, TData>>, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function usePaymentMethodControllerPaymentMethod<TData = Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>, TError = PaymentMethodControllerPaymentMethod4xx>(
- method: SettlementMethod, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>, TError, TData>>, }
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof paymentMethodControllerPaymentMethod>>, TError, TData>>, }
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getPaymentMethodControllerPaymentMethodQueryOptions(method,options)
+  const queryOptions = getPaymentMethodControllerPaymentMethodQueryOptions(id,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -234,14 +299,191 @@ export function usePaymentMethodControllerPaymentMethod<TData = Awaited<ReturnTy
 
 
 
-export const paymentMethodControllerDeactivate = (
-    method: SettlementMethod,
+export const paymentMethodControllerChangeArticle = (
+    id: number,
+    paymentMethodArticleRequest: PaymentMethodArticleRequest,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<PaymentMethodView>(
+      {url: `/api/payment-methods/${id}/aade-article`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: paymentMethodArticleRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getPaymentMethodControllerChangeArticleMutationOptions = <TError = PaymentMethodControllerChangeArticle4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerChangeArticle>>, TError,{id: number;data: PaymentMethodArticleRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerChangeArticle>>, TError,{id: number;data: PaymentMethodArticleRequest}, TContext> => {
+
+const mutationKey = ['paymentMethodControllerChangeArticle'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paymentMethodControllerChangeArticle>>, {id: number;data: PaymentMethodArticleRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  paymentMethodControllerChangeArticle(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PaymentMethodControllerChangeArticleMutationResult = NonNullable<Awaited<ReturnType<typeof paymentMethodControllerChangeArticle>>>
+    export type PaymentMethodControllerChangeArticleMutationBody = PaymentMethodArticleRequest
+    export type PaymentMethodControllerChangeArticleMutationError = PaymentMethodControllerChangeArticle4xx
+
+    export const usePaymentMethodControllerChangeArticle = <TError = PaymentMethodControllerChangeArticle4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerChangeArticle>>, TError,{id: number;data: PaymentMethodArticleRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof paymentMethodControllerChangeArticle>>,
+        TError,
+        {id: number;data: PaymentMethodArticleRequest},
+        TContext
+      > => {
+      return useMutation(getPaymentMethodControllerChangeArticleMutationOptions(options), queryClient);
+    }
+    export const paymentMethodControllerChangeAbbreviation = (
+    id: number,
+    paymentMethodAbbreviationRequest: PaymentMethodAbbreviationRequest,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<PaymentMethodView>(
+      {url: `/api/payment-methods/${id}/abbreviation`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: paymentMethodAbbreviationRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getPaymentMethodControllerChangeAbbreviationMutationOptions = <TError = PaymentMethodControllerChangeAbbreviation4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerChangeAbbreviation>>, TError,{id: number;data: PaymentMethodAbbreviationRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerChangeAbbreviation>>, TError,{id: number;data: PaymentMethodAbbreviationRequest}, TContext> => {
+
+const mutationKey = ['paymentMethodControllerChangeAbbreviation'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paymentMethodControllerChangeAbbreviation>>, {id: number;data: PaymentMethodAbbreviationRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  paymentMethodControllerChangeAbbreviation(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PaymentMethodControllerChangeAbbreviationMutationResult = NonNullable<Awaited<ReturnType<typeof paymentMethodControllerChangeAbbreviation>>>
+    export type PaymentMethodControllerChangeAbbreviationMutationBody = PaymentMethodAbbreviationRequest
+    export type PaymentMethodControllerChangeAbbreviationMutationError = PaymentMethodControllerChangeAbbreviation4xx
+
+    export const usePaymentMethodControllerChangeAbbreviation = <TError = PaymentMethodControllerChangeAbbreviation4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerChangeAbbreviation>>, TError,{id: number;data: PaymentMethodAbbreviationRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof paymentMethodControllerChangeAbbreviation>>,
+        TError,
+        {id: number;data: PaymentMethodAbbreviationRequest},
+        TContext
+      > => {
+      return useMutation(getPaymentMethodControllerChangeAbbreviationMutationOptions(options), queryClient);
+    }
+    export const paymentMethodControllerChangeAccount = (
+    id: number,
+    paymentMethodAccountRequest: PaymentMethodAccountRequest,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<PaymentMethodView>(
+      {url: `/api/payment-methods/${id}/account`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: paymentMethodAccountRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getPaymentMethodControllerChangeAccountMutationOptions = <TError = PaymentMethodControllerChangeAccount4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerChangeAccount>>, TError,{id: number;data: PaymentMethodAccountRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerChangeAccount>>, TError,{id: number;data: PaymentMethodAccountRequest}, TContext> => {
+
+const mutationKey = ['paymentMethodControllerChangeAccount'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paymentMethodControllerChangeAccount>>, {id: number;data: PaymentMethodAccountRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  paymentMethodControllerChangeAccount(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PaymentMethodControllerChangeAccountMutationResult = NonNullable<Awaited<ReturnType<typeof paymentMethodControllerChangeAccount>>>
+    export type PaymentMethodControllerChangeAccountMutationBody = PaymentMethodAccountRequest
+    export type PaymentMethodControllerChangeAccountMutationError = PaymentMethodControllerChangeAccount4xx
+
+    export const usePaymentMethodControllerChangeAccount = <TError = PaymentMethodControllerChangeAccount4xx,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerChangeAccount>>, TError,{id: number;data: PaymentMethodAccountRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof paymentMethodControllerChangeAccount>>,
+        TError,
+        {id: number;data: PaymentMethodAccountRequest},
+        TContext
+      > => {
+      return useMutation(getPaymentMethodControllerChangeAccountMutationOptions(options), queryClient);
+    }
+    export const paymentMethodControllerDeactivate = (
+    id: number,
  signal?: AbortSignal
 ) => {
 
 
       return apiMutator<void>(
-      {url: `/api/payment-methods/${method}/deactivate`, method: 'POST', signal
+      {url: `/api/payment-methods/${id}/deactivate`, method: 'POST', signal
     },
       );
     }
@@ -250,8 +492,8 @@ export const paymentMethodControllerDeactivate = (
 
 
 export const getPaymentMethodControllerDeactivateMutationOptions = <TError = PaymentMethodControllerDeactivate4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerDeactivate>>, TError,{method: SettlementMethod}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerDeactivate>>, TError,{method: SettlementMethod}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerDeactivate>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerDeactivate>>, TError,{id: number}, TContext> => {
 
 const mutationKey = ['paymentMethodControllerDeactivate'];
 const {mutation: mutationOptions} = options ?
@@ -263,10 +505,10 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paymentMethodControllerDeactivate>>, {method: SettlementMethod}> = (props) => {
-          const {method} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paymentMethodControllerDeactivate>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
 
-          return  paymentMethodControllerDeactivate(method,)
+          return  paymentMethodControllerDeactivate(id,)
         }
 
 
@@ -281,24 +523,24 @@ const {mutation: mutationOptions} = options ?
     export type PaymentMethodControllerDeactivateMutationError = PaymentMethodControllerDeactivate4xx
 
     export const usePaymentMethodControllerDeactivate = <TError = PaymentMethodControllerDeactivate4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerDeactivate>>, TError,{method: SettlementMethod}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerDeactivate>>, TError,{id: number}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof paymentMethodControllerDeactivate>>,
         TError,
-        {method: SettlementMethod},
+        {id: number},
         TContext
       > => {
       return useMutation(getPaymentMethodControllerDeactivateMutationOptions(options), queryClient);
     }
     export const paymentMethodControllerDescribe = (
-    method: SettlementMethod,
+    id: number,
     paymentMethodDescriptionRequest: PaymentMethodDescriptionRequest,
  signal?: AbortSignal
 ) => {
 
 
       return apiMutator<PaymentMethodView>(
-      {url: `/api/payment-methods/${method}/description`, method: 'PATCH',
+      {url: `/api/payment-methods/${id}/description`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
       data: paymentMethodDescriptionRequest, signal
     },
@@ -309,8 +551,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getPaymentMethodControllerDescribeMutationOptions = <TError = PaymentMethodControllerDescribe4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerDescribe>>, TError,{method: SettlementMethod;data: PaymentMethodDescriptionRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerDescribe>>, TError,{method: SettlementMethod;data: PaymentMethodDescriptionRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerDescribe>>, TError,{id: number;data: PaymentMethodDescriptionRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerDescribe>>, TError,{id: number;data: PaymentMethodDescriptionRequest}, TContext> => {
 
 const mutationKey = ['paymentMethodControllerDescribe'];
 const {mutation: mutationOptions} = options ?
@@ -322,10 +564,10 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paymentMethodControllerDescribe>>, {method: SettlementMethod;data: PaymentMethodDescriptionRequest}> = (props) => {
-          const {method,data} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paymentMethodControllerDescribe>>, {id: number;data: PaymentMethodDescriptionRequest}> = (props) => {
+          const {id,data} = props ?? {};
 
-          return  paymentMethodControllerDescribe(method,data,)
+          return  paymentMethodControllerDescribe(id,data,)
         }
 
 
@@ -340,23 +582,23 @@ const {mutation: mutationOptions} = options ?
     export type PaymentMethodControllerDescribeMutationError = PaymentMethodControllerDescribe4xx
 
     export const usePaymentMethodControllerDescribe = <TError = PaymentMethodControllerDescribe4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerDescribe>>, TError,{method: SettlementMethod;data: PaymentMethodDescriptionRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerDescribe>>, TError,{id: number;data: PaymentMethodDescriptionRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof paymentMethodControllerDescribe>>,
         TError,
-        {method: SettlementMethod;data: PaymentMethodDescriptionRequest},
+        {id: number;data: PaymentMethodDescriptionRequest},
         TContext
       > => {
       return useMutation(getPaymentMethodControllerDescribeMutationOptions(options), queryClient);
     }
     export const paymentMethodControllerReactivate = (
-    method: SettlementMethod,
+    id: number,
  signal?: AbortSignal
 ) => {
 
 
       return apiMutator<void>(
-      {url: `/api/payment-methods/${method}/reactivate`, method: 'POST', signal
+      {url: `/api/payment-methods/${id}/reactivate`, method: 'POST', signal
     },
       );
     }
@@ -365,8 +607,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getPaymentMethodControllerReactivateMutationOptions = <TError = PaymentMethodControllerReactivate4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerReactivate>>, TError,{method: SettlementMethod}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerReactivate>>, TError,{method: SettlementMethod}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerReactivate>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerReactivate>>, TError,{id: number}, TContext> => {
 
 const mutationKey = ['paymentMethodControllerReactivate'];
 const {mutation: mutationOptions} = options ?
@@ -378,10 +620,10 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paymentMethodControllerReactivate>>, {method: SettlementMethod}> = (props) => {
-          const {method} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paymentMethodControllerReactivate>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
 
-          return  paymentMethodControllerReactivate(method,)
+          return  paymentMethodControllerReactivate(id,)
         }
 
 
@@ -396,24 +638,24 @@ const {mutation: mutationOptions} = options ?
     export type PaymentMethodControllerReactivateMutationError = PaymentMethodControllerReactivate4xx
 
     export const usePaymentMethodControllerReactivate = <TError = PaymentMethodControllerReactivate4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerReactivate>>, TError,{method: SettlementMethod}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerReactivate>>, TError,{id: number}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof paymentMethodControllerReactivate>>,
         TError,
-        {method: SettlementMethod},
+        {id: number},
         TContext
       > => {
       return useMutation(getPaymentMethodControllerReactivateMutationOptions(options), queryClient);
     }
     export const paymentMethodControllerChangeSortCode = (
-    method: SettlementMethod,
+    id: number,
     paymentMethodSortCodeRequest: PaymentMethodSortCodeRequest,
  signal?: AbortSignal
 ) => {
 
 
       return apiMutator<PaymentMethodView>(
-      {url: `/api/payment-methods/${method}/sort-code`, method: 'PATCH',
+      {url: `/api/payment-methods/${id}/sort-code`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
       data: paymentMethodSortCodeRequest, signal
     },
@@ -424,8 +666,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getPaymentMethodControllerChangeSortCodeMutationOptions = <TError = PaymentMethodControllerChangeSortCode4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerChangeSortCode>>, TError,{method: SettlementMethod;data: PaymentMethodSortCodeRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerChangeSortCode>>, TError,{method: SettlementMethod;data: PaymentMethodSortCodeRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerChangeSortCode>>, TError,{id: number;data: PaymentMethodSortCodeRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerChangeSortCode>>, TError,{id: number;data: PaymentMethodSortCodeRequest}, TContext> => {
 
 const mutationKey = ['paymentMethodControllerChangeSortCode'];
 const {mutation: mutationOptions} = options ?
@@ -437,10 +679,10 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paymentMethodControllerChangeSortCode>>, {method: SettlementMethod;data: PaymentMethodSortCodeRequest}> = (props) => {
-          const {method,data} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paymentMethodControllerChangeSortCode>>, {id: number;data: PaymentMethodSortCodeRequest}> = (props) => {
+          const {id,data} = props ?? {};
 
-          return  paymentMethodControllerChangeSortCode(method,data,)
+          return  paymentMethodControllerChangeSortCode(id,data,)
         }
 
 
@@ -455,11 +697,11 @@ const {mutation: mutationOptions} = options ?
     export type PaymentMethodControllerChangeSortCodeMutationError = PaymentMethodControllerChangeSortCode4xx
 
     export const usePaymentMethodControllerChangeSortCode = <TError = PaymentMethodControllerChangeSortCode4xx,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerChangeSortCode>>, TError,{method: SettlementMethod;data: PaymentMethodSortCodeRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentMethodControllerChangeSortCode>>, TError,{id: number;data: PaymentMethodSortCodeRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof paymentMethodControllerChangeSortCode>>,
         TError,
-        {method: SettlementMethod;data: PaymentMethodSortCodeRequest},
+        {id: number;data: PaymentMethodSortCodeRequest},
         TContext
       > => {
       return useMutation(getPaymentMethodControllerChangeSortCodeMutationOptions(options), queryClient);

@@ -188,7 +188,7 @@ class PaymentMethodIT extends AbstractCoreIntegrationTest {
 
         assertThatExceptionOfType(InvalidPaymentMethodException.class)
                 .isThrownBy(() -> paymentMethods.create(new NewPaymentMethod(
-                        first.abbreviation(), "Another", article(3).id(), cash.id(), nextSortCode())))
+                        first.abbreviation(), "Another", article(3).id(), cash.id(), null)))
                 .withMessageContaining("already used");
 
         assertThatExceptionOfType(InvalidPaymentMethodException.class)
@@ -225,7 +225,8 @@ class PaymentMethodIT extends AbstractCoreIntegrationTest {
         AccountView pos = chartOfAccounts.requireAccount(AccountSystemKey.PARTNER_CLEARING_POS);
         assertThat(paymentMethods.changeAccount(id, pos.id()).accountId()).isEqualTo(pos.id());
 
-        int free = nextSortCode();
+        int free = paymentMethods.all().stream()
+                .mapToInt(PaymentMethodView::sortCode).max().orElse(0) + 10;
         assertThat(paymentMethods.changeSortCode(id, free).sortCode()).isEqualTo(free);
 
         paymentMethods.deactivate(id);
@@ -272,13 +273,9 @@ class PaymentMethodIT extends AbstractCoreIntegrationTest {
 
     private PaymentMethodView create(String description, int articleCode, AccountView account) {
         int n = SEQUENCE.getAndIncrement();
+        // ⚠️ null — the SERVICE allocates. See NewPaymentMethod.sortCode.
         return paymentMethods.create(new NewPaymentMethod(
-                "PMIT" + n, description + " " + n, article(articleCode).id(), account.id(),
-                nextSortCode()));
+                "PMIT" + n, description + " " + n, article(articleCode).id(), account.id(), null));
     }
 
-    private int nextSortCode() {
-        return paymentMethods.all().stream()
-                .mapToInt(PaymentMethodView::sortCode).max().orElse(0) + 10;
-    }
 }

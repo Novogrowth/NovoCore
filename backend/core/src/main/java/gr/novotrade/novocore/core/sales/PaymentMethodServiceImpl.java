@@ -86,13 +86,16 @@ class PaymentMethodServiceImpl implements PaymentMethodService {
     public PaymentMethodView create(NewPaymentMethod request) {
         String abbreviation = request.abbreviation();
         requireAbbreviationFree(abbreviation, null);
-        requireSortCodeFree(request.sortCode(), null);
+        // ⚠️ THE ONE ALLOCATOR. Null means "append at the end"; see NewPaymentMethod.sortCode for
+        // why this lives here rather than in each caller.
+        int sortCode = request.sortCode() == null ? nextSortCode() : request.sortCode();
+        requireSortCodeFree(sortCode, null);
 
         AadePaymentMethodView article = requireUsableArticle(request.aadePaymentMethodId());
         AccountView account = requirePermittedAccount(request.accountId());
 
         PaymentMethod saved = repository.save(new PaymentMethod(abbreviation, request.description(),
-                article.id(), account.id(), request.sortCode()));
+                article.id(), account.id(), sortCode));
 
         auditLog.record("payment-method.created", ENTITY_TYPE, String.valueOf(saved.getId()),
                 Map.of("abbreviation", abbreviation,
@@ -222,6 +225,12 @@ class PaymentMethodServiceImpl implements PaymentMethodService {
     // -------------------------------------------------------------------------------------------
     // Guards
     // -------------------------------------------------------------------------------------------
+
+    /** The one place a sort code is invented. Ten-spaced, so a row can be slid between two. */
+    private int nextSortCode() {
+        return repository.findAllByOrderBySortCodeAsc().stream()
+                .mapToInt(PaymentMethod::getSortCode).max().orElse(0) + 10;
+    }
 
     private PaymentMethod load(long id) {
         return repository.findById(id).orElseThrow(() -> new PaymentMethodNotFoundException(id));

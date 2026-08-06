@@ -10,7 +10,6 @@
 import type { Money } from './money';
 import type { SalesChannel } from './salesChannel';
 import type { SalesInvoiceLineView } from './salesInvoiceLineView';
-import type { SettlementMethod } from './settlementMethod';
 import type { TransmissionStatus } from './transmissionStatus';
 
 export interface SalesInvoiceView {
@@ -18,7 +17,9 @@ export interface SalesInvoiceView {
   customerId: number;
   customerName: string;
   channel: SalesChannel;
-  settlementMethod: SettlementMethod;
+  paymentMethodId: number;
+  paymentMethodDescription: string;
+  settlesImmediately: boolean;
   documentNumber: string;
   invoiceDate: string;
   description?: string;

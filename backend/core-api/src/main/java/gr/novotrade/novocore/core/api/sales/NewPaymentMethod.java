@@ -31,15 +31,28 @@ import gr.novotrade.novocore.core.api.shared.Required;
  *     open. ⚠️ Validated against {@code ChartOfAccountsService.activePaymentMethodTargets()}, which is
  *     a <em>wider</em> set than a Receipt's settlement targets and deliberately a separate question —
  *     see {@code ChartOfAccountsService}.
- * @param sortCode ordering only; unique. A text sort puts {@code 1000} before {@code 900}, hence an
- *     {@code int}.
+ * @param sortCode ordering only, and ⚠️ <strong>OPTIONAL: null means "append at the end"</strong>,
+ *     which the service resolves to the highest in use plus ten.
+ *
+ *     <p>⚠️ <strong>It is the ONE allocator, and it is here rather than in the callers on purpose.
+ *     </strong> Four of them grew — two test fixtures, a seeder and a contract-test helper — and two
+ *     agreed only because somebody edited them to after a collision. The column is {@code UNIQUE},
+ *     so every caller inventing its own scheme is a collision waiting for the next one to be
+ *     written.
+ *
+ *     <p>⚠️ <strong>The uniqueness constraint STAYS and was not dropped.</strong> It protects a real
+ *     thing: this column is what a picker is ordered by, and two rows sharing a code makes the order
+ *     between them arbitrary — a list that shuffles between requests. Defaulting fabricates nothing,
+ *     because {@code V34} already records that <em>a sort code has no truth value</em> until somebody
+ *     chooses one; supplying "at the end" is not inventing an answer, it is declining to make the
+ *     caller invent one.
  */
 public record NewPaymentMethod(
         @Mandatory String abbreviation,
         @Mandatory String description,
         @Mandatory Long aadePaymentMethodId,
         @Mandatory Long accountId,
-        int sortCode) {
+        Integer sortCode) {
 
     public NewPaymentMethod {
         abbreviation = Required.text(abbreviation, "abbreviation");

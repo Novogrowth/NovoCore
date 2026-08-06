@@ -7,18 +7,7 @@
  * Every monetary amount, unit cost, quantity and rate is a STRING, never a JSON number. Sending a number where one of these is expected is refused.
  * OpenAPI spec version: 0.1.0
  */
-import type { Money } from './money';
-import type { NewSalesInvoiceLine } from './newSalesInvoiceLine';
 
-export interface NewSalesInvoice {
-  customerId: number;
-  seriesId: number;
-  paymentMethodId: number;
-  documentNumber: string;
-  invoiceDate: string;
-  description?: string;
-  statedTotal?: Money;
-  roundingAcceptedBy?: string;
-  roundingNote?: string;
-  lines: NewSalesInvoiceLine[];
+export interface AadePaymentMethodDescriptionRequest {
+  description: string;
 }

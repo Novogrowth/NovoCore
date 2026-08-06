@@ -10,7 +10,6 @@
 import type { CreditNoteLineView } from './creditNoteLineView';
 import type { Money } from './money';
 import type { SalesChannel } from './salesChannel';
-import type { SettlementMethod } from './settlementMethod';
 
 export interface CreditNoteView {
   id: number;
@@ -19,7 +18,9 @@ export interface CreditNoteView {
   customerId: number;
   customerName: string;
   channel: SalesChannel;
-  settlementMethod?: SettlementMethod;
+  paymentMethodId: number;
+  paymentMethodDescription: string;
+  settlesImmediately: boolean;
   documentNumber: string;
   creditNoteDate: string;
   description?: string;

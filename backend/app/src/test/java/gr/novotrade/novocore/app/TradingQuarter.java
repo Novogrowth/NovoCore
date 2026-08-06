@@ -1311,23 +1311,23 @@ final class TradingQuarter {
 
         handles.put("payment:cash", created("/api/payment-methods",
                 new NewPaymentMethod("TEST-CASH", "TEST Μετρητά", articles.get(3),
-                        id("account:CASH"), SORT_CODES.incrementAndGet()),
+                        id("account:CASH"), null),
                 "the cash payment method"));
         handles.put("payment:card", created("/api/payment-methods",
                 new NewPaymentMethod("TEST-CARD", "TEST Κάρτα (POS)", articles.get(7),
-                        id("account:PARTNER_CLEARING_POS"), SORT_CODES.incrementAndGet()),
+                        id("account:PARTNER_CLEARING_POS"), null),
                 "the card payment method"));
         handles.put("payment:credit", created("/api/payment-methods",
                 new NewPaymentMethod("TEST-CRED", "TEST Επί πιστώσει", articles.get(5),
-                        id("account:ACCOUNTS_RECEIVABLE"), SORT_CODES.incrementAndGet()),
+                        id("account:ACCOUNTS_RECEIVABLE"), null),
                 "the on-account payment method"));
         handles.put("payment:bank", created("/api/payment-methods",
                 new NewPaymentMethod("TEST-BANK", "TEST Κατάθεση σε λογαριασμό", articles.get(1),
-                        id("account:ACCOUNTS_RECEIVABLE"), SORT_CODES.incrementAndGet()),
+                        id("account:ACCOUNTS_RECEIVABLE"), null),
                 "the bank-deposit payment method"));
         handles.put("payment:skroutz", created("/api/payment-methods",
                 new NewPaymentMethod("TEST-SKRZ", "TEST Skroutz", articles.get(5),
-                        id("account:PARTNER_CLEARING_SKROUTZ"), SORT_CODES.incrementAndGet()),
+                        id("account:PARTNER_CLEARING_SKROUTZ"), null),
                 "the Skroutz payment method"));
     }
 

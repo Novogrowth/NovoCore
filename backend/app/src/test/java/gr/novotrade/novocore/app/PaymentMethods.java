@@ -28,14 +28,14 @@ final class PaymentMethods {
         long article = articleWithCode(owner, 5);
         long receivable = accountWithSystemKey(owner, "ACCOUNTS_RECEIVABLE");
 
-        // ⚠️ Derived from the discriminator rather than a counter. Contract tests share a database
-        // and abbreviation and sort code are both UNIQUE — two independent counters starting from
-        // their own base is exactly the collision the core fixture already hit once.
+        // ⚠️ Only the ABBREVIATION is derived here, because that one is genuinely the caller's.
+        // The SORT CODE is sent as null: the service is the one allocator (R4), after four of them
+        // grew across two modules and two collided.
         int unique = Math.abs(discriminator.hashCode() % 100_000) + 200_000;
         return Json.createdId(owner.post("/api/payment-methods", """
                 {"abbreviation":"PM-%d","description":"TEST on account %s",
-                 "aadePaymentMethodId":%d,"accountId":%d,"sortCode":%d}
-                """.formatted(unique, discriminator, article, receivable, unique)),
+                 "aadePaymentMethodId":%d,"accountId":%d}
+                """.formatted(unique, discriminator, article, receivable)),
                 "the on-account payment method");
     }
 

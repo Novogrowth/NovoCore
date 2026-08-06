@@ -38,6 +38,7 @@ import type {
   ChartOfAccountsControllerCreateGroup4xx,
   ChartOfAccountsControllerDeactivateAccount4xx,
   ChartOfAccountsControllerGroups4xx,
+  ChartOfAccountsControllerPaymentMethodTargets4xx,
   ChartOfAccountsControllerReactivateAccount4xx,
   ChartOfAccountsControllerRenameAccount4xx,
   ChartOfAccountsControllerRenameGroup4xx,
@@ -536,7 +537,93 @@ const {mutation: mutationOptions} = options ?
       > => {
       return useMutation(getChartOfAccountsControllerCreateAccountMutationOptions(options), queryClient);
     }
-    export const chartOfAccountsControllerSettlementTargets = (
+    export const chartOfAccountsControllerPaymentMethodTargets = (
+
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<ListResponseAccountView>(
+      {url: `/api/accounts/payment-method-targets`, method: 'GET', signal
+    },
+      );
+    }
+
+
+
+
+export const getChartOfAccountsControllerPaymentMethodTargetsQueryKey = () => {
+    return [
+    `/api/accounts/payment-method-targets`
+    ] as const;
+    }
+
+
+export const getChartOfAccountsControllerPaymentMethodTargetsQueryOptions = <TData = Awaited<ReturnType<typeof chartOfAccountsControllerPaymentMethodTargets>>, TError = ChartOfAccountsControllerPaymentMethodTargets4xx>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerPaymentMethodTargets>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getChartOfAccountsControllerPaymentMethodTargetsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof chartOfAccountsControllerPaymentMethodTargets>>> = ({ signal }) => chartOfAccountsControllerPaymentMethodTargets(signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerPaymentMethodTargets>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ChartOfAccountsControllerPaymentMethodTargetsQueryResult = NonNullable<Awaited<ReturnType<typeof chartOfAccountsControllerPaymentMethodTargets>>>
+export type ChartOfAccountsControllerPaymentMethodTargetsQueryError = ChartOfAccountsControllerPaymentMethodTargets4xx
+
+
+export function useChartOfAccountsControllerPaymentMethodTargets<TData = Awaited<ReturnType<typeof chartOfAccountsControllerPaymentMethodTargets>>, TError = ChartOfAccountsControllerPaymentMethodTargets4xx>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerPaymentMethodTargets>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof chartOfAccountsControllerPaymentMethodTargets>>,
+          TError,
+          Awaited<ReturnType<typeof chartOfAccountsControllerPaymentMethodTargets>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useChartOfAccountsControllerPaymentMethodTargets<TData = Awaited<ReturnType<typeof chartOfAccountsControllerPaymentMethodTargets>>, TError = ChartOfAccountsControllerPaymentMethodTargets4xx>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerPaymentMethodTargets>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof chartOfAccountsControllerPaymentMethodTargets>>,
+          TError,
+          Awaited<ReturnType<typeof chartOfAccountsControllerPaymentMethodTargets>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useChartOfAccountsControllerPaymentMethodTargets<TData = Awaited<ReturnType<typeof chartOfAccountsControllerPaymentMethodTargets>>, TError = ChartOfAccountsControllerPaymentMethodTargets4xx>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerPaymentMethodTargets>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useChartOfAccountsControllerPaymentMethodTargets<TData = Awaited<ReturnType<typeof chartOfAccountsControllerPaymentMethodTargets>>, TError = ChartOfAccountsControllerPaymentMethodTargets4xx>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof chartOfAccountsControllerPaymentMethodTargets>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getChartOfAccountsControllerPaymentMethodTargetsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const chartOfAccountsControllerSettlementTargets = (
 
  signal?: AbortSignal
 ) => {

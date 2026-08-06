@@ -260,6 +260,246 @@
         }
       }
     },
+    "/api/aade-payment-methods" : {
+      "get" : {
+        "operationId" : "AadePaymentMethodController_aadePaymentMethods",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "VIEW",
+        "parameters" : [ {
+          "name" : "active",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ListResponse_AadePaymentMethodView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/aade-payment-methods/{id}" : {
+      "get" : {
+        "operationId" : "AadePaymentMethodController_aadePaymentMethod",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "VIEW",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AadePaymentMethodView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/aade-payment-methods/{id}/deactivate" : {
+      "post" : {
+        "operationId" : "AadePaymentMethodController_deactivate",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/aade-payment-methods/{id}/description" : {
+      "patch" : {
+        "operationId" : "AadePaymentMethodController_describe",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AadePaymentMethodDescriptionRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AadePaymentMethodView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/aade-payment-methods/{id}/reactivate" : {
+      "post" : {
+        "operationId" : "AadePaymentMethodController_reactivate",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/account-groups" : {
       "get" : {
         "operationId" : "ChartOfAccountsController_groups",
@@ -591,6 +831,46 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/AccountView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/accounts/payment-method-targets" : {
+      "get" : {
+        "operationId" : "ChartOfAccountsController_paymentMethodTargets",
+        "x-novocore-section" : "CHART_OF_ACCOUNTS",
+        "x-novocore-level" : "VIEW",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ListResponse_AccountView"
                 }
               }
             }
@@ -5297,19 +5577,68 @@
             }
           }
         }
+      },
+      "post" : {
+        "operationId" : "PaymentMethodController_createPaymentMethod",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "FULL",
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/NewPaymentMethod"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PaymentMethodView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
-    "/api/payment-methods/{method}" : {
+    "/api/payment-methods/{id}" : {
       "get" : {
         "operationId" : "PaymentMethodController_paymentMethod",
         "x-novocore-section" : "SALES",
         "x-novocore-level" : "VIEW",
         "parameters" : [ {
-          "name" : "method",
+          "name" : "id",
           "in" : "path",
           "required" : true,
           "schema" : {
-            "$ref" : "#/components/schemas/SettlementMethod"
+            "type" : "integer",
+            "format" : "int64"
           }
         } ],
         "responses" : {
@@ -5347,17 +5676,195 @@
         }
       }
     },
-    "/api/payment-methods/{method}/deactivate" : {
+    "/api/payment-methods/{id}/aade-article" : {
+      "patch" : {
+        "operationId" : "PaymentMethodController_changeArticle",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PaymentMethodArticleRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PaymentMethodView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payment-methods/{id}/abbreviation" : {
+      "patch" : {
+        "operationId" : "PaymentMethodController_changeAbbreviation",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PaymentMethodAbbreviationRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PaymentMethodView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payment-methods/{id}/account" : {
+      "patch" : {
+        "operationId" : "PaymentMethodController_changeAccount",
+        "x-novocore-section" : "SALES",
+        "x-novocore-level" : "FULL",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PaymentMethodAccountRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PaymentMethodView"
+                }
+              }
+            }
+          },
+          "4XX" : {
+            "description" : "The request was refused. RFC 7807 body with a 'detail' explaining why, except for permission refusals, which say nothing on purpose.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "integer"
+                    },
+                    "title" : {
+                      "type" : "string"
+                    },
+                    "detail" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payment-methods/{id}/deactivate" : {
       "post" : {
         "operationId" : "PaymentMethodController_deactivate",
         "x-novocore-section" : "SALES",
         "x-novocore-level" : "FULL",
         "parameters" : [ {
-          "name" : "method",
+          "name" : "id",
           "in" : "path",
           "required" : true,
           "schema" : {
-            "$ref" : "#/components/schemas/SettlementMethod"
+            "type" : "integer",
+            "format" : "int64"
           }
         } ],
         "responses" : {
@@ -5388,17 +5895,18 @@
         }
       }
     },
-    "/api/payment-methods/{method}/description" : {
+    "/api/payment-methods/{id}/description" : {
       "patch" : {
         "operationId" : "PaymentMethodController_describe",
         "x-novocore-section" : "SALES",
         "x-novocore-level" : "FULL",
         "parameters" : [ {
-          "name" : "method",
+          "name" : "id",
           "in" : "path",
           "required" : true,
           "schema" : {
-            "$ref" : "#/components/schemas/SettlementMethod"
+            "type" : "integer",
+            "format" : "int64"
           }
         } ],
         "requestBody" : {
@@ -5446,17 +5954,18 @@
         }
       }
     },
-    "/api/payment-methods/{method}/reactivate" : {
+    "/api/payment-methods/{id}/reactivate" : {
       "post" : {
         "operationId" : "PaymentMethodController_reactivate",
         "x-novocore-section" : "SALES",
         "x-novocore-level" : "FULL",
         "parameters" : [ {
-          "name" : "method",
+          "name" : "id",
           "in" : "path",
           "required" : true,
           "schema" : {
-            "$ref" : "#/components/schemas/SettlementMethod"
+            "type" : "integer",
+            "format" : "int64"
           }
         } ],
         "responses" : {
@@ -5487,17 +5996,18 @@
         }
       }
     },
-    "/api/payment-methods/{method}/sort-code" : {
+    "/api/payment-methods/{id}/sort-code" : {
       "patch" : {
         "operationId" : "PaymentMethodController_changeSortCode",
         "x-novocore-section" : "SALES",
         "x-novocore-level" : "FULL",
         "parameters" : [ {
-          "name" : "method",
+          "name" : "id",
           "in" : "path",
           "required" : true,
           "schema" : {
-            "$ref" : "#/components/schemas/SettlementMethod"
+            "type" : "integer",
+            "format" : "int64"
           }
         } ],
         "requestBody" : {
@@ -13013,6 +13523,35 @@
           }
         }
       },
+      "AadePaymentMethodDescriptionRequest" : {
+        "type" : "object",
+        "required" : [ "description" ],
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          }
+        }
+      },
+      "AadePaymentMethodView" : {
+        "type" : "object",
+        "required" : [ "id", "code", "description", "active" ],
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "active" : {
+            "type" : "boolean"
+          }
+        }
+      },
       "AbbreviationRequest" : {
         "type" : "object",
         "required" : [ "abbreviation" ],
@@ -13503,7 +14042,7 @@
       },
       "CreditNoteView" : {
         "type" : "object",
-        "required" : [ "id", "salesInvoiceId", "salesInvoiceNumber", "customerId", "customerName", "channel", "documentNumber", "creditNoteDate", "netTotal", "vatTotal", "grossTotal", "roundingAmount", "roundingNeededReview", "journalEntryId", "lines", "inForce", "reversal", "reversed" ],
+        "required" : [ "id", "salesInvoiceId", "salesInvoiceNumber", "customerId", "customerName", "channel", "paymentMethodId", "paymentMethodDescription", "settlesImmediately", "documentNumber", "creditNoteDate", "netTotal", "vatTotal", "grossTotal", "roundingAmount", "roundingNeededReview", "journalEntryId", "lines", "inForce", "reversal", "reversed" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -13526,8 +14065,15 @@
           "channel" : {
             "$ref" : "#/components/schemas/SalesChannel"
           },
-          "settlementMethod" : {
-            "$ref" : "#/components/schemas/SettlementMethod"
+          "paymentMethodId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "paymentMethodDescription" : {
+            "type" : "string"
+          },
+          "settlesImmediately" : {
+            "type" : "boolean"
           },
           "documentNumber" : {
             "type" : "string"
@@ -14347,6 +14893,21 @@
             "type" : "array",
             "items" : {
               "$ref" : "#/components/schemas/AadeInvoiceTypeView"
+            }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "ListResponse_AadePaymentMethodView" : {
+        "type" : "object",
+        "required" : [ "items" ],
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AadePaymentMethodView"
             }
           },
           "page" : {
@@ -15337,6 +15898,30 @@
           }
         }
       },
+      "NewPaymentMethod" : {
+        "type" : "object",
+        "required" : [ "abbreviation", "description", "aadePaymentMethodId", "accountId" ],
+        "properties" : {
+          "abbreviation" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "aadePaymentMethodId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "accountId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "sortCode" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
       "NewProduct" : {
         "type" : "object",
         "required" : [ "sku", "name", "type", "unitOfMeasureId", "defaultVatClassId", "serialTracked" ],
@@ -15574,7 +16159,7 @@
       },
       "NewSalesInvoice" : {
         "type" : "object",
-        "required" : [ "customerId", "seriesId", "settlementMethod", "documentNumber", "invoiceDate", "lines" ],
+        "required" : [ "customerId", "seriesId", "paymentMethodId", "documentNumber", "invoiceDate", "lines" ],
         "properties" : {
           "customerId" : {
             "type" : "integer",
@@ -15584,8 +16169,9 @@
             "type" : "integer",
             "format" : "int64"
           },
-          "settlementMethod" : {
-            "$ref" : "#/components/schemas/SettlementMethod"
+          "paymentMethodId" : {
+            "type" : "integer",
+            "format" : "int64"
           },
           "documentNumber" : {
             "type" : "string"
@@ -15909,6 +16495,35 @@
           }
         }
       },
+      "PaymentMethodAbbreviationRequest" : {
+        "type" : "object",
+        "required" : [ "abbreviation" ],
+        "properties" : {
+          "abbreviation" : {
+            "type" : "string"
+          }
+        }
+      },
+      "PaymentMethodAccountRequest" : {
+        "type" : "object",
+        "required" : [ "accountId" ],
+        "properties" : {
+          "accountId" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "PaymentMethodArticleRequest" : {
+        "type" : "object",
+        "required" : [ "aadePaymentMethodId" ],
+        "properties" : {
+          "aadePaymentMethodId" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
       "PaymentMethodDescriptionRequest" : {
         "type" : "object",
         "required" : [ "description" ],
@@ -15930,10 +16545,11 @@
       },
       "PaymentMethodView" : {
         "type" : "object",
-        "required" : [ "method", "abbreviation", "description", "settlesImmediately", "subjectToCashLimit", "sortCode", "active" ],
+        "required" : [ "id", "abbreviation", "description", "aadePaymentMethodId", "aadePaymentMethodCode", "aadePaymentMethodDescription", "accountId", "accountName", "settlesImmediately", "subjectToCashLimit", "sortCode", "inUse", "active" ],
         "properties" : {
-          "method" : {
-            "$ref" : "#/components/schemas/SettlementMethod"
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
           },
           "abbreviation" : {
             "type" : "string"
@@ -15941,9 +16557,23 @@
           "description" : {
             "type" : "string"
           },
-          "mydataPaymentCode" : {
+          "aadePaymentMethodId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "aadePaymentMethodCode" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "aadePaymentMethodDescription" : {
+            "type" : "string"
+          },
+          "accountId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "accountName" : {
+            "type" : "string"
           },
           "settlesImmediately" : {
             "type" : "boolean"
@@ -15954,6 +16584,9 @@
           "sortCode" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "inUse" : {
+            "type" : "boolean"
           },
           "active" : {
             "type" : "boolean"
@@ -16753,7 +17386,7 @@
       },
       "SalesInvoiceView" : {
         "type" : "object",
-        "required" : [ "id", "customerId", "customerName", "channel", "settlementMethod", "documentNumber", "invoiceDate", "netTotal", "vatTotal", "grossTotal", "roundingAmount", "roundingNeededReview", "journalEntryId", "transmissionStatus", "lines", "inForce", "reversal", "reversed" ],
+        "required" : [ "id", "customerId", "customerName", "channel", "paymentMethodId", "paymentMethodDescription", "settlesImmediately", "documentNumber", "invoiceDate", "netTotal", "vatTotal", "grossTotal", "roundingAmount", "roundingNeededReview", "journalEntryId", "transmissionStatus", "lines", "inForce", "reversal", "reversed" ],
         "properties" : {
           "id" : {
             "type" : "integer",
@@ -16769,8 +17402,15 @@
           "channel" : {
             "$ref" : "#/components/schemas/SalesChannel"
           },
-          "settlementMethod" : {
-            "$ref" : "#/components/schemas/SettlementMethod"
+          "paymentMethodId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "paymentMethodDescription" : {
+            "type" : "string"
+          },
+          "settlesImmediately" : {
+            "type" : "boolean"
           },
           "documentNumber" : {
             "type" : "string"
@@ -17047,10 +17687,6 @@
       "SettlementDirection" : {
         "type" : "string",
         "enum" : [ "INCOMING", "OUTGOING" ]
-      },
-      "SettlementMethod" : {
-        "type" : "string",
-        "enum" : [ "CASH", "CARD_POS", "SKROUTZ", "ACS_COD", "PAYPAL", "STRIPE", "BANK_DEPOSIT", "ON_ACCOUNT" ]
       },
       "SettlementView" : {
         "type" : "object",

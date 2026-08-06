@@ -48,6 +48,7 @@ public record CreditNoteView(
         Objects.requireNonNull(salesInvoiceNumber, "salesInvoiceNumber");
         Objects.requireNonNull(customerName, "customerName");
         Objects.requireNonNull(channel, "channel");
+        Objects.requireNonNull(paymentMethodDescription, "paymentMethodDescription");
         Objects.requireNonNull(documentNumber, "documentNumber");
         Objects.requireNonNull(creditNoteDate, "creditNoteDate");
         Objects.requireNonNull(netTotal, "netTotal");

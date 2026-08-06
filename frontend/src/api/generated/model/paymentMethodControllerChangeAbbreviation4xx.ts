@@ -8,16 +8,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type SettlementMethod = typeof SettlementMethod[keyof typeof SettlementMethod];
-
-
-export const SettlementMethod = {
-  CASH: 'CASH',
-  CARD_POS: 'CARD_POS',
-  SKROUTZ: 'SKROUTZ',
-  ACS_COD: 'ACS_COD',
-  PAYPAL: 'PAYPAL',
-  STRIPE: 'STRIPE',
-  BANK_DEPOSIT: 'BANK_DEPOSIT',
-  ON_ACCOUNT: 'ON_ACCOUNT',
-} as const;
+export type PaymentMethodControllerChangeAbbreviation4xx = {
+  status?: number;
+  title?: string;
+  detail?: string;
+};
