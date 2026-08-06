@@ -769,6 +769,83 @@ as enforcement and is decoration.
 ⚠️ **`@ConditionallyMandatory` is therefore CONSIDERED AND REJECTED, and this line exists so nobody
 adds it back.** `account_id` is simply **optional**, and **its presence carries the meaning**.
 
+#### ⚠️ 2026-08-06 — A.5, A.6 AND G.2 ARE REVERSED BY THE OWNER. Recorded before building
+
+**The rule: A PAYMENT METHOD CANNOT BE CREATED WITHOUT BOTH AN AADE ARTICLE AND A RECONCILIATION
+ACCOUNT.** Both mandatory — confirmed explicitly against the weaker *"at least one of the two"*
+reading. ⚠️ **Both reversals are also written at the columns in `V37`**, because that is where the old
+reasoning was and a reader who meets only the old argument will re-derive it.
+
+| Was | Is now | Why the new one is BETTER, not merely different |
+|---|---|---|
+| **A.5** — `account_id` **optional**, `@ConditionallyMandatory` rejected | **MANDATORY** | ⭐ Under A.5, Επί πιστώσει carried a **null**, and the posting code read that null as *"debit Accounts receivable"* **by convention**. The account was real; it was unnamed, and the interpretation lived in Java. **Now Επί πιστώσει NAMES Accounts receivable explicitly. No null means anything, and the posting rule reads the account the method names — in every case, with no branch.** ⚠️ **`@ConditionallyMandatory` is still rejected, for a better reason: there is no condition left.** It was previously rejected because *"required iff it settles immediately"* tested the field against itself; now the field is unconditionally required, which `@Mandatory` says plainly |
+| **A.6** — `settlesImmediately` derives from `account_id` **being present** | **Derives from the ACCOUNT'S KIND** | Presence no longer discriminates anything: **every** method has an account. `BANK_CASH` or `PARTNER_CLEARING` ⇒ the money is already somewhere ⇒ **born settled**; the Accounts receivable **CONTROL** account ⇒ it is not ⇒ **an open item** until a Receipt allocates. ⭐ **Still one fact, still derived, still no stored flag — derived from a different place** |
+| **G.2** — the AADE article **nullable**, on R1a's precedent | **MANDATORY** | ⚠️ **The R1a analogy was considered and does not hold.** A **document type** with no AADE code is **a real thing the business issues** — Προσφορά, Δελτίο Αποστολής, Παραγγελία are operational documents that genuinely are not tax documents. A **payment method** with no article **is not a real kind of thing; it is an incompletely specified row.** The null would not record *"this has none"* but *"nobody has said yet"* — the two meanings a nullable column cannot tell apart |
+
+⭐ **And G.1's residual is now CLOSED, by making the model complete rather than by adding a second
+signal.** The cash limit derives from the article being code 3; while an article could be absent, a
+cash-like method created without one would silently escape the statutory limit. **That hole is
+unreachable now.** It was the outcome this session declined to fake with an "or the account is the
+cash account" fallback, and requiring the article is what actually removed it.
+
+##### ⚠️ Consequence (a) — the account picker widens, and the answer is a SECOND ROUTE
+
+`GET /api/accounts/settlement-targets` returns `BANK_CASH` and `PARTNER_CLEARING` only
+(`AccountKind.isSettlementTarget()`). **Accounts receivable must now be selectable.** Three ways were
+available and two are wrong:
+
+| Option | Verdict |
+|---|---|
+| **Change `AccountKind.isSettlementTarget()`** | ❌ **REJECTED, and it would be a real defect.** That predicate means *"a Receipt, Payment or Bank Transfer may name this as its money side"* and `NewSettlement.accountId` is validated against it. Adding AR would let **a Receipt settle into Accounts receivable** — allocating a receivable against itself. **One predicate, two questions, and only one of them is asking about payment methods** |
+| **Filter at the screen** | ❌ **REJECTED — it is literally *the screen was the only guard*.** An adapter or a `curl` would face no rule at all |
+| ✅ **A second route + a service-side guard** | **CHOSEN.** *"Which account may a payment method reconcile to"* is a **different question** from *"which account may a Receipt name"*, so it gets its own answer: `activePaymentMethodTargets()` = active settlement targets **plus** the `ACCOUNTS_RECEIVABLE`-keyed account, exposed as `GET /api/accounts/payment-method-targets`, with `PaymentMethodServiceImpl` refusing anything outside that set on create **and** change |
+
+⚠️ **Live-leg row L.5 is REWRITTEN.** It read *"the picker offers only bank, cash and
+partner-clearing accounts — no Accounts Receivable"*. **That assertion is now exactly backwards.**
+It becomes: *the picker offers bank, cash and partner-clearing accounts **and Accounts receivable**,
+and offers nothing else — no Sales, no Inventory, no Output VAT.*
+
+##### 🛑 Consequence (b) — HELD. The three unmapped methods need an article, and it is not mine to invent
+
+**Annex 8.12's eight articles, from the rasterised read:** **1** Επαγ. Λογαριασμός Πληρωμών Ημεδαπής ·
+**2** Επαγ. Λογαριασμός Πληρωμών Αλλοδαπής · **3** Μετρητά · **4** Επιταγή · **5** Επί Πιστώσει ·
+**6** Web Banking · **7** POS / e-POS · **8** Άμεσες Πληρωμές IRIS.
+
+**What each of the three would plausibly need, and the question each turns on — reported, NOT decided:**
+
+| Method | Candidate articles | The question that decides it |
+|---|---|---|
+| **ACS cash on delivery** | **3** (Μετρητά) or **1** (Ημεδαπής) | ⚠️ **Does the article describe what the CUSTOMER did, or how WE received the money?** The customer pays the courier in cash; ACS remits to our bank. Both readings are defensible and they give different codes |
+| **PayPal** | **2** (Αλλοδαπής), **1**, or **7** | Does a PayPal balance count as an *επαγγελματικός λογαριασμός πληρωμών* at all — and if so, PayPal Europe is Luxembourg-established, which points at **2** rather than **1** |
+| **Stripe** | **2**, or **1** | Same shape; Stripe Payments Europe is Irish |
+
+⚠️ **This is the owner's question or his accountant's, and NOTHING IS BUILT ON A GUESS.** The
+codification seed and the create form do not depend on it — **only the owner's own first rows do**,
+and he authors those. 📌 **It also has a statutory edge this session cannot judge:** a wrong article
+is a misdeclared filing that looks successful, which is exactly what `requireMydataPaymentCode()`
+already refuses to paper over.
+
+#### 🅟 PHASE 0 — the cash limit is TWO thresholds, and the discriminator is NOT in the model
+
+**Measured 2026-08-06 against the code, not read from a summary.**
+
+| # | Question | What was measured |
+|---|---|---|
+| **a** | What does `requireWithinCashLimit` compare, against what? | ⭐ **GROSS — VAT-INCLUSIVE.** It takes `receivable`, which is `computedGross + rounding`, and `computedGross` is `Σ line.gross()` where `PricedLine.gross()` is literally `net.plus(vat)`. The constant is `SettingKeys.CASH_PAYMENT_LIMIT` (€500) and it refuses at **`>=`**. ⭐ **So the shipped guard is CORRECT FOR RETAIL and merely ABSENT FOR B2B — not wrong for both.** F5's live leg refusing exactly 500.00 and recording 499.99 was proving the **retail** rule, and it proved it correctly. ⚠️ **B2B is not unguarded, it is OVER-guarded**: the retail ceiling is applied to a B2B sale whose legal ceiling is €500 **net** + VAT — €620 at 24%. **Refusing legal sales is the safe direction to be wrong, and it is still wrong** |
+| **b** | Can the guard reach the document type where it runs? | ✅ **YES — the owner's expectation is confirmed.** `compute(...)` resolves `SeriesContext series = resolveSeries(...)` as its **first** act, and `SeriesContext` carries `SalesDocumentTypeView documentType`. `requireWithinCashLimit` is called ~45 lines later. **The type is in scope; the guard simply does not take it** |
+| **c** | What distinguishes ΑΛΠ from ΤΠΔΑ **in the model**? | 🛑 **NOTHING RELIABLE — and this is where I stop, per the instruction.** The nearest thing is `AadeInvoiceGroup`: ΑΛΠ is *Μη Αντικριζόμενα* (`ISSUER_UNMATCHED`), ΤΠΔΑ is *Αντικριζόμενα* (`ISSUER_MATCHED`), and the group is seeded on all 55 AADE types. **Three reasons it will not carry this rule:** (i) `sales_document_type.aade_invoice_type_id` is **NULLABLE**, so a business type may have no group at all; (ii) `SalesDocumentTypeView` exposes `aadeInvoiceTypeId` and `aadeInvoiceTypeCode` and **NOT the group**, so it is not reachable from `SeriesContext` today; (iii) ⚠️ **matched/unmatched is a myDATA REPORTING distinction being borrowed for a STATUTORY CASH-LAW purpose, and nobody has confirmed the two coincide.** ⚠️ **No field was added to make it work** |
+| **d** | Any test against a B2B document? | ❌ **No — and there is nothing to test against.** Exactly one test touches the rule (`SalesInvoiceIT:473`, asserting `"legal cash limit"`), and with no retail/B2B distinction in the model it cannot be B2B-specific |
+
+##### ➗ The split — and it matches the owner's expectation
+
+- ✅ **R4 CARRIES the derivation and the constant.** R4 deletes the enum that held
+  `subjectToCashLimit`, so the flag must land somewhere; **G.1's cited constant (article code 3) is
+  R4's**, because R4 is what moves it. The guard keeps comparing **gross** against the existing
+  setting, which is correct for retail.
+- 🔴 **A NEW ROW carries the two-threshold rule** — roadmap **C2**. It needs a retail/B2B distinction
+  that **does not exist in the model**, and inventing one inside a payment-method step is precisely
+  what the instruction forbade. ⚠️ **R4 must not pre-empt it.**
+
 #### The rows
 
 | # | Sub-part | Verdict |

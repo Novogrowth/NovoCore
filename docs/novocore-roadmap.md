@@ -131,6 +131,7 @@ frontend work that must land before any adapter is built.
 |      | **▼ OUTSIDE THE SEQUENCE — each has its own gate, none is "next"** ˢᵉᑫ | | | | |
 |  R2c | Sort code: invisible column, unsettable on series ʳ²ᶜ | — |  |       | ⚪ **DEFERRED and SPLIT** — 2a → F10, 2b → R4 ʳ²ᶜ |
 |   C1 | Official Greek chart adopted directly, + display alias ᶜ¹ | — |    |  | ⚪ Decided 2026-08-06, **not scoped** ᶜ¹ |
+|   C2 | Cash limit is TWO thresholds — needs a retail/B2B distinction ᶜ² | — |  |  | ⚪ Raised by R4, 2026-08-06 ᶜ² |
 |   D2 | Product categories, 3 levels ᵗ          |     — |        |       | ⚪ Before the Woo load (19) |
 |   R3 | Self-supply posting paths ˢ             |     — |        |       | ⚪ Not schedulable — accountant |
 |   U2 | Split `PROGRESS.md` / `HISTORY.md` ᵘ²   |     — |        |       | ⚪ Whenever a session has slack |
@@ -1198,6 +1199,40 @@ into one is a real question and it is **not answered here**. Recorded rather tha
 account map to a Novocore account?"* — under this decision the answer side of that mapping is **the
 official Greek chart**, not a chart of our own design. **M0a is not thereby scheduled, blocked or
 cancelled**; only its target moved.
+
+**ᶜ² C2 — the cash limit is TWO thresholds, and the discriminator is not in the model. Raised by R4's
+Phase 0, 2026-08-06. ⚪ Recorded, NOT scoped, and deliberately not built inside R4.**
+
+**The owner's correction:** the Greek legal cash limit is **€500 INCLUDING VAT for retail sales** and
+**€500 NET plus VAT for VAT-registered customers.** Two thresholds, selected by who the counterparty
+is.
+
+**The authoritative signal is the DOCUMENT TYPE, decided by the owner** — retail goes out as **ΑΛΠ**,
+B2B as **ΤΠΔΑ**. ⚠️ **NOT the presence of a customer VAT number**, and the alternative was considered
+and rejected: **two signals for one rule is the shape A.6 exists to remove**, and a customer with a
+VAT number can still be sold to at retail.
+
+**What Phase 0 measured, so C2 does not re-derive it:**
+
+- ✅ **The shipped guard compares GROSS.** `requireWithinCashLimit(method, receivable)` where
+  `receivable = Σ line.gross() + rounding` and `gross() = net.plus(vat)`, refusing at `>=` against
+  `CASH_PAYMENT_LIMIT`. **So it is CORRECT FOR RETAIL and merely absent for B2B** — B2B is
+  *over*-guarded at €500 gross where the law allows €500 net (€620 at 24%). Refusing legal sales is
+  the safe direction and is still wrong.
+- ✅ **The guard can reach the document type.** `compute(...)` resolves the series first and
+  `SeriesContext` carries `SalesDocumentTypeView`. The type is in scope; the guard does not take it.
+- 🛑 **NOTHING IN THE MODEL RELIABLY DISTINGUISHES ΑΛΠ FROM ΤΠΔΑ, WHICH IS WHY THIS IS A ROW AND NOT
+  A SUB-PART.** The nearest candidate is `AadeInvoiceGroup` — ΑΛΠ is `ISSUER_UNMATCHED`, ΤΠΔΑ is
+  `ISSUER_MATCHED`, seeded on all 55 types — and it fails three ways: the FK from
+  `sales_document_type` is **nullable**; `SalesDocumentTypeView` **does not expose the group**; and
+  ⚠️ **matched/unmatched is a myDATA REPORTING distinction being borrowed for a STATUTORY CASH-LAW
+  purpose, which nobody has confirmed is the same line.** ⚠️ **No field was added to make it work.**
+- ❌ **No test exercises the limit against a B2B document**, and there is nothing to exercise: one
+  test touches the rule at all (`SalesInvoiceIT`, `"legal cash limit"`).
+
+⚠️ **What C2 must decide before it can build anything:** whether the retail/B2B line is the AADE
+group, an explicit flag on `sales_document_type`, or something else — and **whether that is a
+statutory question for the accountant** rather than a modelling one. **R4 must not pre-empt it.**
 
 **ᶠ⁶ F6 — Purchase Invoice + Goods Receipt. ⚠️ Two things R1b left it, recorded 2026-08-04 so they
 are not rediscovered.**

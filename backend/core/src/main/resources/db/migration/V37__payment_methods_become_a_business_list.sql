@@ -150,30 +150,62 @@ CREATE TABLE payment_method (
     abbreviation           varchar(20)  NOT NULL,
     description            varchar(120) NOT NULL,
 
-    -- ⚠️ NULLABLE, AND ITS NULLABILITY IS A DECISION (R4 G.2).
-    -- Three of the eight methods this list replaces had NO myDATA code at all — a courier's cash
-    -- on delivery, PayPal and Stripe map to nothing in an eight-value statutory list. That is a
-    -- finding about AADE's list, not a gap in our knowledge of it, and it is R1a's finding again:
-    -- six of the owner's nineteen document types carry no AADE invoice type either.
-    -- A method with no article is legitimate. What it is NOT is transmittable — step 29 must
-    -- REFUSE to transmit a document settled by one rather than substituting a plausible code.
-    aade_payment_method_id bigint       REFERENCES aade_payment_method (id),
+    -- ⚠️ NOT NULL — AND THIS REVERSES G.2, WHICH HAD MADE IT NULLABLE. Owner, 2026-08-06.
+    --
+    -- THE OLD ARGUMENT, so nobody re-derives it: three of the eight methods this list replaces had
+    -- no myDATA code at all (a courier's cash on delivery, PayPal, Stripe), and R1a had already
+    -- established the analogous case one entity over — six of the owner's nineteen document types
+    -- carry no AADE invoice type, so `sales_document_type.aade_invoice_type_id` is nullable.
+    --
+    -- ⚠️ THE R1a ANALOGY WAS CONSIDERED AND DOES NOT HOLD HERE, and the difference is the whole
+    -- reversal. A DOCUMENT TYPE WITH NO AADE CODE IS A REAL THING THE BUSINESS ISSUES — Προσφορά,
+    -- Δελτίο Αποστολής, Παραγγελία are operational documents that are genuinely not tax documents,
+    -- and no code exists for them because none should. A PAYMENT METHOD WITH NO ARTICLE IS NOT A
+    -- REAL KIND OF THING; IT IS AN INCOMPLETELY SPECIFIED ROW. Every payment on a transmitted
+    -- document declares an article. The null would not be recording "this has none", it would be
+    -- recording "nobody has said yet" — and those are exactly the two meanings a nullable column
+    -- cannot tell apart.
+    --
+    -- ⭐ AND IT CLOSES G.1'S RESIDUAL BY MAKING THE MODEL COMPLETE. The cash limit derives from the
+    -- article being code 3; while an article could be absent, a cash-like method created without
+    -- one would silently escape the statutory limit. That hole is now UNREACHABLE — closed by
+    -- requiring the article rather than by adding a second signal to detect cash, which would have
+    -- been two mechanisms for one rule.
+    --
+    -- 📌 OPEN AND HELD, NOT RESOLVED HERE: which article ACS_COD, PAYPAL and STRIPE map onto. That
+    -- is the owner's or his accountant's question. The seed and the create form do not depend on
+    -- it; only the owner's own first rows do.
+    aade_payment_method_id bigint       NOT NULL REFERENCES aade_payment_method (id),
 
-    -- ⚠️ NULLABLE, AND ITS PRESENCE CARRIES A MEANING (R4 A.5/A.6).
-    -- The account this method settles INTO: the cash box, a bank account, a partner clearing
-    -- account. Present ⇒ the money is already there ⇒ the invoice is BORN SETTLED. Absent ⇒ the
-    -- invoice debits Accounts receivable and stays an open item until a Receipt allocates.
+    -- ⚠️ NOT NULL — AND THIS REVERSES A.5, WHICH HAD MADE IT OPTIONAL. Owner, 2026-08-06:
+    -- A PAYMENT METHOD CANNOT BE CREATED WITHOUT BOTH AN AADE ARTICLE AND A RECONCILIATION
+    -- ACCOUNT. Both mandatory, confirmed against the weaker "at least one of the two" reading.
     --
-    -- ⭐ There is deliberately NO `settles_immediately` COLUMN. It is not a second fact: a method
-    -- settles immediately BECAUSE there is an account the money is already in, which is what
-    -- SettlementMethod's own javadoc said before this table existed. Two columns would be one
-    -- fact said twice and able to contradict itself.
+    -- The account this method reconciles to: the cash box, a bank account, a partner clearing
+    -- account — or ACCOUNTS RECEIVABLE, which is the case that makes this mandatory rather than
+    -- optional and is the part worth reading twice.
     --
-    -- ⚠️ @ConditionallyMandatory ON THIS FIELD WAS CONSIDERED AND REJECTED — do not add it. The
-    -- condition would be "required iff the method settles immediately", and since settling
-    -- immediately MEANS having an account, that tests the field against itself and can never
-    -- fail. A guard that cannot fire reads as enforcement and is decoration.
-    account_id             bigint       REFERENCES account (id),
+    -- ⭐ WHY MANDATORY IS BETTER THAN OPTIONAL, not merely different: under A.5, Επί πιστώσει
+    -- carried a NULL, and the posting code read that null as "debit Accounts receivable" BY
+    -- CONVENTION. The account was real, it was just unnamed, and the interpretation lived in Java.
+    -- Now Επί πιστώσει NAMES Accounts receivable EXPLICITLY. NO NULL MEANS ANYTHING HERE, and the
+    -- posting rule reads the account the method names — in every case, with no branch.
+    --
+    -- ⚠️ THEREFORE A.6 CHANGES ITS SOURCE, AND THIS IS THE CONSEQUENCE MOST EASILY MISSED.
+    -- A.6 derived `settlesImmediately` from `account_id` BEING PRESENT. That no longer
+    -- discriminates anything, because EVERY method now has an account. It derives instead from the
+    -- ACCOUNT'S KIND:
+    --
+    --     BANK_CASH or PARTNER_CLEARING  ⇒ the money is already somewhere ⇒ born settled
+    --     the Accounts receivable CONTROL account ⇒ it is not ⇒ an open item until a Receipt
+    --
+    -- Still ONE fact, still DERIVED, still NO STORED FLAG — derived from a different place.
+    --
+    -- ⚠️ @ConditionallyMandatory WAS CONSIDERED AND REJECTED, AND STILL IS — for a better reason
+    -- than before. Under A.5 the rejection was that "required iff it settles immediately" tested
+    -- the field against itself and could never fire. Now THERE IS NO CONDITION LEFT AT ALL: the
+    -- field is unconditionally required, which `@Mandatory` says plainly.
+    account_id             bigint       NOT NULL REFERENCES account (id),
 
     active                 boolean      NOT NULL DEFAULT true,
 
@@ -196,11 +228,14 @@ COMMENT ON TABLE payment_method IS
     'V35''s seed-only shape. References aade_payment_method for what a document declares, and '
     'account for where the money went; both references are nullable and for different reasons.';
 COMMENT ON COLUMN payment_method.account_id IS
-    '⚠️ Presence IS "settles immediately" — there is no separate flag, deliberately. Absent means '
-    'the invoice debits Accounts receivable and stays open. See this migration''s header.';
+    '⚠️ MANDATORY. The account this method reconciles to — including Accounts receivable, named '
+    'explicitly for Επί πιστώσει rather than left null and interpreted by convention. '
+    '"Settles immediately" DERIVES from this account''s KIND (bank/cash/partner-clearing yes, the '
+    'AR control account no); there is no stored flag. See this migration''s header.';
 COMMENT ON COLUMN payment_method.aade_payment_method_id IS
-    '⚠️ Nullable: a method may legitimately have no statutory article (R4 G.2). A document settled '
-    'by one must be REFUSED at transmission (step 29), never sent under a substituted code.';
+    '⚠️ MANDATORY. A payment method with no statutory article is not a real kind of thing, it is an '
+    'incompletely specified row — unlike a document type with no AADE code, which is. Reverses '
+    'R4 G.2; the R1a analogy is examined and rejected in this migration''s header.';
 COMMENT ON COLUMN payment_method.active IS
     '⚠️ Refused on the RECORDING path only. Deactivating never breaks documents already settled by '
     'this method — setting is refused, holding is not.';
