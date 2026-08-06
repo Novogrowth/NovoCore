@@ -110,6 +110,19 @@ export function SalesDocumentSeriesDetail() {
   const types = useSalesDocumentTypeControllerDocumentTypes()
 
   const describe = useSalesDocumentSeriesControllerDescribe()
+  /*
+   * ⚠️ AN ACCENT OR A LOWERCASE LETTER IN AN ABBREVIATION RE-OPENS CLOSED WORK — roadmap F5b.
+   *
+   * A document number is this abbreviation plus a zero-padded integer, no separator (ΑΛΠ00000087),
+   * and DOCUMENT_NUMBER is the only text sort key that ships. F5b — an
+   * `ORDER BY … COLLATE "el-GR-x-icu"` on it — was closed as NOT NEEDED on 2026-08-06 because on
+   * PLAIN UPPERCASE UNACCENTED GREEK the database's byte order and el-GR-x-icu agree. Measured,
+   * with an accented capital, mixed case and Greek-beside-Latin as controls; all three differed.
+   *
+   * ⚠️ Nothing enforces it — varchar(20), not-blank and unique, no pattern here. The full
+   * reasoning is at NewSalesDocumentSeries#abbreviation. Deliberately NOT turned into a validation
+   * rule: the residual is recorded so somebody can decide, not pre-empted.
+   */
   const abbreviation = useSalesDocumentSeriesControllerChangeAbbreviation()
   const sortCode = useSalesDocumentSeriesControllerChangeSortCode()
   const documentType = useSalesDocumentSeriesControllerChangeDocumentType()

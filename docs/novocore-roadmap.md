@@ -137,7 +137,7 @@ frontend work that must land before any adapter is built.
 |  U2a | Split `PROGRESS.md` / `HISTORY.md` ᵘ²   |     — |        |       | 🟢 Done |
 |  U2b | The split's drift guards ᵘ²ᵇ            |     — |        |       | 🟢 Done |
 |   U4 | The dated-figure sweep ᵘ⁴               |     — |        |       | ⚪ Deferred, **re-price before scheduling** |
-|  F5b | `el-GR-x-icu` on `DOCUMENT_NUMBER` ᶠ⁵ᵇ  |     — |        |       | ⚪ Conditional on an owner check |
+|  F5b | `el-GR-x-icu` on `DOCUMENT_NUMBER` ᶠ⁵ᵇ  |     — |        |       | ✅ **CLOSED — not needed** ᶠ⁵ᵇ |
 |  W1c | W1's two consumer clean-ups ʷ¹ᶜ         |     — |        |       | ⚪ Queued |
 |  R1c | Fees / *Έξοδα και κρατήσεις* ʳ¹ᶜ        |     — |        |       | ⚪ Cut from R1, unscheduled |
 |   8c | `NewPurchaseInvoiceLine`'s flat union ⁸ᶜ |    — |        |       | ⚪ **Trigger: before F6 binds it** |
@@ -858,11 +858,94 @@ which is why it could not share a session with a split whose safety property was
 content.
 
 **ᶠ⁵ᵇ F5b — `ORDER BY … COLLATE "el-GR-x-icu"` on `DOCUMENT_NUMBER`.** ⚪ **Deferred out of F5 as its
-sub-part B.4; given a row by U2a, 2026-08-06.** Conditional on **whether a real Prosvasis Go document
-number carries Greek letters — the owner's check, still outstanding.** The two collations agree on
-Latin document numbers, which is the whole basis of the deferral. ⚠️ **A Spring Data `Sort` cannot
-express `COLLATE`**, so applying it means leaving the `Pageable`-driven path for that one property;
-the note saying where is at `SalesInvoiceServiceImpl.SORTABLE`.
+sub-part B.4; given a row by U2a, 2026-08-06.** ⚠️ **A Spring Data `Sort` cannot express `COLLATE`**,
+so applying it means leaving the `Pageable`-driven path for that one property; the note saying where
+is at `SalesInvoiceServiceImpl.SORTABLE`.
+
+### ⚠️ THE OWNER ANSWERED, AND THE ANSWER HAD NEVER REACHED THIS REPOSITORY
+
+**Recorded 2026-08-06. The owner gave the answer on 2026-08-05 and it lived only in chat until now**
+— through F5's close-out on 2026-08-06, which went on listing it among *"three questions with the
+owner"*, and through U2a the same day, which created this row and wrote *"still outstanding"* into
+it. **Seven sites said the condition was open after it had been closed.** That is
+`CLAUDE.md` §*A decision reached in a design conversation gets the same close-out discipline as a
+build step*, and it happened to the very obligation this row exists to stop losing.
+
+**The owner's format, as stated:** a **Greek-letter series prefix immediately followed by a
+zero-padded positive integer, no separator** — `ΑΛΠ00000087`, where `ΑΛΠ` is the series and 87 the
+number. **All series.** So **every** document number carries Greek letters; there are no Latin ones.
+
+⚠️ **THE DEFERRAL'S ORIGINAL BASIS WAS NEVER APPLICABLE.** B.4 was deferred because *"the two
+collations agree on Latin document numbers"* — and **no real document number is Latin.** The only
+Latin ones ever seen are `TEST-SI-2026-0001` and its siblings, which `LiveSeedTest` invents. The
+reasoning was measured against fixture data and read as a fact about production.
+
+#### ⭐ But the conclusion survives, for a DIFFERENT reason — measured 2026-08-06, not assumed
+
+**On plain uppercase unaccented Greek, byte order under `--locale=C` and `el-GR-x-icu` produce the
+SAME order.** Measured against the live PostgreSQL with three negative controls, all of which fired:
+
+| Case | Agree? |
+|---|:---:|
+| `ΑΛΠ…` `ΑΛΦΑ…` `ΤΠΔΑ…` `ΩΜΕΓΑ…` — plain uppercase prefixes | ✅ **yes** |
+| *negative control* — an **accented** capital (`ΆΛΦΑ…`) | ❌ no |
+| *negative control* — **mixed case** (`αλπ…` beside `ΑΛΠ…`) | ❌ no |
+| *negative control* — Greek beside **Latin** (`ALP…`) | ❌ no |
+
+**The Greek uppercase block is contiguous and in alphabetical order, so byte order *is* alphabetical
+order for unaccented capitals.** ⚠️ **So the premise that ordering differs BETWEEN Greek prefixes is
+wrong** — it does not, for prefixes of that shape.
+
+#### ✅ CLOSED 2026-08-06 — NOT NEEDED, and the reason is a measurement rather than a deferral
+
+**The owner answered the replaced condition the same day: no real series abbreviation carries an
+accent or a lowercase letter. All prefixes are plain uppercase Greek.**
+
+> **`ORDER BY … COLLATE "el-GR-x-icu"` on `DOCUMENT_NUMBER` would change no ordering**, because the
+> only text sort key the surface ships carries plain uppercase Greek prefixes, and on those the two
+> collations do not disagree.
+
+⚠️ **This is a closure, not a deferral.** Nothing is waiting, nothing is conditional on a future
+step, and the work is not queued anywhere. **F5b is done by not being needed.**
+
+#### ⚠️ THE RESIDUAL — the closure rests on a fact about DATA, and nothing holds that fact still
+
+**If a series abbreviation ever carries an accent or a lowercase letter, the collation work
+returns.** The measurement is unchanged; only its input would be.
+
+⚠️ **NOTHING IN THE SYSTEM CONSTRAINS AN ABBREVIATION TO PLAIN UPPERCASE GREEK. Measured
+2026-08-06, not assumed:**
+
+| Layer | What it actually enforces |
+|---|---|
+| Database | `varchar(20)`, `…_abbreviation_not_blank`, `…_abbreviation_unique` — **no character-set CHECK on either series table** |
+| `core-api` | `Required.text(abbreviation, …)` — **non-blank, nothing more** |
+| Service | `requireNothingRecorded` (the in-use freeze) and a uniqueness check — **neither looks at characters** |
+| Screen | **no pattern, no `maxLength`, no case transform** |
+
+**Any text is storable.** ⚠️ **No constraint is proposed here** — the residual is recorded so
+whoever meets it can decide, rather than pre-empted by a rule nobody asked for.
+
+📌 **Recorded where somebody creating a series meets it, because a closing reason on this row is not
+enough on its own:** `NewSalesDocumentSeries#abbreviation` (the full reasoning and the three
+controls), `NewPurchaseDocumentSeries#abbreviation`, and the series screen in
+`sales-document-series.tsx`. **The purchase side is the likelier first breach** — a supplier's
+numbering is theirs, not this business's, and **F6** is where a purchase document first carries a
+series.
+
+#### 📌 The zero-padding closes P.16's numeric-ordering wart — the MECHANISM is verified, the PREMISE is not
+
+**Measured 2026-08-06, with two negative controls, both of which fired:** with a **fixed** pad width
+lexical and numeric order **coincide** (`…002 …010 …087 …110`); with **one series unpadded**, or with
+**two widths mixed**, they **diverge**. So P.16's recorded limitation — *`-0010` sorts before
+`-0002`* — does not arise on the owner's stated format.
+
+⚠️ **What is NOT verified, and cannot be from here: that the pad width is actually fixed across every
+series.** The live database holds **no real Go document number at all** — every row is `TEST-`
+synthetic from `LiveSeedTest`, plus two hand-typed `5`s from F5's live leg, which are entries in a
+transitional test harness rather than anything Go printed. **Nothing in this repository records the
+format.** ⚠️ **A single unpadded or differently-padded series reopens it**, and the only sources that
+could settle it are real Go documents or the owner.
 
 ⚠️ **It had NO row until U2a, and the primer asserted that it did** — see ʷ below. A second record
 describing a row that does not exist is worse than silence, because it ends the search.

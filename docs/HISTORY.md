@@ -400,6 +400,45 @@ end:**
 B.6's precedence), and **where R2c sits in the sequence**, which nobody has decided — its roadmap row
 sits outside the sequence for exactly that reason.
 
+> ⚠️⚠️ **APPENDED 2026-08-06 — B.4's QUESTION WAS ALREADY ANSWERED WHEN THIS WAS WRITTEN, and this
+> correction is worth more than the fact.**
+>
+> **The owner answered on 2026-08-05: a Prosvasis Go document number is a Greek-letter series prefix
+> immediately followed by a zero-padded positive integer, no separator — `ΑΛΠ00000087` — for ALL
+> series.** The answer reached no file in this repository. So the paragraph above, written on
+> **2026-08-06**, listed a resolved question among *"three questions with the owner"*; F5's B.4
+> verdict row above still says *"conditional on the owner's check"*; and **U2a, later the same day,
+> created roadmap row F5b and wrote *"still outstanding"* into it.** ⚠️ **Seven sites carried the
+> stale condition, and the newest of them was created after the answer existed.**
+>
+> ⚠️ **The deferral's stated basis was never applicable to real data.** B.4 was deferred because
+> *"the two collations agree on Latin document numbers"* — and **no real document number is Latin.**
+> The `TEST-SI-2026-0001` shapes it was measured against are invented by `LiveSeedTest`. This is
+> `CLAUDE.md` §*a fact established by reading, then built upon* with a fixture standing in for
+> production.
+>
+> ⭐ **The conclusion survives anyway, for a different reason — measured 2026-08-06 with three
+> negative controls, all of which fired.** On **plain uppercase unaccented Greek** byte order under
+> `--locale=C` and `el-GR-x-icu` produce the **same** order, because the Greek uppercase block is
+> contiguous and alphabetical. They diverge on an **accented** capital, on **mixed case**, and on
+> Greek beside Latin.
+>
+> ✅ **AND IT IS NOW CLOSED, the same day.** The owner confirmed that **no real series abbreviation
+> carries an accent or a lowercase letter** — all prefixes are plain uppercase Greek. So the
+> collation **would change no ordering**, and **F5b is closed as NOT NEEDED rather than deferred a
+> second time.** ⭐ **The conclusion B.4 reached was right; the reason it gave was not, and only
+> re-measuring separated the two.**
+>
+> ⚠️ **The residual lives at the code, not here:** nothing constrains a series abbreviation
+> (`varchar(20)`, not-blank and unique, no pattern on the screen), so an accented or lowercase one
+> brings the work back. Recorded at `NewSalesDocumentSeries#abbreviation`, its purchase twin and the
+> series screen — **no constraint was proposed.**
+>
+> 📌 **L.23 was stood down on a condition that had already been met.** It reads
+> *"⛔ NOT APPLICABLE… because B.4 is deferred"*. The row was correctly written as conditional; the
+> condition was evaluated against a stale record. **Current status is in `docs/PROGRESS.md`; the row
+> is roadmap F5b.**
+
 ⚠️ **The next step is R2c or R4, and R4 is the one with a deadline attached**: it changes the sales
 invoice request contract and **F6 should be built against the corrected model**, so it runs before
 F6. R2c has no slot.

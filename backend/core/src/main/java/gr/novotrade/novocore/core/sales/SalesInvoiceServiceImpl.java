@@ -565,6 +565,43 @@ class SalesInvoiceServiceImpl implements SalesInvoiceService {
      * {@code CUSTOMER_NAME} is not offered at all — is recorded at
      * {@code sales-invoice-columns.tsx}.
      *
+     * <p>⚠️⚠️ <strong>CORRECTED 2026-08-06 — THE CONDITION ABOVE IS ANSWERED, AND THE PARAGRAPH IT
+     * RESTS ON WAS NEVER TRUE OF REAL DATA.</strong> The owner answered on 2026-08-05: a Go document
+     * number is a <strong>Greek-letter series prefix immediately followed by a zero-padded positive
+     * integer, no separator</strong> — {@code ΑΛΠ00000087} — for <strong>all</strong> series. So
+     * <strong>every</strong> real number carries Greek letters and none is Latin. The
+     * {@code TEST-SI-2026-0001} shapes the 2026-08-05 measurement leaned on are invented by
+     * {@code LiveSeedTest}; the reasoning was measured against fixtures and written down as a fact
+     * about production.
+     *
+     * <p>⭐ <strong>The conclusion nevertheless holds, for a different reason, measured 2026-08-06
+     * against the live database with three negative controls:</strong> on <strong>plain uppercase
+     * unaccented Greek</strong> the two collations produce the <strong>same</strong> order — the
+     * Greek uppercase block is contiguous and alphabetical, so byte order <em>is</em> alphabetical
+     * order. They diverge on an <strong>accented</strong> capital, on <strong>mixed case</strong>,
+     * and on Greek beside Latin; each of those three was checked and each differed, so the
+     * comparison was alive.
+     *
+     * <p>✅ <strong>CLOSED 2026-08-06 — NOT NEEDED.</strong> The owner confirmed that no real series
+     * abbreviation carries an accent or a lowercase letter; all prefixes are plain uppercase Greek.
+     * <strong>So an {@code ORDER BY … COLLATE "el-GR-x-icu"} here would change no ordering</strong>,
+     * and roadmap row <strong>F5b</strong> is closed on that measurement rather than deferred again.
+     *
+     * <p>⚠️ <strong>THE RESIDUAL, because the closure rests on a fact about DATA rather than about
+     * code: the first series abbreviation carrying an accent or a lowercase letter brings this
+     * back.</strong> Measured 2026-08-06, <strong>nothing constrains one</strong> — the column is
+     * {@code varchar(20)} with only not-blank and unique CHECKs, the request record guards it with
+     * {@code Required.text}, and the screen applies no pattern. <strong>No constraint was
+     * proposed.</strong> The residual is recorded where a series is created —
+     * {@code NewSalesDocumentSeries#abbreviation}, its purchase twin, and the series screen —
+     * because a closing reason on a roadmap row is not somewhere anybody creating a series looks.
+     *
+     * <p>📌 <strong>The zero-padding closes the numeric-ordering wart noted below</strong> — with a
+     * fixed pad width lexical and numeric order coincide (measured, with an unpadded series and a
+     * mixed-width series as controls, both of which diverged). ⚠️ <strong>That the width is fixed
+     * across every series is the owner's statement and is NOT verified here</strong>: the live
+     * database holds no real Go document number at all.
+     *
      * <p>📌 Numeric ordering is off under <em>both</em> orders ({@code -0010} sorts before
      * {@code -0002}), deliberately and consistently with {@code collation.test.ts}. Collation is not
      * what would fix that.

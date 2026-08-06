@@ -184,6 +184,17 @@ to be resolved** — it was outside U2a's scope. **When they disagree, `PROGRESS
     collation on `DOCUMENT_NUMBER`, conditional on whether a real Prosvasis Go number carries Greek
     letters).
 
+    ⚠️⚠️ **AND B.4's CONDITION IS ANSWERED — 2026-08-06.** The owner answered on **2026-08-05** and
+    it reached no file until now: a Go document number is a **Greek prefix + zero-padded integer, no
+    separator** (`ΑΛΠ00000087`), **all series** — so the deferral's basis, *"the two collations agree
+    on Latin document numbers"*, **was never applicable to real data.** ⭐ **Measured 2026-08-06: on
+    plain uppercase unaccented Greek they agree anyway**, so the conclusion stands for a different
+    reason. ✅ **F5b is CLOSED 2026-08-06 as NOT NEEDED** — the owner confirmed all prefixes are
+    plain uppercase Greek, so the collation would change no ordering. ⚠️ **Residual: nothing
+    constrains an abbreviation** (`varchar(20)`, not-blank + unique, no pattern), so an accented or
+    lowercase one brings the work back; recorded at the two series request records and the series
+    screen, and **no constraint was proposed**. Full record at roadmap ᶠ⁵ᵇ.
+
     ⚠️⚠️ **CORRECTED BY U2a, 2026-08-06, and the correction is the point. This bullet said both had
     "their own roadmap rows". N1 did. B.4 DID NOT — there was no such row until U2a created one**
     (now **F5b**). B.4's only home was a table cell inside F5's own record, so archiving F5 would have

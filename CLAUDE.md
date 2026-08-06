@@ -1184,7 +1184,7 @@ chronological split would have archived without a sound:**
 
 | Buried in | Now | What was owed |
 |---|---|---|
-| **F5's B.4** | roadmap **F5b** | An `el-GR-x-icu` collation on `DOCUMENT_NUMBER`, conditional on an owner check that is still outstanding |
+| **F5's B.4** | roadmap **F5b** | An `el-GR-x-icu` collation on `DOCUMENT_NUMBER`. ⚠️ **The owner had ALREADY ANSWERED its condition on 2026-08-05 and the answer reached no file** — see below |
 | **W1's *Queued out of W1*** | roadmap **W1c** | Two consumer clean-ups, marked *Queued*, tracked nowhere |
 | **R1's decision A** | roadmap **R1c** | The Fees question — *"unscheduled, not forgotten"*, with no row to be unforgotten in |
 | **8a's design item H.2** | roadmap **8c** | A discriminated union modelled flat, with a named trigger (**F6**) and nothing watching for it |
@@ -1196,6 +1196,39 @@ that F5's B.4 *"had its own roadmap row"*. It did not — there was no such row 
 **The tell to listen for is the same grammar every time:** *"deferred, with its own row"*,
 *"queued"*, *"recorded, not built"*. **Each is a claim that somebody else is holding it.** Check that
 they are — `grep` the roadmap for the row.
+
+#### ⚠️ And a row is not enough: F5b's was created CARRYING A CONDITION THAT HAD ALREADY BEEN MET
+
+**Found 2026-08-06, one day after the row was created, and it is the sharper half of this rule.**
+
+U2a did what the paragraph above prescribes: it found B.4 buried inside F5's record, gave it roadmap
+row **F5b**, and wrote the condition at the row. **The condition was already false.** The owner had
+answered it on **2026-08-05** — every Prosvasis Go document number carries Greek letters — and the
+answer had reached **no file in this repository**. So U2a **created a new record and populated it
+from the stale ones**, and F5's close-out that same day listed the question among *"three questions
+with the owner"*.
+
+⚠️ **Seven sites then said the condition was open, and the newest of them was written after it
+closed.** The `⚠️` at the code even named the trigger — *"if it does, this stops being deferred
+immediately"* — and did not fire, because nobody had told the repository.
+
+**Two things follow, and the second is the one to carry:**
+
+- **Giving a buried item a row does not verify the item.** A row created from the sites it was
+  buried in inherits whatever those sites got wrong. **When you extract an obligation, re-establish
+  its condition — do not transcribe it.**
+- ⭐ **This is §*A decision reached in a design conversation* landing on the obligation created to
+  prevent exactly that.** The remedy has no new mechanism in it: an answer given in chat is not
+  recorded until somebody writes it into the file that governs it, **and the person who most needs
+  to be asked is the owner, at the moment a row's condition is written down.**
+
+📌 **What the measurement then showed, which is why *re-establish* is not merely bureaucratic.** The
+deferral's stated basis — *"the two collations agree on Latin document numbers"* — was **never
+applicable**: no real document number is Latin, and the `TEST-…` shapes it was measured against are
+invented by `LiveSeedTest`. The conclusion survived on a **different** fact discovered only by
+re-measuring (plain uppercase Greek sorts identically under both collations), and the condition was
+**replaced rather than resolved**. **Transcribing would have kept a right answer resting on a wrong
+reason.**
 
 ## Session close-out
 
