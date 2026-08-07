@@ -6,7 +6,12 @@
 
 ## What NovoCore is
 
-An internally-owned system for Novotrade S.A. (Java Jives) replacing Manager.io, and eventually Prosvasis Go. **Not just "replace Manager"** — the real goal is unifying data across disconnected systems, automating repetitive tasks, and generating real reports. Manager replacement is the first workload, not the purpose. No regulatory/compliance filing responsibility sits with NovoCore — the external accountant handles that; Go remains the invoicing system of record until Phase 11.
+An internally-owned system for Novotrade S.A. (Java Jives) replacing Manager.io, and eventually Prosvasis Go. Manager replacement is the first workload, not the purpose. No regulatory/compliance filing responsibility sits with NovoCore — the external accountant handles that; Go remains the invoicing system of record until Phase 11.
+
+⚠️ **THE PURPOSE STATEMENT LIVES IN BRIEF §1 AND IS NOT RESTATED HERE. Corrected 2026-08-07 (U5, D-U5.7)** — it was in four places, so it is now in one and the other three point at it. Two things a reader needs before going there, because they change what work looks justified:
+
+- **The end state is NOT one system. Novocore is a HUB.** Go and WooCommerce both remain, each keeping its own copy to function; Novocore holds the **one authoritative copy** and they are **satellites fed from it**. "One source of truth" is about *authority*, not *count*. ⚠️ *"Unify to one system"* is a phrasing that would justify work that is not needed.
+- ⚠️ **Novocore will never be commercialised** (owner, 2026-08-07). Speculative generality is a thing to **cut**. `CLAUDE.md` non-negotiable rule 10.
 
 ## ⚠️ The document model — settled 2026-08-02, and it governs everything from R1 onward
 
@@ -18,18 +23,29 @@ The governing statement is `CLAUDE.md`, *The document model*; the identifier dec
   the document receives its ΜΑΡΚ and QR code there. **Legal issuance always runs through an external
   transmission path — Prosvasis Go today, a certified Πάροχος at step 40 — and that does not change in
   any phase.** A sales document appears in Novocore only *after* it legally exists.
-- ⚠️ **A SALES DOCUMENT IS A MIRROR, and the record form is a TEST HARNESS (owner, 2026-08-05).**
-  The invoicing software is the **only** issuer. Novocore sends an **order** via API, that software
-  issues, and Novocore **fetches the issued document back** for internal filing; "issuing" from a
-  Novocore screen means **sending the order again**. ⚠️ **So a sales invoice will NEVER be recorded by
-  hand in real operation** — the core works standalone **for testing purposes only**. **F5's list and
-  detail screens and the whole recording path are permanent product; the record FORM is
-  transitional**, and so is the credit-note form (thinner still — nobody will ever type a credit
-  note) and the **reversal mechanism**, whose replacement once the adapter exists is a **re-fetch from
-  the source**. Full statement in `CLAUDE.md` §1b. ⚠️ **Open structural question, deliberately
-  unresolved:** both paths run through an **order**, Novocore has no order entity (step 22, Phase 4)
-  while the screens are Phase 2 — and **the order and the document are two linked objects, not one
-  filled in progressively**, because Go applies its own VAT resolution, rounding and numbering.
+- ⭐ **A SALES DOCUMENT ORIGINATES IN NOVOCORE, and the record form is PERMANENT PRODUCT (owner,
+  2026-08-07 — SUPERSEDES the mirror model of 2026-08-05).** The document is **composed in Novocore**;
+  "issuing" it from a Novocore screen **sends the data to the external invoicing software**, which
+  issues it, and Novocore then **records the returned document**.
+  ⚠️ **BUT NOVOCORE STILL DOES NOT ISSUE, and rule 1 above is untouched including *"does not change
+  in any phase"*.** Go allocates the number and Go obtains the ΜΑΡΚ. **What moved is where the human
+  types, not who issues** — and the `issue`/`issuance` naming rule therefore survives unchanged, and
+  is *more* necessary than before, not less. Full statement in `CLAUDE.md` §1b.
+  ✅ **What this withdraws:** the record form, the credit-note form and the reversal mechanism were all
+  recorded as **transitional test harnesses** on the premise that a sales invoice would never be typed
+  in real operation. **That premise is withdrawn. All three are permanent**, and a reader previously
+  told not to "finish" the record form no longer is.
+  ✅ **The open structural question about ORDERS is CLOSED: orders are a CORE ENTITY** (2026-08-07,
+  roadmap C4) — **unscoped, nothing built, zero order tables or classes measured the same day.**
+  ⚠️ **The half that does NOT close:** the order and the document remain **two linked objects, not one
+  filled in progressively**, because the invoicing software applies its own VAT resolution, rounding
+  and numbering. *(The old wording of this question said step 22 was "Phase 4". It is **Phase 3** —
+  corrected 2026-08-07 in both places that carried the error.)*
+  ⚠️ **D-U5.3 is a SMALLER change than it first appeared**, and the correction is worth carrying: the
+  architecture already assumed Novocore submits the order — X1's three requirements were settled on
+  **2026-08-05**, the same day as the mirror framing. The mirror framing was about **who authors the
+  document record**, never about **who initiates**. What actually changed is that a human-facing
+  screen now sits permanently on that path.
 - **Numbers are recorded, never generated — until step 40.** No sequence, no counter, no
   allocation-at-commit. What changes at 40 is narrower than it sounds: Novocore begins allocating the
   **series number** and composing the document, transmitting via the Πάροχος instead of handing the job
@@ -100,7 +116,30 @@ dimension means restating history.
 **Product categories** remain three levels deep with a product in several at once — a self-referencing
 table plus a join table, **not two flat columns and not an enum**. Nothing exists, not even the schema.
 
-## Current build status (as of this primer — 2026-08-06, after F5; **R4 is current**)
+## Current build status (as of this primer — 2026-08-07, after U5; **R4 is current and unfinished**)
+
+### ⭐ THE 2026-08-07 SCOPE REVIEW (U5) — read this FIRST. It supersedes things stated below
+
+**U5 was documentation and configuration only. Nothing was built, nothing was scheduled, and
+placement remains the owner's.** Ten decisions; the ones that change how existing records read:
+
+| # | Decision | What it changes |
+|---|---|---|
+| **D-U5.3** | ⭐ **SALES DOCUMENTS ORIGINATE IN NOVOCORE.** Supersedes the mirror model | **The record form, the credit-note form and the reversal mechanism stop being test harnesses and become permanent product.** ⚠️ Novocore still does **not** issue — rule 1 and the `issue`/`issuance` naming rule are **untouched**. ⚠️ **Smaller than it looks**: X1's requirements were already settled on 2026-08-05 from a framing where Novocore submits the order |
+| **D-U5.4** | ⭐ **ORDERS ARE A CORE ENTITY** — roadmap **C4** | **The substantive decision of the session.** ✅ Closes `CLAUDE.md` §1b's open structural question. ⚠️ **Unscoped — nothing exists**; the *two linked objects* half does **not** close |
+| **D-U5.1** | **C1 stands — re-examined, not merely left alone** | The mapping-layer alternative was **re-proposed and withdrawn the same day**. ⚠️ **The rejected alternative and its reasoning are now recorded**, because it had already been re-proposed once. The alias becomes **required but BLOCKED** — roadmap **C3** |
+| **D-U5.6** | ⚠️ **NOVOCORE WILL NEVER BE COMMERCIALISED** | `CLAUDE.md` non-negotiable **rule 10**. Speculative generality is a **reason to cut**. Roadmap step **43 CLOSED**. Raises one unanswered question against **D2** |
+| **D-U5.9/10** | ⚠️ **NO SESSION MAY SEND A WRITE REQUEST TO PROSVASIS GO** | `CLAUDE.md` non-negotiable **rule 9** — *and* `permissions.ask` in a now-**committed** `.claude/settings.json`. **Read requests are also not authorised by default.** The prose states intent; the ask rule is what holds |
+| **D-U5.2** | myDATA characterisation: account default, **line override**, plus an exception report | Roadmap **C5**. ⚠️ **Gate: before step 24 / M0b** — retrofitting means restating history |
+| **D-U5.5** | **Shared-entity ownership is OPEN** — 4 questions × Customers/Products/Stock | Roadmap **C6**. 🛑 **Stock is hardest and may be impossible**: Go's documented API has no stock at all |
+| **D-U5.7** | The purpose statement, corrected, **in brief §1 only** | **Novocore is a HUB, not a merger.** Go and Woo remain as satellites |
+| **D-U5.8** | ⚠️ **Two working Go integrations exist OUTSIDE this repository** and nothing here records them | Roadmap **G1**. **Trigger: before step 18 is scoped** |
+
+⚠️ **A body of DOCUMENTED (not observed) Go API facts arrived with U5 and is recorded at roadmap X1
+and ᵍᵒ.** The three that change existing plans: **Go offers no idempotency mechanism** (so X1's key
+must be Novocore-side check-then-act, over a **scan**); **issuance is two calls**, so *submitted,
+outcome unknown* is **two states with different recoveries**; and the `einvoice` response has **two
+nested `success` flags — outer true with inner false means AADE REJECTED.**
 
 ### ⚠️ THE THREE DECISIONS OF 2026-08-06 — read these before the chronology below
 
@@ -108,7 +147,7 @@ table plus a join table, **not two flat columns and not an enum**. Nothing exist
 |---|---|---|
 | **1** | ⚠️ **R2c is DEFERRED and SPLIT.** It is not core work and the owner does not want it interrupting the core | Demoted 🟡 → ⚪ and **moved out of the roadmap's sequence block** — the demotion **is** the decision, not a side effect. **2a** (the invisible sort-code column, cosmetic) → **F10**'s display-defects list; **2b** (sort code absent from the series **edit** form) → **R4**, with the unverified series-ordering check. ⚠️ **Neither half is scheduled as R2c** |
 | **2** | 🟡 **R4 is CURRENT** — payment methods become a business list referencing an AADE codification | Promoted ⚪ → 🟡 because the owner **commissioned its Phase 0**, not because R2c vacated the slot. **Its gate is unchanged and always was the binding one: before F6**, since it changes the sales invoice request contract |
-| **3** | ⭐ **THE CHART OF ACCOUNTS IS DECIDED.** Novocore uses **the official Greek chart directly**, with an **alias on each account for display**, and there is **NO separate business chart mapped onto it** | **One layer.** The only thing a business chart buys is many-to-one granularity, **better served by the product model** (categories and lines that name products). And **one layer is the reversible choice** — adding a layer later is additive, collapsing two is a merge that loses history. ⚠️ **No alias field exists on an account today** (measured against `Account`/`AccountView`) and it was **not built**; the absence is recorded against roadmap row **C1**. ✅ It **removes a prerequisite R4 might have had** — R4's account picker offers accounts from the one chart that exists |
+| **3** | ⭐ **THE CHART OF ACCOUNTS IS DECIDED.** Novocore uses **the official Greek chart directly**, with an **alias on each account for display**, and there is **NO separate business chart mapped onto it** | **One layer.** The only thing a business chart buys is many-to-one granularity, **better served by the product model** (categories and lines that name products). And **one layer is the reversible choice** — adding a layer later is additive, collapsing two is a merge that loses history. ⚠️ **No alias field exists on an account today** (measured against `Account`/`AccountView`) and it was **not built**; the absence is recorded against roadmap row **C1**. ✅ It **removes a prerequisite R4 might have had** — R4's account picker offers accounts from the one chart that exists. ⭐ **UPDATED 2026-08-07:** the decision was **re-examined and upheld**, which makes the alias **required rather than optional** — and it is now **BLOCKED** on what becomes of `code` and `elp_code`, both empty on every row. **Roadmap C3; do not build an alias from this row** |
 
 **Detailed, always-current status lives in `docs/PROGRESS.md`.** Read that first; this section is
 the summary.
@@ -176,9 +215,11 @@ to be resolved** — it was outside U2a's scope. **When they disagree, `PROGRESS
     invoice request contract, so F6 must be built against the corrected model. Five screens,
     `search=` on both document routes (**V36**), the
   repository's **first three `meta.sortKey`s**, and `DataIntegrityViolationException` mapped to 422.
-  Frontend **402 tests across 41 files**. ⚠️ **The record forms are TRANSITIONAL by owner decision** —
-  a sales document is a *mirror* and is never typed in real operation, so they are test harnesses and
-  must not be polished.
+  Frontend **402 tests across 41 files**. ⭐ **The record forms are PERMANENT PRODUCT — CORRECTED
+  2026-08-07.** This line used to read *"TRANSITIONAL by owner decision — a sales document is a mirror
+  and is never typed in real operation, so they are test harnesses and must not be polished."* **The
+  owner withdrew that premise on 2026-08-07**; a sales document originates in Novocore. **The
+  instruction not to polish them is withdrawn with it.**
   - ⚠️ **Two things were deliberately NOT built: N1** (a reversed document's number is released —
     direction settled, the fix must keep the concurrency guarantee) and **B.4** (an `el-GR-x-icu`
     collation on `DOCUMENT_NUMBER`, conditional on whether a real Prosvasis Go number carries Greek

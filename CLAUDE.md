@@ -13,6 +13,30 @@ NovoCore is Novotrade S.A. (Java Jives)'s internally-owned financial and operati
 7. **Never silently guess or auto-resolve ambiguity.** Rounding differences, customer matches, bank reconciliation matches — all follow the same pattern: auto-resolve only what's genuinely certain (an exact match against a strong identifier), suggest and require one-click confirmation for everything else. See the brief for the specific thresholds and rules per case.
 8. **Adapters have contract tests.** Every adapter must have an automated test confirming the external API still returns the shape it expects. If an external API call returns something unexpected, fail loudly and flag it — never silently drop or guess at malformed data.
 
+9. ⚠️ **NO SESSION MAY SEND A WRITE REQUEST TO PROSVASIS GO.** Owner's rule, 2026-08-07 (D-U5.9). **A document created through Go is transmitted to AADE and legally exists.** A probe that creates one is not a test — it is a **real statutory document that then has to be cancelled**, and Greek law has no cancellation, so the correction is a credit invoice. The rule covers **invoices, credit notes, customers, products and stock**. ⚠️ **Read requests against Go are ALSO not authorised by default** and require the owner's explicit instruction in the step's brief. The rule is lifted **only** against a sandbox or demo company — and **whether one exists is currently unknown**, so today there is no exception. See §*This rule has two halves* below for the part that actually enforces it.
+
+10. ⚠️ **NOVOCORE WILL NEVER BE COMMERCIALISED.** Owner's decision, 2026-08-07 (D-U5.6). It is built for Novotrade S.A. (Java Jives) and for no other business, ever. **The operative consequence, and it is a licence to cut rather than a note:** generality that exists to serve businesses *other than this one* now **needs a justification, and the absence of one is a reason to remove it.** "Someone might want it configurable" is not an argument here — nobody else will ever run this. ⚠️ **This does not license removing generality that serves *this* business**, which is most of it; the target is specifically the speculative kind. **One open question it raises is recorded and NOT answered**: whether D2's three-level, multi-parent product categorisation reflects the real WooCommerce taxonomy or is defensive generality — see the roadmap under ᵗ.
+
+### ⚠️ Rule 9 has TWO HALVES, and CLAUDE.md is the weaker one
+
+**A rule that exists only in this file is a structural assertion, not a behavioural guarantee** — which is the distinction this repository enforces everywhere else and must not exempt itself from. Anthropic's documentation is explicit that permission rules are what Claude Code *enforces*, while instructions in a prompt or in `CLAUDE.md` shape what Claude *tries* to do.
+
+**So rule 9 is written twice, on purpose:**
+
+| Half | What it is | What it actually buys |
+|---|---|---|
+| **The prose above** | The intent, and the reasoning a session needs to apply it to a case nobody enumerated | Persuasion. **Nothing more** |
+| **`.claude/settings.json`** | `permissions.ask` on `Bash(curl *)`, `Bash(wget *)`, `Bash(http *)`, `Bash(httpie *)` | **The owner sees any outbound HTTP from the shell before it happens** |
+
+⚠️ **ASK rather than DENY, deliberately.** A deny rule would block legitimate uses outright and cannot carry exceptions; an ask rule stops nothing that the owner approves and stops everything he does not see.
+
+**The evidence for ask rules surviving every permission mode, stated with its two halves separated because they are not equally strong** — read from https://code.claude.com/docs/en/permissions on **2026-08-07**:
+
+- **For `bypassPermissions`, the documentation says it outright:** the mode *"Skips permission prompts, except those forced by explicit `ask` rules."* **A documented fact.**
+- **For `auto` mode, the same conclusion FOLLOWS FROM the documented rule precedence** — deny, then ask, then allow, with the mode deciding only what happens when *no* rule matches. ⚠️ **That is an inference from a documented rule, not a sentence stating it.** Recorded as an inference so nobody later cites it as chapter and verse.
+
+📌 **And the file had to become committable for any of this to hold, which is a decision in itself.** `.claude/settings.json` was gitignored by W1 (2026-08-04) on the argument that committing it makes one developer's **trust** decisions everybody's. **That argument reaches `allow` rules and does not reach `ask` rules, because an ask rule grants nothing.** U5 split the file accordingly: `ask` is committed, `allow` moved to the still-ignored `.claude/settings.local.json`. **W1's decision is scoped, not reversed** — the reasoning is quoted at the `.gitignore` entry.
+
 ## Shared core services (not domain-specific, but still core-owned)
 
 - **Email sending** is a shared core service, configured once via Settings (SMTP credentials, sender identity), exposed through a single interface — e.g. `send(to, subject, body, attachments)`. Any module or feature needing to send email (Purchase Order PDFs, Reports, the Accountant Monthly Package, etc.) calls this service. Never configure SMTP or send email directly from within a module — that recreates the scattered-credentials problem this rule exists to prevent.
@@ -690,45 +714,65 @@ the document receives a ΜΑΡΚ and a QR code at that moment. **Legal issuance 
 external transmission path — Prosvasis Go today, a certified Πάροχος at step 40 — and that does not
 change in any phase.** A sales document appears in Novocore only *after* it legally exists.
 
-### ⚠️ 1b. A SALES DOCUMENT IN NOVOCORE IS A MIRROR. Settled by the owner, 2026-08-05
+### ⚠️ 1b. A SALES DOCUMENT ORIGINATES IN NOVOCORE. Superseded and rewritten 2026-08-07 (U5)
 
-**This is stronger than rule 1 and it changes how the screens are read.** The invoicing software —
-Prosvasis Go today, another system or a certified Πάροχος later — is the **only** issuer. Novocore's
-sales documents are a **mirror of what that third party created**. There are two paths and the owner
-states the second is the first with a different trigger:
+⚠️ **This section said, from 2026-08-05 to 2026-08-07, that a sales document in Novocore is a MIRROR
+and that F5's record form is a TEST HARNESS. The owner withdrew that premise on 2026-08-07.** The
+superseded text is preserved in `HISTORY.md`; what follows replaces it.
 
-1. Novocore sends an **order** to the invoicing software via API; that software issues the document;
-   Novocore **fetches the issued document back** for internal filing.
-2. "Issuing" from a Novocore screen means **sending the order again**, after which (1) follows.
+**The owner's statement, 2026-08-07:** a sales document is **composed in Novocore**, and "issuing" it
+from a Novocore screen **sends the data to the external invoicing software**, which issues it;
+Novocore then **records the returned document**.
 
-⚠️ **THE CONSEQUENCE, and it must not be mistaken for a limitation of the current build: a sales
-invoice will NEVER be recorded by hand in real operation.** The core must work standalone, without
-adapters, **for testing purposes only**.
+#### ⚠️ READ THIS BEFORE EDITING ANYTHING NEARBY: rule 1 above is UNTOUCHED, in full
 
-**So F5's deliverables split, and the split is the thing to carry:**
+**Rule 1 and this section read as one block, and a careless edit takes both.** It does not.
+**Novocore still does not issue.** Go allocates the number and Go obtains the ΜΑΡΚ. Rule 1's closing
+clause — *"and that does not change in any phase"* — **stands exactly as written.**
+
+**What moved is where the human types, not who issues.** That is the entire content of the change.
+
+📌 **So the naming rule (item 3 below) SURVIVES UNCHANGED — and its justification has shifted
+underneath it, which is why the reason is restated here rather than left to be re-derived.** It used
+to be defensible on the ground that Novocore was merely a passive recipient of documents. **It is no
+longer**: Novocore now composes the document and a screen button starts the process. That makes the
+rule *more* necessary, not less. An identifier named `issue` on a screen that composes a document is
+exactly the reading that has to be prevented — the operator's click **requests** issuance from a
+party that performs it. `requestIssuance`, `submitForIssuance`, `recordIssuedDocument`, `record`.
+
+#### The record form is PERMANENT PRODUCT. F5's split is withdrawn
 
 | Part | Status |
 |---|---|
-| **List and detail screens** | **PERMANENT PRODUCT.** People will read mirrored documents daily |
-| **The recording PATH** — service, refusals, posting, stock consumption | **PERMANENT.** A document issued directly in Go at the counter still arrives through it |
-| **The record FORM** | ⚠️ **TRANSITIONAL — a test harness.** Correct, not polished. It has no production caller once the adapter exists |
+| **List and detail screens** | **PERMANENT PRODUCT** — unchanged by this correction |
+| **The recording PATH** — service, refusals, posting, stock consumption | **PERMANENT** — unchanged. A document issued directly in Go at the counter still arrives through it |
+| **The record FORM** | ✅ **PERMANENT PRODUCT (2026-08-07).** Was *"TRANSITIONAL — a test harness"*. **The premise that a sales invoice would never be typed in real operation is withdrawn by the owner** |
+| **The credit-note form** | ✅ **PERMANENT.** Was *"thinner still — nobody will ever type a credit note"* |
+| **The reversal mechanism** | ✅ **PERMANENT.** Was transitional, on the ground that a wrong mirror is corrected by a re-fetch. There is no mirror to re-fetch |
 
-**A reader who does not know this will "finish" the record form** — richer line editing, serial-number
-pickers, keyboard flow — and that is effort spent on a screen scheduled to be deleted. The same
-applies to the credit-note record form, which is thinner still: **nobody will ever type a credit
-note.**
+⭐ **This raises the value of work already done; nothing is lost.** A reader who met the old text was
+told not to "finish" the record form. **That instruction is withdrawn** — richer line editing,
+serial-number pickers and keyboard flow are now ordinary product work on a screen that stays.
 
-⚠️ **The reversal mechanism is TRANSITIONAL too.** Once the adapter exists, the correction for a
-wrong mirror is a **re-fetch from the source**, not a reversal. Reversal exists because humans
-currently type the mirror by hand. See §2b for what that means for the number.
+#### ✅ The open structural question about ORDERS is CLOSED. Orders are a CORE ENTITY (D-U5.4)
 
-⚠️ **An open structural question follows from this and is deliberately NOT resolved here.** Both
-paths run through an **order** — customer, lines, prices, channel — which is submitted for issuance
-and later receives a document back. **Novocore has no order entity; it is roadmap step 22, in Phase
-4, while the screens that depend on it are being built in Phase 2.** And the issued document may not
-match the order: Go applies its own VAT resolution, rounding and numbering, so **the order and the
-document are two linked objects, not one object filled in progressively.** Recorded against step 22
-and against F5; do not attempt to resolve it while building a screen.
+**This section used to carry an open structural question**: both paths run through an *order*,
+Novocore had no order entity, it sat at roadmap step 22 in **Phase 3** while the screens depending on
+it were being built in Phase 2. **The owner closed it on 2026-08-07.**
+
+**Orders are core data**, alongside Customers, Suppliers, Products, sales documents, purchase
+documents and the chart of accounts — no longer only the Sales Order Fulfillment module's concern.
+
+⚠️ **What is CLOSED is the placement question. The entity is UNSCOPED and deliberately so** — U5
+recorded the decision and built nothing. There is no order table, no order entity and no order route
+today; measured 2026-08-07, `backend/` contains **zero `*Order*.java` files** and no migration
+creates an order table.
+
+⚠️ **And what stays true is the half that survives the reclassification, so do not collapse it:**
+**the order and the document remain TWO LINKED OBJECTS, not one object filled in progressively.**
+The invoicing software applies its own VAT resolution, rounding and numbering, so what comes back may
+not match what was sent. **A design that treats the document as the order's later state is wrong**,
+and it is wrong for a reason that no amount of Novocore-side care removes.
 
 **2. Numbers are recorded, never generated — until step 40.** No sequence, no counter, no
 allocation-at-commit. What changes at step 40 is narrower than it sounds: Novocore begins allocating
@@ -758,6 +802,12 @@ one is wrong.** The reasoning is the part to keep, because it is not derivable f
 > cancellation of an issued document — **Greek law has no such thing**; an error in an issued document
 > is corrected by a credit invoice. Go's document still exists under its number and **must be recorded
 > again correctly**, so the number has to become available.
+
+📌 **Checked against U5's rewrite of §1b, 2026-08-07, and it survives unchanged.** The reasoning never
+depended on the mirror framing: Go still issues and still allocates the number, so a Novocore record
+of it can still be wrong and still has to be re-recordable. **What changed is only that the reversal
+mechanism is now PERMANENT rather than transitional** — §1b used to say its replacement would be a
+re-fetch from the source, and there is no source to re-fetch from when Novocore composed the document.
 
 **So the partial unique index is the enforcement that is wrong. The trigger and the service message
 are right.** Concretely, on both `sales_invoice` and `credit_note`:

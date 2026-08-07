@@ -6,11 +6,35 @@
 
 ## 1. What NovoCore actually is
 
-Not simply "a Manager.io replacement." The real driver is repetitive manual work, operational gaps, and disconnected systems. The goal is to save time, unify data into one database, generate real reports, and automate time-consuming tasks. Manager.io currently just controls the basics of the business — **replacing it is NovoCore's first real workload, not its purpose.**
+⚠️ **This section is the SINGLE HOME of the purpose statement. Corrected 2026-08-07 (U5, D-U5.7).** `CLAUDE.md`, `README.md` and the context primer each carry a one-line *identification* and point here; none of them restates the purpose, deliberately, so there is one record of it rather than four.
+
+**NovoCore exists to:**
+
+1. **Automate daily work** and **reduce errors** in it.
+2. **Unify fragmented systems into ONE SOURCE OF TRUTH.**
+3. **Produce real reports.**
+4. **Allow new modules** to be built against one coherent data model.
+5. **Move functionality OFF THE ECOMMERCE SITE**, which is currently overloaded by carrying it.
+
+Not simply "a Manager.io replacement." The real driver is repetitive manual work, operational gaps, and disconnected systems. Manager.io currently just controls the basics of the business — **replacing it is NovoCore's first real workload, not its purpose.**
+
+### ⚠️ The end state is NOT one system. NovoCore is a HUB, not a merger
+
+**This correction is recorded explicitly because the loose phrasing would justify work that is not needed.** "Unify to one system" reads as *retire the others*. That is wrong:
+
+- **Go and WooCommerce both remain**, and both must keep their own copies of shared data to function at all — Go needs customers and stock to issue; Woo needs products and stock to sell.
+- **NovoCore holds the ONE AUTHORITATIVE COPY. The others are SATELLITES fed from it.** "One source of truth" is a statement about *authority*, not about *count*.
+- ⚠️ **So the shared-entity ownership questions are real design work, not plumbing** — who may create, who may edit, what happens when a satellite is edited anyway, and what happens when a push to a satellite fails. **Open for Customers, Products and Stock; recorded in the roadmap, not answered.**
 
 **No regulatory/compliance filing responsibility sits with NovoCore.** The external accountant continues handling official filings. Prosvasis Go remains the invoicing system of record until NovoCore takes that over directly (Phase 11).
 
-**Long-term goal: fully replace Prosvasis Go** — considered limited software and a primary motivation for the project. Go's current roles: stock/cost data, purchase order documents, invoice issuing + myDATA transmission + POS terminal triggering. The Go adapter is transitional/bridging, not permanent infrastructure.
+**Long-term goal: fully replace Prosvasis Go** — considered limited software and a primary motivation for the project. Go's current roles: stock/cost data, purchase order documents, invoice issuing + myDATA transmission + POS terminal triggering.
+
+⚠️ **"Go is transitional" and "Go is a satellite that remains" are both true, ACROSS TIME, and the timeline is what reconciles them.** Stated in one sentence so a reader meeting both does not treat it as a contradiction: **Go is a satellite until step 40 retires it; WooCommerce is a satellite indefinitely.** The Go adapter is therefore bridging infrastructure with a scheduled end, and the Woo adapter is not.
+
+⭐ **This strengthens the document-origination decision rather than conflicting with it** (`CLAUDE.md` §1b, 2026-08-07). A NovoCore screen that *composes* the sales document, with Go issuing it, is a **waypoint toward step 40** — the composition moves in-house first, the transmission path moves later. It is not a detour.
+
+⚠️ **NovoCore will never be commercialised** (owner, 2026-08-07). Built for Novotrade S.A. and no other business, ever. See `CLAUDE.md` non-negotiable rule 10 for the operative consequence, which is that speculative generality is a thing to cut rather than a thing to keep.
 
 ---
 
@@ -41,7 +65,13 @@ Java + Spring Boot, PostgreSQL, self-hosted (Dockerized, HTTPS reverse proxy fro
 
 ## 4. Chart of accounts
 
-Simplified, business-driven accounts with optional ΕΛΠ (Ν. 4308/2014) code mapping. **Control account / sub-ledger pattern:** Accounts Receivable, Accounts Payable, Inventory, and Fixed Assets are each a single control account; Customers, Suppliers, Products, and Assets are sub-ledger entities.
+⚠️ **CORRECTED 2026-08-07 (U5), brought into line with decision C1. This section used to open: *"Simplified, business-driven accounts with optional ΕΛΠ (Ν. 4308/2014) code mapping."* That is C1's REJECTED ALTERNATIVE**, and it went on being stated as the design for a day after the owner decided against it.
+
+**C1, decided 2026-08-06 and re-examined and upheld 2026-08-07: NovoCore uses the OFFICIAL GREEK CHART OF ACCOUNTS DIRECTLY, with a DISPLAY ALIAS on each account, and there is NO separate business chart mapped onto it.** One layer, not two. The reasoning, the rejected alternative and the open question about the existing `code`/`elp_code` columns are all recorded at roadmap footnote ᶜ¹ — read it before designing anything that touches the chart.
+
+⚠️ **The alias does NOT exist yet and must not be built until the column question at ᶜ¹ is answered.** The account today carries `code` (blank on every row) and `elp_code` (null on every row); adding an alias now would give three label columns of which two are empty.
+
+**Control account / sub-ledger pattern:** Accounts Receivable, Accounts Payable, Inventory, and Fixed Assets are each a single control account; Customers, Suppliers, Products, and Assets are sub-ledger entities.
 
 **Partner Clearing Accounts:** Skroutz, ACS Courier, POS provider (epay/ePOS) — each reconciled against multiple transaction types (invoices, receipts, payments, debit notes, service/commission invoices — fully enumerated per partner, see §8).
 
@@ -56,7 +86,7 @@ Simplified, business-driven accounts with optional ΕΛΠ (Ν. 4308/2014) code m
 ## 5. Core entities
 
 ### Account
-Code, name, type, normal balance side, parent category, ΕΛΠ mapping, active/inactive. **Kind:** Standard / Bank-Cash / Partner Clearing / **Control** (with a configurable linked sub-ledger entity type — Customer for AR, Supplier for AP, Product/Lot for Inventory, Asset for Fixed Assets).
+Code, name, type, normal balance side, parent category, ΕΛΠ mapping, active/inactive. ⚠️ **AND A DISPLAY ALIAS — added to this list 2026-08-07 (U5), NOT BUILT.** C1 (§4 above) makes the alias load-bearing rather than cosmetic: it is what makes an *official* chart usable by the owner rather than only by his accountant. ⚠️ **Its shape is an OPEN QUESTION and it must not be built until that question is answered** — the account already carries two label columns that are empty on every row (`code`, `elp_code`), so a third would be worse than the two-layer shape C1 rejected. See roadmap footnote ᶜ¹. **Kind:** Standard / Bank-Cash / Partner Clearing / **Control** (with a configurable linked sub-ledger entity type — Customer for AR, Supplier for AP, Product/Lot for Inventory, Asset for Fixed Assets).
 
 ### Product *(draft)*
 Title, Photo (core — inline on invoices, staff browsing), Category (main/sub, including **Spare Part**), Brand, Regular Price incl. VAT (default/list price, distinct from actual per-transaction price), VAT Class, SKU, EAN, Stock (computed from lots, never stored), Supplier's SKU, Type/Status (Sellable/Test/On-Demand-Unlisted), Pcs/Carton, Bundle/Composite flag, last purchase price, Unit of measure, Item type (Product vs Service), Active/inactive. Go/Woo IDs excluded — live in adapter mapping tables.

@@ -27,6 +27,7 @@ came to disagree. For status, read `PROGRESS.md`.
 
 | Step | Date | What it was |
 |---|---|---|
+| **U5** | 2026-08-07 | The scope review written into the repository — ten decisions, two of its own premises disproven in Phase 0. Documentation and configuration only |
 | **F5** | 2026-08-06 | Sales invoice + credit note screens — five screens, `search=` on both document routes (**V36**), the repository's first three `meta.sortKey`s. 30 sub-parts; live leg 22 of 23 |
 | **R2b** | 2026-08-04 | R2's live-leg fixes — the stale-list defect (older than R2, in all thirteen create forms), the missing server-side document-type guard, `sort_code` (**V34**), payment methods (**V35**) |
 | **W1 part 2** | 2026-08-04 | The generator describes what **Jackson** writes — +58 properties across 27 response schemas |
@@ -89,6 +90,115 @@ relocation into a diff nobody could check. **The index is the addressing mechani
 not.** New entries go at the top.
 
 ---
+
+
+## ▶ U5 — the 2026-08-07 scope review, written into the repository. **DONE 2026-08-07**
+
+**Documentation and configuration only.** No production code, no schema, no migration, no test
+behaviour changed. Same shape as U3: decisions reached in a design conversation, recorded so they
+survive the session that made them.
+
+⚠️ **Two of U5's OWN premises were disproven by its Phase 0 and corrected rather than written in.**
+That is the most useful thing in this entry, so it is stated before the checklist rather than buried
+in it — see *What Phase 0 caught* below.
+
+### The reconciliation — every D-U5 row, with a verdict
+
+| Row | Verdict |
+|---|---|
+| **D-U5.1** — C1 stands, re-examined | ✅ **DONE.** Rejected alternative *and its reasoning* recorded at roadmap ᶜ¹; accepted costs (longer account list, larger M0a) stated. ⚠️ **Consequence CHANGED by Phase 0** — see below |
+| **D-U5.2** — characterisation defaults | ✅ **DONE.** Roadmap **C5** + `PROGRESS.md` row. All three parts recorded as the requirement; gate (before 24 / M0b) stated. **Not scoped, not built** |
+| **D-U5.3** — documents originate in Novocore | ✅ **DONE.** `CLAUDE.md` §1b rewritten; rule 1 and the naming rule explicitly preserved with the naming rule's reason restated. ⚠️ **(c) REWRITTEN as confirm-and-re-date** — see below |
+| **D-U5.4** — orders become core | ✅ **DONE.** Roadmap **C4**; §1b's open structural question closed; the *two linked objects* half kept open. **Unscoped, as instructed** |
+| **D-U5.5** — shared-entity ownership | ✅ **DONE.** Roadmap **C6** — twelve questions, none answered. Stock named hardest with its reason; Product Creator's promotion recorded |
+| **D-U5.6** — never commercialised | ✅ **DONE.** `CLAUDE.md` non-negotiable **rule 10**; roadmap step **43 CLOSED, not deleted**; the D2 generality question raised and **not answered** |
+| **D-U5.7** — the purpose statement | ✅ **DONE.** Brief **§1** is the single home; primer/`CLAUDE.md`/`README` left as identifications. Hub-not-merger recorded; the Go tension resolved across time |
+| **D-U5.8** — Go integrations outside the repo | ✅ **DONE.** Roadmap **G1**, trigger *before 18 is scoped*; six findings enumerated; absorb-or-standalone left **open** |
+| **D-U5.9** — no writes to Go | ✅ **DONE.** `CLAUDE.md` non-negotiable **rule 9**, including reads-not-authorised and the unknown sandbox |
+| **D-U5.10** — the permission half | ✅ **DONE.** `.claude/settings.json` **committed with `ask` only**; `allow` moved to the still-ignored `.local.json`; `http`/`httpie` added. **Both ignore directions verified** |
+| **C-1** — rule 1 survives intact | ✅ **DONE**, and stated *in the edit itself* as instructed |
+| **C-2** — do not add an alias | ✅ **DONE.** Roadmap **C3** — requirement stands, **shape blocked** on the `code`/`elp_code` question |
+| **C-3** — correct brief §4 *and* §5 | ✅ **DONE**, both |
+| **C-4** — one purpose home; Go tension | ✅ **DONE** |
+| **C-5** — primer says Phase 4 | ✅ **DONE.** Corrected to **Phase 3** in *both* places that carried it |
+| **N-1**…**N-4** — the Go API facts | ✅ **ALL RECORDED**, every one marked **DOCUMENTED, not observed**. N-1/N-2 at roadmap **X1**; N-3 at **C6**; N-4 with the **pre-launch blockers** *and* C6 |
+| **N-5** — commit the vendor documentation | ✅ **DONE, and further than asked.** The extraction **appeared during the session**, so it was committed rather than only recorded: `docs/adapters/prosvasis-go-api.md`, 3,017 lines, version **1.0**, credential-scanned, provenance header. ⚠️ **HALF-OPEN: the HTML's capture date is NOT KNOWN** and is recorded as a gap. The four smaller facts are at **ᵍᵒ** |
+| **H-1** — the staged migration edits | ⚠️ **NOT COMMITTED — the instruction's premise was false.** See below |
+| **H-2** — branch from `main` | ⚠️ **NOT DONE — not executable.** See below |
+
+### ⚠️ What Phase 0 caught, and what changed because of it
+
+**1. X1's three requirements were not new.** U5's brief asserted that documents-originate-in-Novocore
+produced three obligations *"none of which the mirror model needed."* **The repository disproved it:
+requirements a, b and c were settled by the owner on 2026-08-05 — the same day the mirror framing was
+settled — from a framing beginning *"Novocore submits an order."***
+
+⭐ **The mistake was available because *mirror* was read as *passive*. It never meant that** — it was
+about **who authors the document record**, not **who initiates**. Submission was always Novocore's.
+
+⭐ **So D-U5.3 is a SMALLER change than its brief claimed**, and that is why **D-U5.4 carries the
+weight of this session.** The requirements were **re-dated 2026-08-07 with content unchanged**, and
+X1's row went ⚪ *Proposed* → 🔶 **hard prerequisite**.
+
+**2. The alias consequence inverted.** D-U5.1 asked for the alias to be recorded as a required unbuilt
+requirement. **It is — but roadmap ᶜ¹ had already flagged that `code` is blank on every row and
+`elp_code` null on every row**, calling it *"the two-layer shape this decision rejects, one field
+down."* Adding an alias would make **three label columns, two empty.** The owner turned it into a
+**blocking question** instead. **U5 did not discover that observation; it turned a remark into a
+gate.**
+
+**3. The purpose statement was in four places, not three**, and two already carried the loose
+phrasing.
+
+### ⚠️ H-1 — the two staged migration edits were BACKWARDS, and were not committed
+
+**The instruction was to commit them separately as U2a split fallout. They are fallout — in the
+opposite direction.** All three hunks rewrote `HISTORY.md` → `PROGRESS.md` in code comments, and
+**every referent lives in `HISTORY.md` and is absent from `PROGRESS.md`:**
+
+| Referent | in `PROGRESS.md` | in `HISTORY.md` |
+|---|---|---|
+| **Q14** (VAT posting design) | 1 — a status-table row only | **7**, including *"Q14, answered — ADR 0007"* |
+| **"Why the model changed"** | **0** | **3**, including an index row |
+| **the write-off reason field** | **0** | **3** |
+
+**Committing them would have broken three working code-comment citations** — the failure `CLAUDE.md`
+names under *a claim recorded at close-out is a CLAIM*: a citation that resolves to a file not
+containing the thing. ⚠️ **The changes were NOT discarded.** They are preserved as a patch in the
+session scratchpad and the two files restored; **whoever made them should be asked before they are
+re-applied or dropped.**
+
+### ⚠️ H-2 — branching from `main` was not executable, and the reason matters
+
+**`main` is 18 commits behind, and those commits include U2a — the entire `PROGRESS.md`/`HISTORY.md`
+split — plus U2b's drift guards and F5b's closure.** Measured: **`main` has no `HISTORY.md` at all.**
+
+**So the premise *"U5 needs nothing from R4"* is true of R4's build work and false of R4's BRANCH.**
+U5 edits `PROGRESS.md`, `HISTORY.md`, the roadmap and the primer — the exact files U2a restructured —
+and the four-move close-out `CLAUDE.md` now mandates does not exist on `main`. **Every Phase 0
+quotation was measured against this branch's tree and most would not resolve on `main`.**
+
+**What was done instead:** a new branch **`u5-scope-review`** off `r4-payment-methods`' tip. **U5's
+commits no longer pile onto R4's branch**, which is half of what H-2 wanted; **the entanglement it
+wanted to remove is in the repository's history, not in U5's choice of branch,** and undoing it means
+cherry-picking a rename-plus-split over four R4 commits that also touch `PROGRESS.md` — an operation
+well outside a documentation step and the owner's to authorise.
+
+📌 **Also found: local `main` is one commit ahead of `origin/main` and unpushed** —
+`8f1947d Record three decisions of 2026-08-06…`. A close-out that did not push, which `CLAUDE.md`
+requires. **Not fixed by U5** — it is on a branch U5 did not touch.
+
+### What U5 deliberately did NOT do
+
+- **Built nothing.** No code, no schema, no migration, no test.
+- **Scheduled nothing.** No recorded requirement was promoted into the sequence. **Placement is the
+  owner's and he has not made it** — C3, C4, C5, C6 and G1 all carry gates or triggers, never slots.
+- **Answered nothing that was recorded as open** — the alias shape, the twelve ownership questions,
+  D2's generality, absorb-or-standalone, and whether a Go sandbox exists all remain open.
+
+📌 **Evidence class, stated once for the whole entry: every Go API fact is DOCUMENTED, read from the
+vendor's published documentation. Nothing was observed against a live system, and under rule 9
+nothing may be.**
 
 
 ## ▶ F5 — Sales Invoice + Credit Note screens. **DONE 2026-08-06, live leg run, merged to `main`**

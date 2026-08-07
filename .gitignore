@@ -18,10 +18,22 @@ target/
 # find it. Ignored so that window cannot end in a commit. See docs/HISTORY.md's F0 section.
 /seed.ps1
 
-# Claude Code's per-checkout permission allow/deny list. It is a statement about what one
+# Claude Code's permission rules. SPLIT BY U5, 2026-08-07 — W1's decision is NOT reversed, it is
+# scoped to the half it was ever about.
+#
+# W1's argument, 2026-08-04, quoted so it is not lost: this file "is a statement about what one
 # developer's agent may run on one machine, not about this project — committing it would make one
-# person's local trust decisions everybody's, and silently. Found untracked during W1, 2026-08-04.
-.claude/settings.json
+# person's local trust decisions everybody's, and silently."
+#
+# ⚠️ That argument reaches ALLOW rules and does not reach ASK rules, because an ask rule GRANTS
+# NOTHING — it only restricts. Anthropic's documentation makes the same split structurally: a
+# project settings.json's `allow` rules take effect only after the workspace-trust dialog is
+# accepted, while deny and ask rules "aren't affected, since they only restrict"
+# (https://code.claude.com/docs/en/permissions, read 2026-08-07).
+#
+# So `.claude/settings.json` is now COMMITTED and holds the `ask` array only — see D-U5.9/D-U5.10
+# in CLAUDE.md for why one of those rules has to travel with the repository rather than live on one
+# laptop. `allow` moved to `.claude/settings.local.json`, which stays ignored for W1's reason.
 .claude/settings.local.json
 
 # OS / editor cruft

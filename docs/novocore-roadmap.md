@@ -132,11 +132,17 @@ frontend work that must land before any adapter is built.
 |  R2c | Sort code: invisible column, unsettable on series ʳ²ᶜ | — |  |       | ⚪ **DEFERRED and SPLIT** — 2a → F10, 2b → R4 ʳ²ᶜ |
 |   C1 | Official Greek chart adopted directly, + display alias ᶜ¹ | — |    |  | ⚪ Decided 2026-08-06, **not scoped** ᶜ¹ |
 |   C2 | Cash limit is TWO thresholds — needs a retail/B2B distinction ᶜ² | — |  |  | ⚪ Raised by R4, 2026-08-06 ᶜ² |
+|   C3 | Account display alias — **shape is an open question** ᶜ³ | — |  |  | ⚪ **Required by C1, blocked on a question** ᶜ³ |
+|   C4 | **Orders become a CORE entity** ᶜ⁴      |     — |        |       | ⚪ **Decided 2026-08-07, UNSCOPED** ᶜ⁴ |
+|   C5 | myDATA characterisation: account default, line override ᶜ⁵ | — |  |  | ⚪ **Gate: before 24 / M0b** ᶜ⁵ |
+|   C6 | Shared-entity ownership — Customers, Products, Stock ᶜ⁶ | — |  |  | ⚪ **Four questions × three entities, all OPEN** ᶜ⁶ |
+|   G1 | Go's API: capture the two working integrations' findings ᵍᵒ | — |  |  | ⚪ **Trigger: before 18 is scoped** ᵍᵒ |
 |   D2 | Product categories, 3 levels ᵗ          |     — |        |       | ⚪ Before the Woo load (19) |
 |   R3 | Self-supply posting paths ˢ             |     — |        |       | ⚪ Not schedulable — accountant |
 |  U2a | Split `PROGRESS.md` / `HISTORY.md` ᵘ²   |     — |        |       | 🟢 Done |
 |  U2b | The split's drift guards ᵘ²ᵇ            |     — |        |       | 🟢 Done |
 |   U4 | The dated-figure sweep ᵘ⁴               |     — |        |       | ⚪ Deferred, **re-price before scheduling** |
+|   U5 | The 2026-08-07 scope review ᵘ⁵          |     — |        |       | 🟢 Done |
 |  F5b | `el-GR-x-icu` on `DOCUMENT_NUMBER` ᶠ⁵ᵇ  |     — |        |       | ✅ **CLOSED — not needed** ᶠ⁵ᵇ |
 |  W1c | W1's two consumer clean-ups ʷ¹ᶜ         |     — |        |       | ⚪ Queued |
 |  R1c | Fees / *Έξοδα και κρατήσεις* ʳ¹ᶜ        |     — |        |       | ⚪ Cut from R1, unscheduled |
@@ -298,7 +304,7 @@ end. This is the gate before adapters and modules open up.
 
 | Step | What                                    |  Est. | Status         |
 |-----:|-----------------------------------------|------:|----------------|
-|   X1 | General integration outbox ˣ            |     — | ⚪ Proposed, before 18 |
+|   X1 | General integration outbox ˣ            |     — | 🔶 **HARD PREREQUISITE of 18** — reason changed 2026-08-07 ˣ |
 |   17 | Operational monitoring                  |   1.0 | 🔴 Not started  |
 |   18 | Prosvasis Go adapter                    |   4.5 | 🔴 Not started  |
 |      | *(sub-item of 18)* Customer VAT class override ᶠ²ᵃ | — | 🔴 Not started |
@@ -328,7 +334,7 @@ end. This is the gate before adapters and modules open up.
 |   40 | Core-composed invoicing, retires Go ᵇᵇ  |   6.5 | 🔴 Not started  |
 |   41 | Ergani work-card module                 |   1.3 | 🔴 Not started  |
 |   42 | Production server migration             |   1.0 | 🔴 Not started  |
-|   43 | Commercialization requirements ᶜᶜ       |     — | 🔴 Not started  |
+|   43 | Commercialization requirements ᶜᶜ       |     — | ✅ **CLOSED — will never happen** ᶜᶜ |
 |      | **Subtotal, steps 17–43**               |**48.9**|                |
 
 ⚠️ **These estimates are not credible and are deliberately left unrescaled.** Step 15 — the only step
@@ -352,8 +358,19 @@ Real work with no step number. Each has an owner condition rather than a date.
 | **No `sortKey` on any of the *seven* list column files** — no backend constant names one. ⚠️ **Seven, not five**: F4 shipped VAT classes and units of measure with sorting too | The day a list gains paging, its sort controls disappear until keys exist. Safe and loud, still an obligation |
 | **Paging missing on five services** — purchase invoices, goods receipts, settlements, lots/consumptions, email outbox. Confirmed 2026-08-02: exactly 3 of 175 operations accept `page`/`size` | Contract settled and proven on sales invoices. Mechanical. Fires together with the two rows above and with real data volume |
 | **Test-environment parity has no teeth** — timezone, `DateStyle`, PostgreSQL major version, Java default locale/charset are unpinned | Owner's open decision — see below |
-| **2FA + recovery codes (PLB-1)** — deliberately absent because the app is not internet-facing | ⚠️ **Must be resolved before any external or remote access**, including a Remote/Order Staff login, which is that role's whole purpose |
-| **No change-password screen, and no recovery path** — rotating the owner password is a one-off programmatic run of `UserService.changePassword` against the live database | Owner holds the current password (they ran the S1/S2/F4 browser checks with it). The gap is the missing screen and the absent reset path, not a lost credential |
+| **2FA + recovery codes (PLB-1)** — deliberately absent because the app is not internet-facing | ⚠️ **Must be resolved before any external or remote access**, including a Remote/Order Staff login, which is that role's whole purpose. ⭐ **AND NOW ALSO BEFORE ACCEPTING GO WEBHOOKS — new trigger, 2026-08-07 (U5, N-4)**, see ᵍᵒ |
+| **No change-password screen, and no recovery path** — rotating the owner password is a one-off programmatic run of `UserService.changePassword` against the live database | Owner holds the current password (they ran the S1/S2/F4 browser checks with it). The gap is the missing screen and the absent reset path, not a lost credential. ⭐ **Same new trigger as the row above — Go webhooks require a public URL** |
+
+⚠️ **THE THREE ROWS ABOVE SHARE A NEW TRIGGER, ADDED 2026-08-07, AND IT IS THE REASON TO READ THEM
+TOGETHER.** Go's documented webhook support (ᵍᵒ, N-4) is materially good for the shared-entity
+ownership questions — it makes an edit performed directly in Go **detectable** rather than silently
+divergent. **But a webhook requires Novocore to be reachable from the public internet**, and all
+three deferrals above are justified by *"the app is not internet-facing."* **Accepting webhooks turns
+all three from deferred obligations into blocking ones, at once.**
+
+📌 **Recorded beside the capability rather than only beside the deferral, deliberately.** A capability
+written down without its precondition is how the precondition gets met at the last minute, or not at
+all — and the attractive half (webhooks solve a real problem) is the half a future session will read.
 | **Series gap detection** — a document issued through Go that never reached Novocore | Belongs with step 25, Clearing Checks. Schema must support it from R1 onward |
 | **XSD / annex diff check** — AADE publishes no live codification API; lists change between spec versions | Belongs with step 29. Must alert a human, never auto-apply |
 | **Customer / supplier merge** — no mechanism exists (`V17` says so explicitly) | Leaning "alias forward, never rewrite history" |
@@ -1216,7 +1233,19 @@ which is the same shape D2 already requires**, so the load does not need a resha
 owner confirms Woo's categories are exactly the ones wanted: they import AS-IS, with no curation
 during the load.** See ʷᵒᵒ for why the load is not the adapter.
 
-**ᵈ¹ D1 — supplier/customer codes, and the alias.** 📍 **Placed 2026-08-04: after F5, in one block with
+⚠️ **AN OPEN QUESTION WAS RAISED AGAINST THIS ROW ON 2026-08-07 (U5, D-U5.6) AND IS NOT ANSWERED
+HERE.** Since **Novocore will never be commercialised** (`CLAUDE.md` non-negotiable 10), generality
+serving businesses other than this one is a thing to cut. So:
+
+> **Does three-level, multi-parent categorisation reflect the REAL WooCommerce taxonomy this business
+> uses — or is it defensive generality?**
+
+📌 **The paragraph above already contains most of the answer and stops one step short, which is why
+this is a question and not a cut.** The owner confirmed Woo's categories are exactly the ones wanted
+and that they import as-is; Woo's structure *is* hierarchical and multi-membership. **What nobody has
+checked is whether the live catalogue actually USES three levels and multi-membership, or merely
+permits them.** ⚠️ **That is one query against the real Woo installation, and it has not been run.**
+Until it is, cutting would be acting on an assumption in the other direction. 📍 **Placed 2026-08-04: after F5, in one block with
 D3, D4 and D5.** ⚠️ **D1 and D3 are paired because they are the same two entities and the same two
 screens** — codes, the supplier alias and both parties' addresses all land on Customers and Suppliers,
 so doing them apart reopens those two screens twice. Content decided 2026-08-03 (U3):
@@ -1351,7 +1380,40 @@ still free** — run it after eleven screens exist and every finding costs scree
 not need F11**: it is an import, not data entry.
 
 **ᶜ¹ C1 — the official Greek chart is used DIRECTLY, with a display alias. Decided by the owner
-2026-08-06. ⚪ Recorded, NOT scoped, and deliberately not built.**
+2026-08-06; ⭐ RE-EXAMINED AND UPHELD 2026-08-07 (U5, D-U5.1). ⚪ Recorded, NOT scoped, and
+deliberately not built.**
+
+#### ⭐ The alternative was RE-PROPOSED and WITHDRAWN on 2026-08-07. Both halves are recorded
+
+**On 2026-08-07 the owner proposed the alternative — a business chart of accounts with a reference
+field to the official one — and withdrew it in the same session, keeping C1.**
+
+⚠️ **THE REJECTED ALTERNATIVE IS RECORDED HERE DELIBERATELY, AND SO IS WHY IT LOST. A proposal
+rejected without its reasoning recorded gets re-proposed — and this one already has been**, one day
+after being decided. That is the argument for the entry, not tidiness.
+
+> **Why the mapping layer lost:** a mapping between a business chart and the official one is **a
+> SECOND RECORD OF ONE THING**, and a second record that drifts from the first is the failure mode
+> this project has repeatedly paid for. (The worked examples are in `CLAUDE.md`: two records of the
+> sequence, the backend queue and the frontend roadmap disagreeing about item 3, two enforcements of
+> document-number uniqueness diverging silently.)
+
+⚠️ **THE COSTS ARE ACCEPTED, NOT DENIED, and stating them is what makes the decision re-examinable
+rather than merely re-affirmed:**
+
+- **A longer and more granular account list** than a business-designed chart would be.
+- **A larger M0a mapping exercise** — every Manager account now maps onto the official Greek chart
+  rather than onto a chart of our own design. See ᵐ⁰.
+
+📌 **The 2026-08-06 reasoning below stands unchanged and is the primary argument; the above is what
+2026-08-07 added.**
+
+⚠️ **ONE CONSEQUENCE WAS PROMOTED OUT OF THIS FOOTNOTE ON 2026-08-07 — see C3 (ᶜ³).** C1 standing
+makes the display alias **REQUIRED rather than optional**: with no business chart on top, the alias
+is the only place the owner's familiar label can live, and it is what makes an official chart usable
+by him rather than only by his accountant. ⚠️ **It is BLOCKED, not merely unbuilt** — on the very
+question the "two code columns" observation below raises. **Do not build an alias from this footnote;
+read ᶜ³ first.**
 
 **The decision, in one sentence: Novocore uses the official Greek chart of accounts as its chart,
 with an ALIAS on each account for display, and there is NO separate business chart mapped onto the
@@ -1418,6 +1480,220 @@ VAT number can still be sold to at retail.
 ⚠️ **What C2 must decide before it can build anything:** whether the retail/B2B line is the AADE
 group, an explicit flag on `sales_document_type`, or something else — and **whether that is a
 statutory question for the accountant** rather than a modelling one. **R4 must not pre-empt it.**
+
+**ᵘ⁵ U5 — the 2026-08-07 scope review. 🟢 Done. Documentation and configuration only.** Ten owner
+decisions written into the repository, in U3's shape: no production code, no schema, no migration, no
+test behaviour changed. **The full record, including the reconciliation of every row, is in
+`HISTORY.md` under U5.**
+
+**What it produced here:** rows **C3, C4, C5, C6** and **G1**; **X1** promoted to a hard prerequisite
+with its requirements re-dated; **43 closed**; new open questions against **ᵗ (D2)** and **ᶜ¹**; a new
+trigger on three pre-launch blockers.
+
+⚠️ **Nothing was scheduled.** Every row it created carries a **gate or a trigger, never a slot** —
+placement is the owner's and he did not make it.
+
+⚠️ **Two of U5's own premises were disproven by its Phase 0 and corrected rather than written in**,
+which is the part worth reading: X1's three requirements were **not new** (settled 2026-08-05, from a
+framing where Novocore already submits the order), and the account alias turned out to be **blocked
+rather than merely unbuilt**. **Recording the corrections was most of U5's value.**
+
+📌 **Hours and tokens are left BLANK deliberately, not estimated.** `CLAUDE.md`'s roadmap method
+measures from session transcripts bounded by a step's last commit; U5's own close-out is not in the
+transcript when the figure would be computed, and **a plausible number in a column whose entire value
+is that it contains none would be worse than a blank.**
+
+**ᶜ³ C3 — the account display alias. REQUIRED by C1, and BLOCKED on a question C1 itself raised.
+Recorded 2026-08-07 (U5). ⚠️ DO NOT BUILD IT.**
+
+**C1 makes the alias load-bearing rather than cosmetic**, and that is the half worth stating: an
+*official* chart of accounts is usable by an accountant. **The alias is what makes it usable by the
+owner.** With no separate business chart mapped on top (C1's whole point), the alias is the only
+place a familiar label can live. **So this is a requirement, not a nicety — but its shape is open.**
+
+⚠️ **THE BLOCKING QUESTION, for the owner, recorded and NOT answered:**
+
+> Under C1, does **`code` become the official Greek chart code** and **`elp_code` collapse into it**,
+> leaving the new alias to carry the owner's own familiar label — **or is some other arrangement
+> wanted?**
+
+**Why it blocks rather than merely accompanies.** Measured 2026-08-07: the `account` table carries
+**`code`, blank on every row** and **`elp_code`, null on every row**. Adding an alias today produces
+**three label columns of which two are empty** — which is worse than the two-layer shape C1 was
+decided against, one field down. ⭐ **The observation is not new: ᶜ¹ already flagged the two empty
+code columns as "the two-layer shape this decision rejects, one field down" and left it open.** U5
+did not rediscover it; U5 made it a **gate on the alias** instead of a remark beside it.
+
+📌 **Status precisely: the requirement STANDS and is unbuilt. What is open is its SHAPE and what
+becomes of the two existing columns.** Both halves are recorded because recording only the first
+invites somebody to add a third empty column and call C1 discharged.
+
+**ᶜ⁴ C4 — ORDERS ARE A CORE ENTITY. Decided by the owner 2026-08-07 (U5, D-U5.4). ⚪ UNSCOPED.**
+
+**Previously the Sales Order Fulfillment module's concern, at step 22 (Phase 3). Now core data**,
+alongside Customers, Suppliers, Products, sales documents, purchase documents and the chart of
+accounts.
+
+⭐ **This is the SUBSTANTIVE decision of the 2026-08-07 session, and the reason is recorded at X1
+above rather than repeated here**: D-U5.3 turned out to be a *smaller* change than its brief claimed
+— the architecture already assumed Novocore submits an order — so the load falls on this row.
+
+✅ **IT CLOSES A QUESTION THAT WAS OPEN SINCE 2026-08-05.** `CLAUDE.md` §1b carried an *"open
+structural question, deliberately NOT resolved"*: both issuance paths run through an **order**,
+Novocore had no order entity, and the entity sat in **Phase 3** while the screens depending on it
+were being built in **Phase 2**. **Closed by reclassification** — the entity is core, so the phase
+mismatch that made it a question is gone.
+
+⚠️ **WHAT IS CLOSED IS THE PLACEMENT. THE ENTITY IS UNSCOPED, and U5 built nothing.** Measured
+2026-08-07: **zero `*Order*.java` files in `backend/`**, and **no migration creates an order table**.
+There is no schema, no service, no route.
+
+⚠️ **AND THE HALF THAT SURVIVES THE RECLASSIFICATION — do not collapse it, it is the whole reason
+this was ever hard:**
+
+> **The order and the document remain TWO LINKED OBJECTS, not one object filled in progressively.**
+
+The invoicing software applies **its own VAT resolution, rounding and numbering**, so what comes back
+may not match what was sent. **A design that models the document as the order's later state is
+wrong**, and it is wrong for a reason no amount of Novocore-side care removes. ⚠️ **Now sharpened by
+N-2 at X1: issuance is TWO Go calls, so between them a document exists in Go, linked to the order,
+carrying no ΜΑΡΚ.** That state is neither the order nor the finished document.
+
+**ᶜ⁵ C5 — myDATA CHARACTERISATION: an ACCOUNT-LEVEL default with a LINE-LEVEL override. Recorded
+2026-08-07 (U5, D-U5.2). ⚪ Requirement recorded; deliberately NOT scoped and NOT built.**
+
+**Each account carries a default myDATA characterisation. A journal or document line may override
+it. And there must be a way to LIST EVERY LINE THAT TOOK ITS ACCOUNT'S DEFAULT with no human having
+looked at it.**
+
+⚠️ **THE THIRD PART IS NOT A REFINEMENT OF THE FIRST TWO. All three are the requirement**, and the
+reasoning is recorded because the shape is easy to simplify wrongly:
+
+> **myDATA characterisation is PER LINE, not per account**, and **one account can legitimately carry
+> more than one characterisation** depending on the line. An account-level default silently applied
+> to lines it does not fit would **manufacture exactly the discrepancies with the accountant that
+> this feature exists to remove.**
+
+**So the default is a convenience that must be auditable, not a rule.** Without the override the
+model is wrong; without the exception report the model is unfalsifiable — nobody can tell a
+considered characterisation from an unexamined one.
+
+⚠️ **GATE: before real transaction data lands — step 24 / M0b.** Retrofitting a characterisation onto
+posted history means **restating history**, which is the same argument that gates D1/D3/D4/D5. **This
+row shares their deadline and is easy to miss because it was recorded later than they were.**
+
+**ᶜ⁶ C6 — SHARED-ENTITY OWNERSHIP: Customers, Products, Stock. Raised 2026-08-07 (U5, D-U5.5).
+⚪ ALL TWELVE QUESTIONS OPEN. Nothing here is decided.**
+
+**The setting, from the corrected purpose statement (brief §1):** Novocore holds the **one
+authoritative copy** of Customers, Products and Stock. **Go and WooCommerce must nonetheless keep
+their own copies to function** — Go needs customers and stock to issue; Woo needs products and stock
+to sell. **They are satellites, not archives**, and a satellite that cannot be written to cannot run.
+
+**For EACH of Customers, Products and Stock, four questions — twelve in total, none answered:**
+
+| # | Question |
+|---|---|
+| **1** | **Who may CREATE** |
+| **2** | **Who may EDIT** |
+| **3** | **What happens when the satellite system is EDITED ANYWAY** |
+| **4** | **What happens when a PUSH TO THE SATELLITE FAILS** |
+
+⭐ **Question 3 has a partial mechanism now, and its precondition is the catch.** Go supports
+**webhooks** (ᵍᵒ, N-4) on CUSTOMER, ITEM, SALDOC and more, on insert/update/delete/post — so an edit
+made directly in Go becomes **detectable rather than silently divergent**. ⚠️ **But a webhook requires
+Novocore to be reachable from the public internet, which turns three deferred security obligations
+into blocking ones** — recorded with the pre-launch blockers above, not only here.
+
+🛑 **STOCK IS THE HARDEST OF THE THREE, and it is worth saying why rather than just flagging it.**
+**Go derives stock from its own documents.** So Novocore owning stock requires knowing whether Go's
+stock can be **SET from outside or only DERIVED**. ⚠️ **That is a CAPABILITY QUESTION ABOUT GO, not a
+design decision** — which means **it may CONSTRAIN the scope rather than be constrained by it**, and
+no amount of Novocore-side design settles it.
+
+⚠️ **The documented answer is worse than "unknown", and is recorded as DOCUMENTED rather than
+OBSERVED (N-3, 2026-08-07): stock is ABSENT FROM GO'S DOCUMENTED API ENTIRELY.** No quantity field on
+ITEM, no stock or warehouse endpoint, no stock filter on `list/item`; ITEM carries `CODE`, `CODE1`,
+`PRICER`, `PRICEW`, `VAT`, category, group, unit and an active flag. **So on the documentation, Go's
+stock can be neither SET nor READ, and there is no reconciliation path between Go's internal stock
+and Novocore's at all.** ⚠️ **An undocumented endpoint is possible. DO NOT TREAT THIS AS SETTLED** —
+it is the strongest candidate for what G1 must establish first.
+
+📌 **PRODUCTS carry a direction change that is already recorded elsewhere and gains a consequence
+here.** Products **currently originate in WooCommerce**. Reversing the direction — D2's *"Novocore is
+the centre"* — **promotes the Product Creator module from a Phase 9 module to a PREREQUISITE of
+"products live in Novocore."** It is listed in brief §9 among nine other modules with nothing marking
+it load-bearing, and its own brief entry already states the directional decision: *"once built,
+NovoCore becomes the point of product creation, syncing outward to Go/Woo, not the reverse."*
+**Nothing has ever scheduled it against that role.**
+
+**ᵍᵒ G1 — GO'S API: capture what the two WORKING integrations already know. Raised 2026-08-07 (U5,
+D-U5.8). ⚪ Trigger: BEFORE step 18 is scoped.**
+
+⚠️ **THIS IS A KNOWLEDGE GAP, not a build item, and it is the kind that is invisible until somebody
+needs it.** **Two small applications, built with Claude Code, already connect to the invoicing
+software and both send and capture data.** They are **not in this codebase**, and — verified
+2026-08-07 across `docs/` (including all of `HISTORY.md`), `CLAUDE.md` and `README.md` — **their
+findings are recorded nowhere in it.** There was not even a stale version to correct.
+
+**Before step 18 is scoped, those applications' BEHAVIOURAL findings must be captured here:**
+
+| What | Why it is listed separately |
+|---|---|
+| **Auth model** | |
+| **Endpoints exercised** | Which ones were actually called, as against documented |
+| **Error shapes** | |
+| **Whether responses are synchronous** | |
+| ⚠️ **Whether the same request sent twice produces ONE document or TWO** | Directly decides X1's requirement (a) — see N-1 |
+| ⚠️ **Whether stock can be SET or only DERIVED** | Directly decides C6's hardest question — see N-3 |
+
+⚠️ **A WORKING HAPPY PATH ESTABLISHES NONE OF THESE, which is exactly why they are enumerated rather
+than summarised as "it works."** An integration that sends a document successfully has demonstrated
+one path once. It has not demonstrated what a retry does, what a failure looks like, or what the API
+refuses — and those are the things an adapter is mostly made of. **This is `CLAUDE.md`'s *a fact
+established by reading, then built upon*, arriving through somebody else's working code.**
+
+📌 **Whether those two applications are ABSORBED as adapters or REMAIN STANDALONE is a SEPARATE and
+OPEN decision.** Recorded as open; deliberately not answered here. Capturing their findings does not
+presuppose either outcome.
+
+#### ᵍᵒ (continued) — COMMIT THE VENDOR DOCUMENTATION, and four smaller documented facts
+
+⚠️ **The vendor's API documentation is a JavaScript-rendered page a session cannot read.** A text
+extraction existed **outside the repository**; the obligation was to commit it under `docs/adapters/`
+with its **capture date** and the vendor's **documentation version**, so no future session has to
+re-obtain it and a later reader can tell what the documentation said *then* from what it says *now*.
+
+✅ **DISCHARGED 2026-08-07 — the extraction appeared during U5's session and is committed at
+[`docs/adapters/prosvasis-go-api.md`](adapters/prosvasis-go-api.md)** (3,017 lines), with a
+provenance header and its evidence class stated. **Version 1.0**, which is the only version string
+the source carries.
+
+⚠️ **ONE HALF OF THE OBLIGATION IS NOT DISCHARGED, and it is recorded as a gap rather than glossed:
+the DATE THE VENDOR'S HTML WAS CAPTURED IS NOT KNOWN.** The file arrived already converted. That date
+is precisely what would tell a future reader whether the documentation has moved since — **whoever
+captured it should supply it.** ⚠️ **The file was scanned for credentials before committing**; the
+only concrete value is an `s1code` example repeated identically 36 times, left intact as vendor
+boilerplate and flagged at the file.
+
+⚠️ **COMMITTING THE DOCUMENTATION DOES NOT DISCHARGE G1.** The row above is about the two working
+integrations' **behavioural** findings, and **a vendor's documentation is the one thing that cannot
+supply them** — it describes what the API is meant to do. G1 remains open.
+
+**Four smaller DOCUMENTED facts, recorded now because each has a consequence somebody would otherwise
+meet late:**
+
+- ⭐ **Series is specified by the CALLER; Go allocates the NUMBER.** **This confirms the R1a/R1b/R2
+  series model was the right shape** — a series is Novocore's to name and a number is not, which is
+  exactly what `CLAUDE.md` §2 has said since 2026-08-02.
+- **Purchase documents are readable AND writable** (`get`/`list`/`set purdoc`), as are `cfncusdoc`
+  and `cfnsupdoc`. Relevant to F6 and to 18b.
+- ⚠️ **Credentials (`appId`, `token`) travel in the REQUEST BODY**, with `s1code` in a header. **So
+  any request-body logging captures them.** **An adapter logging rule has to exist BEFORE the first
+  log line does, not after** — this is the scattered-credentials failure `CLAUDE.md` already guards
+  for SMTP, arriving at a different door.
+- **Responses are `windows-1253`, not UTF-8.** A decoding step, and a silent-corruption risk on Greek
+  text that will look like a data problem rather than a transport one.
 
 **ᶠ⁶ F6 — Purchase Invoice + Goods Receipt. ⚠️ Two things R1b left it, recorded 2026-08-04 so they
 are not rediscovered.**
@@ -1601,7 +1877,35 @@ concern" rule this should be built once, before the first adapter. For myDATA in
 reuse, deleted-then-recreated external records, and two adapters disagreeing about which core record an
 external ID resolves to are all unanswered. An adapter-time design item.
 
-### ⭐ X1's FIRST CONCRETE REQUIREMENTS — settled by the owner 2026-08-05. **Record only; do not build**
+### ⭐ X1's FIRST CONCRETE REQUIREMENTS — settled 2026-08-05, **CONFIRMED AND RE-DATED 2026-08-07 (U5)**
+
+⚠️ **THE CONTENT BELOW IS UNCHANGED. What changed on 2026-08-07 is the STATUS OF THE ROW and the
+strength of the argument for it — and a correction is recorded here because U5's own brief got this
+wrong.**
+
+**U5's brief asserted that D-U5.3 (sales documents originate in Novocore) produced THREE NEW
+OBLIGATIONS "none of which the mirror model needed". That is false, and this file disproved it.**
+Requirements **a, b and c were settled by the owner on 2026-08-05** — *the same day §1b's mirror
+framing was settled* — from a framing in which **Novocore already submits the order**. The owner's
+own words are quoted below and begin *"Novocore submits an order."*
+
+⭐ **Why the mistake was available, because it is the useful part.** The session that wrote the brief
+read *"a sales document is a mirror"* as meaning **Novocore is passive**. It never meant that. **The
+mirror framing was about the DOCUMENT RECORD — who authors the row Novocore stores — not about who
+initiates.** Submission was always Novocore's.
+
+⭐ **AND THE CONSEQUENCE IS THE THING TO CARRY: D-U5.3 IS A SMALLER CHANGE THAN THE BRIEF CLAIMED.**
+The architecture already assumed Novocore submits an order and Go issues it. **What actually changes
+is that a human-facing screen now sits PERMANENTLY on that path, rather than the path being
+adapter-only.** That makes **D-U5.4 — orders becoming a core entity — the substantive decision of the
+2026-08-07 session**, and it is why C4 below carries the weight rather than this row.
+
+**So, precisely:**
+
+| | |
+|---|---|
+| **Requirements a, b, c** | ✅ **Unchanged in content. Re-dated 2026-08-07** — confirmed, not discovered |
+| **The row's status** | ⚪ *Proposed, before 18* → 🔶 **HARD PREREQUISITE of 18.** D-U5.3 removes the last argument against them: a permanent screen composes the document, so the failure below is reachable by an operator rather than only by an adapter |
 
 ⚠️ **This also answers a question that was previously left open: X1 was thought unspecifiable before a
 real adapter exists. It is not.** Three requirements are fully specified now, and they are **CORE, not
@@ -1624,6 +1928,63 @@ loading screen does not cover it:**
 the sales document list — is being built in F5, before the adapter exists. It is recorded here rather
 than built there, because inventing an unresolved state with nothing to produce it is how a marker
 nobody maintains gets added (the same argument that removed R1b's *stock not yet moved* indicator).
+
+#### ⚠️ WHAT GO'S DOCUMENTED API DOES TO REQUIREMENTS (a) AND (b). Added 2026-08-07 (U5)
+
+⚠️ **EVIDENCE CLASS: DOCUMENTED.** Everything below is read from the vendor's published API
+documentation. **Nothing here was observed against a live system**, and under `CLAUDE.md` rule 9 no
+session may send Go a write request to find out. **Treat every line as a constraint to design
+against and to verify later — not as settled behaviour.** See ᵍᵒ for the full capture and its
+obligations.
+
+**N-1 — GO OFFERS NO IDEMPOTENCY MECHANISM. Requirement (a) is CONSTRAINED, not changed.**
+
+`set/saldoc` is **insert-or-update discriminated by a `key` field, and an empty key inserts a new
+record.** Two identical calls therefore create **two sales documents**. No client-supplied external
+reference exists anywhere in SALDOC's documented field list.
+
+**So requirement (a)'s "idempotency key on the order submission" cannot be a key Go honours. It must
+be built on Novocore's side as CHECK-THEN-ACT:**
+
+- Novocore writes **its own reference into a free-text field** on the document, and
+- **no retry is sent until Go has been queried** for a document already carrying that reference.
+
+⚠️ **AND THE QUERY IS A SCAN, which is the part that will surprise whoever builds it.** `list/saldoc`
+filters only on **TRNDATE, SERIES, TRDR, BRANCH and FINCODE** — **not on any free-text field.** The
+check therefore lists by date and series and **scans the returned rows.** ⚠️ **This depends on the
+reference field appearing in the returned row set at all, which is NOT ESTABLISHED.** If it does not,
+check-then-act has no basis and requirement (a) needs a different mechanism entirely.
+
+**N-2 — ISSUANCE IS TWO CALLS, so requirement (b) is TWO STATES.**
+
+`set/saldoc` creates the document and returns an id. A **separate** call to `/s1services/einvoice`,
+keyed on that id, performs the AADE transmission and returns `mark`, `uid`, `series`, `number`,
+`authenticationCode`, `myDataResponse`, `status` and `dateIssued`.
+
+⭐ **A SALES DOCUMENT CAN EXIST IN GO WITHOUT HAVING BEEN TRANSMITTED.** That does not close the
+statutory question of whether AADE supports a non-finalized document status — but it **establishes
+that Go itself holds an untransmitted state**, which is a different and answerable thing.
+
+**Requirement (b)'s single *submitted, outcome unknown* therefore splits, and the two need DIFFERENT
+recovery actions — which is the whole reason the split matters:**
+
+| State | Recovery |
+|---|---|
+| **CREATED IN GO, NOT TRANSMITTED** | **Re-call `einvoice` on the held id.** Safe to repeat |
+| **TRANSMITTED, OUTCOME UNKNOWN** | ⚠️ **Query. NEVER retry** — a retry here is what produces two statutory documents |
+
+📌 **Both remain extensions of the transmission status ADR 0016 already puts on the core record** —
+not new fields beside it. Do not model them as a second status column.
+
+⚠️ **RECORD THIS TRAP, because an integration reading the obvious flag reports the opposite of the
+truth.** The `einvoice` response carries **`success` at the top level** — documented as whether the
+einvoice was sent *"apart from AADE response"* — **AND a second `success` inside `data`.**
+
+> **Outer `true` with inner `false` means GO TRANSMITTED AND AADE REJECTED.**
+
+**An integration reading the outer flag reports a successful issuance for a refused document.** This
+is the same shape as `CLAUDE.md`'s *the thing that answered was not the thing under test*: the field
+answered truthfully, and it was not answering the question asked.
 
 **ʸ 18b — dispatch document.** Placed with the Go adapter because Go already issues the δελτία, so the
 dispatch document is most likely another **received** document rather than a Novocore-authored one —
@@ -1672,27 +2033,43 @@ and a step scoped from the name alone would build half of it.
 2026-08-03 (U3). Billing and shipping are separate and shipping defaults to billing, but **the
 shipping address is registered at the ORDER, not on the customer**, and it affects only the courier
 voucher — so **the customer entity holds one (billing) address** and this is where the other lives.
-⚠️ **There is no order entity anywhere in this system today**; step 22 is where one *will* exist,
-which is precisely why the requirement is recorded here rather than left in D3 waiting on a table
-that does not exist. See ᵈ³.
+⚠️ **There is no order entity anywhere in this system today** — re-measured 2026-08-07: zero
+`*Order*.java` files in `backend/`, no migration creating an order table. **The requirement is
+recorded here rather than left in D3 waiting on a table that does not exist.** See ᵈ³. ⚠️ **But the
+order entity is NO LONGER THIS STEP'S to define** — it became core data on 2026-08-07 (C4), so this
+step *consumes* it rather than introducing it. **The shipping-address requirement is unaffected;
+only its host moved.**
 
-### ⚠️ AN OPEN STRUCTURAL QUESTION, recorded 2026-08-05. **Deliberately NOT resolved**
+### ✅ THE OPEN STRUCTURAL QUESTION IS CLOSED — orders are a CORE ENTITY. 2026-08-07 (U5, D-U5.4)
 
-**The order is the thing that gets issued, and it is scheduled four phases after the screens that
-depend on it.** Both paths in `CLAUDE.md` §1b run through an **order** — customer, lines, prices,
-channel — which is submitted to the invoicing software for issuance and later receives a document
-back. **Novocore has no order entity. It is this step, in Phase 4, while F5–F9 build the document
-screens in Phase 2.**
+**Recorded open 2026-08-05; closed 2026-08-07 by the owner's decision. The full row is C4 — read it
+there, since orders are no longer this step's property.**
 
-⚠️ **And the order and the document are TWO LINKED OBJECTS, not one object filled in progressively.**
-The issued document may not match the order: **Go applies its own VAT resolution, its own rounding and
-its own numbering.** A design that treats the document as the order with extra fields would have no
-way to represent the ordinary case where they differ — which is also the case a reconciliation check
-exists to find.
+**The question was:** the order is the thing that gets issued, and it was scheduled **three phases
+after the screens that depend on it**. Both issuance paths run through an order — customer, lines,
+prices, channel — submitted to the invoicing software and later receiving a document back. **Novocore
+had no order entity; it was this step, in Phase 3, while F5–F9 built the document screens in Phase
+2.**
 
-**This is recorded as an open question and nothing is decided from it.** It is stated here, and
-against F5 in `HISTORY.md`, so that whoever reaches step 22 knows the question predates them and
-whoever extends a document screen knows not to answer it by accident.
+⚠️ **The 2026-08-05 wording of this question said "Phase 4". That was wrong — step 22 is in Phase
+3, in this file's own table.** Corrected 2026-08-07 along with the same error in the context primer.
+**A one-phase error in a question about phase mismatch, sitting in two documents for two days.**
+
+✅ **CLOSED BY RECLASSIFICATION, which is the cheapest of the available closures.** Orders are **core
+data** — alongside Customers, Suppliers, Products, sales documents, purchase documents and the chart
+of accounts — so the phase mismatch that made this a question no longer exists. Nothing was built and
+nothing was scheduled.
+
+⚠️ **THE SECOND HALF DOES NOT CLOSE, AND MUST NOT BE READ AS CLOSED WITH IT: the order and the
+document are TWO LINKED OBJECTS, not one object filled in progressively.** The issued document may
+not match the order — **Go applies its own VAT resolution, its own rounding and its own numbering.** A
+design that treats the document as the order with extra fields has no way to represent the ordinary
+case where they differ, which is also the case a reconciliation check exists to find. ⚠️ **Sharpened
+2026-08-07 by N-2 (see X1): issuance is TWO Go calls, so a document can exist in Go, linked to the
+order, carrying no ΜΑΡΚ** — a state that is neither the order nor the finished document.
+
+📌 **What this step still owns:** the per-order **shipping address**, above — and it owns it on
+firmer ground now, since the entity it registers against is core rather than hypothetical.
 
 **ᵐᵍ 24 — the migration is the shared deadline for six ⚪ rows.** D5, D4, D1, D3, M0 and R3 all have
 to land before real data does — see *The ⚪ rows share a deadline* under Phase 2 for the per-item
@@ -1721,11 +2098,32 @@ to Go. **It still does not obtain the ΜΑΡΚ itself** — that comes back from
 always has. Everything R1 deliberately did not build — sequence allocation, gap prevention — belongs
 here and not before.
 
-**ᶜᶜ 43 — commercialization.** Per-customer instance with its own database is architecturally
-compatible: no company dimension, no multi-tenancy, EUR-only holds. What it actually requires is
-elsewhere — migration tooling that runs against databases nobody has seen, provisioning and onboarding,
-import from whatever each customer uses today, an internet-facing security posture, and the hosting
-decision (who runs the server) that determines which of three different products this becomes.
+**ᶜᶜ 43 — commercialization. ✅ CLOSED 2026-08-07 by the owner's decision (U5, D-U5.6): NOVOCORE WILL
+NEVER BE COMMERCIALISED.** Built for Novotrade S.A. (Java Jives) and for no other business, ever.
+
+⚠️ **CLOSED, NOT DELETED — the row stays and the analysis below stays with it.** A row that
+disappears takes its reasoning with it, and the next person to have the idea would re-derive the same
+list from scratch. **This is a decision with a date, not an absence.**
+
+⭐ **The operative consequence is a licence to CUT, and it is recorded as a standing rule
+(`CLAUDE.md` non-negotiable 10) rather than only here, because it applies to code nobody is thinking
+about this row while writing.** Generality that exists to serve businesses **other than this one**
+now needs a justification, and **the absence of one is a reason to remove it.** *"Someone might want
+this configurable"* is not an argument in this repository — nobody else will ever run it. ⚠️ **It
+does NOT license removing generality that serves THIS business**, which is most of it.
+
+⚠️ **ONE OPEN QUESTION IT RAISES, RECORDED AND DELIBERATELY NOT ANSWERED:** is **D2's three-level,
+multi-parent product categorisation** a reflection of the **real WooCommerce taxonomy**, or is it
+**defensive generality**? See ᵗ. **Answering it wrongly in either direction costs**: cut a real
+requirement and the Woo load has nowhere to put its categories; keep a speculative one and the model
+carries a join table nothing needs.
+
+**What the row analysed while it was open, kept for the record:** per-customer instance with its own
+database is architecturally compatible — no company dimension, no multi-tenancy, EUR-only holds. What
+it actually required was elsewhere — migration tooling that runs against databases nobody has seen,
+provisioning and onboarding, import from whatever each customer uses today, an internet-facing
+security posture, and the hosting decision (who runs the server) that determines which of three
+different products this becomes.
 
 **ʲ Step 36 includes bilingual EN/EL two-way voice I/O** layered on AI Analysis's read-only
 deterministic-query design. An adapter to an external speech provider, not a change to the core. +0.7 h
