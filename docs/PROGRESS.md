@@ -959,19 +959,21 @@ still owed.
 | **1** | ⚠️ **`AccountRepository.findBySystemKey` does not filter on `active`.** A keyed account that is inactive still resolves and still posts. The guard is in `ChartOfAccountsServiceImpl.deactivate`, **not in the query**. ⚠️ **A real defect in current code, found by U6's Phase 0** — narrow today (all 29 keyed accounts are active and deactivation is refused), and it is narrow **because of** the catalogue model rather than by design | **C7a**, roadmap ᶜ⁷. Listed here too because it is a defect that exists **now**, not only a scope item |
 | **2** | ⚠️ **The setup gate has no mechanism.** *Every `AccountSystemKey` must name an activated account before anything can post* — and the obvious design does not work: `requireAccount`'s precise message is **deliberately discarded** by `WebExceptionHandler`, which must not be weakened. Needs a **screen** plus an **unskippable check** through a channel the 404 handler does not flatten | **C7b**, roadmap ᶜ⁷. **Mechanism deliberately not chosen** |
 | **3** | ⚠️ **The ΕΓΛΣ `.xls` is not in this repository**, and the word ΕΓΛΣ appeared nowhere in it before 2026-08-07. **C1 has existed as a decision since 2026-08-06 while the chart it names is absent.** ⚠️ **Every ΕΓΛΣ figure now recorded is the owner's measurement of a file this repository cannot see** | **C7b** — committing it is *work*, not a precondition check. Its Phase 0 re-derives every figure |
-| **4** | ⚠️ **The Go documentation's CAPTURE URL is not supplied.** Two of U5's three provenance gaps closed 2026-08-07 (capture date, the `s1code` example); this one replaces them, and is the same class | **Owner** — see *Still waiting on input* below, and the file's own provenance header |
+| **4** | ~~The Go documentation's CAPTURE URL is not supplied.~~ ✅ **CLOSED 2026-08-07**, hours after being raised, together with the capture date and the `s1code` example. ⭐ **The artefact's provenance is complete.** ⚠️ **The staleness it warns about is not** — the page is JavaScript-rendered, so no automated diff is possible | **Closed.** Kept as a row because it was extracted as a residual and a residual with no verdict is the failure this table exists for |
 | **5** | ⚠️ **Does `set/saldoc` replace its child tables the way `set/customer` does?** The vendor's notice appears on **two endpoints only**. Both readings are dangerous and neither is supported. ⚠️ **Only a live write could settle it, and `CLAUDE.md` rule 9 forbids one** without the owner's explicit instruction against a sandbox | **Owner / G1**, roadmap ᵍᵒ under N-6 |
 | **6** | 📌 **Does anything ever post to ΕΓΛΣ Group 9 (Αναλυτική Λογιστική)?** It is a **parallel accounting system**, and Novocore already does that job differently — FIFO lots, COGS, ADR 0008 and ADR 0010 variance accounts. **If the answer is no it is ~53 permanently inactive catalogue rows**, which costs nothing. ⭐ **Acceptable as a known state, unacceptable as a later puzzle** | **Owner / accountant.** Recorded at roadmap ᶜ⁷ (D-U6.7); **not blocking C7** |
 | **7** | 📌 **`nav/tree.ts` marks 14 nodes `status: 'BUILT'` that have no screen** — all of `/inventory/*`, `/purchasing/*`, `/accounting/*` and `/email-outbox`, against a doc comment defining `BUILT` as *"there is a working screen behind the item."* **Nothing asserts the correspondence**, which is why the suite is green. Found incidentally while measuring D-U6.5 | **Unowned, and deliberately so** — it is neither U6's nor C7's. ⚠️ **Recorded rather than absorbed**; whether the flag or the comment is wrong is somebody's decision |
 
-⚠️ **TWO THINGS U6 FLAGGED FOR THE OWNER AND DID NOT DECIDE:**
+✅ **THE TWO THINGS U6 FLAGGED FOR THE OWNER WERE BOTH ANSWERED THE SAME DAY:**
 
-- **N1 moved down two rows** in the roadmap sequence, as a mechanical consequence of inserting C7a
-  and C7b where the owner placed them. **His placement said nothing about N1.** Status untouched.
-  **Say the word and it moves back** — recorded at roadmap ˢᵉᑫ because row order is a claim.
-- **`u5-scope-review` still exists** and is now fully contained in `main` — the same "stale pointer"
-  argument that justified deleting `r4-payment-methods`. **The brief named only that one**, so the
-  other was left.
+- ✅ **N1 is back in its original position, directly after R4.** It had moved down two rows as a
+  mechanical consequence of inserting C7a and C7b; the owner's placement said nothing about N1.
+  **Restored; status and content untouched** — recorded at roadmap ˢᵉᑫ because row order is a claim,
+  and *"it moved because something was inserted above it"* is not one anybody made.
+- ✅ **`u5-scope-review` deleted, local and remote.** Fully contained in `main`, same stale-pointer
+  argument as `r4-payment-methods`. 📌 **It survived the first pass only because it was the branch
+  that session was standing on.** ⭐ **`main` and `origin/main` are now the only live pointers** —
+  which is the state G-1 existed to reach, and it took two passes to finish.
 
 ### ⚠️ Four obligations U2a found buried, and the rule they earned
 
@@ -1075,11 +1077,14 @@ one's. **Whoever builds paging on a list screen owns this.**
 
 ### ⚠️ Still waiting on input
 
-- **U6-1** **The URL the Prosvasis Go documentation was captured from.** Added 2026-08-07. ⚠️ **Not
-  the API base** (`https://go.s1cloud.net/`), which is where requests go rather than where the text
-  came from, and **must not be inferred from it.** The capture *date* was the same shape of gap and
-  the owner closed it on 2026-08-07; **this is what is left.** Recorded in the file's own provenance
-  header so somebody about to rely on it meets it there.
+- ~~**U6-1** **The URL the Prosvasis Go documentation was captured from.**~~ ✅ **CLOSED 2026-08-07,
+  the same day it was raised.** The artefact is
+  `https://s1sites.s1cloud.net/s1docs/goapi/docs/index.html`; the vendor's wiki page
+  `https://wiki.prosvasis.com/display/GO/ProsvasisGO+API+documentation` links to it and is the durable
+  route back if that path moves. ⭐ **The Go artefact's provenance is now complete** — version, date,
+  URL and evidence class. 📌 **And the fact worth keeping: the s1sites page is JavaScript-rendered and
+  returns nothing readable to a fetcher**, which is why the committed copy is justified rather than
+  merely convenient — and why its staleness needs a human with a browser rather than a diff check.
 - **U6-2** **May a session send a READ request to Prosvasis Go against a sandbox or demo company?**
   Added 2026-08-07, and it is what blocks the `set/saldoc` child-table question (N-6). ⚠️ **Under
   `CLAUDE.md` rule 9, reads are not authorised by default and writes are forbidden outright**; the

@@ -198,8 +198,31 @@ visible once the alternative existed to compare it against.**
 - **The `findBySystemKey` defect was NOT fixed**, though it is real and in current code. It is C7a's,
   and fixing it here would have made a documentation step touch production code.
 - **The nav `BUILT` inconsistency was not fixed** and was not absorbed into C7's scope.
-- **`u5-scope-review` was not deleted** — the brief named only `r4-payment-methods`.
+- ~~**`u5-scope-review` was not deleted** — the brief named only `r4-payment-methods`.~~ ✅ **Deleted
+  in the amendment below.**
 - **No Prosvasis Go request was sent**, read or write.
+
+### ✅ The amendment, same day — three items the close-out had left open
+
+**All three came back from the owner within the hour, so U6 closed twice.**
+
+| Item | Verdict |
+|---|---|
+| **U6-1 — the capture URL** | ✅ **CLOSED.** Artefact: `https://s1sites.s1cloud.net/s1docs/goapi/docs/index.html`. Entry point: the vendor wiki at `https://wiki.prosvasis.com/display/GO/ProsvasisGO+API+documentation`, which links to it. ⭐ **Both recorded, with the distinction stated** — the artefact is what the file was converted from and is the fragile URL; the wiki is the durable route back |
+| **N1's position** | ✅ **RESTORED** to directly after R4. Status and content untouched |
+| **`u5-scope-review`** | ✅ **DELETED**, local and remote. `main` and `origin/main` are the only live pointers |
+
+⭐ **The capture URL closed with a fact worth more than the URL itself: the s1sites page is
+JavaScript-rendered and returns no readable content to a fetcher.** That is **why the committed copy
+is justified rather than merely convenient** — the alternative was never *"read the vendor's page
+instead"*, it was *"nobody can read it from here at all."* 📌 **And it is why N-8's staleness warning
+cannot be automated away:** a diff needs something to diff against, and **only a human with a browser
+can obtain one.**
+
+⚠️ **The Go artefact's provenance is now COMPLETE — version, capture date, capture URL, evidence
+class — and it took three sessions to get there.** U5 committed the file with the date unknown; U6
+closed the date and the `s1code` example and opened the URL; the amendment closed the URL. **Recorded
+because "provenance" reads like a formality until you watch it take three passes.**
 
 ## ▶ U5 — the 2026-08-07 scope review, written into the repository. **DONE 2026-08-07**
 

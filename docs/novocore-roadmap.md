@@ -117,9 +117,9 @@ frontend work that must land before any adapter is built.
 |   W1 | Serialised-record contract fidelity ʷ¹  |     — |    1.5 |  356k | 🟢 Done         |
 |   F5 | Sales Invoice + Credit Note ʷ           |     — |    3.7 |  766k | 🟢 Done         |
 |   R4 | Payment methods become a business list ʳ⁴ |   — |        |       | 🟡 **Current** ʳ⁴ |
+|   N1 | Release a reversed document's number ⁿ¹ |     — |        |       | ⚪ Direction settled, unbuilt |
 |  C7a | Account gains a CODE and a derived TREE ᶜ⁷ |  — |        |       | ⚪ **Scoped 2026-08-07, not started** ᶜ⁷ |
 |  C7b | The ΕΓΛΣ catalogue, its screen, the key binding ᶜ⁷ | — |  |       | ⚪ **Scoped 2026-08-07, not started** ᶜ⁷ |
-|   N1 | Release a reversed document's number ⁿ¹ |     — |        |       | ⚪ Direction settled, unbuilt |
 |   D1 | Supplier/customer codes + alias ᵈ¹      |     — |        |       | ⚪ After F5, with D3 ˢᵉᑫ |
 |   D3 | Customer/supplier addresses ᵈ³          |     — |        |       | ⚪ After F5, with D1 ˢᵉᑫ |
 |   D4 | Internal document numbers ᵈ⁴            |     — |        |       | ⚪ After F5, with D5 ˢᵉᑫ |
@@ -145,7 +145,7 @@ frontend work that must land before any adapter is built.
 |  U2b | The split's drift guards ᵘ²ᵇ            |     — |        |       | 🟢 Done |
 |   U4 | The dated-figure sweep ᵘ⁴               |     — |        |       | ⚪ Deferred, **re-price before scheduling** |
 |   U5 | The 2026-08-07 scope review ᵘ⁵          |     — |        |       | 🟢 Done |
-|   U6 | Go findings, git hygiene, the ΕΓΛΣ decision ᵘ⁶ | — |   0.5 |  182k | 🟢 Done |
+|   U6 | Go findings, git hygiene, the ΕΓΛΣ decision ᵘ⁶ | — |   0.7 |  202k | 🟢 Done |
 |  F5b | `el-GR-x-icu` on `DOCUMENT_NUMBER` ᶠ⁵ᵇ  |     — |        |       | ✅ **CLOSED — not needed** ᶠ⁵ᵇ |
 |  W1c | W1's two consumer clean-ups ʷ¹ᶜ         |     — |        |       | ⚪ Queued |
 |  R1c | Fees / *Έξοδα και κρατήσεις* ʳ¹ᶜ        |     — |        |       | ⚪ Cut from R1, unscheduled |
@@ -180,14 +180,14 @@ separately instead, where a reader scanning a column of dashes will actually mee
     R2c  deferred out of the sequence entirely, and split — see ʳ²ᶜ
     C1   ⭐ NO LONGER "recorded, not scoped" — it is C7a + C7b above. See ᶜ⁷
 
-⚠️ **ONE ROW MOVED THAT THE OWNER DID NOT MENTION, and it is flagged rather than presented as
-decided.** The placement he gave is `R4 → C7a → C7b → D1…`, which says nothing about **N1**. N1 sat
-between R4 and D1; inserting C7a and C7b in the position stated **pushes N1 down by two rows.**
+✅ **N1 KEEPS ITS ORIGINAL POSITION, directly after R4.** Inserting C7a and C7b where the owner placed
+them initially pushed N1 down two rows — **a mechanical consequence of the insertion, not a decision
+anybody made.** It was flagged at U6's close-out and **the owner restored it the same day.**
 
-📌 **That is a mechanical consequence of the insertion, not a decision anybody made, and its status is
-untouched** (⚪ *Direction settled, unbuilt* — it was never scheduled). **It is recorded here because
-row order is the statement**, so a row moving is a claim being made. **If N1 should sit before C7a,
-say so and it moves back.**
+📌 **Recorded rather than silently fixed, because row order is the statement** — a row that moves is a
+claim being made, and *"it moved because something was inserted above it"* is not one. ⚠️ **N1's
+status and content are untouched** (⚪ *Direction settled, unbuilt*); this was a position restoration
+and nothing else.
 
 **The rows were moved to match**, per `CLAUDE.md` §*A sequencing decision changes the roadmap's ORDER,
 not a paragraph beside it* — a rule written the same day and for this. **The order is the statement;
@@ -1668,9 +1668,25 @@ superseded by the owner mid-session.** Both are recorded in `HISTORY.md` rather 
 worth knowing at the roadmap is that **"merge the finished work and leave R4 behind" was not
 executable** — R4's branch was a strict ancestor of U5's, so there was no separable set.
 
-**Figures: 0.5 h active, 182k output tokens**, measured from this session's transcript by the method
-at the bottom of this file. ⚠️ **Short by the standing caveat** — the close-out is not in the
-transcript when the figure is computed.
+**Figures: 0.7 h active, 202k output tokens**, measured from this session's transcript by the method
+at the bottom of this file.
+
+⭐ **AND THIS ROW IS THE FIRST IN THE TABLE THAT IS NOT SHORT BY THE STANDING CAVEAT.** Every other
+`Actual` here excludes its own close-out, because the close-out is not in the transcript when the
+figure is computed. **U6 was re-measured in the same session, after its close-out commit had landed** —
+the owner asked for it while the transcript was still reachable, and **no later session could have
+done it.**
+
+📌 **The method and its limit, stated so the figure is not over-read.** Same method as every other
+row — inter-event gaps capped at 5 minutes, `output_tokens` from each assistant message — run twice.
+**The first pass gave 0.5 h / 182k; the second, 0.7 h / 202k.** ⚠️ **The delta IS the close-out**,
+which is what the caveat has always been estimating. **This row still excludes the small amendment
+that followed it** (the capture URL, N1's restoration, the branch deletion), so it reads as *"at
+least"* like the others — just by less.
+
+⚠️ **Do NOT rescale other rows from this one.** A documentation step's close-out is a large share of
+its total; a three-session build step's is not. **It is one data point about the caveat's size on one
+kind of step, not a correction factor.**
 
 **ᵘ⁵ U5 — the 2026-08-07 scope review. 🟢 Done. Documentation and configuration only.** Ten owner
 decisions written into the repository, in U3's shape: no production code, no schema, no migration, no
@@ -2386,10 +2402,27 @@ rely on it will be.
   conditional — *"confirm… before this repository is ever made public"* — and it is answered. **No
   redaction is owed.**
 
-⚠️ **ONE IS NEWLY OPEN, and it is the same class of gap the capture date used to be: the URL the page
-was captured FROM is NOT SUPPLIED.** The only URL anywhere in the document is the **API base**,
-`https://go.s1cloud.net/`, which is where requests go and **not** where the text came from. ⚠️ **Do
-not infer a documentation URL from the API base.** **Whoever captured the page should supply it.**
+✅ **AND THE THIRD IS CLOSED TOO, later the same day: the CAPTURE URL is supplied.** ⭐ **The
+provenance of this artefact is now complete** — version, capture date, capture URL, and evidence class.
+
+| | |
+|---|---|
+| **The ARTEFACT** — what the file was converted from, **AUTHORITATIVE** | `https://s1sites.s1cloud.net/s1docs/goapi/docs/index.html` |
+| ⭐ **The ENTRY POINT** — where a human finds the artefact if that URL moves | `https://wiki.prosvasis.com/display/GO/ProsvasisGO+API+documentation`, the vendor's wiki, which links to it |
+
+📌 **Both are recorded because they do different jobs.** The artefact URL is what makes the copy
+checkable and is the fragile one — a docs-hosting path is exactly what a vendor reorganises. The wiki
+page is the durable route back. **Neither substitutes for the other.**
+
+⭐ **AND THE FACT THAT JUSTIFIES THE COPY, rather than merely explaining it: the s1sites page is
+JavaScript-rendered and returns NO READABLE CONTENT to a fetcher.** The alternative to committing this
+file was never *"read the vendor's page instead"* — it was *"nobody can read it from here at all."*
+📌 **It is also why the staleness N-8 warns about cannot be automated away:** a diff check needs
+something to diff against, and **a human with a browser is the only mechanism that can obtain one.**
+
+⚠️ **Evidence class: both URLs were read on 2026-08-07 by the owner's side of the conversation, not
+from inside this repository.** No session has fetched either, and under rule 9 none may without his
+explicit instruction.
 
 ⚠️ **And the marker that was missing: the *Conventions* preamble is EDITORIAL — written by this
 repository, not by the vendor.** Every other section is the vendor's own words. **An unmarked summary

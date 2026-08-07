@@ -130,8 +130,9 @@ for an **unfinished** build step. **A fresh clone gave you a week-old repository
 entire discipline rests on there being one authoritative record.
 
 ✅ **Fast-forwarded and pushed** (`382d6f2` → `6a2e662`, no merge commit, both suites verified green
-first: backend 1,500 tests, frontend 414). **`r4-payment-methods` deleted, local and remote** — it is
-fully contained in `main`, and R4 resumes from there.
+first: backend 1,500 tests, frontend 414). ⭐ **`r4-payment-methods` and `u5-scope-review` both
+deleted, local and remote** — each fully contained in `main`. **`main` and `origin/main` are the only
+live pointers**, and R4 resumes from there.
 
 📌 **R4's unfinished work came WITH it, deliberately.** There was no separable set — `r4-payment-
 methods` is a strict ancestor of `u5-scope-review`. ⭐ **And the reasoning changed rather than being

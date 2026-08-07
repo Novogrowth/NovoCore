@@ -16,13 +16,42 @@ nobody has to re-obtain it.
 | **Vendor documentation version** | **1.0**, as stated in the title above. **No finer version string appears anywhere in the source** |
 | **Date added to this repository** | **2026-08-07** |
 | ✅ **Date the vendor's HTML was captured** | **2026-08-07 — CONFIRMED BY THE OWNER (U6, 2026-08-07).** This row previously read *"NOT KNOWN"* and was recorded as a real gap; **it is closed.** Capture and commit are the same day, so this extraction is not a stale copy of an older page |
-| ⚠️ **URL the vendor's HTML was captured FROM** | ⚠️ **NOT SUPPLIED. This is now the open half of the provenance, and it is the same class of gap the capture date used to be.** The only URL anywhere in this document is the **API base**, `https://go.s1cloud.net/` (see *Conventions*), which is where requests go — **not where this text came from.** ⚠️ **Do not infer one from the base URL.** **Whoever captured the page should supply it** |
+| ✅ **URL the vendor's HTML was captured FROM** — **AUTHORITATIVE** | **`https://s1sites.s1cloud.net/s1docs/goapi/docs/index.html`** — supplied by the owner, **2026-08-07**. **This is the ARTEFACT this file was converted from.** ⚠️ It is neither the API base nor a page a fetcher can read — see below |
+| ⭐ **Where a human FINDS that artefact** — the durable entry point | **`https://wiki.prosvasis.com/display/GO/ProsvasisGO+API+documentation`**. The vendor's own wiki page, which **links to the s1sites URL above.** ⭐ **Start here if the artefact URL has moved** |
 | **Evidence class** | ⚠️ **DOCUMENTED, NOT OBSERVED.** Nothing here has been exercised against a live Go system from this repository, and under `CLAUDE.md` non-negotiable **rule 9** no session may do so without the owner's explicit instruction |
 
 ### ⚠️ N-8 — THIS FILE IS A CONVERTED COPY, AND IT WILL GO STALE SILENTLY
 
 **Recorded 2026-08-07 (U6).** The line under the title already says the content is converted; **this
 says what follows from that**, which is the part a reader acts on.
+
+#### ⚠️ TWO URLs, and the distinction between them is the point rather than a formality
+
+**They are not alternatives and neither replaces the other:**
+
+- **`s1sites.s1cloud.net/s1docs/goapi/docs/index.html` is the ARTEFACT** — the exact page whose text
+  is below. It is what makes this file checkable against its source. ⚠️ **It is also the fragile one:**
+  a docs-hosting path is the kind of URL a vendor reorganises without notice.
+- ⭐ **`wiki.prosvasis.com/display/GO/ProsvasisGO+API+documentation` is the ENTRY POINT** — the
+  vendor's own wiki page, which links to the artefact. **It is what a human uses to find the artefact
+  again when the artefact URL has moved.**
+
+📌 **Recording only the first would leave a dead link and no route back; recording only the second
+would leave nobody able to say what this file was converted from.**
+
+⚠️ **EVIDENCE CLASS: both URLs were read on 2026-08-07 by the owner's side of the conversation, not
+from inside this repository.** No session has fetched either — rule 9 governs outbound requests, and
+in any case the artefact cannot be fetched usefully, which is the next paragraph.
+
+##### ⭐ AND THIS IS WHY THE COPY IS JUSTIFIED, not merely convenient
+
+**The s1sites page is JavaScript-rendered and returns NO READABLE CONTENT to a fetcher.** A session
+that follows the URL gets a shell, not the documentation. ⭐ **That is the whole reason this file
+exists** — the alternative is not *"read the vendor's page instead"*, it is *"nobody can read the
+vendor's page from here at all."*
+
+📌 **It is also why the staleness below cannot be automated away.** A diff check needs something to
+diff against, and a fetcher cannot obtain one. **A human with a browser is the only mechanism.**
 
 **This document is a text extraction of a JavaScript-rendered vendor page. It is not the source.**
 The vendor's page is authoritative and this is a copy of it taken at one moment. ⚠️ **When the vendor
