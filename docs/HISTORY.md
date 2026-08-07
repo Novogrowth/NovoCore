@@ -27,6 +27,7 @@ came to disagree. For status, read `PROGRESS.md`.
 
 | Step | Date | What it was |
 |---|---|---|
+| **U6** | 2026-08-07 | Go findings N-6/7/8, git hygiene (`main` fast-forwarded 19 commits and pushed), and the ΕΓΛΣ decision scoped as C7a + C7b. **Four brief premises disproven; two of its own decisions superseded mid-session.** Documentation, git and configuration only |
 | **U5** | 2026-08-07 | The scope review written into the repository — ten decisions, two of its own premises disproven in Phase 0. Documentation and configuration only |
 | **F5** | 2026-08-06 | Sales invoice + credit note screens — five screens, `search=` on both document routes (**V36**), the repository's first three `meta.sortKey`s. 30 sub-parts; live leg 22 of 23 |
 | **R2b** | 2026-08-04 | R2's live-leg fixes — the stale-list defect (older than R2, in all thirteen create forms), the missing server-side document-type guard, `sort_code` (**V34**), payment methods (**V35**) |
@@ -91,6 +92,114 @@ not.** New entries go at the top.
 
 ---
 
+
+## ▶ U6 — Go findings, git hygiene, and the ΕΓΛΣ decision. **DONE 2026-08-07**
+
+**Documentation, git and configuration only.** No production code, no schema, no migration, no test
+behaviour changed. The third documentation-only step in five days (U3, U5, U6), and the first whose
+largest single act was **a `git merge`.**
+
+### The reconciliation — every row, with a verdict
+
+| Row | Verdict |
+|---|---|
+| **P0.1**–**P0.7** — Phase 0 | ✅ **DONE, and it is the load-bearing part.** ⚠️ **Four premises disproven — see below** |
+| **N-6** — `set` replaces child tables | ✅ **RECORDED** at roadmap ᵍᵒ and against **C6's question 3**, where the owner asked for it. ⚠️ **The vendor sentence was already committed**; what was added is the finding, its consequence, the read-before-write rule and the `saldoc` gap |
+| **N-7** — `cfncusdoc`/`cfnsupdoc` | ✅ **RECORDED** at a new **ᶠ⁷** footnote, and the ᵍᵒ bullet corrected. ⚠️ **Nothing was "corrected" in the extraction** — it was already right; the roadmap was silent |
+| **N-8** — the converted copy | ✅ **RECORDED** at the file's provenance header. Capture date **closed to 2026-08-07**; `s1code` **closed**; *Conventions* **marked EDITORIAL**. ⚠️ **The capture URL is newly OPEN** — not supplied, and not inferable |
+| **G-1** — merge into `main` | ✅ **DONE.** ⚠️ **Not as briefed — see below.** Fast-forward, no merge commit; `r4-payment-methods` deleted local and remote |
+| **G-2** — push `8f1947d` | ✅ **DONE**, carried by G-1's push. `origin/main` = `6a2e662`; local and remote agree |
+| **G-3** — discard the patch | ✅ **DONE**, and ⚠️ **its attribution WITHDRAWN — see below.** R4's section gains nothing |
+| **D-U6.1** — the chart is ΕΓΛΣ | ✅ **RECORDED** at ᶜ¹, with the legal chain, its evidence class, and the two-chart withdrawal |
+| **D-U6.2R** — a catalogue you copy from | ✅ **RECORDED** at ᶜ⁷, with the distinction from `aade_invoice_type` set out at length and the delete-the-catalogue test |
+| **D-U6.3R** — the tree is derived from the code | ✅ **RECORDED** at ᶜ⁷, with what the withdrawn model would have cost |
+| **D-U6.3R.a** — the four preparation decisions | ✅ **RECORDED**, with the weakened justification stated and the `account_name_unique_in_group` collision noted as **avoided** |
+| **D-U6.4** — the owner creates his own accounts | ✅ **RECORDED** at ᶜ⁷, with the eleven internal accounts named |
+| **D-U6.5** — the screen lives in Settings | ✅ **RECORDED.** ⚠️ **It is a MOVE, measured**: nav has the chart under `/accounting/`, not `/settings/` |
+| **D-U6.6** — custom subtotals | ✅ **RECORDED at its real size** and **not scoped**, deliberately |
+| **D-U6.7** — groups 9 and 0 | ✅ **RECORDED**, with Group 9's state as a **known state** and the question extracted to open items |
+| **D-U6.8** — self-hosting | ✅ **RECORDED**, and ⭐ **the mis-filing corrected**: the three security rows attach to **remote access**, not to webhooks |
+| **C7** — define, do not build | ✅ **DEFINED as C7a + C7b**, rows added in sequence position, placement and reasons recorded. ⚠️ **Nothing started** |
+| **M0a** — amend | ✅ **DONE at all three sites**, no fourth statement added: target named **ΕΓΛΣ**, gate changed to **after C7b** |
+
+### ⚠️ What Phase 0 caught — four premises, and the pattern in the last one
+
+**1. The branch topology was wrong in three ways.** `main` was **19** commits behind, not 18 — and it
+**already had W1 and F5**, contrary to the brief. What it lacked was U2a, U2b, F5b, U5 and **all 14 of
+R4's commits.**
+
+**2. ⚠️ "Merge the finished work, leave R4 behind" was NOT EXECUTABLE.** `r4-payment-methods` is a
+**strict ancestor** of `u5-scope-review` — U5 branched off R4's tip (its own H-2 records why). **There
+was no separable set.** ⭐ **The owner changed the REASONING rather than forcing the instruction:**
+branches are for unfinished work in order to keep `main` coherent, and `main` here has no deployment,
+no release and no second developer — its only job is to be the authoritative record. **R4's
+incompleteness is documented in `PROGRESS.md`, so carrying it makes `main` accurate rather than
+dishonest.** Cherry-picking would have created duplicate commits: the same drift in a different medium.
+
+📌 **And the compensating measurement: `main` was an ancestor of `u5-scope-review`, so the merge was a
+FAST-FORWARD** — no merge commit, and **no PROGRESS.md conflict to expect when R4 lands**, because R4
+now continues *from* the merged tip rather than onto it. The brief expected that conflict and priced
+it as acceptable; it does not arise.
+
+**3. N-6 and N-7 were half-done already.** The vendor's child-table sentence was **committed twice
+over** — verbatim at `set/customer` and `set/supplier`, and summarised in *Conventions*. The endpoint
+index **already** said "Receipts Documents" and "Payments Documents", and the phrase the brief asked to
+correct appeared **nowhere in `docs/`**. ⭐ **The reassuring direction is the one that costs**, and here
+it went the other way: checking first halved the work instead of skipping it.
+
+#### ⭐ 4. THE THIRD PREMISE CORRECTED BY TIMESTAMPS, NOT BY ARGUMENT — G-3
+
+**The brief asked for R4's section to record a second fault: that R4's handover left a wrong edit
+staged and did not mention it. Attribution was offered as INFERRED FROM THE BRANCH THE PATCH WAS
+STAGED ON.** It is disproved:
+
+| Measurement | Result |
+|---|---|
+| The three hunks rewrite | `HISTORY.md` → `PROGRESS.md` in migration comments |
+| That wording was introduced by | **U2a's split commit `7970f37`, 2026-08-06 19:08:54** |
+| R4's last commit `10c12fc` (17:58:26) still reads | **`docs/PROGRESS.md`** in both files |
+
+⭐ **R4 could not have staged a reversal of a rename that had not happened yet.** The edits post-date
+U2a by construction. ✅ **R4's handover has ONE recorded fault, not two** — the brief's requested entry
+was removed rather than written.
+
+📌 **The shape is worth more than the correction. The chat inferred authorship from a BRANCH NAME; the
+repository answered from COMMIT TIMESTAMPS.** ⚠️ **That is the third premise corrected the same way in
+this session** — topology, containment, and now authorship, each of which *felt* settled and each of
+which had a one-command answer. **`CLAUDE.md`'s rule is that a claim with a checkable referent is
+proved by checking it; a branch name is a checkable referent that looks like a conclusion.**
+
+**What was done with the patch:** the referents were re-measured independently before discarding —
+`Q14` appears **8×** in `HISTORY.md` and **1×** in `PROGRESS.md` (a status-table row); *"Why the model
+changed"* **4×** and **0×**; the write-off reason field **7×** and **1×**. ⚠️ **The direction of U5's
+H-1 finding is confirmed; the counts differ from H-1's table because the patterns are broader.**
+**Committing the hunks would have broken three working citations.** Discarded.
+
+### ⚠️ AND TWO OF THE BRIEF'S OWN DECISIONS WERE SUPERSEDED MID-SESSION
+
+**D-U6.2 and D-U6.3 were replaced by the owner after Phase 0 reported.** His clarification:
+
+> *Importing the chart of accounts would only help to create and activate the actual accounts FASTER.*
+
+⭐ **That describes a DATA-ENTRY AID. The superseded decisions described an OPERATING MODEL** — the
+whole ΕΓΛΣ tree seeded into `account`, ~860 rows, all inactive, activation flipping a flag. **The
+third option had never been put to him.**
+
+⚠️ **The correction is worth recording as a shape, not only as an outcome: the brief had converged on
+a model nobody had asked for, because the question it answered was never asked.** The measured cost of
+the withdrawn model — ~780 permanently inactive rows, a filter on every picker forever, two ways to
+create an account, and a `findBySystemKey` defect promoted from edge case to routine — **was only
+visible once the alternative existed to compare it against.**
+
+### What U6 deliberately did NOT do
+
+- **Nothing in Parts 3 or 4 was built.** C7 has rows, a scope, a placement and its reasons; **no
+  migration, no column, no screen.**
+- **The `findBySystemKey` defect was NOT fixed**, though it is real and in current code. It is C7a's,
+  and fixing it here would have made a documentation step touch production code.
+- **The nav `BUILT` inconsistency was not fixed** and was not absorbed into C7's scope.
+- **`u5-scope-review` was not deleted** — the brief named only `r4-payment-methods`.
+- **No Prosvasis Go request was sent**, read or write.
 
 ## ▶ U5 — the 2026-08-07 scope review, written into the repository. **DONE 2026-08-07**
 

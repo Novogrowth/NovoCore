@@ -117,13 +117,15 @@ frontend work that must land before any adapter is built.
 |   W1 | Serialised-record contract fidelity ʷ¹  |     — |    1.5 |  356k | 🟢 Done         |
 |   F5 | Sales Invoice + Credit Note ʷ           |     — |    3.7 |  766k | 🟢 Done         |
 |   R4 | Payment methods become a business list ʳ⁴ |   — |        |       | 🟡 **Current** ʳ⁴ |
+|  C7a | Account gains a CODE and a derived TREE ᶜ⁷ |  — |        |       | ⚪ **Scoped 2026-08-07, not started** ᶜ⁷ |
+|  C7b | The ΕΓΛΣ catalogue, its screen, the key binding ᶜ⁷ | — |  |       | ⚪ **Scoped 2026-08-07, not started** ᶜ⁷ |
 |   N1 | Release a reversed document's number ⁿ¹ |     — |        |       | ⚪ Direction settled, unbuilt |
 |   D1 | Supplier/customer codes + alias ᵈ¹      |     — |        |       | ⚪ After F5, with D3 ˢᵉᑫ |
 |   D3 | Customer/supplier addresses ᵈ³          |     — |        |       | ⚪ After F5, with D1 ˢᵉᑫ |
 |   D4 | Internal document numbers ᵈ⁴            |     — |        |       | ⚪ After F5, with D5 ˢᵉᑫ |
 |   D5 | Period locking — a movable lock date ᵛ  |     — |        |       | ⚪ After F5, with D4 ˢᵉᑫ |
 |   F6 | Purchase Invoice + Goods Receipt ᶠ⁶     |     — |        |       | 🔴 Not started  |
-|   F7 | Receipts, Payments, Transfers           |     — |        |       | 🔴 Not started  |
+|   F7 | Receipts, Payments, Transfers ᶠ⁷        |     — |        |       | 🔴 Not started  |
 |   F8 | Freight, Journal, Write-offs            |     — |        |       | 🔴 Not started  |
 |   F9 | Operational read views                  |     — |        |       | 🔴 Not started  |
 |  F10 | Design pass, brand look + version badge ᵇᵃᵈᵍᵉ | — |      |       | 🔴 Not started  |
@@ -143,11 +145,12 @@ frontend work that must land before any adapter is built.
 |  U2b | The split's drift guards ᵘ²ᵇ            |     — |        |       | 🟢 Done |
 |   U4 | The dated-figure sweep ᵘ⁴               |     — |        |       | ⚪ Deferred, **re-price before scheduling** |
 |   U5 | The 2026-08-07 scope review ᵘ⁵          |     — |        |       | 🟢 Done |
+|   U6 | Go findings, git hygiene, the ΕΓΛΣ decision ᵘ⁶ | — |   0.5 |  182k | 🟢 Done |
 |  F5b | `el-GR-x-icu` on `DOCUMENT_NUMBER` ᶠ⁵ᵇ  |     — |        |       | ✅ **CLOSED — not needed** ᶠ⁵ᵇ |
 |  W1c | W1's two consumer clean-ups ʷ¹ᶜ         |     — |        |       | ⚪ Queued |
 |  R1c | Fees / *Έξοδα και κρατήσεις* ʳ¹ᶜ        |     — |        |       | ⚪ Cut from R1, unscheduled |
 |   8c | `NewPurchaseInvoiceLine`'s flat union ⁸ᶜ |    — |        |       | ⚪ **Trigger: before F6 binds it** |
-|  M0a | Manager chart mapping — no code ᵐ⁰      |     — |        |       | ⚪ Unblocked, any time |
+|  M0a | Manager chart mapping — no code ᵐ⁰      |     — |        |       | ⚪ **Gate: after C7b** ᵐ⁰ |
 |  M0b | Trial import, one real year ᵐ⁰          |     — |        |       | ⚪ After D1/D3/D4, before 24 |
 |   8b | Consumer cleanup — optional ᵈᵉᶜ         |     — |        |       | ⚪ Optional      |
 |      | **Subtotal, F-rows (step 16 estimate)** |**8.0**|        |       |                |
@@ -168,11 +171,23 @@ separately instead, where a reader scanning a column of dashes will actually mee
     W1  →  F5  →  R2c  →  R4  →  D1 + D3 + D4 + D5  →  F6 onward
     …and amended AGAIN the same day, when the owner deferred R2c:
     W1  →  F5  →  R4  →  D1 + D3 + D4 + D5  →  F6 onward
+    …and amended AGAIN on 2026-08-07 (U6), when C1 was scoped as C7a + C7b:
+    W1  →  F5  →  R4  →  C7a  →  C7b  →  D1 + D3 + D4 + D5  →  F6 onward
+    M0a  any time after C7b — its gate CHANGED on 2026-08-07, see ᵐ⁰
     D2   before step 19 (the Woo one-time load)
     R3   when the accountant answers — not schedulable
     U2   whenever a session has slack
     R2c  deferred out of the sequence entirely, and split — see ʳ²ᶜ
-    C1   recorded, not scoped — see ᶜ¹
+    C1   ⭐ NO LONGER "recorded, not scoped" — it is C7a + C7b above. See ᶜ⁷
+
+⚠️ **ONE ROW MOVED THAT THE OWNER DID NOT MENTION, and it is flagged rather than presented as
+decided.** The placement he gave is `R4 → C7a → C7b → D1…`, which says nothing about **N1**. N1 sat
+between R4 and D1; inserting C7a and C7b in the position stated **pushes N1 down by two rows.**
+
+📌 **That is a mechanical consequence of the insertion, not a decision anybody made, and its status is
+untouched** (⚪ *Direction settled, unbuilt* — it was never scheduled). **It is recorded here because
+row order is the statement**, so a row moving is a claim being made. **If N1 should sit before C7a,
+say so and it moves back.**
 
 **The rows were moved to match**, per `CLAUDE.md` §*A sequencing decision changes the roadmap's ORDER,
 not a paragraph beside it* — a rule written the same day and for this. **The order is the statement;
@@ -356,10 +371,10 @@ Real work with no step number. Each has an owner condition rather than a date.
 |---|---|
 | **`el-GR-x-icu` never applied** — DB sorts by bytes under locale `C`, browser by `Intl.Collator('el')`. Confirmed live 2026-08-02: `datcollate=C`, 0 user collations, 0 non-default column collations, 0 indexes containing `COLLATE` | Invisible only because no list pages on the server. **Whoever adds paging to a list screen owns it** |
 | **No `sortKey` on any of the *seven* list column files** — no backend constant names one. ⚠️ **Seven, not five**: F4 shipped VAT classes and units of measure with sorting too | The day a list gains paging, its sort controls disappear until keys exist. Safe and loud, still an obligation |
-| **Paging missing on five services** — purchase invoices, goods receipts, settlements, lots/consumptions, email outbox. Confirmed 2026-08-02: exactly 3 of 175 operations accept `page`/`size` | Contract settled and proven on sales invoices. Mechanical. Fires together with the two rows above and with real data volume |
+| **Paging missing on five services** — purchase invoices, goods receipts, settlements, lots/consumptions, email outbox. Confirmed 2026-08-02: exactly 3 of 175 operations accept `page`/`size`. ⚠️ **RE-MEASURED 2026-08-07 (U6): still exactly 3 — but now of 257 operations**, so the *surface* grew by 82 and the paged set did not. The three are `GET /api/sales-invoices`, `GET /api/journal-entries`, `GET /api/accounts/{id}/ledger` | Contract settled and proven on sales invoices. Mechanical. Fires together with the two rows above and with real data volume. ⭐ **AND WITH REMOTE HOSTING — see D-U6.8 below**, where it is the one latency risk that is a real defect rather than a property of the network |
 | **Test-environment parity has no teeth** — timezone, `DateStyle`, PostgreSQL major version, Java default locale/charset are unpinned | Owner's open decision — see below |
-| **2FA + recovery codes (PLB-1)** — deliberately absent because the app is not internet-facing | ⚠️ **Must be resolved before any external or remote access**, including a Remote/Order Staff login, which is that role's whole purpose. ⭐ **AND NOW ALSO BEFORE ACCEPTING GO WEBHOOKS — new trigger, 2026-08-07 (U5, N-4)**, see ᵍᵒ |
-| **No change-password screen, and no recovery path** — rotating the owner password is a one-off programmatic run of `UserService.changePassword` against the live database | Owner holds the current password (they ran the S1/S2/F4 browser checks with it). The gap is the missing screen and the absent reset path, not a lost credential. ⭐ **Same new trigger as the row above — Go webhooks require a public URL** |
+| **2FA + recovery codes (PLB-1)** — deliberately absent because the app is not internet-facing | ⚠️ **Must be resolved before any external or remote access**, including a Remote/Order Staff login, which is that role's whole purpose. ⭐ **THE GENERAL TRIGGER IS SERVER DEPLOYMENT AND REMOTE ACCESS — corrected 2026-08-07 (U6, D-U6.8).** Go webhooks (U5, N-4, see ᵍᵒ) are **one instance** of it, not the trigger itself |
+| **No change-password screen, and no recovery path** — rotating the owner password is a one-off programmatic run of `UserService.changePassword` against the live database | Owner holds the current password (they ran the S1/S2/F4 browser checks with it). The gap is the missing screen and the absent reset path, not a lost credential. ⭐ **Same corrected trigger as the row above: remote access, not webhooks** |
 
 ⚠️ **THE THREE ROWS ABOVE SHARE A NEW TRIGGER, ADDED 2026-08-07, AND IT IS THE REASON TO READ THEM
 TOGETHER.** Go's documented webhook support (ᵍᵒ, N-4) is materially good for the shared-entity
@@ -368,9 +383,69 @@ divergent. **But a webhook requires Novocore to be reachable from the public int
 three deferrals above are justified by *"the app is not internet-facing."* **Accepting webhooks turns
 all three from deferred obligations into blocking ones, at once.**
 
+⚠️ **CORRECTED LATER THE SAME DAY (U6, D-U6.8): the paragraph above states ONE INSTANCE as though it
+were the trigger.** The general trigger is **server deployment and remote access** — the three rows
+fire the moment the application is reachable from outside, **whichever hosting is chosen and whether
+or not webhooks are ever enabled.** ⭐ **The correction is not pedantry: filed under webhooks, all
+three read as blocked on a Go feature that may never be turned on. Filed correctly, they are blocked
+on a hosting decision the owner has already made.** See **D-U6.8** below.
+
 📌 **Recorded beside the capability rather than only beside the deferral, deliberately.** A capability
 written down without its precondition is how the precondition gets met at the last minute, or not at
 all — and the attractive half (webhooks solve a real problem) is the half a future session will read.
+
+### ⚠️ D-U6.8 — SELF-HOSTING, and the three security rows were FILED UNDER THE WRONG TRIGGER
+
+**The owner decided 2026-08-07: SELF-HOST NOW, with a cloud VPS as a possible later move.**
+
+#### ⚠️ The correction, and it is the substantive half of this decision
+
+**The paragraph above attaches 2FA (PLB-1), the missing change-password screen and the absent recovery
+path to GO'S WEBHOOKS. That is too narrow, and the narrowness is the danger.**
+
+⭐ **They attach to SERVER DEPLOYMENT AND REMOTE ACCESS.** They arrive **the moment the application is
+reachable from outside** — **whichever hosting is chosen, and whether or not Go's webhooks are ever
+used.**
+
+⚠️ **Why the mis-filing matters rather than being a tidiness point.** Filed under webhooks, all three
+read as *"blocked on a decision about a Go feature we may never enable"* — which is a reason to leave
+them. **Filed under remote access, they are blocked on a decision the owner has JUST MADE.** A
+Remote/Order Staff login is the clearest case: **that role's entire purpose is remote access**, and it
+has nothing to do with webhooks at all. **The webhook trigger is real and it is one instance of the
+general one, not the general one.**
+
+📌 **U5 added the webhook trigger on 2026-08-07 and it was correct as an addition.** What was wrong is
+that it was the *only* named trigger beside a deferral justified by *"the app is not internet-facing"*
+— a justification about **hosting**, answered by a trigger about **an integration feature.**
+
+#### The self-hosting migration checklist — FOUR items, and it is a checklist rather than an obstacle
+
+**Recorded as scope, not as an argument against the decision.** Whichever way hosting goes later, this
+is what has to be true before the application is reachable from anywhere but this machine:
+
+| # | Item |
+|---|---|
+| **1** | **The backup encryption key environment variable** — it is not reproducible from `docker/.env`, and `CLAUDE.md` already warns that `down -v` destroys the commissioned Drive refresh tokens and the Owner account |
+| **2** | **TLS and a reverse proxy** — Caddy is in the stack already; what changes is a real certificate and a real hostname |
+| **3** | **The remote-access mechanism** — VPN, tunnel or exposed port, and that is a decision rather than a default |
+| **4** | ⚠️ **The three security obligations above** — 2FA + recovery codes, a change-password screen, a password-recovery path |
+
+#### 📌 Why SPEED did not decide this, recorded because it is the objection that would be raised
+
+**The latency cost of remote hosting is PER REQUEST, not per interaction.** A React frontend holding
+its state locally means **only save and load touch the server** — so the thing an operator experiences
+as "the app" is unaffected by where the database lives.
+
+**The three real risks, and only one of them is a defect:**
+
+| Risk | Status |
+|---|---|
+| **Sequential request chains** — N round trips where one would do | A design property to watch for. Nothing measured |
+| **Synchronous waits on an adapter** | ✅ **Already forbidden** by `CLAUDE.md` architecture rule 4 |
+| ⚠️ **MISSING PAGING** | ⭐ **A LIVE, RECORDED DEFECT** — five services, and **exactly 3 of 257 operations** accept `page`/`size` (re-measured 2026-08-07). **This one bites when real data lands, regardless of hosting** — remote hosting merely makes it arrive sooner and hurt more |
+
+⭐ **So hosting is not what makes paging urgent; real data is.** The row above already says *"fires
+with real data volume"*, and this is that sentence meeting a second trigger rather than a new finding.
 | **Series gap detection** — a document issued through Go that never reached Novocore | Belongs with step 25, Clearing Checks. Schema must support it from R1 onward |
 | **XSD / annex diff check** — AADE publishes no live codification API; lists change between spec versions | Belongs with step 29. Must alert a human, never auto-apply |
 | **Customer / supplier merge** — no mechanism exists (`V17` says so explicitly) | Leaning "alias forward, never rewrite history" |
@@ -1358,7 +1433,8 @@ answered by a lock date, which bounds postings from **below**.
 
 **ᵐ⁰ M0 — it splits, and the first half is not an import.** Decided 2026-08-03 (U3).
 
-**M0a — a mapping exercise. No code, and unblocked now.** ⭐ **Novocore's chart of accounts was built
+**M0a — a mapping exercise. No code.** ⚠️ **It is NO LONGER "unblocked now" — see the gate below.**
+⭐ **Novocore's chart of accounts was built
 from scratch, not copied from Manager** — 65 accounts across 13 groups, designed from the brief, with
 `AccountSystemKey` on the eleven the posting rules must locate (step 3's record). So **the real test
 is not an import**: does every account in Manager map to a Novocore account, and **which do not?**
@@ -1366,8 +1442,31 @@ That is a spreadsheet and a session, and **it tests the most load-bearing part o
 
 ⚠️ **Its TARGET changed on 2026-08-06 and the row did not.** The owner decided the **official Greek
 chart is used directly** with a display alias, and no business chart on top — see ᶜ¹. So M0a maps
-Manager's accounts onto **the official chart**, not onto a chart of our own design. **Neither
-scheduled nor blocked by that decision; only the answer side of the mapping moved.**
+Manager's accounts onto **the official chart**, not onto a chart of our own design. ~~**Neither
+scheduled nor blocked by that decision; only the answer side of the mapping moved.**~~
+
+#### ⚠️ GATED 2026-08-07 (U6): M0a's target is the **ΕΓΛΣ**, and it waits on **C7b**
+
+**Two changes, and the second reverses the struck sentence above:**
+
+1. ⭐ **The target is named.** Not *"the official Greek chart"* generically — **the ΕΓΛΣ**, the chart
+   of Π.Δ. 1123/1980, which **the accountant already files in.** See ᶜ¹ / D-U6.1 for the legal basis
+   and its evidence class.
+2. ⚠️ **The gate: AFTER C7b.** **Running M0a before C7b wastes the exercise**, because the chart M0a
+   maps *onto* does not exist in this repository yet — measured 2026-08-07, there is **no ΕΓΛΣ file
+   and no ΕΓΛΣ table**, and `account` holds step 3's 65 hand-built accounts with `code` **blank on
+   every row**. Mapping Manager's accounts onto that answers a question nobody will ask again.
+
+⭐ **THE TARGET HAS NOW MOVED TWICE — 2026-08-06 (C1) and 2026-08-07 (ΕΓΛΣ specifically) — AND THAT IS
+ITSELF THE ARGUMENT FOR THE GATE**, not merely a fact about the row. A mapping exercise run against a
+target that keeps moving produces a spreadsheet that has to be redone; **the gate is what stops it
+being run a third time.**
+
+📌 **What has NOT changed:** M0a is still **no code, no schema, a spreadsheet and a session**, and it
+is still **not scheduled** — a gate says what must come first, not when it happens. ⚠️ **And the
+distinction the struck sentence got right is worth keeping: *unblocked* and *scheduled* were never
+the same claim.** What changed is that M0a is now genuinely **blocked**, where before it was merely
+**unscheduled**.
 
 **M0b — a real year of transactions.** Real chart plus one real year, imported into the current core
 to find out whether the model fits data nobody has examined yet. ⚠️ **Waits until D1, D3 and D4
@@ -1380,8 +1479,49 @@ still free** — run it after eleven screens exist and every finding costs scree
 not need F11**: it is an import, not data entry.
 
 **ᶜ¹ C1 — the official Greek chart is used DIRECTLY, with a display alias. Decided by the owner
-2026-08-06; ⭐ RE-EXAMINED AND UPHELD 2026-08-07 (U5, D-U5.1). ⚪ Recorded, NOT scoped, and
-deliberately not built.**
+2026-08-06; ⭐ RE-EXAMINED AND UPHELD 2026-08-07 (U5, D-U5.1); ⭐ MADE SPECIFIC 2026-08-07 (U6,
+D-U6.1). ⚪ Recorded; ⭐ NOW SCOPED, as C7a + C7b — see ᶜ⁷.**
+
+#### ⭐ D-U6.1 — the chart is **ΕΓΛΣ**, and the legal basis is recorded because a reader will ask
+
+**Decided by the owner 2026-08-07.** C1 said *"the official Greek chart"* without naming it. **It is
+the ΕΓΛΣ — the Ελληνικό Γενικό Λογιστικό Σχέδιο of Π.Δ. 1123/1980 — adopted directly.** Nothing about
+C1 changes; it stops being generic.
+
+⚠️ **IS IT STILL PERMITTED? Yes, and the chain is written out because the obvious objection is that
+Π.Δ. 1123/80 was repealed — which it was:**
+
+- **Π.Δ. 1123/1980 was repealed** for periods beginning after **31 December 2014**, by **article 38 of
+  Ν. 4308/2014** (ΕΛΠ) — **subject to article 3 paragraph 9 of the same law.**
+- **ΕΛΤΕ's implementation guidance (§3.9.1)** states that entities may, **by their own choice**,
+  continue to use the chart of accounts in force at 31 December 2014 — that of Π.Δ. 1123/80 —
+  **making whatever adaptations and additions are needed.**
+
+⭐ **AND THE DECIDING FACT IS NOT THE LAW, IT IS THE ACCOUNTANT: HE FILES IN ΕΓΛΣ.** That is what
+makes C1's payoff real rather than assumed. C1's argument was always that one chart beats two records
+of one chart; **this is the evidence that the one chart is the right one — the books and the
+accountant's line up with no translation step at all.**
+
+⚠️ **EVIDENCE CLASS, stated because it is a legal claim being relied on: READ FROM GREEK TAX-LAW
+REFERENCE SITES ON 2026-08-07, NOT FROM A PRIMARY LEGAL TEXT.** No copy of Ν. 4308/2014, Π.Δ. 1123/80
+or the ΕΛΤΕ guidance is in this repository. ⭐ **The accountant is the authority here, not this
+footnote** — and he is already using ΕΓΛΣ, which is the strongest evidence available and does not
+depend on the citation being read correctly.
+
+#### ⚠️ The TWO-CHART SELECTION the owner floated earlier is WITHDRAWN. One chart
+
+**Withdrawn by the owner, 2026-08-07, with its reason** — recorded because ᶜ¹ already exists to stop a
+rejected alternative being re-proposed, and this is the second variant of the same idea in two days.
+
+> **Two switchable charts would require each account to carry BOTH codes.** That is the mapping layer
+> C1 rejected, **arriving one field down** — the same shape as the *"two code columns"* observation
+> this footnote already flags below, and the same shape as `supplier.vat_number`'s inconsistency.
+
+📌 **Note the pattern rather than only the outcome: the mapping layer has now been proposed three
+times in two days** — as a business chart with a reference field (2026-08-07, withdrawn), as two
+switchable charts (2026-08-07, withdrawn), and it will be proposed a fourth time as *a reference table
+the account points at*. **That third form is answered at ᶜ⁷ under D-U6.2R, and it is the most
+persuasive of the three because it is this repository's own house pattern.**
 
 #### ⭐ The alternative was RE-PROPOSED and WITHDRAWN on 2026-08-07. Both halves are recorded
 
@@ -1401,9 +1541,13 @@ after being decided. That is the argument for the entry, not tidiness.
 ⚠️ **THE COSTS ARE ACCEPTED, NOT DENIED, and stating them is what makes the decision re-examinable
 rather than merely re-affirmed:**
 
-- **A longer and more granular account list** than a business-designed chart would be.
+- **A longer and more granular account list** than a business-designed chart would be. ⭐ **REDUCED
+  2026-08-07 by D-U6.2R** — the ΕΓΛΣ tree lives in a **catalogue**, and `account` holds only what the
+  business uses. The chart is ~80 accounts, not ~860. **The cost was accepted before it was known to
+  be avoidable; recording that it shrank is what keeps the entry honest.**
 - **A larger M0a mapping exercise** — every Manager account now maps onto the official Greek chart
-  rather than onto a chart of our own design. See ᵐ⁰.
+  rather than onto a chart of our own design. See ᵐ⁰. ⚠️ **Now named specifically: ΕΓΛΣ**, and **M0a
+  is gated on C7b** as of 2026-08-07.
 
 📌 **The 2026-08-06 reasoning below stands unchanged and is the primary argument; the above is what
 2026-08-07 added.**
@@ -1442,10 +1586,37 @@ official one.** One layer, not two.
 decision rejects, one field down. If the official chart becomes *the* chart, whether those two collapse
 into one is a real question and it is **not answered here**. Recorded rather than decided.
 
+##### ✅ ANSWERED 2026-08-07 (U6): `code` carries the ΕΓΛΣ code, and `elp_code` is DROPPED
+
+**This paragraph and ᶜ³'s blocking question were the same question, and D-U6.1 settles both.** `code`
+becomes the account's ΕΓΛΣ code; **`elp_code` is deleted, not repurposed**; the alias becomes a third
+field that is no longer a third *empty* one. **Built in C7a — see ᶜ⁷.**
+
+⭐ **The evidence for dropping `elp_code` is the column's own comment, and it is worth quoting rather
+than paraphrasing.** `V4__chart_of_accounts.sql` says:
+
+> `-- ΕΛΠ (Ν. 4308/2014) mapping. NULL until the accountant supplies it.`
+
+and `Account.setElpCode`'s javadoc says *"Records the ΕΛΠ mapping once the accountant supplies it."*
+
+⚠️ **Ν. 4308/2014 — not Π.Δ. 1123/1980.** The column names the *other* framework. It was built to map
+this chart onto **ΕΛΠ**, and the owner has now chosen **ΕΓΛΣ**, which he and his accountant already
+use. ⭐ **So dropping it is a CONSEQUENCE OF A DECISION, not a cleanup of an unused field** — and that
+distinction is the reason to record it here. A future reader who finds a removed column and assumes it
+was dead weight would have the wrong story: it was built for a chart that was then not chosen.
+
+📌 **The column really is empty**, so nothing is lost: `elp_code` is `NULL` on every row, as ᶜ³
+measured on 2026-08-07 and as step 3's own migration intended.
+
 ⚠️ **M0a's target changes with this, and that is stated at ᵐ⁰ too.** M0a asks *"does every Manager
 account map to a Novocore account?"* — under this decision the answer side of that mapping is **the
-official Greek chart**, not a chart of our own design. **M0a is not thereby scheduled, blocked or
-cancelled**; only its target moved.
+official Greek chart**, not a chart of our own design. ~~**M0a is not thereby scheduled, blocked or
+cancelled**; only its target moved.~~
+
+⚠️ **CORRECTED 2026-08-07 (U6). The struck sentence was true on 2026-08-06 and is now false in its
+second half: M0a IS gated.** Its target is named specifically — **ΕΓΛΣ** — and it now waits on
+**C7b**, because **the chart it maps onto does not exist yet.** See ᵐ⁰, where the reasoning sits at
+the row. **Still not *scheduled*; now genuinely *blocked*, which is a different claim.**
 
 **ᶜ² C2 — the cash limit is TWO thresholds, and the discriminator is not in the model. Raised by R4's
 Phase 0, 2026-08-06. ⚪ Recorded, NOT scoped, and deliberately not built inside R4.**
@@ -1480,6 +1651,26 @@ VAT number can still be sold to at retail.
 ⚠️ **What C2 must decide before it can build anything:** whether the retail/B2B line is the AADE
 group, an explicit flag on `sales_document_type`, or something else — and **whether that is a
 statutory question for the accountant** rather than a modelling one. **R4 must not pre-empt it.**
+
+**ᵘ⁶ U6 — Go findings, git hygiene, and the ΕΓΛΣ decision. 🟢 Done 2026-08-07. Documentation, git and
+configuration only.** No production code, no schema, no migration, no test behaviour changed. **The
+full record is in `HISTORY.md` under U6**; what belongs at the roadmap is where its output landed:
+**N-6/N-7/N-8** at ᵍᵒ, ᶜ⁶ and a new ᶠ⁷; **D-U6.1** at ᶜ¹; **D-U6.2R–D-U6.7** at ᶜ⁷ with rows **C7a**
+and **C7b**; **D-U6.8** with the cross-cutting obligations; **M0a** re-gated at ᵐ⁰.
+
+⭐ **Its largest single act was a `git merge`, which is unusual enough to say plainly.** `main` was
+**19 commits behind and had no `HISTORY.md` at all** — every closed step of the previous week lived on
+a branch named for an unfinished one. Both suites were verified green first (**backend 1,500 tests,
+frontend 414**), then `main` was **fast-forwarded and pushed** and `r4-payment-methods` deleted.
+
+⚠️ **Four of its brief's premises were disproven in Phase 0, and two of its own decisions were
+superseded by the owner mid-session.** Both are recorded in `HISTORY.md` rather than here; the one
+worth knowing at the roadmap is that **"merge the finished work and leave R4 behind" was not
+executable** — R4's branch was a strict ancestor of U5's, so there was no separable set.
+
+**Figures: 0.5 h active, 182k output tokens**, measured from this session's transcript by the method
+at the bottom of this file. ⚠️ **Short by the standing caveat** — the close-out is not in the
+transcript when the figure is computed.
 
 **ᵘ⁵ U5 — the 2026-08-07 scope review. 🟢 Done. Documentation and configuration only.** Ten owner
 decisions written into the repository, in U3's shape: no production code, no schema, no migration, no
@@ -1527,6 +1718,23 @@ did not rediscover it; U5 made it a **gate on the alias** instead of a remark be
 📌 **Status precisely: the requirement STANDS and is unbuilt. What is open is its SHAPE and what
 becomes of the two existing columns.** Both halves are recorded because recording only the first
 invites somebody to add a third empty column and call C1 discharged.
+
+#### ✅ UNBLOCKED 2026-08-07 (U6). The question is answered; the alias is now C7a's work
+
+**The owner answered the blocking question on 2026-08-07, in the form ᶜ³ asked it:**
+
+> **`code` becomes the ΕΓΛΣ account code. `elp_code` does not collapse into it — it is DROPPED.** The
+> alias carries the owner's own familiar label.
+
+⚠️ **So the objection that blocked this is gone rather than overridden, and the difference matters.**
+ᶜ³ blocked the alias because adding it would produce **three label columns of which two are empty**.
+After C7a there are **two, and both are populated**: `code` holds a real ΕΓΛΣ code on every account,
+and the alias holds a real label. **The condition was not waived; it stopped being true.**
+
+📌 **C3 is not thereby a separate step.** The alias is **built inside C7a** — it is one column on the
+same table in the same migration that adds `code`'s meaning and removes `elp_code`, and splitting it
+out would mean touching `account` twice for no gain. **This row stays as the record of the
+requirement and its reasoning; the work is at ᶜ⁷.**
 
 **ᶜ⁴ C4 — ORDERS ARE A CORE ENTITY. Decided by the owner 2026-08-07 (U5, D-U5.4). ⚪ UNSCOPED.**
 
@@ -1605,6 +1813,25 @@ made directly in Go becomes **detectable rather than silently divergent**. ⚠�
 Novocore to be reachable from the public internet, which turns three deferred security obligations
 into blocking ones** — recorded with the pre-launch blockers above, not only here.
 
+⚠️⚠️ **QUESTION 3 GOT A SECOND, WORSE ANSWER ON 2026-08-07 — N-6, at ᵍᵒ. Read it before designing
+anything against question 3, because it changes what the question is about.**
+
+**Question 3 was framed around DIVERGENCE** — two copies disagreeing, one edited behind the other's
+back, which is a reconciliation problem and which the webhook above genuinely helps with. **N-6 is not
+that.** Go's `set` **replaces a child table rather than merging into it**, so a push that omits an
+existing child row **deletes it**.
+
+⭐ **The distinction is the whole point: the satellite's data is DESTROYED, by a push about something
+else.** Correcting a customer's *address* from Novocore wipes the bank-account rows somebody added in
+Go, because they live in a child table Novocore never read. **A webhook does not help** — there is no
+conflicting edit to detect, only a deletion that Go performed exactly as asked.
+
+📌 **What follows for this row, recorded and not designed:** whatever answers question 3 must include
+**read-before-write for every record with child tables**, which makes the write **check-then-act** and
+therefore **non-atomic** — and **N-1 says Go offers no idempotency mechanism to close that gap.**
+⚠️ **And it is UNDOCUMENTED whether `set/saldoc` behaves the same way**, which is on the short list of
+things only a live write could settle.
+
 🛑 **STOCK IS THE HARDEST OF THE THREE, and it is worth saying why rather than just flagging it.**
 **Go derives stock from its own documents.** So Novocore owning stock requires knowing whether Go's
 stock can be **SET from outside or only DERIVED**. ⚠️ **That is a CAPABILITY QUESTION ABOUT GO, not a
@@ -1626,6 +1853,379 @@ the centre"* — **promotes the Product Creator module from a Phase 9 module to 
 it load-bearing, and its own brief entry already states the directional decision: *"once built,
 NovoCore becomes the point of product creation, syncing outward to Go/Woo, not the reverse."*
 **Nothing has ever scheduled it against that role.**
+
+**ᶜ⁷ C7 — SEED THE ΕΓΛΣ CHART. Decided by the owner 2026-08-07 (U6, D-U6.1 … D-U6.7). ⚪ SCOPED
+here, SPLIT into C7a and C7b, and DELIBERATELY NOT STARTED.**
+
+⚠️ **NOTHING IN THIS FOOTNOTE IS BUILT.** U6 was documentation, configuration and git only. Every
+figure about the ΕΓΛΣ file below is **the owner's measurement of a spreadsheet that is not in this
+repository** — see the evidence-class warning under C7b. **C7b's own Phase 0 re-derives every one of
+them from the committed file before any migration is written.**
+
+⭐ **This row is not "C1, later." It is C1's design**, and it took three attempts to reach — two of
+which are recorded as withdrawn at ᶜ¹, and the third of which is answered immediately below because it
+is the one a careful reader will re-invent.
+
+### ⚠️⚠️ D-U6.2R — THE ΕΓΛΣ CHART IS A **CATALOGUE YOU COPY FROM**. Not a mapping layer, not the chart
+
+**This supersedes an earlier formulation (D-U6.2) in which the ΕΓΛΣ rows WERE the chart.** The owner's
+clarification is one sentence and it re-decided the model:
+
+> **Importing the chart of accounts would only help to create and activate the actual accounts
+> FASTER.**
+
+⭐ **That describes a DATA-ENTRY AID. The superseded formulation described an OPERATING MODEL** — and
+the difference is the whole of this section. **The third option had never been put to him.** It has
+now, and it is chosen.
+
+**The model:**
+
+| Table | What it holds | Who writes it |
+|---|---|---|
+| **`egls_catalogue`** *(or similar)* | The **ΕΓΛΣ tree**, seeded, **read-only** | Flyway. Nobody else, ever |
+| **`account`** | ⭐ **ONLY the accounts the business actually uses** | The owner, by creating them |
+
+**Creating an account may PREFILL its code and name from a catalogue row.** ⚠️ **THE LINK ENDS
+THERE.** No foreign key from `account` to the catalogue. Nothing reads the catalogue once the account
+exists. **The catalogue is INERT.**
+
+#### ⚠️⚠️ WHY THIS IS NOT A REVERSAL OF C1 — read this before "correcting" it
+
+**A future reader will find a seeded read-only reference table sitting beside `account` and conclude
+that the mapping layer C1 rejected got built anyway. It did not, and the distinction is exact rather
+than a matter of emphasis:**
+
+| | `aade_invoice_type` — **the two-layer shape** | `egls_catalogue` — **a catalogue** |
+|---|---|---|
+| **The relationship** | **POINTED AT.** `sales_document_type` carries a **live FK** | ⭐ **COPIED FROM.** One row, one moment, **no pointer afterwards** |
+| **Lifetime** | The two records **coexist for the life of the document type** | The link exists **for the duration of one form submission** |
+| **Reads after creation** | Every render of a document type joins to it | ⭐ **None. Ever** |
+| **Can they disagree?** | Yes — that is what a mapping is, and why it needs maintaining | **No. There is nothing to disagree with** |
+
+⭐ **THE TEST TO APPLY IF ANYBODY ASKS — and it is a real test, not a metaphor: DELETE THE CATALOGUE.**
+
+- **If the chart still works, it was a catalogue.** ✅ **This one deletes cleanly.** Every account
+  keeps its code, its name, its postings and its place in the tree, because all of that lives on the
+  account.
+- **If accounts lose their identity, it was a mapping layer.** That is what deleting
+  `aade_invoice_type` would do to `sales_document_type`, correctly, which is why that one has an FK.
+
+**So C1's single-layer decision is INTACT. An account is ONE record.** ⚠️ **The house pattern
+(R1a's two layers for AADE invoice types, R4's for payment methods) is RIGHT THERE and is WRONG
+HERE** — and it is wrong for the reason C1 gives: under a pointer model **two accounts could point at
+one ΕΓΛΣ code, or one at none**, and somebody would have to maintain the correspondence. **Copying
+makes both impossible by construction rather than by a constraint somebody has to remember.**
+
+### ⚠️⚠️ D-U6.3R — THE TREE IS DERIVED FROM THE CODE, in both tables. NOTHING is seeded inactive
+
+**⚠️ AN EARLIER FORMULATION (D-U6.3) IS WITHDRAWN.** It held that the whole ΕΓΛΣ tree is seeded into
+`account`, all inactive, and that "creating an account" means flipping a seeded row active.
+**`account` receives only real accounts — expect roughly 80, not 860.**
+
+#### ⚠️ What the withdrawn model would have cost, recorded so it is not re-proposed
+
+- **~780 permanently inactive rows in the chart of accounts**, and therefore **a filter on every
+  picker, list, report and export, forever.** One forgotten filter shows the operator eight hundred
+  accounts he has never used.
+- **TWO ways to create an account** — activate a seeded row, or create your own — **behaving
+  differently**, which is the shape R4 is currently unwinding for payment methods.
+- ⚠️⚠️ **AND IT WOULD HAVE MAGNIFIED A DEFECT MEASURED IN U6's PHASE 0.**
+  `AccountRepository.findBySystemKey` **does not filter on `active`** — the keyed-account guard lives
+  in `ChartOfAccountsServiceImpl.deactivate`, not in the query. Today that is narrow: all **29** keyed
+  accounts are active, and deactivating one is refused. **Under the withdrawn model, `inactive` would
+  have been the DEFAULT STATE OF NEARLY EVERY ROW**, and a system key resolving to an inactive account
+  and posting to it stops being an edge case. ⭐ **Under the catalogue model, inactive is rare again.**
+  The defect is real either way and **C7a closes it**; the point here is that the rejected model would
+  have made it routine.
+
+#### ⭐ THE HIERARCHY IS DERIVED FROM THE CODE. Not a `parent_id`, not a `level` column
+
+**In ΕΓΛΣ the code IS the hierarchy.** `38.03`'s parent is `38` **by definition of the numbering**,
+not by convention and not by anybody's data entry. ⚠️ **A `parent_id` column would be a second
+statement of a fact the code already carries — and two statements of one fact can disagree.**
+
+⭐ **This is the stance the schema already takes everywhere, which is why it is the cheap choice
+rather than the clever one:** no stored balance on `account`, no stock figure on `product`, no
+`normal_balance_side` (derived from `AccountType`), no shortfall on `stock_consumption`. **ADR 0009
+states it in one line — *"Two numbers that must agree are two numbers that can disagree."***
+
+| Question | How it is answered |
+|---|---|
+| **Parent** | The code minus its last segment |
+| **Has children** | Any code beginning with this one plus a `.` |
+| ⭐ **POSTABLE** | **No children** |
+| **Subtree total** | A prefix query — **which is what a subtotal is** |
+| **Depth** | Unlimited, and free |
+
+**ONE CONSTRAINT IS REQUIRED: a code's parent must exist**, so that a typo cannot create an orphan
+hanging off nothing. That is the only thing the derived model needs that the stored model would have
+got from an FK.
+
+#### These survive D-U6.3 unchanged, and apply to `account`'s OWN rows
+
+- ⭐ **POSTABLE MEANS NO CHILDREN.** `38.00 Ταμείο` posts as-is until the owner creates `38.00.00` and
+  `38.00.01`, at which point **`38.00` becomes a sum.**
+- **The owner's auto-activate-ancestors rule becomes AUTO-CREATE ANCESTORS:** creating `38.03.00`
+  creates `38.03` and `38` above it if they are absent.
+- ⚠️ **THE GUARD: adding a child to an account that ALREADY HAS POSTINGS must be REFUSED, naming the
+  remedy.** Otherwise a posting account **silently becomes a sum with postings sitting on it**, which
+  makes every subtree total wrong in a way no report can show. **Cheap now, while the database is
+  disposable; expensive after real data.**
+  - 📌 **The ordinary path, recorded so the guard reads as an edge case rather than an obstacle:**
+    children are created **at activation time, before anything posts.** `38.00` posts until the owner
+    wants `38.00.00` and `38.00.01`, and **creating those before posting avoids the question
+    entirely.** The guard exists for the case where he changes his mind after a year of use.
+- **CONTROL ACCOUNTS STOP ABOVE THEIR SUB-LEDGER.** `30.00` posts; **the individual customer is the
+  Customer entity, not a tertiary account.** ⭐ **This is why the tree and the sub-ledger do not
+  collide** — the chart stops exactly where the sub-ledger begins, which is what `AccountKind.CONTROL`
+  and `sub_ledger_type` already encode.
+
+📌 **Two consequences already decided elsewhere, recorded here because they look like open questions
+otherwise:**
+
+- **`38.03` (bank deposits) and the partner clearing accounts are SUMS FROM DAY ONE.** **R4.3 requires
+  a payment method to name the specific ledger account it settles to**, and **two POS terminals
+  sharing AADE code 7 can land in different banks** — so each needs its own child. **Their children
+  are the owner's to create.**
+- **The internal accounts are the owner's too** — see D-U6.4.
+
+#### ⚠️ THE EARLIER FORMULATION'S OTHER HALF WAS ALSO WRONG, and the correction is the point
+
+**D-U6.3's first draft held that tertiary accounts are the real ones and everything above is a sum.
+Measured against the file, that is false:** **89 primary, 672 secondary, 110 tertiary, 2
+fourth-level.** Restricting activation to tertiary would make **`38.00 Ταμείο`, `54.00 ΦΠΑ`,
+`30.00 Πελάτες εσωτερικού` and `70.95 Επιστροφές πωλήσεων` unusable** — four accounts this business
+posts to constantly.
+
+⭐ **That is why the rule is *no children* rather than *depth 3*.** A depth rule is a guess about the
+shape of somebody else's tree; **a no-children rule is a fact about this tree, whatever shape it has.**
+
+### D-U6.3R.a — the four preparation decisions SURVIVE, and their JUSTIFICATION WEAKENED
+
+**All four stand, decided by the owner 2026-08-07.** ⚠️ **But record why they are now cheaper
+decisions than they were, because somebody will otherwise defend them harder than they need to be
+defended:** under the withdrawn model, noise went **into the chart of accounts**, where every row is a
+posting target. Under the catalogue model, noise goes **into a catalogue nobody posts to.** ⭐ **These
+are BROWSABILITY calls now, not data-integrity ones, and relaxing any of them later is cheap.**
+
+| | Decision | Why |
+|---|---|---|
+| **EXCLUDE** | **560 relative rows** — **39% of the file** | They use shorthand: under `20.00.00` the next row reads `.01`, meaning `20.00.01`, and **expands only by reading the row above.** Real accounts, but deep detail **the owner can create by hand.** 📌 **C7b's Phase 0 must LIST THE PARENT ACCOUNTS whose children are being dropped**, for the owner to scan and rescue any he recognises |
+| **EXCLUDE** | **the ~22 illustrative rows** | `"Είδος Α (ή ομάδα Α)"`, `"κ.λ.π."`, `"κ.ο.κ."`, `"όπως ο λογ/σμός 20"`, `"--"`. ⚠️ **Groups 20 and 70 in particular are the standard showing how to structure your OWN merchandise and sales categories.** Importing them verbatim **creates accounts named "etc."** |
+| ⭐ **RENAME** | **the 36 drachma rows** — **NOT exclude** | ⚠️ **AN EARLIER INSTRUCTION SAID EXCLUDE AND WAS WRONG.** In ΕΓΛΣ **`σε δρχ` means IN DOMESTIC CURRENCY**, the counterpart of **`σε Ξ.Ν.`** on neighbouring rows. **The accounts are current; only the word is stale.** Excluding them would remove **`38.03 Καταθέσεις όψης` — where every bank account hangs** — and `38.04`, `33.95` and `53.98`. **Rewrite δρχ → ευρώ** |
+| **FIX** | **one malformed row** | A single cell containing `"71.00,71.01κ.λ.π. (όπως και ..."` |
+
+⭐ **The drachma rename remains the most valuable of the four, and its value survives the model
+change intact** — under a catalogue, **every account copied from it inherits the corrected name.** A
+bad name in a catalogue propagates into real accounts one copy at a time.
+
+#### ⭐ AND ONE PROBLEM DISAPPEARS ENTIRELY — `account_name_unique_in_group` needs no change
+
+**ΕΓΛΣ repeats names across the tree.** `"Γραμμάτια πληρωτέα σε δρχ."` appears at both **45.19** and
+**51.00**, and it is not the only one. ⚠️ **Under the withdrawn model those rows would have collided
+on `account_name_unique_in_group` the moment they were seeded**, and the constraint would have had to
+be weakened or the names mangled.
+
+✅ **Under the catalogue model, only names ACTUALLY USED ever reach `account`** — and the owner is not
+going to create two accounts with the same name in one group by accident. **The constraint survives
+untouched**, and step 3's reasoning for it (*"Other selling expenses" and "Other general expenses" are
+distinct only because they were named distinctly*) is undisturbed.
+
+📌 **Recorded because the absence of a problem is invisible.** A future reader will not notice that a
+constraint was nearly weakened; they would only notice if it had been.
+
+### D-U6.4 — THE OWNER MAY CREATE HIS OWN ACCOUNTS. Confirmed with the accountant
+
+⚠️ **Recorded as a CONFIRMATION rather than a preference, because it is a legal claim being relied
+on.** The owner checked with his accountant, who confirms it is **standard practice** — which is also
+what ΕΛΤΕ §3.9.1 says in the words *"making whatever adaptations and additions are needed"* (D-U6.1).
+
+⭐ **THIS CLOSES A QUESTION THAT WAS ABOUT TO GO TO THE ACCOUNTANT.** Novocore's own internal
+accounts had no obvious ΕΓΛΣ home and somebody was going to have to find them one:
+
+`GOODS_RECEIVED_INVOICE_RECEIVED_CLEARING` · `PURCHASE_PRICE_VARIANCE` · `LANDED_COST_VARIANCE` ·
+`ROUNDING_DIFFERENCES` · `FREIGHT_LANDED_COST_UNALLOCATED` · `UNCLASSIFIED_NEEDS_REVIEW` ·
+`PARTNER_CLEARING_POS` · `PARTNER_CLEARING_SKROUTZ` · `PARTNER_CLEARING_ACS` · `PAYPAL` · `STRIPE`
+
+**They become the owner's OWN created accounts**, decided **at activation time, manually**. **No ΕΓΛΣ
+code has to be found for them and none should be invented** — inventing one is exactly what the
+codification rule forbids for AADE lists and the reasoning carries over.
+
+### D-U6.5 — THE CHART'S SCREEN LIVES IN SETTINGS
+
+**Same place as VAT classes and units of measure after F4** — `/settings/…`.
+
+⚠️ **THIS IS ABOUT THE SCREEN'S LOCATION IN THE UI, NOT ABOUT STORAGE.** The chart is **not** in the
+`setting` table and nothing about it becomes a key/value pair. Saying so because *"it lives in
+settings"* is exactly the sentence that gets read the other way a month later.
+
+📌 **It is a MOVE, not a placement, and that was measured rather than assumed.** `frontend/src/nav/
+tree.ts` currently puts the chart at **`/accounting/chart-of-accounts`**, under an `accounting`
+heading — not under `/settings`. **C7b moves it.**
+
+⚠️ **And one thing found incidentally while measuring it, recorded and NOT acted on** — it is not
+U6's and not C7's: **`tree.ts` marks `accounting.chartOfAccounts` as `status: 'BUILT'`, while
+`types.ts` defines `BUILT` as *"there is a working screen behind the item."*** There is no such
+screen — the path is absent from `routes.tsx`'s `SCREENS` map, so it renders a `ScreenPlaceholder`.
+**14 of the 35 `BUILT` nav nodes are in that state** (all of `/inventory/*`, `/purchasing/*`,
+`/accounting/*` and `/email-outbox`), so **`BUILT` in practice means *the endpoint exists*, not *the
+screen exists*, and the doc comment says the second.** **Nothing asserts the correspondence, which is
+why the suite is green.** Whether the flag's meaning or its doc comment is the wrong one is somebody's
+question; **it is not a defect C7 should absorb quietly.**
+
+### D-U6.6 — CUSTOM SUBTOTALS, recorded at its REAL SIZE
+
+**The owner asked for custom sorting and custom totals/subtotals.** ⭐ **The tree supplies most of it
+for free: `38` totals `38.00`–`38.06` by structure**, and every other subtotal that follows the
+official hierarchy comes out of the same prefix query.
+
+**What remains is only the part where the owner's preferred grouping CUTS ACROSS the official
+hierarchy** — a total over accounts that are not siblings.
+
+⚠️ **Recorded as that smaller requirement, deliberately, and NOT scoped.** *"Custom reporting"* is a
+phase-8 sized thing; *"a saved grouping that spans branches of the tree"* is not, and writing the big
+phrase down would get it scheduled as the big thing or deferred as the big thing. **Neither is right.**
+
+### D-U6.7 — GROUPS 9 AND 0 ARE INCLUDED, and Group 9 carries a KNOWN STATE
+
+**Both seeded into the catalogue — ~138 rows.**
+
+⚠️ **RECORDED RATHER THAN RESOLVED, and the distinction is deliberate: Group 9 (Αναλυτική Λογιστική)
+is a PARALLEL ACCOUNTING SYSTEM, and Novocore already does that job differently** — FIFO lots, COGS,
+and the variance accounts of **ADR 0008** and **ADR 0010**. **Whether anything ever posts to Group 9
+has not been asked.**
+
+📌 **If the answer is no, it is 53 permanently inactive rows in a catalogue** — which costs nothing,
+because a catalogue is not a chart and nobody posts to it. ⭐ **That is acceptable as a KNOWN STATE and
+unacceptable as a LATER PUZZLE**, which is the entire reason this paragraph exists rather than the
+rows simply being seeded quietly.
+
+---
+
+### ⭐ C7 IS SPLIT IN TWO. R1's split is the precedent, and it is cited rather than invented
+
+⚠️ **A single step would be the backend model, plus the data, plus two screens — which is R1's shape
+exactly, and R1 was split for a reason the roadmap already records as having paid for itself:**
+
+- **R1a could not change what any existing test asserts.** Additive: new tables, new routes, nothing
+  behind it moved.
+- **R1b changed what every sales-invoice test constructs.** `seriesId` became mandatory and `channel`
+  was removed — a behavioural change that touched every caller.
+
+**C7 divides on the same seam.**
+
+#### C7a — THE MODEL. No catalogue, no seed, no screens
+
+| Item | Note |
+|---|---|
+| **`code` on `account`** and its uniqueness | It already exists and is `NULL` on every row; C7a gives it a meaning and populates it |
+| ⭐ **The derived hierarchy** — parent, has-children, **postable**, subtree totals | From the code. **No `parent_id`, no `level`** |
+| **The parent-must-exist constraint** | So a typo cannot create an orphan |
+| ⚠️ **The add-a-child-to-a-posted-account guard** | Refuse, naming the remedy |
+| **The alias field** | **D-U5.1's requirement, unbuilt since 2026-08-06.** ᶜ³ is unblocked — see there |
+| **`elp_code` dropped** | A consequence of D-U6.1, not a cleanup — see ᶜ¹ |
+| ⚠️ **The `findBySystemKey` active filter** | U6's Phase 0 finding — see the gate below |
+
+⭐ **C7a's largest item is the one an earlier scoping understated, and it is worth stating plainly:
+`Account` HAS NO PARENT FK, NO LEVEL COLUMN AND NO TREE TODAY.** Measured 2026-08-07 — the fields are
+`id, code, name, account_type, account_kind, sub_ledger_type, system_key, group_id, display_order,
+active, expected_to_clear, elp_code` and nothing else. **The chart is 65 flat accounts across 13
+groups, and `account_group` is the only grouping that exists.** The postable-means-no-children rule
+was written as though a tree were already there. **It is not. C7a builds it.**
+
+#### C7b — THE CATALOGUE AND THE BINDING
+
+| Item | Note |
+|---|---|
+| **The `egls_catalogue` table and its seed** | ~860 rows after the exclusions and renames |
+| **Create-from-catalogue prefill** | Code and name. **No FK afterwards** — D-U6.2R |
+| **The ΕΓΛΣ management screen** | In **Settings** — D-U6.5. **A move**, not a new placement |
+| **The system-key binding screen and the unskippable check** | See the gate below |
+| **Commit the owner's `.xls`** | ⚠️ **It is not in the repository** — see the evidence class below |
+
+##### ⭐ AND ONE TASK THAT IS THE OWNER'S, NOT A SESSION'S — 29 decisions
+
+**All 29 `AccountSystemKey` values must be re-pointed at coded accounts.** ⚠️ **`code` is `NULL` on
+every existing row**, so this is **not** *"add codes to a coded chart"* — **it is replacing a codeless
+flat chart with a coded tree**, and every keyed account has to be told where it now lives.
+
+- **Some are obvious:** `CASH` → `38.00`, `ACCOUNTS_RECEIVABLE` → `30.00`, `OUTPUT_VAT` under `54.00`.
+- ⚠️ **The internal ones are accounts the OWNER CREATES under D-U6.4** — the eleven listed there.
+
+⚠️ **Recorded as 29 OWNER DECISIONS WITH A NAMED PLACE TO RECORD THEM, not as work a session
+absorbs.** A session that "just picks sensible codes" for eleven accounts nobody has decided on is
+fabricating the chart of accounts of a real company. 📌 **The measured starting point, so nobody
+re-derives it:** all 29 keys resolve today, all 29 accounts are **active**, and
+`account_system_key_known` is a CHECK constraint **extended by migration** (V4 → V14 → V16 → V17 →
+V18). **C7 follows that established pattern rather than inventing one.**
+
+##### ⚠️ THE SETUP GATE — and U6's Phase 0 found something worse than the thing it guards
+
+**The requirement: EVERY `AccountSystemKey` MUST NAME AN ACTIVATED ACCOUNT BEFORE ANYTHING CAN POST.**
+Without it the application starts fine and then refuses every document.
+
+⚠️ **THE OBVIOUS DESIGN — put the gate in the posting error — DOES NOT WORK, and the reason must not
+be weakened.** `ChartOfAccountsServiceImpl.requireAccount(AccountSystemKey)` already throws
+`AccountNotFoundException` with a **precise** message (*"No account carries the system key X. A
+posting rule depends on it, so this is a broken chart of accounts…"*). **`WebExceptionHandler`
+discards it deliberately**, mapping it into the 404 group whose body is generic *"because echoing the
+core's message would confirm the existence of neighbouring records for a caller probing ids."*
+**That reasoning is correct and stays.** The operator sees `404 Not found.`
+
+⚠️ **THE SEPARATE FINDING, measured 2026-08-07: `AccountRepository.findBySystemKey` does not filter on
+`active`.** The keyed-account guard is in the **service** (`deactivate` refuses), **not in the
+query** — so an inactive keyed account still resolves and still posts. Under the catalogue model this
+is smaller than it would have been (D-U6.3R), **but it is a real defect and C7 is the step that should
+close it.**
+
+**Two halves, both recorded, NEITHER BUILT HERE:**
+
+1. **`findBySystemKey` — or `requireAccount` — must treat an INACTIVE keyed account as UNRESOLVED.**
+   An inactive account is not a usable posting target.
+2. **The operator-facing surface is a SCREEN, not an error:** a view showing **every**
+   `AccountSystemKey` and what it is bound to, with unbound ones obvious. ⚠️ **Plus a check somewhere
+   unskippable** — at startup, or a refusal on first posting that names the **specific** unbound key
+   **through a channel the 404 handler does not flatten.** **Both are recorded; the mechanism is
+   deliberately not chosen here.**
+
+📌 **What EXISTS, so C7 does not rebuild it:** `requireAccount` throws with a diagnostic message, and
+**deactivating a keyed account is already refused** with its reason. **Missing: the active filter, the
+unskippable check, and the screen.**
+
+##### ⚠️ EVIDENCE CLASS FOR EVERY ΕΓΛΣ FIGURE ABOVE — the source file is NOT IN THIS REPOSITORY
+
+**Measured 2026-08-07 (U6 Phase 0): there is no `.xls`, `.ods` or `.csv` of the ΕΓΛΣ anywhere in the
+tree**, and **the string `ΕΓΛΣ` appeared nowhere in any `.md`, `.sql` or `.java` file** before this
+footnote. The only spreadsheet in `docs/` is `aade/v2.0.1/syndiasmoi_xaraktirismwn_v2.0.1.xlsx`,
+which is unrelated.
+
+⚠️ **So C1 has existed as a decision since 2026-08-06 while the chart it names is absent from the
+repository.** ⭐ **Committing the owner's `.xls` is PART OF C7b's WORK — it is not a check that the
+file is there.** Source as described by the owner: **10 sheets (groups 1–8 plus 9 and 0), 1,443 code
+rows, created 1999, last saved 2006, code page 1253.**
+
+⚠️⚠️ **EVERY FIGURE IN THIS FOOTNOTE — 1,443 rows, 560 relative, ~22 illustrative, 36 drachma, 89/672/
+110/2 by level, ~138 in groups 9 and 0, 53 in group 9, ~860 expected — IS THE OWNER'S MEASUREMENT OF A
+FILE THIS REPOSITORY CANNOT SEE.** None of it has been verified here and none of it could be.
+**C7b's Phase 0 re-derives all of them from the committed file and produces the exact seeded count and
+the FULL exclusion and rename lists FOR THE OWNER'S APPROVAL BEFORE ANY MIGRATION IS WRITTEN.**
+
+##### PLACEMENT — decided by the owner, 2026-08-07
+
+```
+R4  →  C7a  →  C7b  →  D1 + D3 + D4 + D5  →  F6 onward
+M0a any time after C7b
+```
+
+**The reasons, recorded because they are not derivable from the position:**
+
+- ⭐ **BEFORE F6–F11.** Every document screen displays accounts. **Building eleven screens against a
+  chart about to be replaced means touching them twice.**
+- **BEFORE M0a.** M0a maps Manager's chart onto Novocore's, and **its target has moved twice** — once
+  when C1 was decided, once when C1 became ΕΓΛΣ specifically. **Running it before C7b wastes the
+  exercise.** See ᵐ⁰.
+- **AFTER R4.** R4 is mid-flight and **touches payment methods, which reference accounts**. **Two
+  steps editing the account layer at once is avoidable.**
 
 **ᵍᵒ G1 — GO'S API: capture what the two WORKING integrations already know. Raised 2026-08-07 (U5,
 D-U5.8). ⚪ Trigger: BEFORE step 18 is scoped.**
@@ -1687,13 +2287,144 @@ meet late:**
   series model was the right shape** — a series is Novocore's to name and a number is not, which is
   exactly what `CLAUDE.md` §2 has said since 2026-08-02.
 - **Purchase documents are readable AND writable** (`get`/`list`/`set purdoc`), as are `cfncusdoc`
-  and `cfnsupdoc`. Relevant to F6 and to 18b.
+  and `cfnsupdoc`. Relevant to F6 and to 18b. ⚠️ **CORRECTED 2026-08-07 (U6, N-7) — see below for
+  what those two actually are.**
 - ⚠️ **Credentials (`appId`, `token`) travel in the REQUEST BODY**, with `s1code` in a header. **So
   any request-body logging captures them.** **An adapter logging rule has to exist BEFORE the first
   log line does, not after** — this is the scattered-credentials failure `CLAUDE.md` already guards
   for SMTP, arriving at a different door.
 - **Responses are `windows-1253`, not UTF-8.** A decoding step, and a silent-corruption risk on Greek
   text that will look like a data problem rather than a transport one.
+
+#### ᵍᵒ (continued) — THREE MORE DOCUMENTED FACTS, recorded 2026-08-07 (U6)
+
+**Same evidence class as everything above: DOCUMENTED, NOT OBSERVED.** Read from the vendor's
+documentation, which is now committed. Nothing here has been exercised against a live Go system, and
+under `CLAUDE.md` rule 9 nothing may be without the owner's explicit instruction.
+
+##### ⚠️⚠️ N-6 — `set` REPLACES A CHILD TABLE. An omitted row is DELETED, not left alone
+
+**The vendor's words, verbatim, from `set/customer` and `set/supplier`:**
+
+> *"if the child table contains records already, and you need to update or add new, you have to insert
+> the LINENUM field number of the existing ones (without using any other fields), or else those
+> records will be deleted."*
+
+⚠️ **So a `set` call is a REPLACE of the child table, not a merge into it.** A push composed from
+Novocore's own data — carrying only what Novocore knows — **deletes every child row Novocore does not
+know about.**
+
+⭐ **THIS IS C6's QUESTION 3, AND THE ANSWER IS WORSE THAN THE QUESTION ASSUMED.** Question 3 asks
+*"what happens when the satellite system is EDITED ANYWAY"*, and it was framed around **divergence** —
+two copies disagreeing, which a webhook (N-4) makes detectable. **N-6 is a different and larger
+failure: the satellite's data is DESTROYED, by a push that was about something else entirely.**
+
+**The worked case, because the abstraction understates it.** Somebody adds a customer's second bank
+account in Go. Later, Novocore pushes a corrected **address** for that customer. The address is all
+Novocore is trying to change; the bank accounts are in `CUSBANKACC`, a child table Novocore never
+read. **Both bank-account rows are deleted.** No error, no warning, and a `200` — the operation the
+adapter requested is exactly the operation Go performed.
+
+⚠️ **Note what makes it invisible to the usual defences.** It is not a failed push (C6 question 4),
+so retry logic never engages. It is not a conflict, so no reconciliation fires. **The only signal is
+data that used to be there and is not**, discovered by whoever needed it.
+
+**THE RULE THIS CREATES — READ BEFORE WRITE, UNCONDITIONALLY, for any Go record with child tables.**
+An adapter must `get` the record, carry every existing `LINENUM` forward, and only then `set`.
+⚠️ **RECORDED, NOT BUILT** — there is no adapter to build it into. It belongs in step 18's design and
+is written here so 18 does not have to rediscover it. 📌 And it interacts with **X1/N-1**: read-then-
+write is check-then-act, so it is **not atomic**, and Go offers no idempotency mechanism to make it so.
+
+⚠️ **NOT ESTABLISHED, AND THIS IS THE HALF THAT MATTERS MOST — the notice appears on TWO endpoints
+only.** Measured 2026-08-07 across the committed document: the sentence occurs exactly **twice**,
+at `set/customer` and `set/supplier`. **`set/saldoc` carries child tables and NO SUCH NOTICE** —
+`ITELINES`, `SRVLINES`, `VATANAL`, `EXPANAL` and `MTRDOC`, all using `LINENUM`.
+
+📌 **Both readings are dangerous and neither is supported.** *"The rule is general and the vendor
+documented it twice"* is the likely one — but assuming it and being wrong means an adapter re-sending
+line numbers Go did not want. *"The rule is specific to those two"* means a `set/saldoc` update
+silently drops invoice lines. ⚠️ **This is `CLAUDE.md`'s *a fact established by reading, then built
+upon* exactly: the document does not say `set/saldoc` behaves differently, and it does not say it
+behaves the same. Reading harder cannot answer it.** **It goes on the list of questions only a live
+write could settle — and rule 9 forbids that write, so it stays open until the owner authorises one
+against a sandbox.**
+
+##### N-7 — CORRECTION: `cfncusdoc` is RECEIPTS, `cfnsupdoc` is PAYMENTS
+
+**The bullet above listed both by endpoint name without saying what they are, which invited the
+reading that they are credit or finance documents. They are not.**
+
+| Endpoint family | What it is |
+|---|---|
+| `cfncusdoc` | ⭐ **RECEIPTS documents** — money coming in from a customer |
+| `cfnsupdoc` | ⭐ **PAYMENTS documents** — money going out to a supplier |
+
+**Full CRUD on both** — `get`, `list`, `set`, `del`.
+
+⭐ **The consequence, and it is why this is a correction rather than a gloss: THE SETTLEMENT SIDE HAS
+API SURFACE TOO.** Go is not only an issuing channel for sales documents; receipts and payments are
+readable and writable. **That reaches F7 (Receipts, Payments, Transfers), which had no Go dimension
+recorded against it at all** — see ᶠ⁷.
+
+📌 **Measured, so the scope of the correction is honest:** the committed document's endpoint index and
+section headings **already say "Receipts Documents" and "Payments Documents"**, and the phrase
+*"customer/supplier credit or finance documents"* appears **nowhere in `docs/`**. **The vendor
+document was never wrong; only the roadmap's bullet was silent.** Nothing was corrected in the
+extraction and nothing needed to be.
+
+##### N-8 — the committed documentation is a CONVERTED COPY, and it goes stale silently
+
+**Recorded at the file itself** — [`docs/adapters/prosvasis-go-api.md`](adapters/prosvasis-go-api.md),
+under *PROVENANCE AND EVIDENCE CLASS* — rather than only here, because that is where somebody about to
+rely on it will be.
+
+**Two of U5's three open provenance items are CLOSED by the owner, 2026-08-07:**
+
+- ✅ **The capture date is 2026-08-07.** U5 recorded it as *"NOT KNOWN… a real gap"*; it is closed.
+  **Capture and commit are the same day**, so the extraction is not a stale copy of an older page.
+- ✅ **`10502454783619` is the vendor's documentation example**, not the owner's `s1code`. U5 left a
+  conditional — *"confirm… before this repository is ever made public"* — and it is answered. **No
+  redaction is owed.**
+
+⚠️ **ONE IS NEWLY OPEN, and it is the same class of gap the capture date used to be: the URL the page
+was captured FROM is NOT SUPPLIED.** The only URL anywhere in the document is the **API base**,
+`https://go.s1cloud.net/`, which is where requests go and **not** where the text came from. ⚠️ **Do
+not infer a documentation URL from the API base.** **Whoever captured the page should supply it.**
+
+⚠️ **And the marker that was missing: the *Conventions* preamble is EDITORIAL — written by this
+repository, not by the vendor.** Every other section is the vendor's own words. **An unmarked summary
+inside a reference document is a second record of one thing**, which is this repository's named
+failure mode; it is now boxed and marked, with the rule that **the endpoint section wins** when the
+two disagree. ⭐ **N-6 is the live proof that the marker was needed** — the `LINENUM` bullet states the
+deletion rule as general, and the vendor states it on two endpoints.
+
+**ᶠ⁷ F7 — Receipts, Payments, Transfers. ⭐ IT HAS A GO DIMENSION, recorded 2026-08-07 (U6, N-7), and
+it had none before.**
+
+**Go exposes full CRUD over the settlement side**, which nothing in this roadmap said until now:
+
+| Endpoint family | What it is | Operations |
+|---|---|---|
+| `cfncusdoc` | **RECEIPTS documents** — money in from a customer | `get`, `list`, `set`, `del` |
+| `cfnsupdoc` | **PAYMENTS documents** — money out to a supplier | `get`, `list`, `set`, `del` |
+
+⚠️ **Evidence class: DOCUMENTED, NOT OBSERVED.** Read from the committed vendor documentation; nothing
+exercised against a live system, and rule 9 governs.
+
+⭐ **Why this is worth a footnote on a not-started row.** The Go relationship has been discussed
+entirely in terms of **issuing sales documents** — that is what `CLAUDE.md` §1b, X1 and step 18 are
+all about. **`cfncusdoc`/`cfnsupdoc` mean the settlement side is reachable too**, so when F7 is
+scoped, *"is a receipt recorded in Novocore, in Go, or both, and which way does it flow"* is a real
+question with a real API behind it — **rather than one that gets answered by default because nobody
+knew there was a choice.**
+
+⚠️ **DELIBERATELY NOT ANSWERED HERE.** Which system owns a receipt is a C6-shaped ownership question,
+and C6 is open for Customers, Products and Stock without settlement being among them. **Recorded so
+F7's scoping meets it, not resolved.**
+
+📌 **And N-6 applies to these if they have child tables** — a `set` that omits an existing child row
+deletes it. Whether `cfncusdoc`/`cfnsupdoc` carry child tables is **not established here**; the
+vendor's `LINENUM` notice appears only on `set/customer` and `set/supplier`.
 
 **ᶠ⁶ F6 — Purchase Invoice + Goods Receipt. ⚠️ Two things R1b left it, recorded 2026-08-04 so they
 are not rediscovered.**

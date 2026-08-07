@@ -15,8 +15,30 @@ nobody has to re-obtain it.
 |---|---|
 | **Vendor documentation version** | **1.0**, as stated in the title above. **No finer version string appears anywhere in the source** |
 | **Date added to this repository** | **2026-08-07** |
-| ⚠️ **Date the vendor's HTML was captured** | **NOT KNOWN.** The file arrived already converted. **This is a real gap, not a formality** — it is what tells a future reader whether the documentation has moved since. **Whoever captured it should supply the date** |
+| ✅ **Date the vendor's HTML was captured** | **2026-08-07 — CONFIRMED BY THE OWNER (U6, 2026-08-07).** This row previously read *"NOT KNOWN"* and was recorded as a real gap; **it is closed.** Capture and commit are the same day, so this extraction is not a stale copy of an older page |
+| ⚠️ **URL the vendor's HTML was captured FROM** | ⚠️ **NOT SUPPLIED. This is now the open half of the provenance, and it is the same class of gap the capture date used to be.** The only URL anywhere in this document is the **API base**, `https://go.s1cloud.net/` (see *Conventions*), which is where requests go — **not where this text came from.** ⚠️ **Do not infer one from the base URL.** **Whoever captured the page should supply it** |
 | **Evidence class** | ⚠️ **DOCUMENTED, NOT OBSERVED.** Nothing here has been exercised against a live Go system from this repository, and under `CLAUDE.md` non-negotiable **rule 9** no session may do so without the owner's explicit instruction |
+
+### ⚠️ N-8 — THIS FILE IS A CONVERTED COPY, AND IT WILL GO STALE SILENTLY
+
+**Recorded 2026-08-07 (U6).** The line under the title already says the content is converted; **this
+says what follows from that**, which is the part a reader acts on.
+
+**This document is a text extraction of a JavaScript-rendered vendor page. It is not the source.**
+The vendor's page is authoritative and this is a copy of it taken at one moment. ⚠️ **When the vendor
+changes their documentation, nothing here changes and nothing anywhere reports it** — there is no
+fetch, no diff, no check, and there cannot be one while the source is a rendered page and rule 9
+governs outbound requests. **The failure mode is silence**, which is why it is written at the top
+rather than assumed.
+
+📌 **The practical consequence, stated so it is usable:** a disagreement between this file and
+observed Go behaviour is **evidence about this file's age**, not necessarily a bug in either. Check
+the capture date above before concluding the API changed.
+
+⚠️ **Same shape as the AADE codification artefacts** (`docs/aade/v2.0.1/`) — a versioned copy of
+somebody else's document, held locally because it cannot be fetched on demand, needing a human diff
+rather than an automatic one. `CLAUDE.md`'s standing rule for those applies here: **alert a human,
+never auto-apply.**
 
 ⚠️ **DOCUMENTED IS NOT VERIFIED, and the gap is what roadmap row G1 exists to close.** Two working
 integrations already exist outside this codebase; **their behavioural findings — what a retry does,
@@ -30,12 +52,30 @@ flags — outer `true` with inner `false` means Go transmitted and AADE REJECTED
 
 📌 **A note on the repeated `Example: 10502454783619`.** It appears **36 times, identically, on every
 endpoint** — the shape of vendor template boilerplate rather than a real credential, which is why it
-was left intact rather than redacted. ⚠️ **It is nonetheless a *username* (`s1code`). Confirm it is
-the vendor's example and not your own before this repository is ever made public.**
+was left intact rather than redacted. ✅ **CLOSED 2026-08-07 (U6): the owner confirms it is the
+VENDOR'S DOCUMENTATION EXAMPLE and not his own `s1code`.** U5 left this as a conditional — *"confirm
+it is the vendor's example… before this repository is ever made public"* — and the condition is now
+answered. **No redaction is owed.**
 
 ---
 
 ## Conventions
+
+> ### ⚠️ THIS SECTION IS EDITORIAL. It is NOT vendor text
+>
+> **Everything from here to the endpoint index was WRITTEN BY THIS REPOSITORY**, summarising the
+> per-endpoint bodies below. Every other section of this file is the vendor's own words.
+>
+> ⚠️ **So this is the one part of the document that can be WRONG WITHOUT THE VENDOR BEING WRONG.** A
+> summary is a second record of what the body says, and this repository has paid repeatedly for two
+> records of one thing drifting apart. **When a bullet here disagrees with an endpoint section below,
+> the endpoint section wins** — it is the source, this is the digest.
+>
+> 📌 **The `LINENUM` bullet is the live example and the reason this marker exists.** It states the
+> child-table deletion rule as though it were general. **The vendor states it on exactly two
+> endpoints** — `set/customer` and `set/supplier` — and **nowhere else**. See **N-6** at roadmap ᵍᵒ:
+> the generalisation is this repository's inference, not the vendor's claim, and it matters because
+> `set/saldoc` also has child tables.
 
 - **Base URL:** `https://go.s1cloud.net/`
 - **All endpoints are `POST`**, even the `get`/`list`/`del` ones — the verb is part of the path, not the HTTP method.
@@ -48,6 +88,7 @@ the vendor's example and not your own before this repository is ever made public
 - **`filters`** on `list/*` endpoints: `ENTITY.FIELD=value & ENTITY.FIELD_TO=value` (`&` separates filters). Empty string = no filtering.
 - **`key`** identifies an existing record. On `set/*` endpoints, leave `key` blank to insert a new record; supply it to update.
 - **`LINENUM`** (detail/child tables): use numbers from `9000001` upward for new lines. When updating a record whose child table already has rows, you must re-send the `LINENUM` of every existing row you want to keep (LINENUM alone is enough) — omitted rows are deleted.
+  - ⚠️ **SCOPE: the vendor states this on `set/customer` and `set/supplier` ONLY.** Whether `set/saldoc`'s child tables behave the same way is **UNDOCUMENTED** — see **N-6** at roadmap ᵍᵒ. **This bullet's phrasing is editorial and generalises; the vendor did not.**
 - Schema blocks below use the source's pseudo-JSON notation (`field: type`), not literal JSON.
 
 ## Endpoint index

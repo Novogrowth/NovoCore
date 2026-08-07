@@ -116,9 +116,65 @@ dimension means restating history.
 **Product categories** remain three levels deep with a product in several at once — a self-referencing
 table plus a join table, **not two flat columns and not an enum**. Nothing exists, not even the schema.
 
-## Current build status (as of this primer — 2026-08-07, after U5; **R4 is current and unfinished**)
+## Current build status (as of this primer — 2026-08-07, after U6; **R4 is current and unfinished**)
 
-### ⭐ THE 2026-08-07 SCOPE REVIEW (U5) — read this FIRST. It supersedes things stated below
+### ⭐ U6, 2026-08-07 — READ THIS FIRST. It supersedes parts of U5's block below
+
+**U6 was documentation, git and configuration only. Nothing was built.** Three things happened.
+
+#### 1. ⭐ `main` IS THE AUTHORITATIVE RECORD AGAIN — and it was not
+
+⚠️ **Until 2026-08-07, `main` was 19 commits behind and had NO `HISTORY.md` at all.** Every closed
+step of the previous week — U2a, U2b, F5b, U5 and all 14 of R4's commits — lived on a branch named
+for an **unfinished** build step. **A fresh clone gave you a week-old repository**, and this project's
+entire discipline rests on there being one authoritative record.
+
+✅ **Fast-forwarded and pushed** (`382d6f2` → `6a2e662`, no merge commit, both suites verified green
+first: backend 1,500 tests, frontend 414). **`r4-payment-methods` deleted, local and remote** — it is
+fully contained in `main`, and R4 resumes from there.
+
+📌 **R4's unfinished work came WITH it, deliberately.** There was no separable set — `r4-payment-
+methods` is a strict ancestor of `u5-scope-review`. ⭐ **And the reasoning changed rather than being
+forced:** `main` has no deployment, no release and no second developer; its only job is to be the
+record. **R4's incompleteness is documented in `PROGRESS.md`, so carrying it makes `main` accurate.**
+
+#### 2. ⭐ THE CHART OF ACCOUNTS IS SCOPED — C1 becomes **C7a + C7b**
+
+| | |
+|---|---|
+| **The chart is the ΕΓΛΣ** (Π.Δ. 1123/1980), adopted directly | ⭐ **The deciding fact: THE ACCOUNTANT FILES IN ΕΓΛΣ.** Still permitted — repealed by art. 38 of Ν. 4308/2014 **subject to art. 3 §9**; ΕΛΤΕ §3.9.1 lets an entity keep the chart in force at 31/12/2014. ⚠️ **Read from tax-law reference sites, not a primary text; the accountant is the authority** |
+| ⚠️⚠️ **The ΕΓΛΣ tree is a CATALOGUE YOU COPY FROM** | **Not a mapping layer, not the chart.** Seeded and read-only; creating an account **prefills** code and name; **no FK afterwards and nothing reads it again.** ⭐ **The test: DELETE THE CATALOGUE — the chart still works.** ⚠️ **This is NOT the house two-layer pattern** (`aade_invoice_type` is *pointed at*; this is *copied from*), and somebody will try to "fix" it into one |
+| ⭐ **`account` holds only real accounts — ~80, not ~860** | **Nothing is seeded inactive.** An earlier formulation seeded the whole tree; **withdrawn** |
+| ⭐ **The hierarchy is DERIVED FROM THE CODE** | `38.03`'s parent is `38` by definition of the numbering. **No `parent_id`, no `level`** — ADR 0009's stance. **POSTABLE = NO CHILDREN**; subtotal = a prefix query |
+| **The owner may create his own accounts** | Confirmed with the accountant. ⭐ **This closes a question that was about to go to him:** GR/IR clearing, the variance accounts, rounding, and the partner clearing accounts need no ΕΓΛΣ home found for them |
+| ✅ **C3 is UNBLOCKED** | `code` becomes the ΕΓΛΣ code; **`elp_code` is DROPPED** (its own comment says *"ΕΛΠ (Ν. 4308/2014)"* — the other framework); the alias is built in **C7a** |
+| ⚠️ **M0a is now GATED on C7b** | It read *"unblocked, any time"* since 2026-08-03. **Its target has moved twice**, which is the argument for the gate |
+
+⚠️ **NOTHING IS BUILT. `Account` has no parent FK, no level column and no tree today**, and the ΕΓΛΣ
+`.xls` **is not in this repository** — committing it is part of C7b's work.
+
+#### 3. Three more DOCUMENTED Go facts — N-6, N-7, N-8
+
+- ⚠️⚠️ **N-6: `set` REPLACES a child table.** A push that omits an existing child row **deletes it**.
+  ⭐ **This is C6's question 3 with an answer worse than divergence — the satellite's data is
+  DESTROYED by a push about something else.** Correcting a customer's *address* wipes bank-account
+  rows added in Go. **Read-before-write, unconditionally.** ⚠️ **Whether `set/saldoc` behaves the same
+  is UNDOCUMENTED** and only a live write could settle it — which rule 9 forbids.
+- **N-7: `cfncusdoc` is RECEIPTS, `cfnsupdoc` is PAYMENTS**, full CRUD. ⭐ **The settlement side has
+  API surface too** — new to **F7**, which had no Go dimension recorded at all.
+- **N-8:** the committed documentation is a **converted copy that goes stale silently.** Capture date
+  closed to **2026-08-07**; the `s1code` example confirmed vendor boilerplate; *Conventions* marked
+  **EDITORIAL**. ⚠️ **The capture URL is newly open.**
+
+#### And one correction that is not about the chart
+
+⚠️ **2FA (PLB-1), the missing change-password screen and the absent recovery path were filed under
+GO'S WEBHOOKS. They attach to SERVER DEPLOYMENT AND REMOTE ACCESS.** They fire the moment the app is
+reachable from outside, **whichever hosting is chosen and whether webhooks are ever enabled.**
+⭐ **Filed under webhooks they read as blocked on a feature we may never turn on; filed correctly they
+are blocked on a hosting decision the owner has just made** — **self-host now**, VPS possibly later.
+
+### ⭐ THE 2026-08-07 SCOPE REVIEW (U5) — read this after U6 above. It supersedes things stated below
 
 **U5 was documentation and configuration only. Nothing was built, nothing was scheduled, and
 placement remains the owner's.** Ten decisions; the ones that change how existing records read:
@@ -147,7 +203,7 @@ nested `success` flags — outer true with inner false means AADE REJECTED.**
 |---|---|---|
 | **1** | ⚠️ **R2c is DEFERRED and SPLIT.** It is not core work and the owner does not want it interrupting the core | Demoted 🟡 → ⚪ and **moved out of the roadmap's sequence block** — the demotion **is** the decision, not a side effect. **2a** (the invisible sort-code column, cosmetic) → **F10**'s display-defects list; **2b** (sort code absent from the series **edit** form) → **R4**, with the unverified series-ordering check. ⚠️ **Neither half is scheduled as R2c** |
 | **2** | 🟡 **R4 is CURRENT** — payment methods become a business list referencing an AADE codification | Promoted ⚪ → 🟡 because the owner **commissioned its Phase 0**, not because R2c vacated the slot. **Its gate is unchanged and always was the binding one: before F6**, since it changes the sales invoice request contract |
-| **3** | ⭐ **THE CHART OF ACCOUNTS IS DECIDED.** Novocore uses **the official Greek chart directly**, with an **alias on each account for display**, and there is **NO separate business chart mapped onto it** | **One layer.** The only thing a business chart buys is many-to-one granularity, **better served by the product model** (categories and lines that name products). And **one layer is the reversible choice** — adding a layer later is additive, collapsing two is a merge that loses history. ⚠️ **No alias field exists on an account today** (measured against `Account`/`AccountView`) and it was **not built**; the absence is recorded against roadmap row **C1**. ✅ It **removes a prerequisite R4 might have had** — R4's account picker offers accounts from the one chart that exists. ⭐ **UPDATED 2026-08-07:** the decision was **re-examined and upheld**, which makes the alias **required rather than optional** — and it is now **BLOCKED** on what becomes of `code` and `elp_code`, both empty on every row. **Roadmap C3; do not build an alias from this row** |
+| **3** | ⭐ **THE CHART OF ACCOUNTS IS DECIDED.** Novocore uses **the official Greek chart directly**, with an **alias on each account for display**, and there is **NO separate business chart mapped onto it** | **One layer.** The only thing a business chart buys is many-to-one granularity, **better served by the product model** (categories and lines that name products). And **one layer is the reversible choice** — adding a layer later is additive, collapsing two is a merge that loses history. ⚠️ **No alias field exists on an account today** (measured against `Account`/`AccountView`) and it was **not built**; the absence is recorded against roadmap row **C1**. ✅ It **removes a prerequisite R4 might have had** — R4's account picker offers accounts from the one chart that exists. ⭐ **UPDATED 2026-08-07:** the decision was **re-examined and upheld**, which makes the alias **required rather than optional** — and it is now **BLOCKED** on what becomes of `code` and `elp_code`, both empty on every row. **Roadmap C3; do not build an alias from this row.** ⚠️ **SUPERSEDED LATER THE SAME DAY (U6) — read the U6 block at the top of this section.** The chart is named (**ΕΓΛΣ**), the model is settled (**a catalogue you copy from**, ~80 real accounts, a **tree derived from the code**), **C3 is unblocked** (`code` = ΕΓΛΣ code, `elp_code` **dropped**), and C1 is **scoped as C7a + C7b** |
 
 **Detailed, always-current status lives in `docs/PROGRESS.md`.** Read that first; this section is
 the summary.
@@ -370,8 +426,10 @@ to be resolved** — it was outside U2a's scope. **When they disagree, `PROGRESS
     with no cost, and Novocore needs opening **lots**; that is a separate, harder question. **After
     cutover Woo is read-only for product data, scoped** to the fields Novocore manages — and **that
     list must be written down at step 19; it does not exist.**
-  - **M0 splits. M0a — mapping Manager's chart onto Novocore's — is UNBLOCKED and needs no code**
+  - **M0 splits. M0a — mapping Manager's chart onto Novocore's — needs no code**
     (Novocore's chart was built from scratch, so the question is which Manager accounts have no home).
+    ⚠️ **It was "UNBLOCKED, any time" from 2026-08-03 until 2026-08-07; it is now GATED ON C7b** —
+    its target is the **ΕΓΛΣ**, which is not in the repository yet.
     **M0b — a real year — waits on D1/D3/D4.** ⚠️ **Not after F11:** M0 exists to find gaps while
     fixing them is free, and it is an import rather than data entry.
   - **The ACS adapter (21) has TWO MODES** — receive an existing Skroutz voucher, or **create** one
@@ -878,6 +936,14 @@ was **deliberately not built**; the absence is recorded against roadmap row **C1
 M0a's target**: Manager's accounts now map onto the official chart rather than onto a chart of our own
 design. **Everything below describes the chart AS BUILT and remains an accurate record of what is in
 the database.** Resolved shape:
+
+> ⚠️ **UPDATED 2026-08-07 (U6) — and the sentence above is the one to hold on to.** *"Everything below
+> describes the chart AS BUILT"* stays exactly true; **what changed is that the chart as built is now
+> scheduled to be replaced**, by **C7a + C7b** (see the U6 block at the top of this file). Concretely:
+> **`code` will carry the ΕΓΛΣ code**, **`elpCode` is dropped**, **the alias is built in C7a**, and
+> **the two-level `AccountGroup` arrangement described below gains a real hierarchy derived from the
+> code** — parent = code minus its last segment, **postable = no children**. ⚠️ **None of it is built.
+> Do not read the list below as obsolete; read it as current-and-superseded.**
 
 - **Two levels only:** an `AccountGroup` entity (name + `displayOrder`) with accounts under it. Not a self-referencing Account tree. Groups are an entity rather than flat text because ordering is **manual/drag-and-drop**, which needs somewhere to store a group's position. Alphabetical ordering applies only to sub-ledgers (customers, suppliers); inventory sorts by SKU.
 - **Normal balance side is derived from account type, never stored** — there is no `normal_balance_side` column and a test asserts its absence. **Seven types**, because both contra types are genuinely needed: `CONTRA_ASSET` (accumulated depreciation is Asset-classified with a *credit* normal balance; without it fixed assets report at roughly double carrying value) and `CONTRA_INCOME` (sales returns are Income-classified with a *debit* normal balance; typed as `EXPENSE` they would sit below the revenue line and overstate gross revenue).
